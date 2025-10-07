@@ -8,26 +8,39 @@
     body {
       margin: 0;
       font-family: sans-serif;
-      background-color: #6ab04c;
+      background-color: #2f3640;
       overflow: hidden;
+      touch-action: none;
     }
 
     #gameTitle {
       text-align: center;
-      background-color: #2f3640;
+      background-color: #353b48;
       color: white;
       padding: 10px;
       margin: 0;
-      font-size: 28px;
+      font-size: 26px;
+      position: fixed;
+      width: 100%;
+      z-index: 100;
+    }
+
+    #viewport {
+      position: absolute;
+      top: 50px;
+      left: 0;
+      width: 100%;
+      height: calc(100vh - 50px);
+      overflow: hidden;
     }
 
     #gameArea {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      background: linear-gradient(to top, #4cd137, #44bd32);
-      overflow: hidden;
-      cursor: pointer;
+      position: absolute;
+      width: 2000px;
+      height: 2000px;
+      background: linear-gradient(to top, #44bd32, #6ab04c);
+      transform-origin: center center;
+      cursor: grab;
     }
 
     .building {
@@ -45,7 +58,7 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.4);
     }
 
-    /* 🎨 Farby jednotlivých budov */
+    /* 🎨 Farby budov */
     .townhall { background: #d35400; }
     .cannon { background: #718093; }
     .goldstorage { background: #fbc531; }
@@ -55,14 +68,14 @@
     .armycamp { background: #44bd32; }
 
     #infoBox {
-      position: absolute;
+      position: fixed;
       background: rgba(0,0,0,0.8);
       color: white;
       padding: 8px 12px;
       border-radius: 8px;
       pointer-events: none;
       font-size: 14px;
-      z-index: 10;
+      z-index: 200;
     }
 
     .hidden {
@@ -72,23 +85,24 @@
 </head>
 <body>
   <h1 id="gameTitle">ErikAI COC</h1>
-  <div id="gameArea"></div>
-
+  <div id="viewport">
+    <div id="gameArea"></div>
+  </div>
   <div id="infoBox" class="hidden"></div>
 
   <script>
     const gameArea = document.getElementById('gameArea');
     const infoBox = document.getElementById('infoBox');
 
-    // 🏠 Zoznam budov s pozíciou a kódom
+    // 📍 Zoznam budov (viac rozmiestnených)
     const buildings = [
-      { id: "townhall", name: "Town Hall", x: 400, y: 250, class: "townhall" },
-      { id: "cannon", name: "Cannon", x: 550, y: 300, class: "cannon" },
-      { id: "goldmine", name: "Gold Mine", x: 300, y: 350, class: "goldmine" },
-      { id: "goldstorage", name: "Gold Storage", x: 480, y: 150, class: "goldstorage" },
-      { id: "elixirmine", name: "Elixir Mine", x: 620, y: 220, class: "elixirmine" },
-      { id: "elixirstorage", name: "Elixir Storage", x: 350, y: 180, class: "elixirstorage" },
-      { id: "armycamp", name: "Army Camp", x: 200, y: 400, class: "armycamp" }
+      { id: "townhall", name: "Town Hall", x: 900, y: 900, class: "townhall" },
+      { id: "cannon", name: "Cannon", x: 1000, y: 950, class: "cannon" },
+      { id: "goldmine", name: "Gold Mine", x: 800, y: 1000, class: "goldmine" },
+      { id: "goldstorage", name: "Gold Storage", x: 1100, y: 850, class: "goldstorage" },
+      { id: "elixirmine", name: "Elixir Mine", x: 700, y: 800, class: "elixirmine" },
+      { id: "elixirstorage", name: "Elixir Storage", x: 950, y: 750, class: "elixirstorage" },
+      { id: "armycamp", name: "Army Camp", x: 1200, y: 1000, class: "armycamp" }
     ];
 
     // 🏗️ Generovanie budov
@@ -102,12 +116,77 @@
       gameArea.appendChild(el);
     });
 
-    // 🖱️ Klik na budovu → zobrazí názov
+    // 📦 Premenné pre zoom a pohyb
+    let scale = 1;
+    let posX = -500, posY = -500;
+    let dragging = false;
+    let startX, startY;
+
+    function updateTransform() {
+      gameArea.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+    }
+    updateTransform();
+
+    // 🖱️ Zoom kolieskom
+    window.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomSpeed = 0.1;
+      if (e.deltaY < 0) scale += zoomSpeed;
+      else scale -= zoomSpeed;
+      scale = Math.min(Math.max(0.4, scale), 2.5);
+      updateTransform();
+    });
+
+    // 👆 Ťahanie mapy myšou
+    gameArea.addEventListener('mousedown', (e) => {
+      dragging = true;
+      startX = e.clientX - posX;
+      startY = e.clientY - posY;
+      gameArea.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mouseup', () => {
+      dragging = false;
+      gameArea.style.cursor = 'grab';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      posX = e.clientX - startX;
+      posY = e.clientY - startY;
+      updateTransform();
+    });
+
+    // 📱 Dotykové ovládanie (telefón)
+    let touchStartDist = 0;
+    let lastScale = 1;
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        touchStartDist = Math.hypot(dx, dy);
+        lastScale = scale;
+      }
+    });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        scale = lastScale * (dist / touchStartDist);
+        scale = Math.min(Math.max(0.4, scale), 2.5);
+        updateTransform();
+      }
+    }, { passive: false });
+
+    // 🖱️ Klik na budovu → názov
     gameArea.addEventListener('click', (e) => {
       if (e.target.classList.contains('building')) {
         infoBox.textContent = e.target.dataset.name + " (" + e.target.dataset.id + ")";
         infoBox.style.left = e.pageX + 'px';
-        infoBox.style.top = e.pageY - 30 + 'px';
+        infoBox.style.top = e.pageY - 40 + 'px';
         infoBox.classList.remove('hidden');
       } else {
         infoBox.classList.add('hidden');
@@ -115,4 +194,4 @@
     });
   </script>
 </body>
-</html>
+  </html>
