@@ -1,60 +1,56 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="sk">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>ErikAI Arena — Walls & Loot</title>
+<title>ErikAI Mobile Battle (2.5D) – Walls & Power-ups</title>
 <style>
-  :root{--yellow:#f6e58d;--ui:#111}
-  html,body{height:100%;margin:0;background:#222;color:#fff;font-family:Inter,Arial,sans-serif;overflow:hidden}
-  header{position:fixed;top:0;left:0;right:0;background:var(--ui);padding:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;z-index:110;box-shadow:0 2px 6px rgba(0,0,0,0.6)}
-  input,select,button{padding:8px;border-radius:8px;border:none;background:#333;color:#fff;font-size:14px}
-  input{width:140px;text-align:center}
-  #arena{position:fixed;top:120px;bottom:8px;left:8px;right:8px;background:var(--yellow);border-radius:10px;overflow:hidden;box-shadow:inset 0 4px 30px rgba(0,0,0,0.15)}
-  .entity{position:absolute; width:48px; height:48px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; transform-origin:center bottom; box-shadow:0 6px 10px rgba(0,0,0,0.25)}
-  .player{background:#e74c3c; border:3px solid #b83b2f; z-index:60}
-  .enemy{background:#2980b9; border:3px solid #1f5f8a; z-index:50}
-  .loot-sword{background:linear-gradient(135deg,#bfbfbf,#9e9e9e); border:2px solid #666; width:30px;height:30px;border-radius:6px; display:flex;align-items:center;justify-content:center;color:#222;font-size:13px}
-  .loot-shield{background:linear-gradient(135deg,#87CEEB,#5DADE2); border:2px solid #2e86c1; width:30px;height:30px;border-radius:6px; display:flex;align-items:center;justify-content:center;color:#022f4d;font-size:13px}
-  .wall{position:absolute;background:#8b5a2b;border:2px solid #6a3f15;box-shadow:inset 0 -6px 12px rgba(0,0,0,0.2);z-index:70}
-  .hpBar{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);width:54px;height:6px;background:rgba(0,0,0,0.45);border-radius:6px;overflow:hidden}
-  .hpFill{height:100%;background:linear-gradient(90deg,#2ecc71,#27ae60);width:100%}
-  #joystick{position:fixed;left:12px;bottom:12px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;z-index:120}
-  #joyKnob{width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,0.4)}
-  #uiPanel{position:fixed;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;z-index:120}
-  .controlBtn{padding:12px 14px;border-radius:8px;background:#333;border:none;color:#fff;font-weight:700}
-  #buffs{position:fixed;left:50%;transform:translateX(-50%);top:82px;background:rgba(0,0,0,0.5);padding:6px 10px;border-radius:10px;font-size:13px;z-index:120}
-  #bottomMsg{position:fixed;left:50%;transform:translateX(-50%);bottom:8px;background:rgba(0,0,0,0.6);padding:6px 10px;border-radius:8px;z-index:130}
-  @media (max-width:520px){ header{padding:8px;font-size:13px} input{width:120px} #arena{top:140px} }
+:root{--yellow:#f6e58d}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:#222;color:#fff;overflow:hidden;-webkit-user-select:none;user-select:none}
+header{position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,0.6);display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px;z-index:100}
+input,select,button{padding:8px 10px;border-radius:8px;border:none;font-size:15px}
+input{width:150px;text-align:center;background:#111;color:#fff}
+select,button{background:#333;color:#fff}
+button{cursor:pointer}
+#arena{position:fixed;top:90px;bottom:0;left:0;right:0;background:var(--yellow);border-radius:10px;margin:6px;overflow:hidden;touch-action:none;position:relative}
+.entity{position:absolute;width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;transform-origin:center bottom;transform:perspective(800px) rotateX(25deg);transition:left 0.05s, top 0.05s}
+.player{background:#e74c3c;border:3px solid #b83b2f;z-index:30}
+.enemy{background:#2980b9;border:3px solid #1f5f8a;z-index:20}
+.wall{background:#7f8c8d;width:40px;height:40px;position:absolute;border:2px solid #2c3e50;z-index:25}
+.hpBar{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);width:50px;height:6px;background:rgba(0,0,0,0.4);border-radius:6px;overflow:hidden}
+.hpFill{height:100%;background:linear-gradient(90deg,#2ecc71,#27ae60);width:100%}
+#joystick{position:fixed;left:10px;bottom:10px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;z-index:90}
+#joyKnob{width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,0.5)}
+#uiPanel{position:fixed;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px;z-index:90}
+.controlBtn{padding:12px 16px;background:#333;border:none;border-radius:8px;font-weight:bold}
+#bottomMsg{position:fixed;bottom:5px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);padding:6px 12px;border-radius:8px;font-size:13px;z-index:200}
+.powerUp{width:36px;height:36px;border-radius:6px;position:absolute;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;z-index:28;box-shadow:0 0 5px #000}
+.power-sword{background:#c0392b}
+.power-shield{background:#2980b9}
 </style>
 </head>
 <body>
 
 <header>
   <div>
-    <input id="nameInput" placeholder="Tvoje meno">
+    <input id="nameInput" type="text" placeholder="Tvoje meno">
     <button id="saveName">Uložiť</button>
   </div>
-
-  <div>🏆 <span id="trophies">0</span> | Mód:
+  <div>
+    🏆 <span id="trophies">0</span> | Mode:
     <select id="modeSelect">
-      <option value="1">1</option>
-      <option value="2">2</option>
-      <option value="3">3</option>
-      <option value="4">4</option>
-      <option value="5" selected>5</option>
+      <option value="1">1 hráč</option>
+      <option value="2">2 hráči</option>
+      <option value="3">3 hráči</option>
+      <option value="4">4 hráči</option>
+      <option value="5" selected>5 hráčov</option>
     </select>
-  </div>
-
-  <div style="margin-left:auto;display:flex;gap:8px">
     <button id="startBtn">Štart</button>
     <button id="clearBtn" style="background:#a33">Reset</button>
   </div>
 </header>
 
-<div id="buffs" style="display:none"></div>
 <div id="arena"></div>
-
 <div id="joystick"><div id="joyKnob"></div></div>
 <div id="uiPanel">
   <button id="attackBtn" class="controlBtn">ÚTOK</button>
@@ -62,445 +58,231 @@
 <div id="bottomMsg" style="display:none"></div>
 
 <script>
-/* ErikAI Arena — walls & loot
- - walls (AABB) block movement
- - loot (sword/shield) 2–4 items, random pos
- - player & enemies cannot go through walls
- - player collects loot (temporary buff)
- - enemies attack player when close
- - improved 2.5D effect: scale by Y (depth)
- - save/load state to localStorage
-*/
+const arena=document.getElementById('arena');
+const trophiesEl=document.getElementById('trophies');
+const nameInput=document.getElementById('nameInput');
+const saveName=document.getElementById('saveName');
+const startBtn=document.getElementById('startBtn');
+const clearBtn=document.getElementById('clearBtn');
+const modeSelect=document.getElementById('modeSelect');
+const attackBtn=document.getElementById('attackBtn');
+const JOY=document.getElementById('joystick'),KNOB=document.getElementById('joyKnob');
+const bottomMsg=document.getElementById('bottomMsg');
+const SAVE_KEY='erikai_mobile_save';
 
-const SAVE_KEY = 'erik_arena_v2';
-const arena = document.getElementById('arena');
-const nameInput = document.getElementById('nameInput');
-const saveNameBtn = document.getElementById('saveName');
-const trophiesEl = document.getElementById('trophies');
-const modeSelect = document.getElementById('modeSelect');
-const startBtn = document.getElementById('startBtn');
-const clearBtn = document.getElementById('clearBtn');
-const attackBtn = document.getElementById('attackBtn');
-const JOY = document.getElementById('joystick'), KNOB = document.getElementById('joyKnob');
-const buffsDiv = document.getElementById('buffs');
-const bottomMsg = document.getElementById('bottomMsg');
-
-let state = {
-  name: '',
-  trophies: 0,
-  mode: 5,
-  player: { x: 200, y: 200, hp: 100, maxHp: 100, baseDmg: 30 },
-  enemies: [],
-  walls: [],
-  loot: [],
-  inBattle: false,
-  resultShown: false
+let state={
+  name:'', trophies:0, player:{x:200,y:200,hp:100,maxHp:100}, 
+  enemies:[], mode:1, walls:[], powerUps:[], battleOver:false
 };
 
-// helpers
-const randInt = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
-const clamp = (v,a,b)=> Math.max(a,Math.min(b,v));
-function save(){ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
-function load(){ try { const raw = localStorage.getItem(SAVE_KEY); if(raw) state = JSON.parse(raw); } catch(e){ console.error(e); } }
-function clearAll(){ localStorage.removeItem(SAVE_KEY); location.reload(); }
-function showMsg(t,ms=1500){ bottomMsg.textContent = t; bottomMsg.style.display='block'; setTimeout(()=> bottomMsg.style.display='none', ms); }
+//=== SAVE / LOAD ===
+function save(){localStorage.setItem(SAVE_KEY,JSON.stringify(state));}
+function load(){let r=localStorage.getItem(SAVE_KEY);if(r){state=JSON.parse(r);}}
+function clearAll(){localStorage.removeItem(SAVE_KEY);location.reload();}
 
-// UI events
-saveNameBtn.onclick = ()=>{ if(nameInput.value.trim()){ state.name = nameInput.value.trim(); save(); showMsg('Meno uložené'); updateUI(); } };
-startBtn.onclick = ()=>{ state.mode = parseInt(modeSelect.value); startBattle(); save(); };
-clearBtn.onclick = ()=>{ if(confirm('Vymazať všetko?')) clearAll(); };
-function updateUI(){ trophiesEl.textContent = state.trophies; nameInput.value = state.name || ''; modeSelect.value = state.mode; }
+//=== UI ===
+function msg(t){bottomMsg.textContent=t;bottomMsg.style.display='block';setTimeout(()=>bottomMsg.style.display='none',1500);}
+function updateUI(){trophiesEl.textContent=state.trophies;nameInput.value=state.name||'';modeSelect.value=state.mode;}
+saveName.onclick=()=>{if(nameInput.value.trim()){state.name=nameInput.value.trim();save();msg('Meno uložené');}}
 
-// Arena size responsive
-function arenaSize(){ return { w: arena.clientWidth, h: arena.clientHeight }; }
+//=== Player ===
+let playerEl;
+function ensurePlayer(){if(!playerEl){playerEl=document.createElement('div');playerEl.className='entity player';playerEl.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';arena.appendChild(playerEl);}}
 
-// Entities DOM
-let playerEl = null;
-function createPlayerEl(){
-  playerEl = document.createElement('div');
-  playerEl.className = 'entity player';
-  playerEl.innerHTML = `<div class="hpBar"><div class="hpFill" style="width:100%"></div></div>`;
-  arena.appendChild(playerEl);
-}
-function syncPlayerDom(){
-  if(!playerEl) createPlayerEl();
-  // scale by y (2.5D depth)
-  const s = 0.9 + (state.player.y / arena.clientHeight) * 0.35;
-  playerEl.style.transform = `translate(${state.player.x-24}px, ${state.player.y-40}px) scale(${s}) perspective(800px) rotateX(25deg)`;
-  playerEl.querySelector('.hpFill').style.width = (state.player.hp/state.player.maxHp*100)+'%';
-}
-
-// walls
-function genWalls(){
-  state.walls = [];
-  const n = randInt(8,12);
-  const {w,h} = arenaSize();
-  let attempts = 0;
-  while(state.walls.length < n && attempts < 300){
-    attempts++;
-    const ww = randInt(80,160), hh = randInt(40,100);
-    const x = randInt(40, w - ww - 40);
-    const y = randInt(40, h - hh - 40);
-    const rect = { x, y, w: ww, h: hh };
-    // avoid player spawn area center
-    const px = state.player.x, py = state.player.y;
-    if(rectIntersects(rect, {x:px-80,y:py-80,w:160,h:160})) continue;
-    // avoid too-close to edges
-    // avoid overlapping existing walls
-    if(state.walls.some(r=>rectIntersects(r,rect))) continue;
-    state.walls.push(rect);
+//=== Walls ===
+function generateWalls(){
+  state.walls=[]; // clear old
+  for(let i=0;i<10;i++){
+    const wx=Math.random()*(arena.clientWidth-40);
+    const wy=Math.random()*(arena.clientHeight-40-50)+50;
+    state.walls.push({x:wx,y:wy});
   }
 }
-
 function renderWalls(){
-  // remove old
-  arena.querySelectorAll('.wall').forEach(el=>el.remove());
-  for(const r of state.walls){
-    const el = document.createElement('div');
-    el.className = 'wall';
-    el.style.left = r.x + 'px';
-    el.style.top = r.y + 'px';
-    el.style.width = r.w + 'px';
-    el.style.height = r.h + 'px';
-    arena.appendChild(el);
-  }
+  const existing=new Map();arena.querySelectorAll('.wall').forEach(el=>existing.set(el.dataset.id,el));
+  state.walls.forEach((w,i)=>{
+    let el=existing.get('w'+i);
+    if(!el){el=document.createElement('div');el.className='wall';el.dataset.id='w'+i;arena.appendChild(el);}
+    el.style.left=w.x+'px';el.style.top=w.y+'px';
+    existing.delete('w'+i);
+  });
+  existing.forEach(el=>el.remove());
 }
 
-// loot
-function genLoot(){
-  state.loot = [];
-  const n = randInt(2,4);
-  const {w,h} = arenaSize();
-  let attempts = 0;
-  while(state.loot.length < n && attempts < 200){
-    attempts++;
-    const lx = randInt(40, w-40), ly = randInt(40, h-40);
-    // avoid walls & player spawn & other loot
-    const pickRect = {x:lx-16,y:ly-16,w:32,h:32};
-    if(state.walls.some(r=>rectIntersects(r,pickRect))) continue;
-    if(state.loot.some(p=>Math.hypot(p.x-lx,p.y-ly) < 60)) continue;
-    const type = Math.random() < 0.5 ? 'sword' : 'shield';
-    state.loot.push({ id: 'l'+Date.now()+'_'+state.loot.length, x: lx, y: ly, type, taken:false });
-  }
-}
-
-function renderLoot(){
-  arena.querySelectorAll('.loot').forEach(el=>el.remove());
-  for(const p of state.loot){
-    if(p.taken) continue;
-    const el = document.createElement('div');
-    el.className = 'loot ' + (p.type==='sword' ? 'loot-sword' : 'loot-shield');
-    el.dataset.id = p.id;
-    el.style.left = (p.x - 15) + 'px';
-    el.style.top = (p.y - 15) + 'px';
-    el.title = p.type;
-    el.textContent = p.type==='sword' ? '⚔' : '🛡';
-    arena.appendChild(el);
-  }
-}
-
-// collisions
-function rectIntersects(a,b){
-  return !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
-}
-
-function pointInRect(px,py,r){ return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h; }
-
-// movement with wall collisions (AABB)
-function canMoveTo(x,y,size=24){
-  const rect = { x: x - size, y: y - size, w: size*2, h: size*2 };
-  // inside arena bounds
-  if(rect.x < 0 || rect.y < 0 || rect.x + rect.w > arena.clientWidth || rect.y + rect.h > arena.clientHeight) return false;
-  // walls
-  for(const w of state.walls) if(rectIntersects(rect,w)) return false;
-  return true;
-}
-
-// enemies
-function spawnEnemies(count){
-  state.enemies = [];
-  const {w,h} = arenaSize();
+//=== Power-ups ===
+function generatePowerUps(){
+  state.powerUps=[];
+  const count=2+Math.floor(Math.random()*3); // 2-4
   for(let i=0;i<count;i++){
-    let ex,ey,ok=false,tries=0;
-    while(!ok && tries<200){
-      tries++;
-      ex = randInt(40, w-40); ey = randInt(40,h-40);
-      const rect = {x:ex-18,y:ey-18,w:36,h:36};
-      if(state.walls.some(r=>rectIntersects(r,rect))) continue;
-      if(Math.hypot(ex-state.player.x,ey-state.player.y) < 120) continue;
-      ok = true;
+    const type=Math.random()<0.5?'sword':'shield';
+    const px=Math.random()*(arena.clientWidth-36);
+    const py=Math.random()*(arena.clientHeight-36-50)+50;
+    state.powerUps.push({id:'p'+i,type:type,x:px,y:py});
+  }
+}
+function renderPowerUps(){
+  const existing=new Map();arena.querySelectorAll('.powerUp').forEach(el=>existing.set(el.dataset.id,el));
+  state.powerUps.forEach(p=>{
+    let el=existing.get(p.id);
+    if(!el){
+      el=document.createElement('div');
+      el.className='powerUp '+(p.type==='sword'?'power-sword':'power-shield');
+      el.dataset.id=p.id; el.textContent=p.type==='sword'?'🗡️':'🛡️'; arena.appendChild(el);
+      existing.set(p.id,el);
     }
-    state.enemies.push({ id:'e'+Date.now()+'_'+i, x:ex, y:ey, hp: 60+randInt(0,30), maxHp: 60+randInt(0,30), speed: 0.7 + Math.random()*0.6, attackCooldown:0 });
-  }
-  renderEnemies();
+    el.style.left=p.x+'px'; el.style.top=p.y+'px';
+    existing.delete(p.id);
+  });
+  existing.forEach(el=>el.remove());
 }
 
-function renderEnemies(){
-  arena.querySelectorAll('.enemy').forEach(el=>el.remove());
-  for(const e of state.enemies){
-    const el = document.createElement('div');
-    el.className = 'entity enemy';
-    el.dataset.id = e.id;
-    el.innerHTML = '<div class="hpBar"><div class="hpFill" style="width:100%"></div></div>';
-    arena.appendChild(el);
-  }
-}
-
-// entity DOM sync
-function syncEnemiesDom(){
-  for(const e of state.enemies){
-    const el = arena.querySelector(`.enemy[data-id="${e.id}"]`);
-    if(!el) continue;
-    const s = 0.85 + (e.y / arena.clientHeight) * 0.25;
-    el.style.transform = `translate(${e.x-24}px, ${e.y-40}px) scale(${s}) perspective(800px) rotateX(25deg)`;
-    const hp = el.querySelector('.hpFill');
-    if(hp) hp.style.width = (e.hp/e.maxHp*100) + '%';
+//=== Enemies ===
+function spawnEnemies(count){
+  state.enemies=[]; state.battleOver=false;
+  for(let i=0;i<count;i++){
+    const ex=Math.random()*arena.clientWidth*0.8+40;
+    const ey=Math.random()*(arena.clientHeight-50)*0.7+60;
+    state.enemies.push({id:'e'+i,x:ex,y:ey,hp:60,maxHp:60,speed:0.7});
   }
 }
 
-// loot pickup
-function checkLootPickup(){
-  for(const p of state.loot){
-    if(p.taken) continue;
-    const d = Math.hypot(state.player.x - p.x, state.player.y - p.y);
-    if(d < 36){
-      p.taken = true;
-      applyLoot(p.type);
-      showMsg(p.type === 'sword' ? 'Získal si Meč (Dmg +20 na 20s)' : 'Získal si Štít (Damage -50% na 20s)');
-      save();
-      renderLoot();
-    }
-  }
-}
-
-// buffs
-let buffs = { swordEnd:0, shieldEnd:0 };
-function applyLoot(type){
-  const now = Date.now();
-  if(type === 'sword') buffs.swordEnd = now + 20000; // 20s
-  else buffs.shieldEnd = now + 20000;
-  updateBuffsUI();
-}
-
-function updateBuffsUI(){
-  const now = Date.now();
-  const active = [];
-  if(buffs.swordEnd > now) active.push('⚔ Meč');
-  if(buffs.shieldEnd > now) active.push('🛡 Štít');
-  if(active.length) { buffsDiv.style.display='block'; buffsDiv.textContent = 'Buffs: ' + active.join(' | '); }
-  else buffsDiv.style.display='none';
-}
-
-// attack (player)
-let canAttack = true;
+//=== Attack ===
 function attack(){
-  if(!state.inBattle || !canAttack) return;
-  canAttack = false;
-  setTimeout(()=> canAttack = true, 400);
-  const base = state.player.baseDmg;
-  const now = Date.now();
-  const dmg = base + (buffs.swordEnd > now ? 20 : 0);
-  let hit = false;
+  if(state.battleOver) return;
+  let hit=false;
   for(const e of state.enemies){
-    const d = Math.hypot(state.player.x - e.x, state.player.y - e.y);
-    if(d < 70){
-      e.hp -= dmg;
-      if(e.hp <= 0) e.dead = true;
-      hit = true;
-    }
+    const d=Math.hypot(state.player.x-e.x,state.player.y-e.y);
+    if(d<60){e.hp-=30;hit=true;if(e.hp<=0)e.dead=true;}
   }
-  if(hit) showMsg('Zásah!');
-  state.enemies = state.enemies.filter(e=>!e.dead);
-  renderEnemies();
-  save();
-  checkBattleResult();
+  state.enemies=state.enemies.filter(e=>!e.dead);
+  if(hit)msg('Zásah!');
+  checkBattleOver();
 }
 
-// enemy logic: move towards player but avoid walls via simple step try
-function enemyStep(e, dt){
-  const dx = state.player.x - e.x;
-  const dy = state.player.y - e.y;
-  const dist = Math.hypot(dx,dy);
-  if(dist < 28){
-    // attack cooldown
-    const now = Date.now();
-    if(!e.attackCooldown || now - e.attackCooldown > 700){
-      e.attackCooldown = now;
-      // damage reduced by shield buff
-      const shield = buffs.shieldEnd > now;
-      state.player.hp -= shield ? 6 : 12;
-      if(state.player.hp < 0) state.player.hp = 0;
-      showMsg('💥 Zasiahnutý!');
-    }
-    return;
-  }
-  // try direct step; if blocked by wall, try small offsets
-  const step = (e.speed * 50) * dt;
-  const nx = e.x + (dx/dist) * step;
-  const ny = e.y + (dy/dist) * step;
-  if(canMoveTo(nx, ny, 20)){
-    e.x = nx; e.y = ny;
-    return;
-  }
-  // try offsets: left/right
-  const perp = { x: -dy/dist, y: dx/dist };
-  const candidates = [
-    {x: e.x + perp.x * 30, y: e.y + perp.y * 30},
-    {x: e.x - perp.x * 30, y: e.y - perp.y * 30},
-    {x: e.x + perp.x * 60, y: e.y + perp.y * 60},
-    {x: e.x - perp.x * 60, y: e.y - perp.y * 60}
-  ];
-  for(const c of candidates){
-    if(canMoveTo(c.x, c.y, 20)){
-      // move a bit toward candidate
-      const ddx = c.x - e.x, ddy = c.y - e.y, ddd = Math.hypot(ddx,ddy);
-      e.x += (ddx/ddd) * step;
-      e.y += (ddy/ddd) * step;
-      return;
+//=== Enemy AI Attack ===
+function enemyAttack(){
+  for(const e of state.enemies){
+    const dx=state.player.x-e.x,dy=state.player.y-e.y,d=Math.hypot(dx,dy);
+    if(d>25){ // move
+      const nx=dx/d, ny=dy/d;
+      const speed=e.speed;
+      const nextX=e.x+nx*speed; const nextY=e.y+ny*speed;
+      if(!checkCollision(nextX,nextY)) { e.x=nextX; e.y=nextY; }
+    } else { // attack player
+      state.player.hp-=2;
+      if(state.player.hp<0) state.player.hp=0;
     }
   }
-  // else stay
 }
 
-// battle start & result check
-function startBattle(){
-  state.player.hp = state.player.maxHp;
-  spawnArena(); // regenerate walls/loot/enemies positioned safely if not exist
+//=== Collision with walls ===
+function checkCollision(x,y){
+  for(const w of state.walls){
+    if(Math.abs(x-w.x-20)<34 && Math.abs(y-w.y-20)<34) return true;
+  }
+  return false;
+}
+
+//=== Pickup power-ups ===
+function checkPowerUps(){
+  state.powerUps.forEach((p,i)=>{
+    const d=Math.hypot(state.player.x-p.x,state.player.y-p.y);
+    if(d<30){
+      if(p.type==='sword'){msg('Meč získaný! Útok +50% na 10s');}
+      else{msg('Štít získaný! Obrana +50% na 10s');}
+      state.powerUps.splice(i,1);
+    }
+  });
+}
+
+//=== Loop ===
+let input={x:0,y:0}; let activePointer=null,rect;
+JOY.addEventListener
+
+  // pokračovanie skriptu
+JOY.addEventListener('pointerdown',e=>{
+  activePointer=e.pointerId;rect=JOY.getBoundingClientRect();JOY.setPointerCapture(e.pointerId);
+});
+JOY.addEventListener('pointermove',e=>{
+  if(activePointer!==e.pointerId)return;
+  const dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);
+  const mag=Math.min(40,Math.hypot(dx,dy));
+  const nx=dx/mag||0,ny=dy/mag||0;
+  KNOB.style.transform=`translate(${nx*mag}px,${ny*mag}px)`;
+  input.x=nx; input.y=ny;
+});
+JOY.addEventListener('pointerup',e=>{
+  if(activePointer!==e.pointerId)return;
+  JOY.releasePointerCapture(e.pointerId);activePointer=null;KNOB.style.transform='translate(0,0)';
+  input.x=input.y=0;
+});
+
+startBtn.onclick=()=>{
+  state.mode=parseInt(modeSelect.value);
   spawnEnemies(state.mode);
-  state.inBattle = true;
-  state.resultShown = false;
+  generateWalls();
+  generatePowerUps();
+  msg('Súperi: '+state.mode);
   save();
-  showMsg('Battle: ' + state.mode + ' enemy(s)');
-}
+};
+clearBtn.onclick=()=>{if(confirm('Vymazať dáta?'))clearAll();}
+attackBtn.onclick=attack;
 
-function checkBattleResult(){
-  if(state.resultShown) return;
-  if(state.enemies.length === 0 && state.inBattle){
-    const gain = randInt(1,15);
-    state.trophies += gain;
-    showMsg('Víťazstvo! +'+gain+'🏆');
-    state.inBattle = false;
-    state.resultShown = true;
-    save();
-  } else if(state.player.hp <= 0 && state.inBattle){
-    state.player.hp = 0;
-    state.trophies = Math.max(0, state.trophies - 3);
-    showMsg('Prehra! -3 🏆');
-    state.inBattle = false;
-    state.resultShown = true;
+function checkBattleOver(){
+  if(state.enemies.length===0 && !state.battleOver){
+    const add=Math.floor(Math.random()*15)+5;
+    state.trophies+=add;
+    msg('Výhra! +'+add+'🏆');
+    state.battleOver=true;
     save();
   }
 }
 
-// spawn logic ensuring walls/loot exist
-function spawnArena(){
-  // if walls/loot saved, keep; otherwise generate
-  if(!state.walls || state.walls.length === 0) genWalls();
-  if(!state.loot || state.loot.length === 0) genLoot();
+function loop(){
+  ensurePlayer();
+  // pohyb hráča
+  const nextX=state.player.x+input.x*3;
+  const nextY=state.player.y+input.y*3;
+  if(!checkCollision(nextX,nextY)){
+    state.player.x=nextX; state.player.y=nextY;
+  }
+  state.player.x=Math.max(24,Math.min(arena.clientWidth-24,state.player.x));
+  state.player.y=Math.max(40,Math.min(arena.clientHeight-40,state.player.y));
+
+  // nepriatelia pohyb a útok
+  enemyAttack();
+  // power-ups
+  checkPowerUps();
+
+  // vykreslenie hráča
+  playerEl.style.left=(state.player.x-24)+'px';
+  playerEl.style.top=(state.player.y-40)+'px';
+  playerEl.querySelector('.hpFill').style.width=(state.player.hp/state.player.maxHp*100)+'%';
+
+  // vykreslenie nepriateľov
+  const existingEnemies=new Map();arena.querySelectorAll('.enemy').forEach(el=>existingEnemies.set(el.dataset.id,el));
+  state.enemies.forEach(e=>{
+    let el=existingEnemies.get(e.id);
+    if(!el){el=document.createElement('div');el.className='entity enemy';el.dataset.id=e.id;el.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';arena.appendChild(el);}
+    el.style.left=(e.x-24)+'px'; el.style.top=(e.y-40)+'px';
+    el.querySelector('.hpFill').style.width=(e.hp/e.maxHp*100)+'%';
+    existingEnemies.delete(e.id);
+  });
+  existingEnemies.forEach(el=>el.remove());
+
+  // vykreslenie stien a power-upov
   renderWalls();
-  renderLoot();
-}
+  renderPowerUps();
 
-// render loop
-let last = performance.now();
-function loop(now){
-  const dt = (now - last) / 1000; last = now;
-  // movement (player)
-  if(!playerEl) createPlayerEl();
-  if(state.inBattle){
-    // smooth move by input vector (input normalized)
-    const speed = 120; // px/sec
-    const nx = state.player.x + input.x * speed * dt;
-    const ny = state.player.y + input.y * speed * dt;
-    if(canMoveTo(nx, ny, 20)){ state.player.x = nx; state.player.y = ny; }
-    // enemies step
-    for(const e of state.enemies) enemyStep(e, dt);
-    // pickups collision
-    checkLootPickup();
-  }
-  syncPlayerDom();
-  syncEnemiesDom();
-  trophyAndUI();
-  updateBuffsUI();
-  checkBattleResult();
   requestAnimationFrame(loop);
 }
 
-function trophyAndUI(){ trophiesEl.textContent = state.trophies; }
-
-// joystick handling (pointer)
-let input = {x:0,y:0}, activePointer = null, joyRect=null;
-JOY.addEventListener('pointerdown', e=>{
-  activePointer = e.pointerId; JOY.setPointerCapture(e.pointerId); joyRect = JOY.getBoundingClientRect();
-});
-JOY.addEventListener('pointermove', e=>{
-  if(activePointer !== e.pointerId) return;
-  const dx = e.clientX - (joyRect.left + joyRect.width/2), dy = e.clientY - (joyRect.top + joyRect.height/2);
-  const mag = Math.min(40, Math.hypot(dx,dy));
-  const nx = mag ? dx/mag : 0; const ny = mag ? dy/mag : 0;
-  KNOB.style.transform = `translate(${nx*mag}px, ${ny*mag}px)`;
-  input.x = nx; input.y = ny;
-});
-JOY.addEventListener('pointerup', e=>{
-  if(activePointer !== e.pointerId) return;
-  JOY.releasePointerCapture(e.pointerId); activePointer = null; KNOB.style.transform = 'translate(0,0)'; input.x = input.y = 0;
-});
-
-// attack button
-attackBtn.onclick = ()=> attack();
-
-// spawn enemies (with wall avoidance)
-function spawnEnemies(count){
-  state.enemies = [];
-  const {w,h} = arenaSize();
-  for(let i=0;i<count;i++){
-    let tries = 0;
-    while(tries++ < 300){
-      const ex = randInt(40, arena.clientWidth - 40);
-      const ey = randInt(40, arena.clientHeight - 40);
-      if(!canMoveTo(ex, ey, 20)) continue;
-      if(Math.hypot(ex - state.player.x, ey - state.player.y) < 120) continue;
-      state.enemies.push({ id:'e'+Date.now()+'_'+i, x:ex, y:ey, hp: 60+randInt(0,30), maxHp: 60+randInt(0,30), speed: 0.6 + Math.random()*0.8, attackCooldown: 0 });
-      break;
-    }
-  }
-  renderEnemies();
-}
-
-// utilities
-function arenaSize(){ return { w: arena.clientWidth, h: arena.clientHeight }; }
-function renderEnemies(){ arena.querySelectorAll('.enemy').forEach(n=>n.remove()); for(const e of state.enemies){ const el = document.createElement('div'); el.className='entity enemy'; el.dataset.id = e.id; el.innerHTML = '<div class="hpBar"><div class="hpFill" style="width:100%"></div></div>'; arena.appendChild(el); } }
-function createPlayerEl(){ if(!playerEl){ playerEl = document.createElement('div'); playerEl.className='entity player'; playerEl.innerHTML = '<div class="hpBar"><div class="hpFill" style="width:100%"></div></div>'; arena.appendChild(playerEl); } }
-function syncEnemiesDom(){ for(const e of state.enemies){ const el = arena.querySelector(`.enemy[data-id="${e.id}"]`); if(!el) continue; const s = 0.85 + (e.y / arena.clientHeight) * 0.25; el.style.transform = `translate(${e.x-24}px, ${e.y-40}px) scale(${s}) perspective(800px) rotateX(25deg)`; const hp = el.querySelector('.hpFill'); if(hp) hp.style.width = (e.hp/e.maxHp*100) + '%'; } }
-function renderLoot(){ arena.querySelectorAll('.loot').forEach(n=>n.remove()); for(const p of state.loot){ if(p.taken) continue; const el = document.createElement('div'); el.className = 'loot ' + (p.type==='sword'?'loot-sword':'loot-shield'); el.dataset.id = p.id; el.style.left = (p.x-15)+'px'; el.style.top = (p.y-15)+'px'; el.textContent = p.type==='sword' ? '⚔' : '🛡'; arena.appendChild(el); } }
-function checkLootPickup(){ for(const p of state.loot){ if(p.taken) continue; const d = Math.hypot(state.player.x - p.x, state.player.y - p.y); if(d < 36){ p.taken = true; applyLoot(p.type); showMsg(p.type==='sword' ? 'Meč získaný' : 'Štít získaný'); save(); renderLoot(); } } }
-function applyLoot(type){ const now = Date.now(); if(type === 'sword') buffs.swordEnd = now + 20000; else buffs.shieldEnd = now + 20000; updateBuffsUI(); }
-function updateBuffsUI(){ const now = Date.now(); const list = []; if(buffs.swordEnd > now) list.push('⚔ Meč'); if(buffs.shieldEnd > now) list.push('🛡 Štít'); if(list.length){ buffsDiv.style.display='block'; buffsDiv.textContent = 'Buffs: ' + list.join(' | '); } else buffsDiv.style.display='none'; }
-
-// load & init
+//=== Init ===
 load();
-if(!state.player) state.player = { x:200,y:200,hp:100,maxHp:100, baseDmg:30 };
+ensurePlayer();
 updateUI();
-if(!state.walls || state.walls.length===0) genWalls();
-if(!state.loot || state.loot.length===0) genLoot();
-renderWalls();
-renderLoot();
-createPlayerEl();
-last = performance.now();
-requestAnimationFrame(loop);
-
-// save periodically
-setInterval(()=>save(), 2500);
-
-// make sure UI fits on tiny screens
-window.addEventListener('resize', ()=> {
-  // ensure player inside bounds
-  state.player.x = clamp(state.player.x, 20, arena.clientWidth - 20);
-  state.player.y = clamp(state.player.y, 20, arena.clientHeight - 20);
-});
-
-// Expose for debug
-window._state = state;
+save();
+loop();
 </script>
 </body>
 </html>
