@@ -70,6 +70,12 @@
       border: 2px solid #000;
       transform: perspective(600px) rotateX(25deg);
       transition: transform 0.1s, box-shadow 0.1s;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px #000;
     }
 
     .building:hover {
@@ -88,18 +94,33 @@
 
     #infoBox {
       position: fixed;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.85);
       color: white;
-      padding: 8px 12px;
-      border-radius: 8px;
-      pointer-events: none;
+      padding: 12px 16px;
+      border-radius: 10px;
+      pointer-events: auto;
       font-size: 14px;
       z-index: 200;
+      min-width: 160px;
     }
 
-    .hidden {
-      display: none;
+    #infoBox button {
+      margin-top: 6px;
+      width: 100%;
+      padding: 6px;
+      border: none;
+      background: #27ae60;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
     }
+
+    #infoBox button:hover {
+      background: #2ecc71;
+    }
+
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -117,15 +138,15 @@
     const infoBox = document.getElementById('infoBox');
     const resetBtn = document.getElementById('resetBtn');
 
-    // 📍 Zoznam budov
+    // 📍 Zoznam budov s HP, DMG a levelom
     const buildings = [
-      { id: "townhall", name: "Town Hall", x: 950, y: 950, class: "townhall" },
-      { id: "cannon", name: "Cannon", x: 1100, y: 950, class: "cannon" },
-      { id: "goldmine", name: "Gold Mine", x: 800, y: 1000, class: "goldmine" },
-      { id: "goldstorage", name: "Gold Storage", x: 1200, y: 900, class: "goldstorage" },
-      { id: "elixirmine", name: "Elixir Mine", x: 700, y: 850, class: "elixirmine" },
-      { id: "elixirstorage", name: "Elixir Storage", x: 950, y: 750, class: "elixirstorage" },
-      { id: "armycamp", name: "Army Camp", x: 1250, y: 1050, class: "armycamp" }
+      { id: "townhall", name: "Town Hall", x: 950, y: 950, class: "townhall", hp: 1500, dmg: 0, level: 1 },
+      { id: "cannon", name: "Cannon", x: 1100, y: 950, class: "cannon", hp: 800, dmg: 50, level: 1 },
+      { id: "goldmine", name: "Gold Mine", x: 800, y: 1000, class: "goldmine", hp: 600, dmg: 0, level: 1 },
+      { id: "goldstorage", name: "Gold Storage", x: 1200, y: 900, class: "goldstorage", hp: 900, dmg: 0, level: 1 },
+      { id: "elixirmine", name: "Elixir Mine", x: 700, y: 850, class: "elixirmine", hp: 600, dmg: 0, level: 1 },
+      { id: "elixirstorage", name: "Elixir Storage", x: 950, y: 750, class: "elixirstorage", hp: 900, dmg: 0, level: 1 },
+      { id: "armycamp", name: "Army Camp", x: 1250, y: 1050, class: "armycamp", hp: 700, dmg: 0, level: 1 }
     ];
 
     // 🏗️ Generovanie budov
@@ -134,12 +155,12 @@
       el.className = 'building ' + b.class;
       el.style.left = b.x + 'px';
       el.style.top = b.y + 'px';
-      el.dataset.name = b.name;
       el.dataset.id = b.id;
+      el.textContent = b.level;
       gameArea.appendChild(el);
     });
 
-    // 📦 Premenné pre zoom a pohyb
+    // 📦 Kamera
     let scale = 0.8;
     let posX = window.innerWidth / 2 - 1000;
     let posY = window.innerHeight / 2 - 1000;
@@ -161,19 +182,14 @@
       updateTransform();
     });
 
-    // 👆 Ťahanie mapy myšou
+    // 👆 Ťahanie mapy
     gameArea.addEventListener('mousedown', (e) => {
       dragging = true;
       startX = e.clientX - posX;
       startY = e.clientY - posY;
       gameArea.style.cursor = 'grabbing';
     });
-
-    window.addEventListener('mouseup', () => {
-      dragging = false;
-      gameArea.style.cursor = 'grab';
-    });
-
+    window.addEventListener('mouseup', () => dragging = false);
     window.addEventListener('mousemove', (e) => {
       if (!dragging) return;
       posX = e.clientX - startX;
@@ -181,7 +197,7 @@
       updateTransform();
     });
 
-    // 📱 Dotykové ovládanie
+    // 📱 Dotyky
     let touchStartDist = 0;
     let lastScale = 1;
     window.addEventListener('touchstart', (e) => {
@@ -192,7 +208,6 @@
         lastScale = scale;
       }
     });
-
     window.addEventListener('touchmove', (e) => {
       if (e.touches.length === 2) {
         e.preventDefault();
@@ -205,17 +220,42 @@
       }
     }, { passive: false });
 
-    // 🖱️ Klik na budovu → názov
+    // 🧱 Klik na budovu
     gameArea.addEventListener('click', (e) => {
       if (e.target.classList.contains('building')) {
-        infoBox.textContent = e.target.dataset.name + " (" + e.target.dataset.id + ")";
-        infoBox.style.left = e.pageX + 'px';
-        infoBox.style.top = e.pageY - 40 + 'px';
-        infoBox.classList.remove('hidden');
+        const id = e.target.dataset.id;
+        const b = buildings.find(x => x.id === id);
+        showInfoBox(e.pageX, e.pageY, b);
       } else {
         infoBox.classList.add('hidden');
       }
     });
+
+    // 🧩 Funkcia na zobrazenie info o budove
+    function showInfoBox(x, y, b) {
+      infoBox.innerHTML = `
+        <strong>${b.name}</strong><br>
+        Level: ${b.level}<br>
+        HP: ${b.hp}<br>
+        DMG: ${b.dmg}<br>
+        <button onclick="upgradeBuilding('${b.id}')">Upgrade</button>
+      `;
+      infoBox.style.left = x + 'px';
+      infoBox.style.top = y - 50 + 'px';
+      infoBox.classList.remove('hidden');
+    }
+
+    // ⚒️ Upgrade budovy
+    window.upgradeBuilding = function(id) {
+      const b = buildings.find(x => x.id === id);
+      b.level += 1;
+      b.hp = Math.round(b.hp * 1.1);
+      b.dmg = Math.round(b.dmg * 1.1);
+      const el = [...document.getElementsByClassName('building')]
+        .find(e => e.dataset.id === id);
+      el.textContent = b.level;
+      showInfoBox(parseInt(infoBox.style.left), parseInt(infoBox.style.top) + 50, b);
+    };
 
     // 🔄 Reset pohľadu
     resetBtn.addEventListener('click', () => {
@@ -227,4 +267,4 @@
     });
   </script>
 </body>
-  </html>
+</html>
