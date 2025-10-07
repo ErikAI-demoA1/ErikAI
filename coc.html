@@ -1,159 +1,438 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sk">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI COC Základ</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ErikAI Mini Battle (2.5D)</title>
 <style>
-  body { margin:0; font-family:sans-serif; background:#2f3640; overflow:hidden; user-select:none; }
-  #topUI { position:fixed; top:0; width:100%; display:flex; justify-content:space-between; padding:5px 20px; z-index:100; }
-  #playerStats, #resources { color:white; font-weight:bold; font-size:16px; padding:8px 14px; background:rgba(0,0,0,0.4); border-radius:10px; white-space:nowrap; }
-  #viewport { position:absolute; top:50px; left:0; width:100%; height:calc(100vh - 50px); overflow:hidden; }
-  #gameArea { position:absolute; width:2000px; height:2000px; background:linear-gradient(to top, #44bd32,#6ab04c); transform-origin:center center; cursor:grab; }
-  .building { position:absolute; width:80px; height:80px; border-radius:10px; border:2px solid #000; transform:perspective(600px) rotateX(25deg); transition: transform 0.1s, box-shadow 0.1s; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; text-shadow:1px 1px 2px #000; cursor:pointer; }
-  .building:hover { transform:perspective(600px) rotateX(25deg) scale(1.1); box-shadow:0 0 10px rgba(0,0,0,0.4); }
-  .townhall{background:#d35400;} .cannon{background:#718093;} .goldmine{background:#e1b12c;} .goldstorage{background:#fbc531;} .elixirmine{background:#9c88ff;} .elixirstorage{background:#8c7ae6;} .armycamp{background:#44bd32;}
-  #infoBox { position:fixed; background:rgba(0,0,0,0.85); color:white; padding:12px 16px; border-radius:10px; pointer-events:auto; font-size:14px; z-index:200; min-width:200px; }
-  #infoBox button{ margin-top:6px; width:100%; padding:6px; border:none; background:#27ae60; color:white; border-radius:6px; cursor:pointer; font-weight:bold; }
-  #infoBox button:hover{ background:#2ecc71; }
-  .hidden{ display:none; }
-  #buildingProgress { height:8px; background:#555; border-radius:4px; overflow:hidden; margin-top:5px; }
-  #progressBar { height:8px; background:#2ecc71; width:0%; transition:width 1s linear; }
+  :root{--ui-bg:rgba(0,0,0,0.45);--yellow:#f6e58d}
+  body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:#222;color:#fff;overflow:hidden}
+  header{position:fixed;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(0,0,0,0.6);z-index:40}
+  header .left, header .right{display:flex;gap:10px;align-items:center}
+  input[type="text"]{padding:6px;border-radius:6px;border:1px solid #333;background:#111;color:#fff}
+  select, button{padding:6px 8px;border-radius:6px;border:1px solid #333;background:#333;color:#fff;cursor:pointer}
+  button.small{padding:6px 10px}
+  #arenaWrap{position:fixed;top:64px;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center}
+  #arena{width:92vw;height:78vh;background:var(--yellow);position:relative;overflow:hidden;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+  /* 2.5D style */
+  .entity{position:absolute;width:44px;height:44px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700; text-shadow:0 1px 0 rgba(0,0,0,0.6); transform-origin:center bottom; transform:perspective(800px) rotateX(25deg)}
+  .player{background:#e74c3c;border:3px solid #b83b2f;z-index:30}
+  .enemy{background:#2980b9;border:3px solid #1f5f8a;z-index:20}
+  .hpBar{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 6px);width:48px;height:6px;background:rgba(0,0,0,0.5);border-radius:6px;overflow:hidden}
+  .hpFill{height:100%;background:linear-gradient(90deg,#2ecc71,#27ae60);width:100%}
+  #uiPanel{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;z-index:50}
+  .controlBtn{padding:10px 14px;border-radius:8px;background:#333;border:1px solid #222;color:#fff;font-weight:700}
+  /* joystick */
+  #joystick{position:absolute;left:12px;bottom:12px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;touch-action:none;z-index:60}
+  #joyKnob{width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,0.35);box-shadow:inset 0 -3px 6px rgba(0,0,0,0.4)}
+  /* small text */
+  .muted{opacity:0.85;font-size:13px}
+  #bottomMsg{position:fixed;left:50%;transform:translateX(-50%);bottom:6px;background:rgba(0,0,0,0.6);padding:6px 10px;border-radius:8px;font-size:13px;z-index:80}
+  /* responsive */
+  @media (max-width:700px){ #arena{width:96vw;height:74vh} #joystick{left:10px;bottom:10px;width:110px;height:110px} #joyKnob{width:44px;height:44px} }
 </style>
 </head>
 <body>
 
-<div id="topUI">
-  <div id="playerStats">👤 <span id="playerName">ErikAI</span> | Level: <span id="playerLevel">1</span> | 🏆 <span id="trophies">0</span></div>
-  <div id="resources">💰 Gold: <span id="gold">1000</span> | 🧪 Elixir: <span id="elixir">800</span> | 💎 Gemy: <span id="gems">100</span></div>
+<header>
+  <div class="left">
+    <label class="muted">Meno:</label>
+    <input id="nameInput" type="text" placeholder="Zadaj meno" />
+    <button id="saveName" class="small">Uložiť</button>
+    <div id="trophiesDisplay" class="muted" style="margin-left:8px">🏆 0</div>
+  </div>
+
+  <div class="right">
+    <label class="muted">Mode:</label>
+    <select id="modeSelect">
+      <option value="1">1 hráč (1 enemy)</option>
+      <option value="2">2 hráči</option>
+      <option value="3">3 hráči</option>
+      <option value="4">4 hráči</option>
+      <option value="5" selected>5 hráčov</option>
+    </select>
+    <button id="startBtn">Start Battle</button>
+    <button id="clearBtn" style="background:#a33">Vymazať históriu</button>
+  </div>
+</header>
+
+<div id="arenaWrap">
+  <div id="arena"></div>
 </div>
 
-<div id="viewport">
-  <div id="gameArea"></div>
+<!-- joystick + controls -->
+<div id="joystick" aria-hidden="true"><div id="joyKnob"></div></div>
+
+<div id="uiPanel" aria-hidden="true">
+  <button id="attackBtn" class="controlBtn">ATTACK</button>
+  <button id="superBtn" class="controlBtn">SUPER (Rage)</button>
 </div>
 
-<div id="infoBox" class="hidden"></div>
+<div id="bottomMsg" style="display:none"></div>
 
 <script>
-const gameArea = document.getElementById('gameArea');
-const infoBox = document.getElementById('infoBox');
+/*
+  Mini battle prototype — single HTML.
+  - Player (red) with joystick/keys movement
+  - Mode selects number of enemies (1..5)
+  - Attack button damages nearby enemy
+  - Super (rage) increases attack for short time
+  - Win => +random(1..15) trophies; Lose => -3 trophies
+  - Auto-save to localStorage; clear button wipes data
+  - Save: name, trophies, player pos
+*/
 
-const player = { name:"ErikAI", level:1, trophies:0, gold:1000, elixir:800, gems:100 };
+const arena = document.getElementById('arena');
+const nameInput = document.getElementById('nameInput');
+const saveNameBtn = document.getElementById('saveName');
+const trophiesDisplay = document.getElementById('trophiesDisplay');
+const modeSelect = document.getElementById('modeSelect');
+const startBtn = document.getElementById('startBtn');
+const clearBtn = document.getElementById('clearBtn');
+const attackBtn = document.getElementById('attackBtn');
+const superBtn = document.getElementById('superBtn');
+const bottomMsg = document.getElementById('bottomMsg');
 
-const buildings = [
-  {id:"townhall", name:"Town Hall", x:950,y:950,class:"townhall",hp:1500,level:1, upgrading:false, type:"center"},
-  {id:"cannon", name:"Cannon", x:1100,y:950,class:"cannon",hp:800,level:1,upgrading:false,type:"defense"},
-  {id:"goldmine", name:"Gold Mine", x:800,y:1000,class:"goldmine",hp:600,level:1,prod:10,stored:0,maxStore:500,upgrading:false,type:"mine"},
-  {id:"goldstorage", name:"Gold Storage", x:880,y:920,class:"goldstorage",hp:900,level:1,capacity:2000,type:"storage"},
-  {id:"elixirmine", name:"Elixir Mine", x:700,y:850,class:"elixirmine",hp:600,level:1,prod:5,stored:0,maxStore:500,upgrading:false,type:"mine"},
-  {id:"elixirstorage", name:"Elixir Storage", x:820,y:890,class:"elixirstorage",hp:900,level:1,capacity:2000,type:"storage"},
-  {id:"armycamp", name:"Army Camp", x:1050,y:1000,class:"armycamp",hp:800,level:1,type:"army"}
-];
+const JOY = document.getElementById('joystick');
+const KNOB = document.getElementById('joyKnob');
 
-// Vytvorenie budov
-buildings.forEach(b=>{
-  const el=document.createElement('div');
-  el.className='building '+b.class;
-  el.style.left=b.x+'px';
-  el.style.top=b.y+'px';
-  el.dataset.id=b.id;
-  el.textContent=b.level;
-  gameArea.appendChild(el);
-});
+const SAVE_KEY = 'mini_coc_save_v1';
 
-// Kamera a pohyb
-let scale=0.8, posX=window.innerWidth/2-1000, posY=window.innerHeight/2-1000, dragging=false, startX, startY;
-function updateTransform(){ gameArea.style.transform=`translate(${posX}px,${posY}px) scale(${scale})`; }
-updateTransform();
-
-window.addEventListener('wheel',e=>{ e.preventDefault(); scale += e.deltaY<0?0.1:-0.1; scale=Math.min(Math.max(0.5,scale),2.5); updateTransform(); });
-gameArea.addEventListener('mousedown',e=>{
-  if(!e.target.classList.contains('building')){ dragging=true; startX=e.clientX-posX; startY=e.clientY-posY; gameArea.style.cursor='grabbing'; }
-});
-window.addEventListener('mouseup',()=>{ dragging=false; gameArea.style.cursor='grab'; });
-window.addEventListener('mousemove',e=>{
-  if(dragging){ posX=e.clientX-startX; posY=e.clientY-startY; updateTransform(); }
-});
-
-// Klik na budovu
-gameArea.addEventListener('click',e=>{
-  if(e.target.classList.contains('building')){
-    const b=buildings.find(x=>x.id===e.target.dataset.id);
-    showInfoBox(e.pageX,e.pageY,b);
-  } else infoBox.classList.add('hidden');
-});
-
-function showInfoBox(x,y,b){
-  let html = `<strong>${b.name}</strong><br>Level: ${b.level}<br>HP: ${b.hp}<br>`;
-  if(b.prod) html+=`Produkuje: ${b.prod}/5s<br>Uložené: ${b.stored}/${b.maxStore}<br>`;
-  if(b.capacity) html+=`Kapacita: ${b.capacity}<br>`;
-  if(b.upgrading){
-    html+=`<div id="buildingProgress"><div id="progressBar"></div></div>Upgrade prebieha...`;
-  } else {
-    html+=`<button onclick="upgradeBuilding('${b.id}')">Upgrade</button>`;
-  }
-  infoBox.innerHTML=html;
-  infoBox.style.left=x+'px'; infoBox.style.top=y-60+'px'; infoBox.classList.remove('hidden');
-}
-
-// Upgrade budovy (s časom)
-window.upgradeBuilding=function(id){
-  const b=buildings.find(x=>x.id===id);
-  if(b.upgrading) return;
-  const cost=200*b.level;
-  if(player.gold<cost){ alert("Nedostatok zlata!"); return; }
-  player.gold-=cost;
-  document.getElementById('gold').textContent=player.gold;
-  b.upgrading=true;
-  const duration=5000; // 5s na test
-  const el=document.querySelector(`[data-id="${id}"]`);
-  let elapsed=0;
-  const bar=document.createElement('div');
-  bar.id='progressBar';
-  const box=document.createElement('div');
-  box.id='buildingProgress';
-  box.appendChild(bar);
-  infoBox.appendChild(box);
-  const interval=setInterval(()=>{
-    elapsed+=100;
-    const percent=Math.min(100,(elapsed/duration)*100);
-    bar.style.width=percent+'%';
-    if(elapsed>=duration){
-      clearInterval(interval);
-      b.level+=1;
-      b.hp=Math.round(b.hp*1.15);
-      b.prod?b.prod=Math.round(b.prod*1.2):null;
-      el.textContent=b.level;
-      b.upgrading=false;
-      showInfoBox(parseInt(infoBox.style.left),parseInt(infoBox.style.top),b);
-    }
-  },100);
+// game state
+let state = {
+  name: 'ErikAI',
+  trophies: 0,
+  mode: 5,
+  player: { x: 300, y: 200, hp: 100, maxHp:100, level:1 },
+  enemies: [],
+  savedAt: Date.now()
 };
 
-// Generovanie surovín
-setInterval(()=>{
-  let totalGoldAdd=0, totalElixirAdd=0;
-  buildings.forEach(b=>{
-    if(b.type==="mine"){
-      b.stored=Math.min(b.maxStore,b.stored+b.prod);
+// movement
+let input = { x:0, y:0 };
+let touchId = null;
+let knobCenter = null;
+
+// attack/super
+let canAttack = true;
+let baseDamage = 25;
+let superActive = false;
+
+// utility
+function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+// save/load
+function saveState(){
+  state.savedAt = Date.now();
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(raw){ state = JSON.parse(raw); }
+  }catch(e){ console.error('load err',e); }
+}
+function clearSave(){
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+}
+
+// UI updates
+function refreshUI(){
+  trophiesDisplay.textContent = '🏆 ' + state.trophies;
+  nameInput.value = state.name || '';
+  modeSelect.value = state.mode;
+}
+saveNameBtn.addEventListener('click', ()=>{
+  const v = nameInput.value.trim();
+  if(v){ state.name = v; saveState(); refreshUI(); bottomNotice('Meno uložené: '+v); }
+});
+
+// bottom notice
+let noticeTimer = null;
+function bottomNotice(txt,ms=2000){
+  bottomMsg.textContent = txt; bottomMsg.style.display='block';
+  clearTimeout(noticeTimer); noticeTimer = setTimeout(()=> bottomMsg.style.display='none', ms);
+}
+
+// create player element
+let playerEl = null;
+function createPlayerEl(){
+  playerEl = document.createElement('div');
+  playerEl.className = 'entity player';
+  playerEl.style.width = '56px'; playerEl.style.height = '56px';
+  playerEl.innerHTML = '<div class="hpBar"><div class="hpFill" style="width:100%"></div></div>';
+  arena.appendChild(playerEl);
+}
+
+// enemies management
+function spawnEnemies(count){
+  // clear any existing
+  state.enemies = [];
+  // spawn at random positions
+  for(let i=0;i<count;i++){
+    const ex = randInt(40, arena.clientWidth-80);
+    const ey = randInt(40, arena.clientHeight-80);
+    state.enemies.push({ id: 'e'+Date.now()+'_'+i, x:ex, y:ey, hp:60, maxHp:60, speed:0.7 + Math.random()*0.6 });
+  }
+}
+
+// render loop
+function renderEntities(){
+  // player
+  if(!playerEl) createPlayerEl();
+  playerEl.style.left = (state.player.x - 28) + 'px';
+  playerEl.style.top = (state.player.y - 46) + 'px';
+  const pHpFill = playerEl.querySelector('.hpFill');
+  pHpFill.style.width = (state.player.hp/state.player.maxHp*100)+'%';
+
+  // enemies DOM sync
+  const existing = new Map();
+  arena.querySelectorAll('.entity.enemy').forEach(el=> existing.set(el.dataset.id, el));
+  // create/update
+  state.enemies.forEach(en=>{
+    let el = existing.get(en.id);
+    if(!el){
+      el = document.createElement('div');
+      el.className = 'entity enemy';
+      el.dataset.id = en.id;
+      el.style.width='50px'; el.style.height='50px';
+      el.innerHTML = '<div class="hpBar"><div class="hpFill" style="width:100%"></div></div>';
+      arena.appendChild(el);
+      existing.set(en.id, el);
+    }
+    el.style.left = (en.x - 25) + 'px';
+    el.style.top = (en.y - 42) + 'px';
+    const hp = el.querySelector('.hpFill');
+    hp.style.width = (en.hp/en.maxHp*100)+'%';
+  });
+  // remove extras
+  existing.forEach((el,id)=>{
+    if(!state.enemies.find(e=>e.id===id)){
+      el.remove();
     }
   });
-  // Prenos do storage
-  const goldStorage=buildings.find(x=>x.id==='goldstorage');
-  const elixirStorage=buildings.find(x=>x.id==='elixirstorage');
-  const goldMine=buildings.find(x=>x.id==='goldmine');
-  const elixirMine=buildings.find(x=>x.id==='elixirmine');
-  if(goldMine && goldStorage) {
-    const collect=Math.min(goldMine.stored, goldStorage.capacity - (player.gold));
-    player.gold+=collect; goldMine.stored-=collect;
+}
+
+// simple physics & AI
+function update(dt){
+  // move player by input
+  const speed = 160 * dt; // px per second base
+  state.player.x += input.x * speed;
+  state.player.y += input.y * speed;
+  // clamp inside arena
+  state.player.x = clamp(state.player.x, 30, arena.clientWidth-30);
+  state.player.y = clamp(state.player.y, 30, arena.clientHeight-30);
+
+  // enemies move towards player
+  state.enemies.forEach(en=>{
+    const dx = state.player.x - en.x;
+    const dy = state.player.y - en.y;
+    const dist = Math.hypot(dx,dy);
+    if(dist > 28){
+      en.x += (dx/dist) * (en.speed * 60 * dt);
+      en.y += (dy/dist) * (en.speed * 60 * dt);
+    } else {
+      // enemy attack player
+      enAttack(en);
+    }
+  });
+
+  // check dead enemies
+  const before = state.enemies.length;
+  state.enemies = state.enemies.filter(e => e.hp > 0);
+  if(state.enemies.length !== before){
+    // some died
+    if(state.enemies.length === 0){
+      // player won
+      const gain = randInt(1,15);
+      state.trophies += gain;
+      bottomNotice(`Vyhral si! +${gain} 🏆`);
+      saveState();
+      refreshUI();
+    }
   }
-  if(elixirMine && elixirStorage) {
-    const collect=Math.min(elixirMine.stored, elixirStorage.capacity - (player.elixir));
-    player.elixir+=collect; elixirMine.stored-=collect;
+
+  // check player death
+  if(state.player.hp <= 0){
+    state.player.hp = 0;
+    state.trophies = Math.max(0, state.trophies - 3);
+    bottomNotice('Prehral si! -3 🏆');
+    saveState();
+    refreshUI();
+    // respawn player after short delay and end battle
+    setTimeout(()=> {
+      // restore hp and reposition
+      state.player.hp = state.player.maxHp || 100;
+      // clear enemies
+      state.enemies = [];
+      saveState();
+    }, 900);
   }
-  document.getElementById('gold').textContent=player.gold;
-  document.getElementById('elixir').textContent=player.elixir;
-},5000);
+
+  // render
+  renderEntities();
+}
+
+// enemy attacks player (simple cooldown)
+let enemyAttackCooldown = {};
+function enAttack(en){
+  const key = en.id;
+  const now = Date.now();
+  if(!enemyAttackCooldown[key] || now - enemyAttackCooldown[key] > 800){
+    enemyAttackCooldown[key] = now;
+    state.player.hp -= 8; // enemy damage
+    state.player.hp = Math.max(0, state.player.hp);
+  }
+}
+
+// attack button handler
+function doAttack(){
+  if(!canAttack) return;
+  canAttack = false;
+  setTimeout(()=> canAttack = true, 400); // attack rate
+
+  const dmg = baseDamage * (superActive ? 1.8 : 1);
+  // find nearest enemy within range (60px)
+  let nearest = null; let nd = 9999;
+  state.enemies.forEach(en=>{
+    const d = Math.hypot(state.player.x - en.x, state.player.y - en.y);
+    if(d < 60 && d < nd){ nearest = en; nd = d; }
+  });
+  if(nearest){
+    nearest.hp -= dmg;
+    if(nearest.hp <= 0){
+      nearest.hp = 0;
+    }
+  } else {
+    bottomNotice('Žiadny nepriateľ v dosahu', 900);
+  }
+}
+
+// super button (rage)
+let superTimer = null;
+function activateSuper(){
+  if(superActive) return;
+  if(state.gems <= 0) { bottomNotice('Nie sú gemy'); return; }
+  state.gems -= 1; saveState(); refreshUI();
+  superActive = true;
+  bottomNotice('SUPER aktívny (10s)');
+  superBtn.style.background = '#b03';
+  if(superTimer) clearTimeout(superTimer);
+  superTimer = setTimeout(()=> {
+    superActive = false; superBtn.style.background=''; bottomNotice('Super skončil',1200);
+  },10000);
+}
+
+// start battle
+function startBattle(){
+  const mode = parseInt(modeSelect.value);
+  state.mode = mode;
+  spawnEnemies(mode);
+  saveState();
+  bottomNotice('Battle started: ' + mode + ' enemy(s)', 1200);
+}
+
+// spawn enemies
+function spawnEnemies(count){
+  state.enemies = [];
+  for(let i=0;i<count;i++){
+    const ex = randInt(60, arena.clientWidth - 60);
+    const ey = randInt(60, arena.clientHeight - 60);
+    // if too close to player, offset
+    if(Math.hypot(ex-state.player.x, ey-state.player.y) < 140){
+      ex += 120; ey += 60;
+    }
+    state.enemies.push({ id: 'e'+Date.now()+'_'+i, x:ex, y:ey, hp: 60 + randInt(0,40), maxHp: 60 + randInt(0,40), speed: 0.7 + Math.random()*0.6 });
+  }
+  saveState();
+}
+
+// joystick: pointer events
+let joystickRect = JOY.getBoundingClientRect();
+function updateKnob(dx,dy){
+  const max = 36;
+  const mag = Math.hypot(dx,dy);
+  const nx = mag ? dx/mag : 0;
+  const ny = mag ? dy/mag : 0;
+  const dist = Math.min(max, mag);
+  KNOB.style.transform = `translate(${nx*dist}px, ${ny*dist}px)`;
+  input.x = (nx * (dist/max));
+  input.y = (ny * (dist/max));
+}
+function resetKnob(){ KNOB.style.transform='translate(0,0)'; input.x=0; input.y=0; }
+
+let activePointer = null;
+JOY.addEventListener('pointerdown', e => {
+  JOY.setPointerCapture(e.pointerId);
+  activePointer = e.pointerId;
+  joystickRect = JOY.getBoundingClientRect();
+});
+JOY.addEventListener('pointermove', e => {
+  if(activePointer !== e.pointerId) return;
+  const dx = e.clientX - (joystickRect.left + joystickRect.width/2);
+  const dy = e.clientY - (joystickRect.top + joystickRect.height/2);
+  updateKnob(dx,dy);
+});
+JOY.addEventListener('pointerup', e => {
+  if(activePointer !== e.pointerId) return;
+  JOY.releasePointerCapture(e.pointerId);
+  activePointer = null;
+  resetKnob();
+});
+
+// keyboard controls
+const keyMap = {};
+window.addEventListener('keydown', e=>{
+  keyMap[e.key] = true;
+  refreshInputFromKeys();
+  // attack keys
+  if(e.key === ' '){ doAttack(); }
+});
+window.addEventListener('keyup', e=>{
+  keyMap[e.key] = false;
+  refreshInputFromKeys();
+});
+function refreshInputFromKeys(){
+  let x=0,y=0;
+  if(keyMap['ArrowUp']||keyMap['w']) y = -1;
+  if(keyMap['ArrowDown']||keyMap['s']) y = 1;
+  if(keyMap['ArrowLeft']||keyMap['a']) x = -1;
+  if(keyMap['ArrowRight']||keyMap['d']) x = 1;
+  // normalize
+  const mag = Math.hypot(x,y);
+  input.x = mag? x/mag : 0;
+  input.y = mag? y/mag : 0;
+}
+
+// buttons
+attackBtn.addEventListener('click', ()=> doAttack());
+superBtn.addEventListener('click', ()=> activateSuper());
+startBtn.addEventListener('click', ()=> startBattle());
+clearBtn.addEventListener('click', ()=> { if(confirm('Vymazať uložené dáta?')) clearSave(); });
+
+// autosave & load
+loadState();
+if(!state.player) state.player = { x:300,y:200,hp:100,maxHp:100 };
+refreshUI();
+saveState();
+
+// initial render
+let last = performance.now();
+function loop(t){
+  const dt = (t-last)/1000;
+  last = t;
+  update(dt);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// save periodically
+setInterval(()=> saveState(), 3000);
+
+// expose for debug
+window._state = state;
 </script>
 </body>
 </html>
