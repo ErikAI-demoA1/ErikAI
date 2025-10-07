@@ -58,6 +58,7 @@ button{cursor:pointer}
 <div id="bottomMsg" style="display:none"></div>
 
 <script>
+window.onload = () => {
 const arena=document.getElementById('arena');
 const trophiesEl=document.getElementById('trophies');
 const nameInput=document.getElementById('nameInput');
@@ -91,7 +92,7 @@ function ensurePlayer(){if(!playerEl){playerEl=document.createElement('div');pla
 
 //=== Walls ===
 function generateWalls(){
-  state.walls=[]; // clear old
+  state.walls=[];
   for(let i=0;i<10;i++){
     const wx=Math.random()*(arena.clientWidth-40);
     const wy=Math.random()*(arena.clientHeight-40-50)+50;
@@ -112,7 +113,7 @@ function renderWalls(){
 //=== Power-ups ===
 function generatePowerUps(){
   state.powerUps=[];
-  const count=2+Math.floor(Math.random()*3); // 2-4
+  const count=2+Math.floor(Math.random()*3);
   for(let i=0;i<count;i++){
     const type=Math.random()<0.5?'sword':'shield';
     const px=Math.random()*(arena.clientWidth-36);
@@ -163,19 +164,19 @@ function attack(){
 function enemyAttack(){
   for(const e of state.enemies){
     const dx=state.player.x-e.x,dy=state.player.y-e.y,d=Math.hypot(dx,dy);
-    if(d>25){ // move
+    if(d>25){
       const nx=dx/d, ny=dy/d;
       const speed=e.speed;
       const nextX=e.x+nx*speed; const nextY=e.y+ny*speed;
       if(!checkCollision(nextX,nextY)) { e.x=nextX; e.y=nextY; }
-    } else { // attack player
+    } else {
       state.player.hp-=2;
       if(state.player.hp<0) state.player.hp=0;
     }
   }
 }
 
-//=== Collision with walls ===
+//=== Collision ===
 function checkCollision(x,y){
   for(const w of state.walls){
     if(Math.abs(x-w.x-20)<34 && Math.abs(y-w.y-20)<34) return true;
@@ -183,13 +184,12 @@ function checkCollision(x,y){
   return false;
 }
 
-//=== Pickup power-ups ===
+//=== Power-ups pickup ===
 function checkPowerUps(){
   state.powerUps.forEach((p,i)=>{
     const d=Math.hypot(state.player.x-p.x,state.player.y-p.y);
     if(d<30){
-      if(p.type==='sword'){msg('Meč získaný! Útok +50% na 10s');}
-      else{msg('Štít získaný! Obrana +50% na 10s');}
+      msg(p.type==='sword'?'Meč získaný!':'Štít získaný!');
       state.powerUps.splice(i,1);
     }
   });
@@ -197,9 +197,6 @@ function checkPowerUps(){
 
 //=== Loop ===
 let input={x:0,y:0}; let activePointer=null,rect;
-JOY.addEventListener
-
-  // pokračovanie skriptu
 JOY.addEventListener('pointerdown',e=>{
   activePointer=e.pointerId;rect=JOY.getBoundingClientRect();JOY.setPointerCapture(e.pointerId);
 });
@@ -240,7 +237,6 @@ function checkBattleOver(){
 
 function loop(){
   ensurePlayer();
-  // pohyb hráča
   const nextX=state.player.x+input.x*3;
   const nextY=state.player.y+input.y*3;
   if(!checkCollision(nextX,nextY)){
@@ -249,17 +245,13 @@ function loop(){
   state.player.x=Math.max(24,Math.min(arena.clientWidth-24,state.player.x));
   state.player.y=Math.max(40,Math.min(arena.clientHeight-40,state.player.y));
 
-  // nepriatelia pohyb a útok
   enemyAttack();
-  // power-ups
   checkPowerUps();
 
-  // vykreslenie hráča
   playerEl.style.left=(state.player.x-24)+'px';
   playerEl.style.top=(state.player.y-40)+'px';
   playerEl.querySelector('.hpFill').style.width=(state.player.hp/state.player.maxHp*100)+'%';
 
-  // vykreslenie nepriateľov
   const existingEnemies=new Map();arena.querySelectorAll('.enemy').forEach(el=>existingEnemies.set(el.dataset.id,el));
   state.enemies.forEach(e=>{
     let el=existingEnemies.get(e.id);
@@ -270,10 +262,8 @@ function loop(){
   });
   existingEnemies.forEach(el=>el.remove());
 
-  // vykreslenie stien a power-upov
   renderWalls();
   renderPowerUps();
-
   requestAnimationFrame(loop);
 }
 
@@ -283,6 +273,7 @@ ensurePlayer();
 updateUI();
 save();
 loop();
+};
 </script>
 </body>
 </html>
