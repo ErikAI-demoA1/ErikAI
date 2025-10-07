@@ -1,45 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sk">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>ErikAI Mobile Battle (2.5D) – Walls & Power-ups</title>
+<title>ErikAI Mobile Battle (2.5D)</title>
 <style>
-:root{--yellow:#f6e58d}
-body{margin:0;font-family:Inter,Arial,sans-serif;background:#222;color:#fff;overflow:hidden;-webkit-user-select:none;user-select:none}
-header{position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,0.6);display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px;z-index:100}
-input,select,button{padding:8px 10px;border-radius:8px;border:none;font-size:15px}
-input{width:150px;text-align:center;background:#111;color:#fff}
-select,button{background:#333;color:#fff}
-button{cursor:pointer}
-#arena {
-  position: fixed;
-  top: 90px;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--yellow);
-  border-radius: 10px;
-  margin: 6px;
-  overflow: hidden;
-  touch-action: none;
-  position: relative;
-  min-height: calc(100vh - 100px);
-}
-.entity{position:absolute;width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;transform-origin:center bottom;transform:perspective(800px) rotateX(25deg);transition:left 0.05s, top 0.05s}
-.player{background:#e74c3c;border:3px solid #b83b2f;z-index:30}
-.enemy{background:#2980b9;border:3px solid #1f5f8a;z-index:20}
-.wall{background:#7f8c8d;width:40px;height:40px;position:absolute;border:2px solid #2c3e50;z-index:25}
-.hpBar{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);width:50px;height:6px;background:rgba(0,0,0,0.4);border-radius:6px;overflow:hidden}
-.hpFill{height:100%;background:linear-gradient(90deg,#2ecc71,#27ae60);width:100%}
-#joystick{position:fixed;left:10px;bottom:10px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;z-index:90}
-#joyKnob{width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,0.5)}
-#uiPanel{position:fixed;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px;z-index:90}
-.controlBtn{padding:12px 16px;background:#333;border:none;border-radius:8px;font-weight:bold}
-#bottomMsg{position:fixed;bottom:5px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);padding:6px 12px;border-radius:8px;font-size:13px;z-index:200}
-.powerUp{width:36px;height:36px;border-radius:6px;position:absolute;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;z-index:28;box-shadow:0 0 5px #000}
-.power-sword{background:#c0392b}
-.power-shield{background:#2980b9}
+  :root{--yellow:#f6e58d}
+  body{margin:0;font-family:Inter,Arial,sans-serif;background:#222;color:#fff;overflow:hidden;-webkit-user-select:none;user-select:none}
+  header{position:fixed;top:0;left:0;right:0;background:#111;box-shadow:0 2px 6px rgba(0,0,0,0.6);display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;z-index:100;font-size:15px}
+  input,select,button{padding:8px 10px;border-radius:8px;border:none;font-size:15px}
+  input{width:160px;text-align:center;background:#000;color:#fff}
+  select,button{background:#333;color:#fff}
+  button{cursor:pointer}
+  #arena{position:fixed;top:130px;bottom:0;left:0;right:0;background:var(--yellow);border-radius:10px;margin:6px;overflow:hidden;box-shadow:inset 0 0 10px rgba(0,0,0,0.3)}
+  .entity{position:absolute;width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;transform-origin:center bottom;transform:perspective(800px) rotateX(25deg)}
+  .player{background:#e74c3c;border:3px solid #b83b2f;z-index:30}
+  .enemy{background:#2980b9;border:3px solid #1f5f8a;z-index:20}
+  .hpBar{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);width:50px;height:6px;background:rgba(0,0,0,0.4);border-radius:6px;overflow:hidden}
+  .hpFill{height:100%;background:linear-gradient(90deg,#2ecc71,#27ae60);width:100%}
+  #joystick{position:fixed;left:10px;bottom:10px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;z-index:90}
+  #joyKnob{width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,0.5)}
+  #uiPanel{position:fixed;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px;z-index:90}
+  .controlBtn{padding:12px 16px;background:#333;border:none;border-radius:8px;font-weight:bold}
+  #bottomMsg{position:fixed;bottom:5px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);padding:6px 12px;border-radius:8px;font-size:13px;z-index:200}
 </style>
 </head>
 <body>
@@ -50,7 +33,7 @@ button{cursor:pointer}
     <button id="saveName">Uložiť</button>
   </div>
   <div>
-    🏆 <span id="trophies">0</span> | Mode:
+    🏆 <span id="trophies">0</span> | Mód:
     <select id="modeSelect">
       <option value="1">1 hráč</option>
       <option value="2">2 hráči</option>
@@ -58,6 +41,8 @@ button{cursor:pointer}
       <option value="4">4 hráči</option>
       <option value="5" selected>5 hráčov</option>
     </select>
+  </div>
+  <div style="display:flex;gap:8px;">
     <button id="startBtn">Štart</button>
     <button id="clearBtn" style="background:#a33">Reset</button>
   </div>
@@ -71,7 +56,6 @@ button{cursor:pointer}
 <div id="bottomMsg" style="display:none"></div>
 
 <script>
-window.onload = () => {
 const arena=document.getElementById('arena');
 const trophiesEl=document.getElementById('trophies');
 const nameInput=document.getElementById('nameInput');
@@ -83,11 +67,7 @@ const attackBtn=document.getElementById('attackBtn');
 const JOY=document.getElementById('joystick'),KNOB=document.getElementById('joyKnob');
 const bottomMsg=document.getElementById('bottomMsg');
 const SAVE_KEY='erikai_mobile_save';
-
-let state={
-  name:'', trophies:0, player:{x:200,y:200,hp:100,maxHp:100}, 
-  enemies:[], mode:1, walls:[], powerUps:[], battleOver:false
-};
+let state={name:'',trophies:0,player:{x:200,y:200,hp:100,maxHp:100},enemies:[],mode:1,inBattle:false,resultShown:false};
 
 //=== SAVE / LOAD ===
 function save(){localStorage.setItem(SAVE_KEY,JSON.stringify(state));}
@@ -95,74 +75,32 @@ function load(){let r=localStorage.getItem(SAVE_KEY);if(r){state=JSON.parse(r);}
 function clearAll(){localStorage.removeItem(SAVE_KEY);location.reload();}
 
 //=== UI ===
-function msg(t){bottomMsg.textContent=t;bottomMsg.style.display='block';setTimeout(()=>bottomMsg.style.display='none',1500);}
+function msg(t){bottomMsg.textContent=t;bottomMsg.style.display='block';setTimeout(()=>bottomMsg.style.display='none',2000);}
 function updateUI(){trophiesEl.textContent=state.trophies;nameInput.value=state.name||'';modeSelect.value=state.mode;}
 saveName.onclick=()=>{if(nameInput.value.trim()){state.name=nameInput.value.trim();save();msg('Meno uložené');}}
 
 //=== Player ===
 let playerEl;
-function ensurePlayer(){if(!playerEl){playerEl=document.createElement('div');playerEl.className='entity player';playerEl.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';arena.appendChild(playerEl);}}
-
-//=== Walls ===
-function generateWalls(){
-  state.walls=[];
-  for(let i=0;i<10;i++){
-    const wx=Math.random()*(arena.clientWidth-40);
-    const wy=Math.random()*(arena.clientHeight-40-50)+50;
-    state.walls.push({x:wx,y:wy});
+function ensurePlayer(){
+  if(!playerEl){
+    playerEl=document.createElement('div');
+    playerEl.className='entity player';
+    playerEl.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';
+    arena.appendChild(playerEl);
   }
-}
-function renderWalls(){
-  const existing=new Map();arena.querySelectorAll('.wall').forEach(el=>existing.set(el.dataset.id,el));
-  state.walls.forEach((w,i)=>{
-    let el=existing.get('w'+i);
-    if(!el){el=document.createElement('div');el.className='wall';el.dataset.id='w'+i;arena.appendChild(el);}
-    el.style.left=w.x+'px';el.style.top=w.y+'px';
-    existing.delete('w'+i);
-  });
-  existing.forEach(el=>el.remove());
-}
-
-//=== Power-ups ===
-function generatePowerUps(){
-  state.powerUps=[];
-  const count=2+Math.floor(Math.random()*3);
-  for(let i=0;i<count;i++){
-    const type=Math.random()<0.5?'sword':'shield';
-    const px=Math.random()*(arena.clientWidth-36);
-    const py=Math.random()*(arena.clientHeight-36-50)+50;
-    state.powerUps.push({id:'p'+i,type:type,x:px,y:py});
-  }
-}
-function renderPowerUps(){
-  const existing=new Map();arena.querySelectorAll('.powerUp').forEach(el=>existing.set(el.dataset.id,el));
-  state.powerUps.forEach(p=>{
-    let el=existing.get(p.id);
-    if(!el){
-      el=document.createElement('div');
-      el.className='powerUp '+(p.type==='sword'?'power-sword':'power-shield');
-      el.dataset.id=p.id; el.textContent=p.type==='sword'?'🗡️':'🛡️'; arena.appendChild(el);
-      existing.set(p.id,el);
-    }
-    el.style.left=p.x+'px'; el.style.top=p.y+'px';
-    existing.delete(p.id);
-  });
-  existing.forEach(el=>el.remove());
 }
 
 //=== Enemies ===
 function spawnEnemies(count){
-  state.enemies=[]; state.battleOver=false;
+  state.enemies=[];
   for(let i=0;i<count;i++){
-    const ex=Math.random()*arena.clientWidth*0.8+40;
-    const ey=Math.random()*(arena.clientHeight-50)*0.7+60;
-    state.enemies.push({id:'e'+i,x:ex,y:ey,hp:60,maxHp:60,speed:0.7});
+    state.enemies.push({id:'e'+i,x:Math.random()*arena.clientWidth*0.8+40,y:Math.random()*arena.clientHeight*0.7+60,hp:60,maxHp:60});
   }
 }
 
 //=== Attack ===
 function attack(){
-  if(state.battleOver) return;
+  if(!state.inBattle)return;
   let hit=false;
   for(const e of state.enemies){
     const d=Math.hypot(state.player.x-e.x,state.player.y-e.y);
@@ -170,46 +108,12 @@ function attack(){
   }
   state.enemies=state.enemies.filter(e=>!e.dead);
   if(hit)msg('Zásah!');
-  checkBattleOver();
+  checkBattleResult();
 }
 
-//=== Enemy AI Attack ===
-function enemyAttack(){
-  for(const e of state.enemies){
-    const dx=state.player.x-e.x,dy=state.player.y-e.y,d=Math.hypot(dx,dy);
-    if(d>25){
-      const nx=dx/d, ny=dy/d;
-      const speed=e.speed;
-      const nextX=e.x+nx*speed; const nextY=e.y+ny*speed;
-      if(!checkCollision(nextX,nextY)) { e.x=nextX; e.y=nextY; }
-    } else {
-      state.player.hp-=2;
-      if(state.player.hp<0) state.player.hp=0;
-    }
-  }
-}
-
-//=== Collision ===
-function checkCollision(x,y){
-  for(const w of state.walls){
-    if(Math.abs(x-w.x-20)<34 && Math.abs(y-w.y-20)<34) return true;
-  }
-  return false;
-}
-
-//=== Power-ups pickup ===
-function checkPowerUps(){
-  state.powerUps.forEach((p,i)=>{
-    const d=Math.hypot(state.player.x-p.x,state.player.y-p.y);
-    if(d<30){
-      msg(p.type==='sword'?'Meč získaný!':'Štít získaný!');
-      state.powerUps.splice(i,1);
-    }
-  });
-}
-
-//=== Loop ===
-let input={x:0,y:0}; let activePointer=null,rect;
+//=== Movement ===
+let input={x:0,y:0};
+let activePointer=null,rect;
 JOY.addEventListener('pointerdown',e=>{
   activePointer=e.pointerId;rect=JOY.getBoundingClientRect();JOY.setPointerCapture(e.pointerId);
 });
@@ -219,7 +123,7 @@ JOY.addEventListener('pointermove',e=>{
   const mag=Math.min(40,Math.hypot(dx,dy));
   const nx=dx/mag||0,ny=dy/mag||0;
   KNOB.style.transform=`translate(${nx*mag}px,${ny*mag}px)`;
-  input.x=nx; input.y=ny;
+  input.x=nx;input.y=ny;
 });
 JOY.addEventListener('pointerup',e=>{
   if(activePointer!==e.pointerId)return;
@@ -227,56 +131,89 @@ JOY.addEventListener('pointerup',e=>{
   input.x=input.y=0;
 });
 
+//=== Battle ===
 startBtn.onclick=()=>{
   state.mode=parseInt(modeSelect.value);
+  state.player.hp=state.player.maxHp;
   spawnEnemies(state.mode);
-  generateWalls();
-  generatePowerUps();
+  state.inBattle=true;
+  state.resultShown=false;
   msg('Súperi: '+state.mode);
   save();
 };
 clearBtn.onclick=()=>{if(confirm('Vymazať dáta?'))clearAll();}
 attackBtn.onclick=attack;
 
-function checkBattleOver(){
-  if(state.enemies.length===0 && !state.battleOver){
-    const add=Math.floor(Math.random()*15)+5;
+//=== Check win/lose ===
+function checkBattleResult(){
+  if(state.resultShown)return;
+  if(state.enemies.length===0){
+    const add=Math.floor(Math.random()*15)+1;
     state.trophies+=add;
-    msg('Výhra! +'+add+'🏆');
-    state.battleOver=true;
+    msg('🏆 Výhra! +'+add);
+    state.inBattle=false;
+    state.resultShown=true;
+    save();
+  }else if(state.player.hp<=0){
+    state.player.hp=0;
+    const lose=3;
+    state.trophies=Math.max(0,state.trophies-lose);
+    msg('❌ Prehra! -'+lose);
+    state.inBattle=false;
+    state.resultShown=true;
     save();
   }
 }
 
+//=== Loop ===
 function loop(){
   ensurePlayer();
-  const nextX=state.player.x+input.x*3;
-  const nextY=state.player.y+input.y*3;
-  if(!checkCollision(nextX,nextY)){
-    state.player.x=nextX; state.player.y=nextY;
+
+  if(state.inBattle){
+    // pohyb hráča
+    state.player.x+=input.x*3;
+    state.player.y+=input.y*3;
+    state.player.x=Math.max(20,Math.min(arena.clientWidth-20,state.player.x));
+    state.player.y=Math.max(20,Math.min(arena.clientHeight-20,state.player.y));
+
+    // súperi sa hýbu smerom k hráčovi
+    for(const e of state.enemies){
+      const dx=state.player.x-e.x,dy=state.player.y-e.y,d=Math.hypot(dx,dy);
+      if(d>25){e.x+=dx/d*1.2;e.y+=dy/d*1.2;}
+      else if(Math.random()<0.02){ // náhodný útok
+        state.player.hp-=10;
+        if(state.player.hp<0)state.player.hp=0;
+        msg('💥 Zasiahnutý!');
+      }
+    }
   }
-  state.player.x=Math.max(24,Math.min(arena.clientWidth-24,state.player.x));
-  state.player.y=Math.max(40,Math.min(arena.clientHeight-40,state.player.y));
 
-  enemyAttack();
-  checkPowerUps();
-
+  // vykresli hráča
   playerEl.style.left=(state.player.x-24)+'px';
   playerEl.style.top=(state.player.y-40)+'px';
   playerEl.querySelector('.hpFill').style.width=(state.player.hp/state.player.maxHp*100)+'%';
 
-  const existingEnemies=new Map();arena.querySelectorAll('.enemy').forEach(el=>existingEnemies.set(el.dataset.id,el));
-  state.enemies.forEach(e=>{
-    let el=existingEnemies.get(e.id);
-    if(!el){el=document.createElement('div');el.className='entity enemy';el.dataset.id=e.id;el.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';arena.appendChild(el);}
-    el.style.left=(e.x-24)+'px'; el.style.top=(e.y-40)+'px';
+  // súperi
+  const existing=new Map();
+  arena.querySelectorAll('.enemy').forEach(el=>existing.set(el.dataset.id,el));
+  for(const e of state.enemies){
+    let el=existing.get(e.id);
+    if(!el){
+      el=document.createElement('div');
+      el.className='entity enemy';
+      el.dataset.id=e.id;
+      el.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';
+      arena.appendChild(el);
+    }
+    el.style.left=(e.x-24)+'px';
+    el.style.top=(e.y-40)+'px';
     el.querySelector('.hpFill').style.width=(e.hp/e.maxHp*100)+'%';
-    existingEnemies.delete(e.id);
-  });
-  existingEnemies.forEach(el=>el.remove());
+    existing.delete(e.id);
+  }
+  existing.forEach(el=>el.remove());
 
-  renderWalls();
-  renderPowerUps();
+  checkBattleResult();
+  trophiesEl.textContent=state.trophies;
   requestAnimationFrame(loop);
 }
 
@@ -286,7 +223,7 @@ ensurePlayer();
 updateUI();
 save();
 loop();
-};
 </script>
 </body>
-</html>
+  </html>
+  
