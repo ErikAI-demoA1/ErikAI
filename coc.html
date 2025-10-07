@@ -11,6 +11,7 @@
       background-color: #2f3640;
       overflow: hidden;
       touch-action: none;
+      user-select: none;
     }
 
     #gameTitle {
@@ -24,6 +25,21 @@
       width: 100%;
       z-index: 100;
     }
+
+    #playerStats, #resources {
+      position: fixed;
+      top: 55px;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+      padding: 8px 14px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 10px;
+      z-index: 101;
+    }
+
+    #playerStats { left: 10px; }
+    #resources { right: 10px; }
 
     #resetBtn {
       position: fixed;
@@ -40,16 +56,14 @@
       z-index: 101;
     }
 
-    #resetBtn:hover {
-      background: #9c88ff;
-    }
+    #resetBtn:hover { background: #9c88ff; }
 
     #viewport {
       position: absolute;
-      top: 50px;
+      top: 100px;
       left: 0;
       width: 100%;
-      height: calc(100vh - 50px);
+      height: calc(100vh - 100px);
       overflow: hidden;
     }
 
@@ -76,6 +90,7 @@
       justify-content: center;
       font-weight: bold;
       text-shadow: 1px 1px 2px #000;
+      cursor: pointer;
     }
 
     .building:hover {
@@ -125,6 +140,8 @@
 </head>
 <body>
   <h1 id="gameTitle">ErikAI COC</h1>
+  <div id="playerStats">👤 ErikAI | Level: <span id="playerLevel">1</span> | 🏆 <span id="trophies">0</span></div>
+  <div id="resources">💰 Gold: <span id="gold">1000</span> | 🧪 Elixir: <span id="elixir">800</span> | 💎 Gemy: <span id="gems">100</span></div>
   <button id="resetBtn">Reset View</button>
 
   <div id="viewport">
@@ -138,7 +155,16 @@
     const infoBox = document.getElementById('infoBox');
     const resetBtn = document.getElementById('resetBtn');
 
-    // 📍 Zoznam budov s HP, DMG a levelom
+    const player = {
+      name: "ErikAI",
+      level: 1,
+      trophies: 0,
+      gold: 1000,
+      elixir: 800,
+      gems: 100
+    };
+
+    // 🏗️ Zoznam budov
     const buildings = [
       { id: "townhall", name: "Town Hall", x: 950, y: 950, class: "townhall", hp: 1500, dmg: 0, level: 1 },
       { id: "cannon", name: "Cannon", x: 1100, y: 950, class: "cannon", hp: 800, dmg: 50, level: 1 },
@@ -160,7 +186,7 @@
       gameArea.appendChild(el);
     });
 
-    // 📦 Kamera
+    // 🎥 Kamera
     let scale = 0.8;
     let posX = window.innerWidth / 2 - 1000;
     let posY = window.innerHeight / 2 - 1000;
@@ -172,17 +198,16 @@
     }
     updateTransform();
 
-    // 🖱️ Zoom kolieskom
+    // 🔍 Zoom
     window.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoomSpeed = 0.1;
-      if (e.deltaY < 0) scale += zoomSpeed;
-      else scale -= zoomSpeed;
+      scale += e.deltaY < 0 ? zoomSpeed : -zoomSpeed;
       scale = Math.min(Math.max(0.4, scale), 2.5);
       updateTransform();
     });
 
-    // 👆 Ťahanie mapy
+    // ✋ Posúvanie mapy
     gameArea.addEventListener('mousedown', (e) => {
       dragging = true;
       startX = e.clientX - posX;
@@ -197,30 +222,25 @@
       updateTransform();
     });
 
-    // 📱 Dotyky
-    let touchStartDist = 0;
-    let lastScale = 1;
-    window.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 2) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        touchStartDist = Math.hypot(dx, dy);
-        lastScale = scale;
+    // 🧱 Presúvanie budov
+    let movingBuilding = null;
+    gameArea.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('building')) {
+        movingBuilding = e.target;
       }
     });
-    window.addEventListener('touchmove', (e) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        const dist = Math.hypot(dx, dy);
-        scale = lastScale * (dist / touchStartDist);
-        scale = Math.min(Math.max(0.4, scale), 2.5);
-        updateTransform();
+    window.addEventListener('mouseup', () => movingBuilding = null);
+    window.addEventListener('mousemove', (e) => {
+      if (movingBuilding) {
+        const rect = gameArea.getBoundingClientRect();
+        const x = (e.clientX - rect.left - 40) / scale;
+        const y = (e.clientY - rect.top - 40) / scale;
+        movingBuilding.style.left = x + 'px';
+        movingBuilding.style.top = y + 'px';
       }
-    }, { passive: false });
+    });
 
-    // 🧱 Klik na budovu
+    // 🧩 Klik na budovu
     gameArea.addEventListener('click', (e) => {
       if (e.target.classList.contains('building')) {
         const id = e.target.dataset.id;
@@ -231,7 +251,7 @@
       }
     });
 
-    // 🧩 Funkcia na zobrazenie info o budove
+    // 🪄 Info box
     function showInfoBox(x, y, b) {
       infoBox.innerHTML = `
         <strong>${b.name}</strong><br>
@@ -245,16 +265,20 @@
       infoBox.classList.remove('hidden');
     }
 
-    // ⚒️ Upgrade budovy
+    // ⚒️ Upgrade
     window.upgradeBuilding = function(id) {
       const b = buildings.find(x => x.id === id);
-      b.level += 1;
-      b.hp = Math.round(b.hp * 1.1);
-      b.dmg = Math.round(b.dmg * 1.1);
-      const el = [...document.getElementsByClassName('building')]
-        .find(e => e.dataset.id === id);
-      el.textContent = b.level;
-      showInfoBox(parseInt(infoBox.style.left), parseInt(infoBox.style.top) + 50, b);
+      if (player.gold >= 100) {
+        player.gold -= 100;
+        b.level += 1;
+        b.hp = Math.round(b.hp * 1.1);
+        b.dmg = Math.round(b.dmg * 1.1);
+        document.querySelector(`[data-id="${id}"]`).textContent = b.level;
+        updateResources();
+        showInfoBox(parseInt(infoBox.style.left), parseInt(infoBox.style.top) + 50, b);
+      } else {
+        alert("❌ Máš málo zlata na upgrade!");
+      }
     };
 
     // 🔄 Reset pohľadu
@@ -265,6 +289,16 @@
       updateTransform();
       infoBox.classList.add('hidden');
     });
+
+    // 💰 Update UI
+    function updateResources() {
+      document.getElementById('gold').textContent = player.gold;
+      document.getElementById('elixir').textContent = player.elixir;
+      document.getElementById('gems').textContent = player.gems;
+      document.getElementById('playerLevel').textContent = player.level;
+      document.getElementById('trophies').textContent = player.trophies;
+    }
+    updateResources();
   </script>
 </body>
 </html>
