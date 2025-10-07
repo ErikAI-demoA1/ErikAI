@@ -6,23 +6,110 @@
 <title>ErikAI Mobile Battle (2.5D)</title>
 <style>
   :root{--yellow:#f6e58d}
-  body{margin:0;font-family:Inter,Arial,sans-serif;background:#222;color:#fff;overflow:hidden;-webkit-user-select:none;user-select:none}
-  header{position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,0.6);display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px;z-index:100}
-  input,select,button{padding:8px 10px;border-radius:8px;border:none;font-size:15px}
-  input{width:150px;text-align:center;background:#111;color:#fff}
-  select,button{background:#333;color:#fff}
+  body{
+    margin:0;
+    font-family:Inter,Arial,sans-serif;
+    background:#222;
+    color:#fff;
+    overflow:hidden;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  header{
+    position:fixed;
+    top:0;left:0;right:0;
+    background:#111;
+    box-shadow:0 2px 6px rgba(0,0,0,0.6);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    padding:10px;
+    z-index:100;
+    font-size:15px;
+  }
+  input,select,button{
+    padding:8px 10px;
+    border-radius:8px;
+    border:none;
+    font-size:15px;
+  }
+  input{
+    width:160px;
+    text-align:center;
+    background:#000;
+    color:#fff;
+  }
+  select,button{
+    background:#333;
+    color:#fff;
+  }
   button{cursor:pointer}
-  #arena{position:fixed;top:90px;bottom:0;left:0;right:0;background:var(--yellow);border-radius:10px;margin:6px;overflow:hidden}
-  .entity{position:absolute;width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;transform-origin:center bottom;transform:perspective(800px) rotateX(25deg)}
+  #arena{
+    position:fixed;
+    top:130px;bottom:0;left:0;right:0;
+    background:var(--yellow);
+    border-radius:10px;
+    margin:6px;
+    overflow:hidden;
+    box-shadow:inset 0 0 10px rgba(0,0,0,0.3);
+  }
+  .entity{
+    position:absolute;
+    width:48px;height:48px;
+    border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:bold;color:#fff;
+    transform-origin:center bottom;
+    transform:perspective(800px) rotateX(25deg);
+  }
   .player{background:#e74c3c;border:3px solid #b83b2f;z-index:30}
   .enemy{background:#2980b9;border:3px solid #1f5f8a;z-index:20}
-  .hpBar{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);width:50px;height:6px;background:rgba(0,0,0,0.4);border-radius:6px;overflow:hidden}
+  .hpBar{
+    position:absolute;
+    bottom:calc(100% + 4px);
+    left:50%;
+    transform:translateX(-50%);
+    width:50px;height:6px;
+    background:rgba(0,0,0,0.4);
+    border-radius:6px;overflow:hidden;
+  }
   .hpFill{height:100%;background:linear-gradient(90deg,#2ecc71,#27ae60);width:100%}
-  #joystick{position:fixed;left:10px;bottom:10px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;z-index:90}
-  #joyKnob{width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,0.5)}
-  #uiPanel{position:fixed;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px;z-index:90}
-  .controlBtn{padding:12px 16px;background:#333;border:none;border-radius:8px;font-weight:bold}
-  #bottomMsg{position:fixed;bottom:5px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);padding:6px 12px;border-radius:8px;font-size:13px;z-index:200}
+  #joystick{
+    position:fixed;
+    left:10px;bottom:10px;
+    width:120px;height:120px;
+    border-radius:50%;
+    background:rgba(0,0,0,0.2);
+    display:flex;align-items:center;justify-content:center;
+    z-index:90;
+  }
+  #joyKnob{
+    width:50px;height:50px;
+    border-radius:50%;
+    background:rgba(0,0,0,0.5);
+  }
+  #uiPanel{
+    position:fixed;
+    right:10px;bottom:10px;
+    display:flex;flex-direction:column;gap:8px;z-index:90;
+  }
+  .controlBtn{
+    padding:12px 16px;
+    background:#333;
+    border:none;border-radius:8px;
+    font-weight:bold;
+  }
+  #bottomMsg{
+    position:fixed;
+    bottom:5px;left:50%;
+    transform:translateX(-50%);
+    background:rgba(0,0,0,0.6);
+    padding:6px 12px;
+    border-radius:8px;
+    font-size:13px;
+    z-index:200;
+  }
 </style>
 </head>
 <body>
@@ -33,7 +120,7 @@
     <button id="saveName">Uložiť</button>
   </div>
   <div>
-    🏆 <span id="trophies">0</span> | Mode:
+    🏆 <span id="trophies">0</span> | Mód:
     <select id="modeSelect">
       <option value="1">1 hráč</option>
       <option value="2">2 hráči</option>
@@ -41,6 +128,8 @@
       <option value="4">4 hráči</option>
       <option value="5" selected>5 hráčov</option>
     </select>
+  </div>
+  <div style="display:flex;gap:8px;">
     <button id="startBtn">Štart</button>
     <button id="clearBtn" style="background:#a33">Reset</button>
   </div>
@@ -79,7 +168,14 @@ saveName.onclick=()=>{if(nameInput.value.trim()){state.name=nameInput.value.trim
 
 //=== Player ===
 let playerEl;
-function ensurePlayer(){if(!playerEl){playerEl=document.createElement('div');playerEl.className='entity player';playerEl.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';arena.appendChild(playerEl);}}
+function ensurePlayer(){
+  if(!playerEl){
+    playerEl=document.createElement('div');
+    playerEl.className='entity player';
+    playerEl.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';
+    arena.appendChild(playerEl);
+  }
+}
 
 //=== Enemies ===
 function spawnEnemies(count){
@@ -98,7 +194,12 @@ function attack(){
   }
   state.enemies=state.enemies.filter(e=>!e.dead);
   if(hit)msg('Zásah!');
-  if(state.enemies.length===0){const add=Math.floor(Math.random()*15)+1;state.trophies+=add;msg('Výhra! +'+add+'🏆');save();}
+  if(state.enemies.length===0){
+    const add=Math.floor(Math.random()*15)+1;
+    state.trophies+=add;
+    msg('Výhra! +'+add+'🏆');
+    save();
+  }
 }
 
 //=== Movement ===
@@ -151,11 +252,19 @@ function loop(){
   playerEl.querySelector('.hpFill').style.width=(state.player.hp/state.player.maxHp*100)+'%';
 
   // enemies render
-  const existing=new Map();arena.querySelectorAll('.enemy').forEach(el=>existing.set(el.dataset.id,el));
+  const existing=new Map();
+  arena.querySelectorAll('.enemy').forEach(el=>existing.set(el.dataset.id,el));
   for(const e of state.enemies){
     let el=existing.get(e.id);
-    if(!el){el=document.createElement('div');el.className='entity enemy';el.dataset.id=e.id;el.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';arena.appendChild(el);}
-    el.style.left=(e.x-24)+'px';el.style.top=(e.y-40)+'px';
+    if(!el){
+      el=document.createElement('div');
+      el.className='entity enemy';
+      el.dataset.id=e.id;
+      el.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';
+      arena.appendChild(el);
+    }
+    el.style.left=(e.x-24)+'px';
+    el.style.top=(e.y-40)+'px';
     el.querySelector('.hpFill').style.width=(e.hp/e.maxHp*100)+'%';
     existing.delete(e.id);
   }
@@ -172,4 +281,4 @@ save();
 loop();
 </script>
 </body>
-  </html>
+        </html>
