@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini COC Základ</title>
+<title>ErikAI COC Základ</title>
 <style>
   body { margin:0; font-family:sans-serif; background:#2f3640; overflow:hidden; user-select:none; }
   #topUI { position:fixed; top:0; width:100%; display:flex; justify-content:space-between; padding:5px 20px; z-index:100; }
@@ -13,10 +13,12 @@
   .building { position:absolute; width:80px; height:80px; border-radius:10px; border:2px solid #000; transform:perspective(600px) rotateX(25deg); transition: transform 0.1s, box-shadow 0.1s; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; text-shadow:1px 1px 2px #000; cursor:pointer; }
   .building:hover { transform:perspective(600px) rotateX(25deg) scale(1.1); box-shadow:0 0 10px rgba(0,0,0,0.4); }
   .townhall{background:#d35400;} .cannon{background:#718093;} .goldmine{background:#e1b12c;} .goldstorage{background:#fbc531;} .elixirmine{background:#9c88ff;} .elixirstorage{background:#8c7ae6;} .armycamp{background:#44bd32;}
-  #infoBox { position:fixed; background:rgba(0,0,0,0.85); color:white; padding:12px 16px; border-radius:10px; pointer-events:auto; font-size:14px; z-index:200; min-width:180px; }
+  #infoBox { position:fixed; background:rgba(0,0,0,0.85); color:white; padding:12px 16px; border-radius:10px; pointer-events:auto; font-size:14px; z-index:200; min-width:200px; }
   #infoBox button{ margin-top:6px; width:100%; padding:6px; border:none; background:#27ae60; color:white; border-radius:6px; cursor:pointer; font-weight:bold; }
   #infoBox button:hover{ background:#2ecc71; }
   .hidden{ display:none; }
+  #buildingProgress { height:8px; background:#555; border-radius:4px; overflow:hidden; margin-top:5px; }
+  #progressBar { height:8px; background:#2ecc71; width:0%; transition:width 1s linear; }
 </style>
 </head>
 <body>
@@ -39,10 +41,13 @@ const infoBox = document.getElementById('infoBox');
 const player = { name:"ErikAI", level:1, trophies:0, gold:1000, elixir:800, gems:100 };
 
 const buildings = [
-  {id:"townhall", name:"Town Hall", x:950,y:950,class:"townhall",hp:1500,dmg:0,level:1},
-  {id:"cannon", name:"Cannon", x:1100,y:950,class:"cannon",hp:800,dmg:50,level:1},
-  {id:"goldmine", name:"Gold Mine", x:800,y:1000,class:"goldmine",hp:600,dmg:0,level:1},
-  {id:"elixirmine", name:"Elixir Mine", x:700,y:850,class:"elixirmine",hp:600,dmg:0,level:1}
+  {id:"townhall", name:"Town Hall", x:950,y:950,class:"townhall",hp:1500,level:1, upgrading:false, type:"center"},
+  {id:"cannon", name:"Cannon", x:1100,y:950,class:"cannon",hp:800,level:1,upgrading:false,type:"defense"},
+  {id:"goldmine", name:"Gold Mine", x:800,y:1000,class:"goldmine",hp:600,level:1,prod:10,stored:0,maxStore:500,upgrading:false,type:"mine"},
+  {id:"goldstorage", name:"Gold Storage", x:880,y:920,class:"goldstorage",hp:900,level:1,capacity:2000,type:"storage"},
+  {id:"elixirmine", name:"Elixir Mine", x:700,y:850,class:"elixirmine",hp:600,level:1,prod:5,stored:0,maxStore:500,upgrading:false,type:"mine"},
+  {id:"elixirstorage", name:"Elixir Storage", x:820,y:890,class:"elixirstorage",hp:900,level:1,capacity:2000,type:"storage"},
+  {id:"armycamp", name:"Army Camp", x:1050,y:1000,class:"armycamp",hp:800,level:1,type:"army"}
 ];
 
 // Vytvorenie budov
@@ -57,25 +62,18 @@ buildings.forEach(b=>{
 });
 
 // Kamera a pohyb
-let scale=0.8, posX=window.innerWidth/2-1000, posY=window.innerHeight/2-1000, dragging=false, startX, startY, movingBuilding=null;
+let scale=0.8, posX=window.innerWidth/2-1000, posY=window.innerHeight/2-1000, dragging=false, startX, startY;
 function updateTransform(){ gameArea.style.transform=`translate(${posX}px,${posY}px) scale(${scale})`; }
 updateTransform();
 
-// Zoom
 window.addEventListener('wheel',e=>{ e.preventDefault(); scale += e.deltaY<0?0.1:-0.1; scale=Math.min(Math.max(0.5,scale),2.5); updateTransform(); });
-
-// Drag mapy
 gameArea.addEventListener('mousedown',e=>{
   if(!e.target.classList.contains('building')){ dragging=true; startX=e.clientX-posX; startY=e.clientY-posY; gameArea.style.cursor='grabbing'; }
 });
-window.addEventListener('mouseup',()=>{ dragging=false; movingBuilding=null; gameArea.style.cursor='grab'; });
+window.addEventListener('mouseup',()=>{ dragging=false; gameArea.style.cursor='grab'; });
 window.addEventListener('mousemove',e=>{
   if(dragging){ posX=e.clientX-startX; posY=e.clientY-startY; updateTransform(); }
-  if(movingBuilding){ const rect=gameArea.getBoundingClientRect(); const x=(e.clientX-rect.left-40)/scale; const y=(e.clientY-rect.top-40)/scale; movingBuilding.style.left=x+'px'; movingBuilding.style.top=y+'px'; }
 });
-
-// Presúvanie budov
-gameArea.addEventListener('mousedown',e=>{ if(e.target.classList.contains('building')) movingBuilding=e.target; });
 
 // Klik na budovu
 gameArea.addEventListener('click',e=>{
@@ -86,21 +84,73 @@ gameArea.addEventListener('click',e=>{
 });
 
 function showInfoBox(x,y,b){
-  infoBox.innerHTML=`<strong>${b.name}</strong><br>Level: ${b.level}<br>HP: ${b.hp}<br>DMG: ${b.dmg}<br>
-  <button onclick="upgradeBuilding('${b.id}')">Upgrade</button>`;
-  infoBox.style.left=x+'px'; infoBox.style.top=y-50+'px'; infoBox.classList.remove('hidden');
+  let html = `<strong>${b.name}</strong><br>Level: ${b.level}<br>HP: ${b.hp}<br>`;
+  if(b.prod) html+=`Produkuje: ${b.prod}/5s<br>Uložené: ${b.stored}/${b.maxStore}<br>`;
+  if(b.capacity) html+=`Kapacita: ${b.capacity}<br>`;
+  if(b.upgrading){
+    html+=`<div id="buildingProgress"><div id="progressBar"></div></div>Upgrade prebieha...`;
+  } else {
+    html+=`<button onclick="upgradeBuilding('${b.id}')">Upgrade</button>`;
+  }
+  infoBox.innerHTML=html;
+  infoBox.style.left=x+'px'; infoBox.style.top=y-60+'px'; infoBox.classList.remove('hidden');
 }
 
-// Upgrade budovy
+// Upgrade budovy (s časom)
 window.upgradeBuilding=function(id){
   const b=buildings.find(x=>x.id===id);
-  b.level+=1; b.hp=Math.round(b.hp*1.1); b.dmg=Math.round(b.dmg*1.1);
-  document.querySelector(`[data-id="${id}"]`).textContent=b.level;
-}
+  if(b.upgrading) return;
+  const cost=200*b.level;
+  if(player.gold<cost){ alert("Nedostatok zlata!"); return; }
+  player.gold-=cost;
+  document.getElementById('gold').textContent=player.gold;
+  b.upgrading=true;
+  const duration=5000; // 5s na test
+  const el=document.querySelector(`[data-id="${id}"]`);
+  let elapsed=0;
+  const bar=document.createElement('div');
+  bar.id='progressBar';
+  const box=document.createElement('div');
+  box.id='buildingProgress';
+  box.appendChild(bar);
+  infoBox.appendChild(box);
+  const interval=setInterval(()=>{
+    elapsed+=100;
+    const percent=Math.min(100,(elapsed/duration)*100);
+    bar.style.width=percent+'%';
+    if(elapsed>=duration){
+      clearInterval(interval);
+      b.level+=1;
+      b.hp=Math.round(b.hp*1.15);
+      b.prod?b.prod=Math.round(b.prod*1.2):null;
+      el.textContent=b.level;
+      b.upgrading=false;
+      showInfoBox(parseInt(infoBox.style.left),parseInt(infoBox.style.top),b);
+    }
+  },100);
+};
 
 // Generovanie surovín
 setInterval(()=>{
-  buildings.forEach(b=>{ if(b.class==='goldmine') player.gold+=10; if(b.class==='elixirmine') player.elixir+=5; });
+  let totalGoldAdd=0, totalElixirAdd=0;
+  buildings.forEach(b=>{
+    if(b.type==="mine"){
+      b.stored=Math.min(b.maxStore,b.stored+b.prod);
+    }
+  });
+  // Prenos do storage
+  const goldStorage=buildings.find(x=>x.id==='goldstorage');
+  const elixirStorage=buildings.find(x=>x.id==='elixirstorage');
+  const goldMine=buildings.find(x=>x.id==='goldmine');
+  const elixirMine=buildings.find(x=>x.id==='elixirmine');
+  if(goldMine && goldStorage) {
+    const collect=Math.min(goldMine.stored, goldStorage.capacity - (player.gold));
+    player.gold+=collect; goldMine.stored-=collect;
+  }
+  if(elixirMine && elixirStorage) {
+    const collect=Math.min(elixirMine.stored, elixirStorage.capacity - (player.elixir));
+    player.elixir+=collect; elixirMine.stored-=collect;
+  }
   document.getElementById('gold').textContent=player.gold;
   document.getElementById('elixir').textContent=player.elixir;
 },5000);
