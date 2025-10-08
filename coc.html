@@ -44,7 +44,7 @@ let items = [];
 let healPacks = [];
 let trophies = parseInt(localStorage.getItem("trophies")) || 0;
 
-// generovanie stien (rôzne tvary)
+// generovanie stien (rôzne tvary + random farba)
 const shapes = ["rect","circle","triangle"];
 for(let i=0;i<wallCount;i++){
   walls.push({
@@ -52,7 +52,8 @@ for(let i=0;i<wallCount;i++){
     y:Math.random()*mapSize,
     w:40+Math.random()*80,
     h:40+Math.random()*80,
-    shape:shapes[Math.floor(Math.random()*shapes.length)]
+    shape:shapes[Math.floor(Math.random()*shapes.length)],
+    color: '#'+Math.floor(Math.random()*16777215).toString(16) // random farba
   });
 }
 
@@ -135,7 +136,6 @@ function movePlayer(){
   let newX = player.x + (keys["a"]?-player.speed:0) + (keys["d"]?player.speed:0) + moveX*player.speed;
   let newY = player.y + (keys["w"]?-player.speed:0) + (keys["s"]?player.speed:0) + moveY*player.speed;
 
-  // kolízia so stenami (všetky tvary)
   let collision = walls.some(w=> collides(newX,newY,player.size,w));
   if(!collision){
     player.x = Math.max(0, Math.min(mapSize-player.size, newX));
@@ -150,10 +150,8 @@ function collides(px,py,size,w){
   } else if(w.shape==="circle"){
     const dx = (px+size/2) - (w.x+w.w/2);
     const dy = (py+size/2) - (w.y+w.h/2);
-    const dist = Math.hypot(dx,dy);
-    return dist < (size/2 + w.w/2);
+    return Math.hypot(dx,dy) < (size/2 + w.w/2);
   } else if(w.shape==="triangle"){
-    // hrubý rámec - berie sa ako štvorec
     return px < w.x + w.w && px + size > w.x && py < w.y + w.h && py + size > w.y;
   }
   return false;
@@ -169,7 +167,6 @@ function moveEnemies(){
     if(dist>5){
       const newX = e.x + dx/dist*e.speed;
       const newY = e.y + dy/dist*e.speed;
-      // aj nepriatelia narazia do stien
       if(!walls.some(w=>collides(newX,newY,e.size,w))){
         e.x = newX;
         e.y = newY;
@@ -181,7 +178,7 @@ function moveEnemies(){
       if(player.hp <= 0){
         player.hp = 0;
         player.alive = false;
-        let lose = Math.floor(55 + Math.random()*15);
+        let lose = Math.floor(55 + Math.random()*16);
         trophies = Math.max(0, trophies - lose);
         localStorage.setItem("trophies", trophies);
         alert(`💀 Prehral si! -${lose} trofejí`);
@@ -232,10 +229,10 @@ function draw(){
   ctx.lineWidth=6;
   ctx.strokeRect(-camX, -camY, mapSize, mapSize);
 
-  // steny - rôzne tvary
+  // steny - rôzne tvary a farby
   walls.forEach(w=>{
     const x = w.x - camX, y = w.y - camY;
-    ctx.fillStyle="#8b5a2b";
+    ctx.fillStyle = w.color;
     if(w.shape==="rect"){
       ctx.fillRect(x,y,w.w,w.h);
     } else if(w.shape==="circle"){
@@ -263,8 +260,6 @@ function draw(){
   // hráč
   ctx.fillStyle="red";
   ctx.fillRect(player.x-camX, player.y-camY, player.size, player.size);
-
-  // HP bar
   ctx.fillStyle="black";
   ctx.fillRect(20, 50, 200, 20);
   ctx.fillStyle="lime";
@@ -297,4 +292,4 @@ function loop(){
 loop();
 </script>
 </body>
-  </html>
+</html>
