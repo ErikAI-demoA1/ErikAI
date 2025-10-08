@@ -20,9 +20,68 @@
     width: 100px; height: 100px; border-radius: 50%;
     font-size: 20px; background:red; color:white;
   }
+  #radar {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 150px;
+  height: 150px;
+  background: rgba(0,0,0,0.5);
+  border: 2px solid white;
+  border-radius: 8px;
+  z-index: 100;
+  }
 </style>
 </head>
 <body>
+  <canvas id="radar"></canvas>
+  <script> 
+    const radar = document.getElementById("radar");
+const rCtx = radar.getContext("2d");
+radar.width = 150;
+radar.height = 150;
+
+const radarScale = radar.width / mapSize; // zmenšenie mapy do radaru
+
+function drawRadar(){
+  rCtx.clearRect(0,0,radar.width,radar.height);
+
+  // steny
+  walls.forEach(w=>{
+    let x = w.x * radarScale;
+    let y = w.y * radarScale;
+    let wW = w.w * radarScale;
+    let wH = w.h * radarScale;
+    rCtx.fillStyle = w.color;
+    if(w.shape==="rect"){
+      rCtx.fillRect(x, y, wW, wH);
+    } else if(w.shape==="circle"){
+      rCtx.beginPath();
+      rCtx.arc(x+wW/2, y+wH/2, wW/2, 0, Math.PI*2);
+      rCtx.fill();
+    } else if(w.shape==="triangle"){
+      rCtx.beginPath();
+      rCtx.moveTo(x+wW/2, y);
+      rCtx.lineTo(x, y+wH);
+      rCtx.lineTo(x+wW, y+wH);
+      rCtx.closePath();
+      rCtx.fill();
+    }
+  });
+
+  // nepriatelia
+  enemies.forEach(e=>{
+    if(e.alive){
+      rCtx.fillStyle="purple";
+      rCtx.fillRect(e.x*radarScale-2, e.y*radarScale-2, 4, 4);
+    }
+  });
+
+  // hráč
+  rCtx.fillStyle="red";
+  rCtx.fillRect(player.x*radarScale-3, player.y*radarScale-3, 6, 6);
+                }
+  </script>
 <canvas id="game"></canvas>
 <div id="joystick"><div id="joyKnob"></div></div>
 <button id="attackBtn">ÚTOK</button>
@@ -290,6 +349,7 @@ function loop(){
   requestAnimationFrame(loop);
 }
 loop();
+  drawRadar();
 </script>
 </body>
 </html>
