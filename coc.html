@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="sk">
 <head>
 <meta charset="UTF-8">
@@ -20,18 +20,30 @@
     width: 100px; height: 100px; border-radius: 50%;
     font-size: 20px; background:red; color:white;
   }
+  #restartBtn {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 20px 40px;
+    font-size: 26px;
+    background: green; color: white;
+    border: none; border-radius: 20px;
+    display: none;
+  }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="joystick"><div id="joyKnob"></div></div>
 <button id="attackBtn">ÚTOK</button>
+<button id="restartBtn">🔄 Reštartovať</button>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
+
+const restartBtn = document.getElementById("restartBtn");
 
 // Mapa a základné nastavenia
 const mapSize = 6000;
@@ -158,6 +170,12 @@ function moveEnemies(){
       if(player.hp<=0){
         player.hp = 0;
         player.alive = false;
+        // odrátanie trofejí
+        let lost = Math.floor(Math.random()*21)+30; // -30 až -50
+        trophies = Math.max(0, trophies - lost);
+        localStorage.setItem("trophies", trophies);
+        // ukázať tlačidlo
+        restartBtn.style.display = "block";
       }
     }
     e.attackCooldown--;
@@ -241,6 +259,16 @@ function attack(){
   });
 }
 
+// reštart hry
+restartBtn.addEventListener("click", ()=>{
+  player.hp = player.maxHp;
+  player.alive = true;
+  player.x = mapSize/2;
+  player.y = mapSize/2;
+  enemies = [];
+  restartBtn.style.display = "none";
+});
+
 // hlavný loop
 function loop(){
   movePlayer();
@@ -251,4 +279,4 @@ function loop(){
 loop();
 </script>
 </body>
-</html>
+  </html>
