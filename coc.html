@@ -1,197 +1,457 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sk">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI Mini Clash</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ErikAI Mini Clash - Camera + Gameplay</title>
 <style>
-  body {
-    margin: 0;
-    overflow: hidden;
-    background: #000;
-  }
-  canvas {
-    display: block;
-    background: #f7d94c; /* žltá mapa */
-  }
+  :root{--yellow:#f7d94c}
+  html,body{height:100%;margin:0;background:#000;font-family:Inter,Arial,sans-serif;-webkit-user-select:none;user-select:none;overflow:hidden}
+  #gameWrap{position:fixed;left:0;top:0;right:0;bottom:0;display:block}
+  canvas{display:block;width:100%;height:100%;background:var(--yellow)}
+  /* UI overlays */
+  #uiTop{position:fixed;left:8px;top:8px;z-index:60;color:#000;display:flex;gap:8px;align-items:center}
+  #uiTop input{padding:6px;border-radius:8px;border:1px solid rgba(0,0,0,0.2)}
+  #uiTop button{padding:6px 8px;border-radius:8px;border:none;background:#222;color:#fff}
+  #hud{position:fixed;right:8px;top:8px;z-index:60;background:rgba(255,255,255,0.9);color:#000;padding:6px 10px;border-radius:10px;font-weight:700}
+  #attackBtn{position:fixed;right:12px;bottom:12px;z-index:70;padding:14px 18px;border-radius:12px;background:#b83232;color:#fff;border:none;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,0.4)}
+  #joystick{position:fixed;left:12px;bottom:12px;z-index:70;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center}
+  #knob{width:54px;height:54px;border-radius:50%;background:rgba(0,0,0,0.35)}
+  /* mobile small adjustments */
+  @media(max-width:420px){ #joystick{width:100px;height:100px} #knob{width:44px;height:44px} #attackBtn{padding:12px 14px} }
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
+<div id="gameWrap"><canvas id="c"></canvas></div>
+
+<!-- UI overlays -->
+<div id="uiTop">
+  <input id="playerName" placeholder="Tvoje meno" style="width:150px"/>
+  <button id="saveName">Uložiť</button>
+  <button id="startBtn">Štart</button>
+  <button id="resetBtn" style="background:#a33">Reset</button>
+</div>
+<div id="hud">🏆 <span id="trophies">0</span> &nbsp; | &nbsp; HP: <span id="hp">100</span></div>
+
+<!-- mobile controls -->
+<div id="joystick"><div id="knob"></div></div>
+<button id="attackBtn">ÚTOK</button>
+
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+/* ErikAI Mini Clash — camera + gameplay combined */
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
 
-// Nastavenie mapy
-const mapSize = 6000; // ešte väčšia mapa
-const wallCount = 200;
-const itemCount = 8;
+// UI elements
+const nameInput = document.getElementById('playerName');
+const saveNameBtn = document.getElementById('saveName');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const trophiesEl = document.getElementById('trophies');
+const hpEl = document.getElementById('hp');
+const attackBtn = document.getElementById('attackBtn');
 
+const JOY = document.getElementById('joystick');
+const KNOB = document.getElementById('knob');
+
+const SAVE_KEY = 'erikai_mini_v2';
+
+// world
+const WORLD = { w: 6000, h: 6000 };
+
+// gameplay state
+let state = {
+  name: 'ErikAI',
+  trophies: 0,
+  player: { x: WORLD.w/2, y: WORLD.h/2, size: 36, hp: 100, maxHp:100, baseAtk:25, atkMul:1, defMul:1 },
+  enemies: [],
+  walls: [],
+  powerups: [],
+  inBattle: false,
+  battleEnded: false
+};
+
+// input
+let input = { x:0, y:0 };
 let keys = {};
-let player = { x: mapSize / 2, y: mapSize / 2, size: 30, speed: 5 };
-let enemies = [];
-let walls = [];
-let items = [];
-let trophies = 0;
+window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if(e.key===' ') doAttack(); });
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
-// Generovanie stien
-for (let i = 0; i < wallCount; i++) {
-  walls.push({
-    x: Math.random() * mapSize,
-    y: Math.random() * mapSize,
-    w: 60 + Math.random() * 40,
-    h: 20 + Math.random() * 20
-  });
+// save/load
+function saveAll(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){console.warn(e);} updateHUDBindings(); }
+function loadAll(){ try{ const raw = localStorage.getItem(SAVE_KEY); if(raw) state = JSON.parse(raw); }catch(e){console.warn(e);} updateHUDBindings(); }
+
+// reset
+resetBtn.addEventListener('click', ()=> {
+  if(!confirm('Vymazať uložené dáta a reštartovať?')) return;
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+});
+
+// name save
+saveNameBtn.addEventListener('click', ()=> {
+  const v = nameInput.value.trim();
+  if(v){ state.name = v; saveAll(); showMsg('Meno uložené'); }
+});
+
+// start battle — (generuje nepriateľov, steny, powerups)
+startBtn.addEventListener('click', ()=> {
+  startBattle();
+});
+
+// attack button
+attackBtn.addEventListener('click', ()=> doAttack());
+
+// HUD update
+function updateHUDBindings(){
+  trophiesEl.textContent = state.trophies;
+  hpEl.textContent = Math.max(0, Math.round(state.player.hp));
+  nameInput.value = state.name || '';
 }
 
-// Generovanie mečov a štítov
-const itemTypes = ["sword", "shield"];
-for (let i = 0; i < itemCount; i++) {
-  items.push({
-    x: Math.random() * mapSize,
-    y: Math.random() * mapSize,
-    type: itemTypes[Math.floor(Math.random() * itemTypes.length)]
-  });
+// small message
+let msgTimer = null;
+function showMsg(text,ms=1500){
+  clearTimeout(msgTimer);
+  const el = document.getElementById('hud');
+  const prev = el.textContent;
+  el.textContent = text;
+  msgTimer = setTimeout(()=> updateHUDBindings(), ms);
 }
 
-// Generovanie súperov
-for (let i = 0; i < 5; i++) {
-  enemies.push({
-    x: Math.random() * mapSize,
-    y: Math.random() * mapSize,
-    size: 30,
-    speed: 2,
-    alive: true
-  });
-}
-
-window.addEventListener("keydown", e => keys[e.key] = true);
-window.addEventListener("keyup", e => keys[e.key] = false);
-
-function movePlayer() {
-  let newX = player.x;
-  let newY = player.y;
-
-  if (keys["w"]) newY -= player.speed;
-  if (keys["s"]) newY += player.speed;
-  if (keys["a"]) newX -= player.speed;
-  if (keys["d"]) newX += player.speed;
-
-  // kolízia so stenami
-  let collision = walls.some(w =>
-    newX < w.x + w.w &&
-    newX + player.size > w.x &&
-    newY < w.y + w.h &&
-    newY + player.size > w.y
-  );
-
-  if (!collision) {
-    player.x = Math.max(0, Math.min(mapSize - player.size, newX));
-    player.y = Math.max(0, Math.min(mapSize - player.size, newY));
+// generate walls small random
+function genWalls(count=60){
+  state.walls.length = 0;
+  for(let i=0;i<count;i++){
+    const w = 24 + Math.random()*56; // width
+    const h = 16 + Math.random()*28; // height
+    const x = Math.random()*(WORLD.w - w - 40) + 20;
+    const y = Math.random()*(WORLD.h - h - 40) + 20;
+    state.walls.push({ x,y,w,h });
   }
 }
 
-function moveEnemies() {
-  enemies.forEach(e => {
-    if (!e.alive) return;
-    const dx = player.x - e.x;
-    const dy = player.y - e.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist > 5) {
-      e.x += (dx / dist) * e.speed;
-      e.y += (dy / dist) * e.speed;
+// generate powerups (2-4)
+function genPowerups(){
+  state.powerups.length = 0;
+  const count = 2 + Math.floor(Math.random()*3);
+  for(let i=0;i<count;i++){
+    const type = Math.random() < 0.6 ? 'sword' : 'shield';
+    const x = Math.random()*(WORLD.w-60)+30;
+    const y = Math.random()*(WORLD.h-60)+30;
+    state.powerups.push({ id: 'p'+Date.now()+'_'+i, type, x, y, taken:false, ttl: 0 });
+  }
+}
+
+// generate enemies
+function genEnemies(count=3){
+  state.enemies.length = 0;
+  for(let i=0;i<count;i++){
+    const x = Math.random()*(WORLD.w-120)+60;
+    const y = Math.random()*(WORLD.h-120)+60;
+    state.enemies.push({ id:'e'+i, x,y, size:34, hp:60 + Math.floor(Math.random()*60), maxHp:60 + Math.floor(Math.random()*60), speed: 0.6 + Math.random()*0.8, atk:8, attackCooldown:0 });
+  }
+  state.inBattle = true;
+  state.battleEnded = false;
+}
+
+// start battle helper
+function startBattle(){
+  // reset player hp and powerups
+  state.player.hp = state.player.maxHp;
+  state.player.atkMul = 1;
+  state.player.defMul = 1;
+  genWalls(80);
+  genPowerups();
+  genEnemies( Math.max(1, Math.min(6, Math.floor(Math.random()*5)+1)) ); // mode random-ish or you could set count
+  state.inBattle = true;
+  state.battleEnded = false;
+  showMsg('Bitka začína');
+  saveAll();
+}
+
+// collision check with walls for a point (x,y, size)
+function collidesWalls(x,y,size){
+  for(const w of state.walls){
+    if( x < w.x + w.w + size/2 && x + size/2 > w.x && y < w.y + w.h + size/2 && y + size/2 > w.y ){
+      return true;
     }
-  });
+  }
+  return false;
 }
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+// enemy movement with simple wall avoidance (try small adjustments)
+function enemyMoveStep(enemy, dt){
+  const dx = state.player.x - enemy.x;
+  const dy = state.player.y - enemy.y;
+  const dist = Math.hypot(dx,dy) || 1;
+  const nx = dx/dist, ny = dy/dist;
+  const step = enemy.speed * (60*dt);
+  let nxPos = enemy.x + nx*step;
+  let nyPos = enemy.y + ny*step;
+  if(!collidesWalls(nxPos, nyPos, enemy.size)){
+    enemy.x = nxPos; enemy.y = nyPos;
+  } else {
+    // try side steps
+    const alt1x = enemy.x + (-ny)*step;
+    const alt1y = enemy.y + (nx)*step;
+    const alt2x = enemy.x + (ny)*step;
+    const alt2y = enemy.y + (-nx)*step;
+    if(!collidesWalls(alt1x,alt1y,enemy.size)){ enemy.x=alt1x; enemy.y=alt1y; }
+    else if(!collidesWalls(alt2x,alt2y,enemy.size)){ enemy.x=alt2x; enemy.y=alt2y; }
+  }
+}
 
-  // Kamera sleduje hráča
-  const camX = Math.floor(player.x - canvas.width / 2);
-  const camY = Math.floor(player.y - canvas.height / 2);
+// attack action (player)
+let canAttack = true;
+function doAttack(){
+  if(!state.inBattle) return;
+  if(!canAttack) return;
+  canAttack = false;
+  setTimeout(()=> canAttack = true, 450); // attack cooldown
 
-  // Orezanie – kreslí sa len to, čo je v dohľade
-  ctx.fillStyle = "#f7d94c";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // find nearest enemy within 70 px
+  let nearest = null, nd = 9999;
+  for(const e of state.enemies){
+    if(e.hp<=0) continue;
+    const d = Math.hypot(state.player.x - e.x, state.player.y - e.y);
+    if(d < 80 && d < nd){ nearest = e; nd = d; }
+  }
+  if(nearest){
+    const dmg = Math.round(state.player.baseAtk * (state.player.atkMul || 1));
+    nearest.hp -= dmg;
+    showMsg('Zásah! -' + dmg);
+    if(nearest.hp <= 0) nearest.hp = 0;
+  } else {
+    showMsg('Žiadny nepriateľ v dosahu', 700);
+  }
+}
 
-  // Steny
-  ctx.fillStyle = "#8b5a2b";
-  walls.forEach(w => {
-    const drawX = w.x - camX;
-    const drawY = w.y - camY;
-    if (drawX + w.w > 0 && drawX < canvas.width && drawY + w.h > 0 && drawY < canvas.height)
-      ctx.fillRect(drawX, drawY, w.w, w.h);
-  });
-
-  // Meče a štíty
-  items.forEach(i => {
-    const drawX = i.x - camX;
-    const drawY = i.y - camY;
-    if (drawX > -20 && drawX < canvas.width + 20 && drawY > -20 && drawY < canvas.height + 20) {
-      ctx.fillStyle = i.type === "sword" ? "silver" : "lightblue";
-      ctx.beginPath();
-      ctx.arc(drawX, drawY, 15, 0, Math.PI * 2);
-      ctx.fill();
+// enemy attack handling
+function enemyCombat(enemy, now){
+  const d = Math.hypot(state.player.x - enemy.x, state.player.y - enemy.y);
+  if(d < 48){
+    // cooldown per enemy
+    if(!enemy.lastAtk || now - enemy.lastAtk > 800){
+      enemy.lastAtk = now;
+      const dmg = Math.round(enemy.atk / (state.player.defMul || 1));
+      state.player.hp = Math.max(0, state.player.hp - dmg);
+      // small hit message
+      //showMsg('Zasiahnutý -' + dmg, 700);
     }
-  });
+  }
+}
 
-  // Hráč
-  ctx.fillStyle = "red";
-  ctx.fillRect(player.x - camX, player.y - camY, player.size, player.size);
-
-  // Súperi
-  ctx.fillStyle = "purple";
-  enemies.forEach(e => {
-    if (e.alive) {
-      const drawX = e.x - camX;
-      const drawY = e.y - camY;
-      if (drawX + e.size > 0 && drawX < canvas.width && drawY + e.size > 0 && drawY < canvas.height)
-        ctx.fillRect(drawX, drawY, e.size, e.size);
+// check pickups (powerups)
+function checkPickups(){
+  for(const p of state.powerups){
+    if(p.taken) continue;
+    const d = Math.hypot(state.player.x - p.x, state.player.y - p.y);
+    if(d < 40){
+      p.taken = true;
+      if(p.type === 'sword'){
+        state.player.atkMul = 2;
+        // revert after 10s
+        setTimeout(()=> { state.player.atkMul = 1; }, 10000);
+        showMsg('⚔️ Meč: +útok 10s', 1200);
+      } else {
+        state.player.defMul = 2;
+        setTimeout(()=> { state.player.defMul = 1; }, 10000);
+        showMsg('🛡️ Štít: +obrana 10s', 1200);
+      }
     }
-  });
-
-  // Text – trofeje
-  ctx.fillStyle = "black";
-  ctx.font = "20px Arial";
-  ctx.fillText(`🏆 Trofeje: ${trophies}`, 20, 30);
+  }
+  // remove taken in rendering stage (they won't be used)
 }
 
-function checkCombat() {
-  enemies.forEach(e => {
-    if (!e.alive) return;
-    const dx = player.x - e.x;
-    const dy = player.y - e.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 40) {
-      e.alive = false;
-      trophies += Math.floor(Math.random() * 15) + 1;
-      saveGame();
+// check end of battle & trophies awarding once
+function checkBattleEnd(){
+  if(state.battleEnded) return;
+  const alive = state.enemies.some(e => e.hp > 0);
+  if(!alive && state.inBattle){
+    state.battleEnded = true;
+    state.inBattle = false;
+    const gain = Math.floor(Math.random()*15)+1;
+    state.trophies = (state.trophies||0) + gain;
+    saveAll();
+    showMsg('🏆 Výhra! +' + gain, 2500);
+  }
+  if(state.player.hp <= 0 && state.inBattle){
+    state.battleEnded = true;
+    state.inBattle = false;
+    const lose = 3;
+    state.trophies = Math.max(0, (state.trophies||0) - lose);
+    saveAll();
+    showMsg('❌ Prehra! -' + lose, 2000);
+  }
+}
+
+// camera follow and draw
+let lastTime = performance.now();
+function frame(now){
+  const dt = (now - lastTime)/1000;
+  lastTime = now;
+
+  // handle keyboard input for movement
+  let mx = 0, my = 0;
+  if(keys['w']||keys['arrowup']) my = -1;
+  if(keys['s']||keys['arrowdown']) my = 1;
+  if(keys['a']||keys['arrowleft']) mx = -1;
+  if(keys['d']||keys['arrowright']) mx = 1;
+  // normalize
+  const mag = Math.hypot(mx,my);
+  if(mag>0){ mx/=mag; my/=mag; }
+
+  // joystick input overrides keys if present
+  if(input.x !== 0 || input.y !== 0){ mx = input.x; my = input.y; }
+
+  // attempt move
+  if(state.inBattle){
+    const speed = state.player.speed * (60*dt);
+    const newX = state.player.x + mx*speed;
+    const newY = state.player.y + my*speed;
+    if(!collidesWalls(newX, newY, state.player.size)){
+      state.player.x = Math.max(0, Math.min(WORLD.w - state.player.size, newX));
+      state.player.y = Math.max(0, Math.min(WORLD.h - state.player.size, newY));
     }
-  });
+    // enemies
+    for(const e of state.enemies) if(e.hp>0) enemyMoveStep(e, dt);
+    // enemy attacks
+    for(const e of state.enemies) if(e.hp>0) enemyCombat(e, now);
+    // pickups
+    checkPickups();
+  }
+
+  // check battle end
+  checkBattleEnd();
+
+  // draw scene with camera
+  drawScene();
+
+  updateHUDBindings();
+  requestAnimationFrame(frame);
 }
 
-function saveGame() {
-  localStorage.setItem("trophies", trophies);
+// drawScene: draw world relative to camera centered on player
+function drawScene(){
+  // camera pos such that player in center
+  const camX = Math.floor(state.player.x - canvas.width/2);
+  const camY = Math.floor(state.player.y - canvas.height/2);
+
+  // background (map)
+  ctx.fillStyle = '#f7d94c';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // draw walls (only visible)
+  ctx.fillStyle = '#7a4b2a';
+  for(const w of state.walls){
+    const dx = w.x - camX;
+    const dy = w.y - camY;
+    if(dx + w.w < -50 || dy + w.h < -50 || dx > canvas.width + 50 || dy > canvas.height + 50) continue;
+    ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(w.w), Math.round(w.h));
+  }
+
+  // draw powerups
+  for(const p of state.powerups){
+    if(p.taken) continue;
+    const dx = p.x - camX;
+    const dy = p.y - camY;
+    if(dx < -40 || dx > canvas.width + 40 || dy < -40 || dy > canvas.height + 40) continue;
+    ctx.beginPath();
+    ctx.fillStyle = (p.type==='sword') ? '#c0392b' : '#16a085';
+    ctx.arc(Math.round(dx), Math.round(dy), 14, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px Arial';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(p.type==='sword'?'⚔':'🛡', Math.round(dx), Math.round(dy));
+  }
+
+  // draw enemies
+  for(const e of state.enemies){
+    if(e.hp<=0) continue;
+    const dx = e.x - camX;
+    const dy = e.y - camY;
+    if(dx + e.size < -50 || dy + e.size < -50 || dx > canvas.width + 50 || dy > canvas.height + 50) continue;
+    // body
+    ctx.fillStyle = '#6a2cb8';
+    ctx.fillRect(Math.round(dx - e.size/2), Math.round(dy - e.size/2), e.size, e.size);
+    // hp
+    const hpW = Math.max(0, Math.round((e.hp/e.maxHp) * (e.size)));
+    ctx.fillStyle = '#222';
+    ctx.fillRect(Math.round(dx - e.size/2), Math.round(dy - e.size/2 - 10), e.size, 6);
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillRect(Math.round(dx - e.size/2), Math.round(dy - e.size/2 - 10), hpW, 6);
+  }
+
+  // draw player (centered)
+  const px = Math.round(canvas.width/2);
+  const py = Math.round(canvas.height/2);
+  ctx.fillStyle = '#e74c3c';
+  ctx.fillRect(px - state.player.size/2, py - state.player.size/2, state.player.size, state.player.size);
+  // player hp bar
+  const barW = 160;
+  ctx.fillStyle = '#222';
+  ctx.fillRect(px - barW/2, py - state.player.size/2 - 18, barW, 8);
+  ctx.fillStyle = '#2ecc71';
+  const ph = Math.max(0, state.player.hp/state.player.maxHp);
+  ctx.fillRect(px - barW/2, py - state.player.size/2 - 18, Math.round(barW*ph), 8);
+
+  // small overlay texts
+  ctx.fillStyle = '#000';
+  ctx.font = '16px Inter, Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText('Hráč: ' + (state.name || 'ErikAI'), 12, 22);
+  ctx.textAlign = 'right';
+  ctx.fillText('Trofeje: ' + (state.trophies||0), canvas.width - 12, 22);
 }
 
-function loadGame() {
-  trophies = parseInt(localStorage.getItem("trophies")) || 0;
-}
+// periodic save
+setInterval(saveAll, 3000);
 
-function loop() {
-  movePlayer();
-  moveEnemies();
-  checkCombat();
-  draw();
-  requestAnimationFrame(loop);
-}
+// joystick handling (pointer)
+let activePointer = null;
+let joyRect = null;
+KNOB.style.transform = 'translate(0px,0px)';
+JOY.addEventListener('pointerdown', e => {
+  activePointer = e.pointerId;
+  joyRect = JOY.getBoundingClientRect();
+  JOY.setPointerCapture(e.pointerId);
+});
+JOY.addEventListener('pointermove', e => {
+  if(activePointer !== e.pointerId) return;
+  const cx = joyRect.left + joyRect.width/2;
+  const cy = joyRect.top + joyRect.height/2;
+  const dx = e.clientX - cx;
+  const dy = e.clientY - cy;
+  const mag = Math.hypot(dx,dy);
+  const max = 36;
+  const d = Math.min(max, mag);
+  const nx = mag ? dx/mag : 0;
+  const ny = mag ? dy/mag : 0;
+  KNOB.style.transform = `translate(${nx*d}px, ${ny*d}px)`;
+  input.x = nx * (d / max);
+  input.y = ny * (d / max);
+});
+JOY.addEventListener('pointerup', e => {
+  if(activePointer !== e.pointerId) return;
+  JOY.releasePointerCapture(e.pointerId);
+  activePointer = null;
+  KNOB.style.transform = 'translate(0px,0px)';
+  input.x = 0; input.y = 0;
+});
 
-loadGame();
-loop();
+// initial load & start
+loadAll();
+updateHUDBindings();
+// Auto-start to show world; you can press Start to re-generate battle.
+requestAnimationFrame(frame);
+
 </script>
 </body>
-</html>
+  </html>
