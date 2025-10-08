@@ -3,21 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>ErikAI Mobile Battle (2.5D)</title>
+<title>ErikAI Battle (2.5D)</title>
 <style>
   :root{--yellow:#f6e58d}
-  body{margin:0;font-family:Inter,Arial,sans-serif;background:#222;color:#fff;overflow:hidden;-webkit-user-select:none;user-select:none}
-  header{position:fixed;top:0;left:0;right:0;background:#111;box-shadow:0 2px 6px rgba(0,0,0,0.6);display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;z-index:100;font-size:15px}
+  body{margin:0;font-family:Inter,Arial,sans-serif;background:#222;color:#fff;overflow:hidden}
+  header{position:fixed;top:0;left:0;right:0;background:#111;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;z-index:100}
   input,select,button{padding:8px 10px;border-radius:8px;border:none;font-size:15px}
   input{width:160px;text-align:center;background:#000;color:#fff}
   select,button{background:#333;color:#fff}
   button{cursor:pointer}
   #arena{position:fixed;top:130px;bottom:0;left:0;right:0;background:var(--yellow);border-radius:10px;margin:6px;overflow:hidden;box-shadow:inset 0 0 10px rgba(0,0,0,0.3)}
-  .entity{position:absolute;width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;transform-origin:center bottom;transform:perspective(800px) rotateX(25deg)}
+  .entity{position:absolute;width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;transform:perspective(800px) rotateX(25deg)}
   .player{background:#e74c3c;border:3px solid #b83b2f;z-index:30}
   .enemy{background:#2980b9;border:3px solid #1f5f8a;z-index:20}
   .hpBar{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);width:50px;height:6px;background:rgba(0,0,0,0.4);border-radius:6px;overflow:hidden}
   .hpFill{height:100%;background:linear-gradient(90deg,#2ecc71,#27ae60);width:100%}
+  .wall{position:absolute;background:#8b4513;border:2px solid #5a3210;border-radius:4px;z-index:10}
+  .power{position:absolute;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold}
+  .sword{background:#c0392b}
+  .shield{background:#16a085}
   #joystick{position:fixed;left:10px;bottom:10px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;z-index:90}
   #joyKnob{width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,0.5)}
   #uiPanel{position:fixed;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px;z-index:90}
@@ -67,7 +71,7 @@ const attackBtn=document.getElementById('attackBtn');
 const JOY=document.getElementById('joystick'),KNOB=document.getElementById('joyKnob');
 const bottomMsg=document.getElementById('bottomMsg');
 const SAVE_KEY='erikai_mobile_save';
-let state={name:'',trophies:0,player:{x:200,y:200,hp:100,maxHp:100},enemies:[],mode:1,inBattle:false,resultShown:false};
+let state={name:'',trophies:0,player:{x:200,y:200,hp:100,maxHp:100},enemies:[],mode:1,inBattle:false,resultShown:false,powerAtk:1,powerDef:1,walls:[],powerUps:[]};
 
 //=== SAVE / LOAD ===
 function save(){localStorage.setItem(SAVE_KEY,JSON.stringify(state));}
@@ -98,13 +102,36 @@ function spawnEnemies(count){
   }
 }
 
+//=== Walls ===
+function generateWalls(){
+  state.walls=[];
+  for(let i=0;i<6;i++){
+    const w=40+Math.random()*40;
+    const h=20+Math.random()*30;
+    state.walls.push({x:Math.random()*(arena.clientWidth-w),y:Math.random()*(arena.clientHeight-h),w,h});
+  }
+}
+
+//=== PowerUps ===
+function spawnPowerUps(){
+  state.powerUps=[];
+  const types=['sword','shield'];
+  for(const type of types){
+    if(Math.random()<0.9){
+      const x=Math.random()*(arena.clientWidth-40)+20;
+      const y=Math.random()*(arena.clientHeight-40)+20;
+      state.powerUps.push({type,x,y});
+    }
+  }
+}
+
 //=== Attack ===
 function attack(){
   if(!state.inBattle)return;
   let hit=false;
   for(const e of state.enemies){
     const d=Math.hypot(state.player.x-e.x,state.player.y-e.y);
-    if(d<60){e.hp-=30;hit=true;if(e.hp<=0)e.dead=true;}
+    if(d<60){e.hp-=30*state.powerAtk;hit=true;if(e.hp<=0)e.dead=true;}
   }
   state.enemies=state.enemies.filter(e=>!e.dead);
   if(hit)msg('Zásah!');
@@ -131,11 +158,23 @@ JOY.addEventListener('pointerup',e=>{
   input.x=input.y=0;
 });
 
+//=== Collisions ===
+function collides(x,y){
+  for(const w of state.walls){
+    if(x> w.x-24 && x< w.x+w.w+24 && y> w.y-24 && y< w.y+w.h+24) return true;
+  }
+  return false;
+}
+
 //=== Battle ===
 startBtn.onclick=()=>{
   state.mode=parseInt(modeSelect.value);
   state.player.hp=state.player.maxHp;
+  state.powerAtk=1;
+  state.powerDef=1;
   spawnEnemies(state.mode);
+  generateWalls();
+  spawnPowerUps();
   state.inBattle=true;
   state.resultShown=false;
   msg('Súperi: '+state.mode);
@@ -155,7 +194,6 @@ function checkBattleResult(){
     state.resultShown=true;
     save();
   }else if(state.player.hp<=0){
-    state.player.hp=0;
     const lose=3;
     state.trophies=Math.max(0,state.trophies-lose);
     msg('❌ Prehra! -'+lose);
@@ -170,30 +208,40 @@ function loop(){
   ensurePlayer();
 
   if(state.inBattle){
-    // pohyb hráča
-    state.player.x+=input.x*3;
-    state.player.y+=input.y*3;
-    state.player.x=Math.max(20,Math.min(arena.clientWidth-20,state.player.x));
-    state.player.y=Math.max(20,Math.min(arena.clientHeight-20,state.player.y));
+    let newX=state.player.x+input.x*3;
+    let newY=state.player.y+input.y*3;
+    if(!collides(newX,newY)){
+      state.player.x=Math.max(20,Math.min(arena.clientWidth-20,newX));
+      state.player.y=Math.max(20,Math.min(arena.clientHeight-20,newY));
+    }
 
-    // súperi sa hýbu smerom k hráčovi
     for(const e of state.enemies){
       const dx=state.player.x-e.x,dy=state.player.y-e.y,d=Math.hypot(dx,dy);
       if(d>25){e.x+=dx/d*1.2;e.y+=dy/d*1.2;}
-      else if(Math.random()<0.02){ // náhodný útok
-        state.player.hp-=10;
-        if(state.player.hp<0)state.player.hp=0;
+      else if(Math.random()<0.02){
+        state.player.hp-=10/state.powerDef;
         msg('💥 Zasiahnutý!');
       }
     }
+
+    // power-upy
+    for(const p of state.powerUps){
+      const d=Math.hypot(state.player.x-p.x,state.player.y-p.y);
+      if(d<40){
+        if(p.type==='sword'){state.powerAtk=2;msg('⚔️ Sila útoku +');}
+        if(p.type==='shield'){state.powerDef=2;msg('🛡️ Obrana +');}
+        p.taken=true;
+      }
+    }
+    state.powerUps=state.powerUps.filter(p=>!p.taken);
   }
 
-  // vykresli hráča
+  // Render
   playerEl.style.left=(state.player.x-24)+'px';
   playerEl.style.top=(state.player.y-40)+'px';
   playerEl.querySelector('.hpFill').style.width=(state.player.hp/state.player.maxHp*100)+'%';
 
-  // súperi
+  // Enemies
   const existing=new Map();
   arena.querySelectorAll('.enemy').forEach(el=>existing.set(el.dataset.id,el));
   for(const e of state.enemies){
@@ -212,6 +260,29 @@ function loop(){
   }
   existing.forEach(el=>el.remove());
 
+  // Walls
+  arena.querySelectorAll('.wall').forEach(el=>el.remove());
+  for(const w of state.walls){
+    const el=document.createElement('div');
+    el.className='wall';
+    el.style.left=w.x+'px';
+    el.style.top=w.y+'px';
+    el.style.width=w.w+'px';
+    el.style.height=w.h+'px';
+    arena.appendChild(el);
+  }
+
+  // Power-ups
+  arena.querySelectorAll('.power').forEach(el=>el.remove());
+  for(const p of state.powerUps){
+    const el=document.createElement('div');
+    el.className='power '+p.type;
+    el.style.left=p.x+'px';
+    el.style.top=p.y+'px';
+    el.textContent=p.type==='sword'?'⚔️':'🛡️';
+    arena.appendChild(el);
+  }
+
   checkBattleResult();
   trophiesEl.textContent=state.trophies;
   requestAnimationFrame(loop);
@@ -225,5 +296,4 @@ save();
 loop();
 </script>
 </body>
-  </html>
-  
+</html>
