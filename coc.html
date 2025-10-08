@@ -87,19 +87,30 @@ for(let i=0;i<itemCount;i++){
 }
 
 // nepriatelia
+// --- Úprava funkcie spawnEnemy ---
 function spawnEnemy(){
-  enemies.push({
-    x:Math.random()*mapSize,
-    y:Math.random()*mapSize,
-    size:30,
-    speed:2,
-    alive:true,
-    attackCooldown:0
-  });
-}
-for(let i=0;i<5;i++) spawnEnemy();
-setInterval(spawnEnemy, 2000 + Math.random()*1000);
+  let typeRand = Math.random();
+  let enemy = { x:Math.random()*mapSize, y:Math.random()*mapSize, size:30, alive:true, attackCooldown:0 };
 
+  if(typeRand < 0.5){
+    // pôvodný nepriateľ (fialový štvorec)
+    enemy.speed = 2;
+    enemy.shape = "rect";
+    enemy.color = "purple";
+  } else if(typeRand < 0.75){
+    // zelený kruh, rýchlejší o 10%
+    enemy.speed = player.speed * 1.1;
+    enemy.shape = "circle";
+    enemy.color = "green";
+  } else {
+    // čierny trojuholník, pomalší o 65%
+    enemy.speed = player.speed * 0.35;
+    enemy.shape = "triangle";
+    enemy.color = "black";
+  }
+
+  enemies.push(enemy);
+}
 // liečivý predmet
 function spawnHealPack(){
   healPacks.push({
@@ -275,12 +286,27 @@ function draw(){
   ctx.fillRect(player.x-camX,player.y-camY,player.size,player.size);
 
   ctx.fillStyle="purple";
-  enemies.forEach(e=>{
-    if(e.alive){
-      const x = e.x-camX, y = e.y-camY;
-      ctx.fillRect(x,y,e.size,e.size);
+  // v draw()
+enemies.forEach(e=>{
+  if(e.alive){
+    const x = e.x - camX;
+    const y = e.y - camY;
+    ctx.fillStyle = e.color;
+    if(e.shape==="rect") ctx.fillRect(x,y,e.size,e.size);
+    else if(e.shape==="circle"){
+      ctx.beginPath();
+      ctx.arc(x+e.size/2,y+e.size/2,e.size/2,0,Math.PI*2);
+      ctx.fill();
+    } else if(e.shape==="triangle"){
+      ctx.beginPath();
+      ctx.moveTo(x+e.size/2,y);
+      ctx.lineTo(x,y+e.size);
+      ctx.lineTo(x+e.size,y+e.size);
+      ctx.closePath();
+      ctx.fill();
     }
-  });
+  }
+});
 
   ctx.fillStyle="black";
   ctx.font="20px Arial";
