@@ -21,13 +21,12 @@
     font-size: 20px; background:red; color:white;
   }
   #restartBtn {
+    display:none;
     position: fixed; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     padding: 20px 40px;
-    font-size: 26px;
-    background: green; color: white;
-    border: none; border-radius: 20px;
-    display: none;
+    font-size: 24px; border:none; border-radius:20px;
+    background:green; color:white;
   }
 </style>
 </head>
@@ -35,7 +34,7 @@
 <canvas id="game"></canvas>
 <div id="joystick"><div id="joyKnob"></div></div>
 <button id="attackBtn">ÚTOK</button>
-<button id="restartBtn">🔄 Reštartovať</button>
+<button id="restartBtn">🔁 Reštartovať</button>
 
 <script>
 const canvas = document.getElementById("game");
@@ -43,56 +42,48 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const restartBtn = document.getElementById("restartBtn");
-
-// Mapa a základné nastavenia
 const mapSize = 6000;
 const wallCount = 200;
 const itemCount = 8;
 
-let player = { 
-  x: mapSize/2, 
-  y: mapSize/2, 
-  size:30, 
-  speed:5, 
-  hp:100, 
-  maxHp:100, 
-  alive:true 
-};
+let player, enemies, walls, items, trophies;
 
-let enemies = [];
-let walls = [];
-let items = [];
-let trophies = parseInt(localStorage.getItem("trophies")) || 0;
+function initGame() {
+  player = { x: mapSize/2, y: mapSize/2, size:30, speed:5, hp:100, maxHp:100, alive:true };
+  enemies = [];
+  walls = [];
+  items = [];
+  trophies = parseInt(localStorage.getItem("trophies")) || 0;
 
-// generovanie stien
-for(let i=0;i<wallCount;i++){
-  walls.push({
-    x:Math.random()*mapSize,
-    y:Math.random()*mapSize,
-    w:60+Math.random()*40,
-    h:20+Math.random()*20
-  });
+  for(let i=0;i<wallCount;i++){
+    walls.push({
+      x:Math.random()*mapSize,
+      y:Math.random()*mapSize,
+      w:60+Math.random()*40,
+      h:20+Math.random()*20
+    });
+  }
+
+  const itemTypes=["sword","shield"];
+  for(let i=0;i<itemCount;i++){
+    items.push({
+      x:Math.random()*mapSize,
+      y:Math.random()*mapSize,
+      type:itemTypes[Math.floor(Math.random()*itemTypes.length)]
+    });
+  }
+
+  document.getElementById("restartBtn").style.display = "none";
 }
 
-// generovanie itemov
-const itemTypes=["sword","shield"];
-for(let i=0;i<itemCount;i++){
-  items.push({
-    x:Math.random()*mapSize,
-    y:Math.random()*mapSize,
-    type:itemTypes[Math.floor(Math.random()*itemTypes.length)]
-  });
-}
+initGame();
 
-// joystick
-let keys={};
+let keys={}, moveX=0, moveY=0;
 window.addEventListener("keydown", e=>keys[e.key]=true);
 window.addEventListener("keyup", e=>keys[e.key]=false);
 
 let joystick = document.getElementById("joystick");
 let joyKnob = document.getElementById("joyKnob");
-let moveX=0, moveY=0;
 let activePointer = null;
 let rect = null;
 
@@ -119,26 +110,26 @@ joystick.addEventListener("pointerup", e=>{
   moveX=0; moveY=0;
 });
 
-// útok
 document.getElementById("attackBtn").addEventListener("touchstart", attack);
 window.addEventListener("keydown", e=>{if(e.key===" ") attack();});
 
-// pohyb hráča
 function movePlayer(){
   if(!player.alive) return;
-
   let newX = player.x + (keys["a"]?-player.speed:0) + (keys["d"]?player.speed:0) + moveX*player.speed;
   let newY = player.y + (keys["w"]?-player.speed:0) + (keys["s"]?player.speed:0) + moveY*player.speed;
 
-  // kolízie
+  // hranice mapy
+  newX = Math.max(0, Math.min(mapSize-player.size, newX));
+  newY = Math.max(0, Math.min(mapSize-player.size, newY));
+
+  // kolízie so stenami
   let collision = walls.some(w=> newX< w.x + w.w && newX+player.size> w.x && newY< w.y+w.h && newY+player.size> w.y);
   if(!collision){
-    player.x = Math.max(0, Math.min(mapSize-player.size, newX));
-    player.y = Math.max(0, Math.min(mapSize-player.size, newY));
+    player.x = newX;
+    player.y = newY;
   }
 }
 
-// nepriatelia - spawn každé 2–3 sekundy
 function spawnEnemy(){
   enemies.push({
     x: Math.random()*mapSize,
@@ -152,7 +143,6 @@ function spawnEnemy(){
 }
 setInterval(spawnEnemy, 2000 + Math.random()*1000);
 
-// pohyb a útok nepriateľov
 function moveEnemies(){
   enemies.forEach(e=>{
     if(!e.alive) return;
@@ -163,34 +153,34 @@ function moveEnemies(){
       e.x += dx/dist*e.speed;
       e.y += dy/dist*e.speed;
     }
-    // útok na hráča
     if(dist < 40 && e.attackCooldown<=0 && player.alive){
       player.hp -= 10;
       e.attackCooldown = 50;
       if(player.hp<=0){
         player.hp = 0;
         player.alive = false;
-        // odrátanie trofejí
-        let lost = Math.floor(Math.random()*21)+30; // -30 až -50
-        trophies = Math.max(0, trophies - lost);
+        let lose = 30 + Math.floor(Math.random()*21);
+        trophies = Math.max(0, trophies - lose);
         localStorage.setItem("trophies", trophies);
-        // ukázať tlačidlo
-        restartBtn.style.display = "block";
+        document.getElementById("restartBtn").style.display = "block";
       }
     }
     e.attackCooldown--;
   });
 }
 
-// vykreslenie
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-
   const camX = player.x - canvas.width/2;
   const camY = player.y - canvas.height/2;
 
   ctx.fillStyle="#f7d94c";
   ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // zelené hranice mapy
+  ctx.strokeStyle="green";
+  ctx.lineWidth=15;
+  ctx.strokeRect(-camX, -camY, mapSize, mapSize);
 
   // steny
   ctx.fillStyle="#8b5a2b";
@@ -213,7 +203,6 @@ function draw(){
   if(player.alive){
     ctx.fillStyle="red";
     ctx.fillRect(player.x-camX, player.y-camY, player.size, player.size);
-    // HP bar
     ctx.fillStyle="green";
     ctx.fillRect(player.x-camX, player.y-camY-10, player.size*(player.hp/player.maxHp),5);
   } else {
@@ -228,20 +217,17 @@ function draw(){
       const x = e.x-camX, y = e.y-camY;
       ctx.fillStyle="purple";
       ctx.fillRect(x,y,e.size,e.size);
-      // HP bar
       ctx.fillStyle="green";
       ctx.fillRect(x, y-8, e.size*(e.hp/30), 4);
     }
   });
 
-  // trofeje + HP
   ctx.fillStyle="black";
   ctx.font="20px Arial";
   ctx.fillText(`🏆 Trofeje: ${trophies}`, 20, 30);
   ctx.fillText(`❤️ HP: ${player.hp}`, 20, 60);
 }
 
-// útok hráča
 function attack(){
   if(!player.alive) return;
   enemies.forEach(e=>{
@@ -259,17 +245,10 @@ function attack(){
   });
 }
 
-// reštart hry
-restartBtn.addEventListener("click", ()=>{
-  player.hp = player.maxHp;
-  player.alive = true;
-  player.x = mapSize/2;
-  player.y = mapSize/2;
-  enemies = [];
-  restartBtn.style.display = "none";
+document.getElementById("restartBtn").addEventListener("click", ()=>{
+  initGame();
 });
 
-// hlavný loop
 function loop(){
   movePlayer();
   moveEnemies();
