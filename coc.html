@@ -74,6 +74,7 @@ function initGame() {
     });
   }
 
+  spawnDecoration();
   document.getElementById("restartBtn").style.display = "none";
 }
 
@@ -128,9 +129,8 @@ function movePlayer(){
     player.y = newY;
   }
 
-  // kolízia s dekoráciami = doplnenie života
   decorations.forEach((d)=>{
-    if(!d.used && Math.abs(player.x - d.x)<30 && Math.abs(player.y - d.y)<30){
+    if(!d.used && Math.abs(player.x - d.x)<35 && Math.abs(player.y - d.y)<35){
       d.used = true;
       player.hp = Math.min(player.maxHp, player.hp + 30);
     }
@@ -150,18 +150,19 @@ function spawnEnemy(){
 }
 setInterval(spawnEnemy, 2000 + Math.random()*1000);
 
-// 🔹 generovanie nových dekorácií každých 12 sekúnd
 function spawnDecoration(){
-  const colors = ["#6af", "#f6a", "#6f6", "#ffa"];
+  const colors = ["#00ff99", "#33ccff", "#ff6699", "#ffee33"];
+  const shapes = ["circle","square","star"];
   decorations.push({
     x: Math.random()*mapSize,
     y: Math.random()*mapSize,
     color: colors[Math.floor(Math.random()*colors.length)],
-    used:false
+    shape: shapes[Math.floor(Math.random()*shapes.length)],
+    used:false,
+    angle:0
   });
 }
 setInterval(spawnDecoration, 12000);
-spawnDecoration(); // na začiatok aspoň jedna
 
 function moveEnemies(){
   enemies.forEach(e=>{
@@ -189,6 +190,23 @@ function moveEnemies(){
   });
 }
 
+function drawStar(x, y, r, color){
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath();
+  ctx.moveTo(0, -r);
+  for(let i=0; i<5; i++){
+    ctx.lineTo(Math.cos((i*72+36)*Math.PI/180)*r*0.5, Math.sin((i*72+36)*Math.PI/180)*r*0.5);
+    ctx.lineTo(Math.cos((i*72+72)*Math.PI/180)*r, Math.sin((i*72+72)*Math.PI/180)*r);
+  }
+  ctx.closePath();
+  ctx.fillStyle=color;
+  ctx.shadowColor=color;
+  ctx.shadowBlur=20;
+  ctx.fill();
+  ctx.restore();
+}
+
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const camX = player.x - canvas.width/2;
@@ -197,7 +215,7 @@ function draw(){
   ctx.fillStyle="#f7d94c";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  // zelené hranice mapy
+  // zelené hranice
   ctx.strokeStyle="green";
   ctx.lineWidth=15;
   ctx.strokeRect(-camX, -camY, mapSize, mapSize);
@@ -210,25 +228,29 @@ function draw(){
       ctx.fillRect(x,y,w.w,w.h);
   });
 
-  // dekorácie (liečivé)
+  // dekorácie
   decorations.forEach(d=>{
     if(!d.used){
       const x = d.x - camX;
       const y = d.y - camY;
-      ctx.fillStyle = d.color;
-      ctx.beginPath();
-      ctx.arc(x, y, 20, 0, Math.PI*2);
-      ctx.fill();
+      ctx.shadowColor=d.color;
+      ctx.shadowBlur=20;
+      ctx.fillStyle=d.color;
+      if(d.shape==="circle"){
+        ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI*2); ctx.fill();
+      } else if(d.shape==="square"){
+        ctx.fillRect(x-20, y-20, 40, 40);
+      } else {
+        drawStar(x, y, 25, d.color);
+      }
     }
   });
 
   // itemy
   items.forEach(i=>{
     const x=i.x-camX, y=i.y-camY;
-    if(x>-20 && x<canvas.width+20 && y>-20 && y<canvas.height+20){
-      ctx.fillStyle = i.type==="sword"?"silver":"lightblue";
-      ctx.beginPath(); ctx.arc(x,y,15,0,Math.PI*2); ctx.fill();
-    }
+    ctx.fillStyle = i.type==="sword"?"silver":"lightblue";
+    ctx.beginPath(); ctx.arc(x,y,15,0,Math.PI*2); ctx.fill();
   });
 
   // hráč
