@@ -34,27 +34,29 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 const mapSize = 6000;
-const wallCount = 200;
+const wallCount = 180;
 const itemCount = 8;
 
-let player = { x: mapSize/2, y: mapSize/2, size:30, speed:5, hp:100, maxHp:100 };
+let player = { x: mapSize/2, y: mapSize/2, size:30, speed:5, hp:100, maxHp:100, alive:true };
 let enemies = [];
 let walls = [];
 let items = [];
 let healPacks = [];
 let trophies = parseInt(localStorage.getItem("trophies")) || 0;
 
-// generovanie stien
+// generovanie stien (rôzne tvary)
+const shapes = ["rect","circle","triangle"];
 for(let i=0;i<wallCount;i++){
   walls.push({
     x:Math.random()*mapSize,
     y:Math.random()*mapSize,
-    w:60+Math.random()*40,
-    h:20+Math.random()*20
+    w:40+Math.random()*80,
+    h:40+Math.random()*80,
+    shape:shapes[Math.floor(Math.random()*shapes.length)]
   });
 }
 
-// generovanie itemov (meč, štít)
+// generovanie itemov
 const itemTypes=["sword","shield"];
 for(let i=0;i<itemCount;i++){
   items.push({
@@ -65,9 +67,6 @@ for(let i=0;i<itemCount;i++){
 }
 
 // nepriatelia
-for(let i=0;i<5;i++){
-  spawnEnemy();
-}
 function spawnEnemy(){
   enemies.push({
     x:Math.random()*mapSize,
@@ -78,6 +77,7 @@ function spawnEnemy(){
     attackCooldown:0
   });
 }
+for(let i=0;i<5;i++) spawnEnemy();
 setInterval(spawnEnemy, 2000 + Math.random()*1000);
 
 // spawn liečivého predmetu (červené plus)
@@ -131,13 +131,32 @@ window.addEventListener("keydown", e=>{if(e.key===" ") attack();});
 
 // pohyb hráča
 function movePlayer(){
+  if(!player.alive) return;
   let newX = player.x + (keys["a"]?-player.speed:0) + (keys["d"]?player.speed:0) + moveX*player.speed;
   let newY = player.y + (keys["w"]?-player.speed:0) + (keys["s"]?player.speed:0) + moveY*player.speed;
-  let collision = walls.some(w=> newX< w.x + w.w && newX+player.size> w.x && newY< w.y+w.h && newY+player.size> w.y);
+
+  // kolízia so stenami (všetky tvary)
+  let collision = walls.some(w=> collides(newX,newY,player.size,w));
   if(!collision){
     player.x = Math.max(0, Math.min(mapSize-player.size, newX));
     player.y = Math.max(0, Math.min(mapSize-player.size, newY));
   }
+}
+
+// funkcia kolízie pre rôzne tvary
+function collides(px,py,size,w){
+  if(w.shape==="rect"){
+    return px < w.x + w.w && px + size > w.x && py < w.y + w.h && py + size > w.y;
+  } else if(w.shape==="circle"){
+    const dx = (px+size/2) - (w.x+w.w/2);
+    const dy = (py+size/2) - (w.y+w.h/2);
+    const dist = Math.hypot(dx,dy);
+    return dist < (size/2 + w.w/2);
+  } else if(w.shape==="triangle"){
+    // hrubý rámec - berie sa ako štvorec
+    return px < w.x + w.w && px + size > w.x && py < w.y + w.h && py + size > w.y;
+  }
+  return false;
 }
 
 // pohyb nepriateľov + útok
@@ -148,13 +167,26 @@ function moveEnemies(){
     const dy = player.y - e.y;
     const dist = Math.hypot(dx, dy);
     if(dist>5){
-      e.x += dx/dist*e.speed;
-      e.y += dy/dist*e.speed;
+      const newX = e.x + dx/dist*e.speed;
+      const newY = e.y + dy/dist*e.speed;
+      // aj nepriatelia narazia do stien
+      if(!walls.some(w=>collides(newX,newY,e.size,w))){
+        e.x = newX;
+        e.y = newY;
+      }
     }
     if(dist < 40 && e.attackCooldown <= 0){
-      player.hp -= 5;
-      e.attackCooldown = 60;
-      if(player.hp <= 0){ player.hp = 0; alert("💀 Prehral si!"); location.reload(); }
+      player.hp -= 10;
+      e.attackCooldown = 50;
+      if(player.hp <= 0){
+        player.hp = 0;
+        player.alive = false;
+        let lose = Math.floor(55 + Math.random()*15);
+        trophies = Math.max(0, trophies - lose);
+        localStorage.setItem("trophies", trophies);
+        alert(`💀 Prehral si! -${lose} trofejí`);
+        location.reload();
+      }
     }
     if(e.attackCooldown>0) e.attackCooldown--;
   });
@@ -166,7 +198,7 @@ function attack(){
     if(!e.alive) return;
     const dx = player.x - e.x;
     const dy = player.y - e.y;
-    if(Math.hypot(dx,dy)<40){
+    if(Math.hypot(dx,dy)<45){
       e.alive=false;
       trophies += Math.floor(Math.random()*15)+1;
       localStorage.setItem("trophies", trophies);
@@ -200,19 +232,24 @@ function draw(){
   ctx.lineWidth=6;
   ctx.strokeRect(-camX, -camY, mapSize, mapSize);
 
-  // steny
-  ctx.fillStyle="#8b5a2b";
+  // steny - rôzne tvary
   walls.forEach(w=>{
     const x = w.x - camX, y = w.y - camY;
-    if(x+w.w>0 && x<canvas.width && y+w.h>0 && y<canvas.height)
+    ctx.fillStyle="#8b5a2b";
+    if(w.shape==="rect"){
       ctx.fillRect(x,y,w.w,w.h);
-  });
-
-  // itemy
-  items.forEach(i=>{
-    const x=i.x-camX, y=i.y-camY;
-    ctx.fillStyle = i.type==="sword"?"silver":"lightblue";
-    ctx.beginPath(); ctx.arc(x,y,15,0,Math.PI*2); ctx.fill();
+    } else if(w.shape==="circle"){
+      ctx.beginPath();
+      ctx.arc(x+w.w/2,y+w.h/2,w.w/2,0,Math.PI*2);
+      ctx.fill();
+    } else if(w.shape==="triangle"){
+      ctx.beginPath();
+      ctx.moveTo(x+w.w/2, y);
+      ctx.lineTo(x, y+w.h);
+      ctx.lineTo(x+w.w, y+w.h);
+      ctx.closePath();
+      ctx.fill();
+    }
   });
 
   // liečivé plus
@@ -260,4 +297,4 @@ function loop(){
 loop();
 </script>
 </body>
-</html>
+  </html>
