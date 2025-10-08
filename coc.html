@@ -21,29 +21,29 @@
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 // Nastavenie mapy
-const mapSize = 4000; // veľká mapa
-const wallCount = 100;
-const itemCount = 6;
+const mapSize = 6000; // ešte väčšia mapa
+const wallCount = 200;
+const itemCount = 8;
 
 let keys = {};
 let player = { x: mapSize / 2, y: mapSize / 2, size: 30, speed: 5 };
 let enemies = [];
 let walls = [];
 let items = [];
-
 let trophies = 0;
 
-// Generovanie náhodných stien
+// Generovanie stien
 for (let i = 0; i < wallCount; i++) {
   walls.push({
     x: Math.random() * mapSize,
     y: Math.random() * mapSize,
-    w: 80,
-    h: 30
+    w: 60 + Math.random() * 40,
+    h: 20 + Math.random() * 20
   });
 }
 
@@ -58,7 +58,7 @@ for (let i = 0; i < itemCount; i++) {
 }
 
 // Generovanie súperov
-for (let i = 0; i < 3; i++) {
+for (let i = 0; i < 5; i++) {
   enemies.push({
     x: Math.random() * mapSize,
     y: Math.random() * mapSize,
@@ -89,8 +89,8 @@ function movePlayer() {
   );
 
   if (!collision) {
-    player.x = newX;
-    player.y = newY;
+    player.x = Math.max(0, Math.min(mapSize - player.size, newX));
+    player.y = Math.max(0, Math.min(mapSize - player.size, newY));
   }
 }
 
@@ -110,23 +110,33 @@ function moveEnemies() {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Kamera - hráč v strede
-  const camX = player.x - canvas.width / 2;
-  const camY = player.y - canvas.height / 2;
+  // Kamera sleduje hráča
+  const camX = Math.floor(player.x - canvas.width / 2);
+  const camY = Math.floor(player.y - canvas.height / 2);
 
-  // Mapa (steny)
+  // Orezanie – kreslí sa len to, čo je v dohľade
   ctx.fillStyle = "#f7d94c";
-  ctx.fillRect(0 - camX, 0 - camY, mapSize, mapSize);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  // Steny
   ctx.fillStyle = "#8b5a2b";
-  walls.forEach(w => ctx.fillRect(w.x - camX, w.y - camY, w.w, w.h));
+  walls.forEach(w => {
+    const drawX = w.x - camX;
+    const drawY = w.y - camY;
+    if (drawX + w.w > 0 && drawX < canvas.width && drawY + w.h > 0 && drawY < canvas.height)
+      ctx.fillRect(drawX, drawY, w.w, w.h);
+  });
 
   // Meče a štíty
   items.forEach(i => {
-    ctx.fillStyle = i.type === "sword" ? "silver" : "lightblue";
-    ctx.beginPath();
-    ctx.arc(i.x - camX, i.y - camY, 15, 0, Math.PI * 2);
-    ctx.fill();
+    const drawX = i.x - camX;
+    const drawY = i.y - camY;
+    if (drawX > -20 && drawX < canvas.width + 20 && drawY > -20 && drawY < canvas.height + 20) {
+      ctx.fillStyle = i.type === "sword" ? "silver" : "lightblue";
+      ctx.beginPath();
+      ctx.arc(drawX, drawY, 15, 0, Math.PI * 2);
+      ctx.fill();
+    }
   });
 
   // Hráč
@@ -136,7 +146,12 @@ function draw() {
   // Súperi
   ctx.fillStyle = "purple";
   enemies.forEach(e => {
-    if (e.alive) ctx.fillRect(e.x - camX, e.y - camY, e.size, e.size);
+    if (e.alive) {
+      const drawX = e.x - camX;
+      const drawY = e.y - camY;
+      if (drawX + e.size > 0 && drawX < canvas.width && drawY + e.size > 0 && drawY < canvas.height)
+        ctx.fillRect(drawX, drawY, e.size, e.size);
+    }
   });
 
   // Text – trofeje
