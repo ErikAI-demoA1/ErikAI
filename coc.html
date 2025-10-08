@@ -1,298 +1,181 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="sk">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>ErikAI Battle (2.5D)</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI Mini Clash</title>
 <style>
-  :root{--yellow:#f6e58d}
-  body{margin:0;font-family:Inter,Arial,sans-serif;background:#222;color:#fff;overflow:hidden}
-  header{position:fixed;top:0;left:0;right:0;background:#111;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;z-index:100}
-  input,select,button{padding:8px 10px;border-radius:8px;border:none;font-size:15px}
-  input{width:160px;text-align:center;background:#000;color:#fff}
-  select,button{background:#333;color:#fff}
-  button{cursor:pointer}
-  #arena{position:fixed;top:130px;bottom:0;left:0;right:0;background:var(--yellow);border-radius:10px;margin:6px;overflow:hidden;box-shadow:inset 0 0 10px rgba(0,0,0,0.3)}
-  .entity{position:absolute;width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;transform:perspective(800px) rotateX(25deg)}
-  .player{background:#e74c3c;border:3px solid #b83b2f;z-index:30}
-  .enemy{background:#2980b9;border:3px solid #1f5f8a;z-index:20}
-  .hpBar{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);width:50px;height:6px;background:rgba(0,0,0,0.4);border-radius:6px;overflow:hidden}
-  .hpFill{height:100%;background:linear-gradient(90deg,#2ecc71,#27ae60);width:100%}
-  .wall{position:absolute;background:#8b4513;border:2px solid #5a3210;border-radius:4px;z-index:10}
-  .power{position:absolute;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold}
-  .sword{background:#c0392b}
-  .shield{background:#16a085}
-  #joystick{position:fixed;left:10px;bottom:10px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;z-index:90}
-  #joyKnob{width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,0.5)}
-  #uiPanel{position:fixed;right:10px;bottom:10px;display:flex;flex-direction:column;gap:8px;z-index:90}
-  .controlBtn{padding:12px 16px;background:#333;border:none;border-radius:8px;font-weight:bold}
-  #bottomMsg{position:fixed;bottom:5px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);padding:6px 12px;border-radius:8px;font-size:13px;z-index:200}
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #000;
+  }
+  canvas {
+    display: block;
+    background: #f7d94c; /* žltá mapa */
+  }
 </style>
 </head>
 <body>
-
-<header>
-  <div>
-    <input id="nameInput" type="text" placeholder="Tvoje meno">
-    <button id="saveName">Uložiť</button>
-  </div>
-  <div>
-    🏆 <span id="trophies">0</span> | Mód:
-    <select id="modeSelect">
-      <option value="1">1 hráč</option>
-      <option value="2">2 hráči</option>
-      <option value="3">3 hráči</option>
-      <option value="4">4 hráči</option>
-      <option value="5" selected>5 hráčov</option>
-    </select>
-  </div>
-  <div style="display:flex;gap:8px;">
-    <button id="startBtn">Štart</button>
-    <button id="clearBtn" style="background:#a33">Reset</button>
-  </div>
-</header>
-
-<div id="arena"></div>
-<div id="joystick"><div id="joyKnob"></div></div>
-<div id="uiPanel">
-  <button id="attackBtn" class="controlBtn">ÚTOK</button>
-</div>
-<div id="bottomMsg" style="display:none"></div>
-
+<canvas id="game"></canvas>
 <script>
-const arena=document.getElementById('arena');
-const trophiesEl=document.getElementById('trophies');
-const nameInput=document.getElementById('nameInput');
-const saveName=document.getElementById('saveName');
-const startBtn=document.getElementById('startBtn');
-const clearBtn=document.getElementById('clearBtn');
-const modeSelect=document.getElementById('modeSelect');
-const attackBtn=document.getElementById('attackBtn');
-const JOY=document.getElementById('joystick'),KNOB=document.getElementById('joyKnob');
-const bottomMsg=document.getElementById('bottomMsg');
-const SAVE_KEY='erikai_mobile_save';
-let state={name:'',trophies:0,player:{x:200,y:200,hp:100,maxHp:100},enemies:[],mode:1,inBattle:false,resultShown:false,powerAtk:1,powerDef:1,walls:[],powerUps:[]};
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-//=== SAVE / LOAD ===
-function save(){localStorage.setItem(SAVE_KEY,JSON.stringify(state));}
-function load(){let r=localStorage.getItem(SAVE_KEY);if(r){state=JSON.parse(r);}}
-function clearAll(){localStorage.removeItem(SAVE_KEY);location.reload();}
+// Nastavenie mapy
+const mapSize = 4000; // veľká mapa
+const wallCount = 100;
+const itemCount = 6;
 
-//=== UI ===
-function msg(t){bottomMsg.textContent=t;bottomMsg.style.display='block';setTimeout(()=>bottomMsg.style.display='none',2000);}
-function updateUI(){trophiesEl.textContent=state.trophies;nameInput.value=state.name||'';modeSelect.value=state.mode;}
-saveName.onclick=()=>{if(nameInput.value.trim()){state.name=nameInput.value.trim();save();msg('Meno uložené');}}
+let keys = {};
+let player = { x: mapSize / 2, y: mapSize / 2, size: 30, speed: 5 };
+let enemies = [];
+let walls = [];
+let items = [];
 
-//=== Player ===
-let playerEl;
-function ensurePlayer(){
-  if(!playerEl){
-    playerEl=document.createElement('div');
-    playerEl.className='entity player';
-    playerEl.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';
-    arena.appendChild(playerEl);
+let trophies = 0;
+
+// Generovanie náhodných stien
+for (let i = 0; i < wallCount; i++) {
+  walls.push({
+    x: Math.random() * mapSize,
+    y: Math.random() * mapSize,
+    w: 80,
+    h: 30
+  });
+}
+
+// Generovanie mečov a štítov
+const itemTypes = ["sword", "shield"];
+for (let i = 0; i < itemCount; i++) {
+  items.push({
+    x: Math.random() * mapSize,
+    y: Math.random() * mapSize,
+    type: itemTypes[Math.floor(Math.random() * itemTypes.length)]
+  });
+}
+
+// Generovanie súperov
+for (let i = 0; i < 3; i++) {
+  enemies.push({
+    x: Math.random() * mapSize,
+    y: Math.random() * mapSize,
+    size: 30,
+    speed: 2,
+    alive: true
+  });
+}
+
+window.addEventListener("keydown", e => keys[e.key] = true);
+window.addEventListener("keyup", e => keys[e.key] = false);
+
+function movePlayer() {
+  let newX = player.x;
+  let newY = player.y;
+
+  if (keys["w"]) newY -= player.speed;
+  if (keys["s"]) newY += player.speed;
+  if (keys["a"]) newX -= player.speed;
+  if (keys["d"]) newX += player.speed;
+
+  // kolízia so stenami
+  let collision = walls.some(w =>
+    newX < w.x + w.w &&
+    newX + player.size > w.x &&
+    newY < w.y + w.h &&
+    newY + player.size > w.y
+  );
+
+  if (!collision) {
+    player.x = newX;
+    player.y = newY;
   }
 }
 
-//=== Enemies ===
-function spawnEnemies(count){
-  state.enemies=[];
-  for(let i=0;i<count;i++){
-    state.enemies.push({id:'e'+i,x:Math.random()*arena.clientWidth*0.8+40,y:Math.random()*arena.clientHeight*0.7+60,hp:60,maxHp:60});
-  }
-}
-
-//=== Walls ===
-function generateWalls(){
-  state.walls=[];
-  for(let i=0;i<6;i++){
-    const w=40+Math.random()*40;
-    const h=20+Math.random()*30;
-    state.walls.push({x:Math.random()*(arena.clientWidth-w),y:Math.random()*(arena.clientHeight-h),w,h});
-  }
-}
-
-//=== PowerUps ===
-function spawnPowerUps(){
-  state.powerUps=[];
-  const types=['sword','shield'];
-  for(const type of types){
-    if(Math.random()<0.9){
-      const x=Math.random()*(arena.clientWidth-40)+20;
-      const y=Math.random()*(arena.clientHeight-40)+20;
-      state.powerUps.push({type,x,y});
+function moveEnemies() {
+  enemies.forEach(e => {
+    if (!e.alive) return;
+    const dx = player.x - e.x;
+    const dy = player.y - e.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 5) {
+      e.x += (dx / dist) * e.speed;
+      e.y += (dy / dist) * e.speed;
     }
-  }
+  });
 }
 
-//=== Attack ===
-function attack(){
-  if(!state.inBattle)return;
-  let hit=false;
-  for(const e of state.enemies){
-    const d=Math.hypot(state.player.x-e.x,state.player.y-e.y);
-    if(d<60){e.hp-=30*state.powerAtk;hit=true;if(e.hp<=0)e.dead=true;}
-  }
-  state.enemies=state.enemies.filter(e=>!e.dead);
-  if(hit)msg('Zásah!');
-  checkBattleResult();
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Kamera - hráč v strede
+  const camX = player.x - canvas.width / 2;
+  const camY = player.y - canvas.height / 2;
+
+  // Mapa (steny)
+  ctx.fillStyle = "#f7d94c";
+  ctx.fillRect(0 - camX, 0 - camY, mapSize, mapSize);
+
+  ctx.fillStyle = "#8b5a2b";
+  walls.forEach(w => ctx.fillRect(w.x - camX, w.y - camY, w.w, w.h));
+
+  // Meče a štíty
+  items.forEach(i => {
+    ctx.fillStyle = i.type === "sword" ? "silver" : "lightblue";
+    ctx.beginPath();
+    ctx.arc(i.x - camX, i.y - camY, 15, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Hráč
+  ctx.fillStyle = "red";
+  ctx.fillRect(player.x - camX, player.y - camY, player.size, player.size);
+
+  // Súperi
+  ctx.fillStyle = "purple";
+  enemies.forEach(e => {
+    if (e.alive) ctx.fillRect(e.x - camX, e.y - camY, e.size, e.size);
+  });
+
+  // Text – trofeje
+  ctx.fillStyle = "black";
+  ctx.font = "20px Arial";
+  ctx.fillText(`🏆 Trofeje: ${trophies}`, 20, 30);
 }
 
-//=== Movement ===
-let input={x:0,y:0};
-let activePointer=null,rect;
-JOY.addEventListener('pointerdown',e=>{
-  activePointer=e.pointerId;rect=JOY.getBoundingClientRect();JOY.setPointerCapture(e.pointerId);
-});
-JOY.addEventListener('pointermove',e=>{
-  if(activePointer!==e.pointerId)return;
-  const dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);
-  const mag=Math.min(40,Math.hypot(dx,dy));
-  const nx=dx/mag||0,ny=dy/mag||0;
-  KNOB.style.transform=`translate(${nx*mag}px,${ny*mag}px)`;
-  input.x=nx;input.y=ny;
-});
-JOY.addEventListener('pointerup',e=>{
-  if(activePointer!==e.pointerId)return;
-  JOY.releasePointerCapture(e.pointerId);activePointer=null;KNOB.style.transform='translate(0,0)';
-  input.x=input.y=0;
-});
-
-//=== Collisions ===
-function collides(x,y){
-  for(const w of state.walls){
-    if(x> w.x-24 && x< w.x+w.w+24 && y> w.y-24 && y< w.y+w.h+24) return true;
-  }
-  return false;
+function checkCombat() {
+  enemies.forEach(e => {
+    if (!e.alive) return;
+    const dx = player.x - e.x;
+    const dy = player.y - e.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 40) {
+      e.alive = false;
+      trophies += Math.floor(Math.random() * 15) + 1;
+      saveGame();
+    }
+  });
 }
 
-//=== Battle ===
-startBtn.onclick=()=>{
-  state.mode=parseInt(modeSelect.value);
-  state.player.hp=state.player.maxHp;
-  state.powerAtk=1;
-  state.powerDef=1;
-  spawnEnemies(state.mode);
-  generateWalls();
-  spawnPowerUps();
-  state.inBattle=true;
-  state.resultShown=false;
-  msg('Súperi: '+state.mode);
-  save();
-};
-clearBtn.onclick=()=>{if(confirm('Vymazať dáta?'))clearAll();}
-attackBtn.onclick=attack;
-
-//=== Check win/lose ===
-function checkBattleResult(){
-  if(state.resultShown)return;
-  if(state.enemies.length===0){
-    const add=Math.floor(Math.random()*15)+1;
-    state.trophies+=add;
-    msg('🏆 Výhra! +'+add);
-    state.inBattle=false;
-    state.resultShown=true;
-    save();
-  }else if(state.player.hp<=0){
-    const lose=3;
-    state.trophies=Math.max(0,state.trophies-lose);
-    msg('❌ Prehra! -'+lose);
-    state.inBattle=false;
-    state.resultShown=true;
-    save();
-  }
+function saveGame() {
+  localStorage.setItem("trophies", trophies);
 }
 
-//=== Loop ===
-function loop(){
-  ensurePlayer();
+function loadGame() {
+  trophies = parseInt(localStorage.getItem("trophies")) || 0;
+}
 
-  if(state.inBattle){
-    let newX=state.player.x+input.x*3;
-    let newY=state.player.y+input.y*3;
-    if(!collides(newX,newY)){
-      state.player.x=Math.max(20,Math.min(arena.clientWidth-20,newX));
-      state.player.y=Math.max(20,Math.min(arena.clientHeight-20,newY));
-    }
-
-    for(const e of state.enemies){
-      const dx=state.player.x-e.x,dy=state.player.y-e.y,d=Math.hypot(dx,dy);
-      if(d>25){e.x+=dx/d*1.2;e.y+=dy/d*1.2;}
-      else if(Math.random()<0.02){
-        state.player.hp-=10/state.powerDef;
-        msg('💥 Zasiahnutý!');
-      }
-    }
-
-    // power-upy
-    for(const p of state.powerUps){
-      const d=Math.hypot(state.player.x-p.x,state.player.y-p.y);
-      if(d<40){
-        if(p.type==='sword'){state.powerAtk=2;msg('⚔️ Sila útoku +');}
-        if(p.type==='shield'){state.powerDef=2;msg('🛡️ Obrana +');}
-        p.taken=true;
-      }
-    }
-    state.powerUps=state.powerUps.filter(p=>!p.taken);
-  }
-
-  // Render
-  playerEl.style.left=(state.player.x-24)+'px';
-  playerEl.style.top=(state.player.y-40)+'px';
-  playerEl.querySelector('.hpFill').style.width=(state.player.hp/state.player.maxHp*100)+'%';
-
-  // Enemies
-  const existing=new Map();
-  arena.querySelectorAll('.enemy').forEach(el=>existing.set(el.dataset.id,el));
-  for(const e of state.enemies){
-    let el=existing.get(e.id);
-    if(!el){
-      el=document.createElement('div');
-      el.className='entity enemy';
-      el.dataset.id=e.id;
-      el.innerHTML='<div class="hpBar"><div class="hpFill"></div></div>';
-      arena.appendChild(el);
-    }
-    el.style.left=(e.x-24)+'px';
-    el.style.top=(e.y-40)+'px';
-    el.querySelector('.hpFill').style.width=(e.hp/e.maxHp*100)+'%';
-    existing.delete(e.id);
-  }
-  existing.forEach(el=>el.remove());
-
-  // Walls
-  arena.querySelectorAll('.wall').forEach(el=>el.remove());
-  for(const w of state.walls){
-    const el=document.createElement('div');
-    el.className='wall';
-    el.style.left=w.x+'px';
-    el.style.top=w.y+'px';
-    el.style.width=w.w+'px';
-    el.style.height=w.h+'px';
-    arena.appendChild(el);
-  }
-
-  // Power-ups
-  arena.querySelectorAll('.power').forEach(el=>el.remove());
-  for(const p of state.powerUps){
-    const el=document.createElement('div');
-    el.className='power '+p.type;
-    el.style.left=p.x+'px';
-    el.style.top=p.y+'px';
-    el.textContent=p.type==='sword'?'⚔️':'🛡️';
-    arena.appendChild(el);
-  }
-
-  checkBattleResult();
-  trophiesEl.textContent=state.trophies;
+function loop() {
+  movePlayer();
+  moveEnemies();
+  checkCombat();
+  draw();
   requestAnimationFrame(loop);
 }
 
-//=== Init ===
-load();
-ensurePlayer();
-updateUI();
-save();
+loadGame();
 loop();
 </script>
 </body>
