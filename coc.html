@@ -46,13 +46,14 @@ const mapSize = 6000;
 const wallCount = 200;
 const itemCount = 8;
 
-let player, enemies, walls, items, trophies;
+let player, enemies, walls, items, trophies, decorations;
 
 function initGame() {
   player = { x: mapSize/2, y: mapSize/2, size:30, speed:5, hp:100, maxHp:100, alive:true };
   enemies = [];
   walls = [];
   items = [];
+  decorations = [];
   trophies = parseInt(localStorage.getItem("trophies")) || 0;
 
   for(let i=0;i<wallCount;i++){
@@ -118,16 +119,22 @@ function movePlayer(){
   let newX = player.x + (keys["a"]?-player.speed:0) + (keys["d"]?player.speed:0) + moveX*player.speed;
   let newY = player.y + (keys["w"]?-player.speed:0) + (keys["s"]?player.speed:0) + moveY*player.speed;
 
-  // hranice mapy
   newX = Math.max(0, Math.min(mapSize-player.size, newX));
   newY = Math.max(0, Math.min(mapSize-player.size, newY));
 
-  // kolízie so stenami
   let collision = walls.some(w=> newX< w.x + w.w && newX+player.size> w.x && newY< w.y+w.h && newY+player.size> w.y);
   if(!collision){
     player.x = newX;
     player.y = newY;
   }
+
+  // kolízia s dekoráciami = doplnenie života
+  decorations.forEach((d)=>{
+    if(!d.used && Math.abs(player.x - d.x)<30 && Math.abs(player.y - d.y)<30){
+      d.used = true;
+      player.hp = Math.min(player.maxHp, player.hp + 30);
+    }
+  });
 }
 
 function spawnEnemy(){
@@ -142,6 +149,19 @@ function spawnEnemy(){
   });
 }
 setInterval(spawnEnemy, 2000 + Math.random()*1000);
+
+// 🔹 generovanie nových dekorácií každých 12 sekúnd
+function spawnDecoration(){
+  const colors = ["#6af", "#f6a", "#6f6", "#ffa"];
+  decorations.push({
+    x: Math.random()*mapSize,
+    y: Math.random()*mapSize,
+    color: colors[Math.floor(Math.random()*colors.length)],
+    used:false
+  });
+}
+setInterval(spawnDecoration, 12000);
+spawnDecoration(); // na začiatok aspoň jedna
 
 function moveEnemies(){
   enemies.forEach(e=>{
@@ -188,6 +208,18 @@ function draw(){
     const x = w.x - camX, y = w.y - camY;
     if(x+w.w>0 && x<canvas.width && y+w.h>0 && y<canvas.height)
       ctx.fillRect(x,y,w.w,w.h);
+  });
+
+  // dekorácie (liečivé)
+  decorations.forEach(d=>{
+    if(!d.used){
+      const x = d.x - camX;
+      const y = d.y - camY;
+      ctx.fillStyle = d.color;
+      ctx.beginPath();
+      ctx.arc(x, y, 20, 0, Math.PI*2);
+      ctx.fill();
+    }
   });
 
   // itemy
@@ -258,4 +290,4 @@ function loop(){
 loop();
 </script>
 </body>
-  </html>
+</html>
