@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI Mobile Clash — Super tvary</title>
+<title>ErikAI Mobile Clash — Super verzia</title>
 <style>
 body { margin:0; overflow:hidden; background:#000; touch-action:none; user-select:none; font-family:Arial,sans-serif; }
 canvas { display:block; background:#f7d94c; }
@@ -18,16 +18,16 @@ canvas { display:block; background:#f7d94c; }
 
 <canvas id="game"></canvas>
 <canvas id="radar"></canvas>
+
 <div id="joystick"><div id="joyKnob"></div></div>
 <button id="attackBtn">ÚTOK</button>
 <div id="missionBox">Misie: žiadna aktivita</div>
 
 <script>
-// --- Základné premenné ---
+// --- Základné ---
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
 const radar = document.getElementById("radar");
 const rCtx = radar.getContext("2d");
@@ -52,15 +52,12 @@ const missionBox = document.getElementById("missionBox");
 let currentMission = { text: 'Žiadna aktivita', type: null, target:0, progress:0 };
 
 // --- Steny a itemy ---
-const shapes = ["rect","circle","triangle","pentagon","hexagon","star","diamond"];
-let walls = [];
-let items = [];
-let healPacks = [];
-let enemies = [];
+const shapes = ["rect","circle","triangle","hexagon","pentagon","star","octagon"];
+let walls = [], items = [], healPacks = [], enemies = [];
 
 // --- Generovanie stien ---
 for(let i=0;i<wallCount;i++){
-  walls.push({ x:Math.random()*mapSize, y:Math.random()*mapSize, w:40+Math.random()*80, h:40+Math.random()*80, shape:shapes[Math.floor(Math.random()*shapes.length)], color:'#'+Math.floor(Math.random()*16777215).toString(16) });
+  walls.push({ x:Math.random()*mapSize, y:Math.random()*mapSize, w:40+Math.random()*80, h:40+Math.random()*80, shape:shapes[Math.floor(Math.random()*3)], color:'#'+Math.floor(Math.random()*16777215).toString(16) });
 }
 
 // --- Generovanie itemov ---
@@ -68,22 +65,6 @@ const itemTypes=["sword","shield"];
 for(let i=0;i<itemCount;i++){
   items.push({ x:Math.random()*mapSize, y:Math.random()*mapSize, type:itemTypes[Math.floor(Math.random()*itemTypes.length)] });
 }
-
-// --- Nepriatelia ---
-function spawnEnemy(){
-  let typeRand = Math.random();
-  let e = { x:Math.random()*mapSize, y:Math.random()*mapSize, size:30, alive:true, attackCooldown:0 };
-  if(typeRand < 0.5){ e.speed=2; e.shape="rect"; e.color="purple"; }
-  else if(typeRand<0.75){ e.speed=player.speed*1.1; e.shape="circle"; e.color="green"; }
-  else { e.speed=player.speed*0.35; e.shape="triangle"; e.color="black"; }
-  enemies.push(e);
-}
-for(let i=0;i<5;i++) spawnEnemy();
-setInterval(()=>spawnEnemy(), 2000 + Math.random()*1000);
-
-// --- Liečivé predmety ---
-function spawnHealPack(){ healPacks.push({ x: Math.random()*mapSize, y: Math.random()*mapSize, size:25 }); }
-setInterval(spawnHealPack, 5000);
 
 // --- Ovládanie ---
 let keys={};
@@ -94,8 +75,7 @@ window.addEventListener("keyup", e=>keys[e.key]=false);
 let joystick = document.getElementById("joystick");
 let joyKnob = document.getElementById("joyKnob");
 let moveX=0, moveY=0;
-let activePointer=null;
-let rect=null;
+let activePointer=null, rect=null;
 
 joystick.addEventListener("pointerdown", e=>{
   activePointer=e.pointerId;
@@ -107,8 +87,7 @@ joystick.addEventListener("pointermove", e=>{
   const dx = e.clientX - (rect.left + rect.width/2);
   const dy = e.clientY - (rect.top + rect.height/2);
   const mag = Math.min(40, Math.hypot(dx,dy));
-  const nx = dx/mag||0;
-  const ny = dy/mag||0;
+  const nx = dx/mag||0; const ny = dy/mag||0;
   joyKnob.style.transform = `translate(${nx*mag}px,${ny*mag}px)`;
   moveX=nx; moveY=ny;
 });
@@ -124,23 +103,42 @@ joystick.addEventListener("pointerup", e=>{
 document.getElementById("attackBtn").addEventListener("touchstart", attack);
 window.addEventListener("keydown", e=>{ if(e.key===" ") attack(); });
 
-// --- Pohyb hráča ---
+// --- Generovanie nepriateľov ---
+function spawnEnemy(){
+  let typeRand=Math.random();
+  let e={ x:Math.random()*mapSize, y:Math.random()*mapSize, size:30, alive:true, attackCooldown:0, hp:10 };
+
+  if(typeRand<0.15){ e.speed=player.speed*2; e.shape="circle"; e.color="cyan"; e.hp=5; } // scout
+  else if(typeRand<0.30){ e.speed=player.speed*0.5; e.shape="rect"; e.color="brown"; e.hp=50; } // tank
+  else if(typeRand<0.45){ e.speed=player.speed*1; e.shape="triangle"; e.color="orange"; e.hp=15; e.jumpCooldown=0; } // skokan
+  else if(typeRand<0.60){ e.speed=player.speed*0.9; e.shape="hexagon"; e.color="purple"; e.hp=12; e.shootCooldown=Math.floor(Math.random()*100); } // strieľajúci
+  else if(typeRand<0.75){ e.speed=player.speed*1.1; e.shape="pentagon"; e.color="gray"; e.hp=10; e.invisibleCooldown=0; } // kamufláž
+  else if(typeRand<0.90){ e.speed=player.speed*0.6; e.shape="star"; e.color="red"; e.hp=8; e.explodeDistance=50; } // explozívny
+  else{ e.speed=player.speed*0.4; e.shape="octagon"; e.color="black"; e.hp=80; } // boss mini
+
+  enemies.push(e);
+}
+for(let i=0;i<5;i++) spawnEnemy();
+setInterval(()=>spawnEnemy(), 2000+Math.random()*1000);
+
+// --- Liečivé predmety ---
+function spawnHealPack(){ healPacks.push({ x:Math.random()*mapSize, y:Math.random()*mapSize, size:25 }); }
+setInterval(spawnHealPack,5000);
+
+// --- Pohyb hráča a liečenie ---
 function movePlayer(){
   if(!player.alive) return;
-  let newX = player.x + (keys["a"]?-player.speed:0) + (keys["d"]?player.speed:0) + moveX*player.speed;
-  let newY = player.y + (keys["w"]?-player.speed:0) + (keys["s"]?player.speed:0) + moveY*player.speed;
+  let newX=player.x+(keys["a"]?-player.speed:0)+(keys["d"]?player.speed:0)+moveX*player.speed;
+  let newY=player.y+(keys["w"]?-player.speed:0)+(keys["s"]?player.speed:0)+moveY*player.speed;
   if(!walls.some(w=>collides(newX,newY,player.size,w))){
-    player.x = Math.max(0, Math.min(mapSize-player.size, newX));
-    player.y = Math.max(0, Math.min(mapSize-player.size, newY));
+    player.x=Math.max(0,Math.min(mapSize-player.size,newX));
+    player.y=Math.max(0,Math.min(mapSize-player.size,newY));
   }
+
   // liečenie
-  healPacks = healPacks.filter(h=>{
-    const d = Math.hypot(player.x - h.x, player.y - h.y);
-    if(d < 40){
-      player.hp = Math.min(player.maxHp, player.hp + 25);
-      updateMission('heal');
-      return false;
-    }
+  healPacks=healPacks.filter(h=>{
+    const d=Math.hypot(player.x-h.x,player.y-h.y);
+    if(d<40){ player.hp=Math.min(player.maxHp,player.hp+25); updateMission('heal'); return false; }
     return true;
   });
 }
@@ -149,25 +147,30 @@ function movePlayer(){
 function collides(px,py,size,w){
   if(w.shape==="rect") return px<w.x+w.w && px+size>w.x && py<w.y+w.h && py+size>w.y;
   else if(w.shape==="circle"){ const dx=(px+size/2)-(w.x+w.w/2); const dy=(py+size/2)-(w.y+w.h/2); return Math.hypot(dx,dy)<(size/2+w.w/2); }
-  else if(w.shape==="triangle"||w.shape==="pentagon"||w.shape==="hexagon"||w.shape==="star"||w.shape==="diamond"){ return px<w.x+w.w && px+size>w.x && py<w.y+w.h && py+size>w.y; }
+  else if(w.shape==="triangle") return px<w.x+w.w && px+size>w.x && py<w.y+w.h && py+size>w.y;
   return false;
 }
 
-// --- Nepriatelia ---
+// --- Pohyb nepriateľov ---
 function moveEnemies(){
   enemies.forEach(e=>{
     if(!e.alive) return;
-    const dx=player.x-e.x; const dy=player.y-e.y; const dist=Math.hypot(dx,dy);
-    if(dist>5){
-      const newX = e.x + dx/dist*e.speed;
-      const newY = e.y + dy/dist*e.speed;
-      if(!walls.some(w=>collides(newX,newY,e.size,w))){ e.x=newX; e.y=newY; }
-    }
-    if(dist<40 && e.attackCooldown<=0){
-      player.hp-=10; e.attackCooldown=50;
+    const dx=player.x-e.x, dy=player.y-e.y, dist=Math.hypot(dx,dy);
+
+    if(e.shape==="triangle" && e.jumpCooldown<=0 && dist>50){ e.x+=dx*0.5; e.y+=dy*0.5; e.jumpCooldown=150; }
+    if(e.shape==="star" && dist<e.explodeDistance){ player.hp-=20; e.alive=false; return; }
+    if(e.shape==="pentagon" && e.invisibleCooldown<=0){ e.visible=!e.visible; e.invisibleCooldown=100+Math.random()*50; }
+
+    if(dist>5){ const newX=e.x+dx/dist*e.speed; const newY=e.y+dy/dist*e.speed; if(!walls.some(w=>collides(newX,newY,e.size,w))){ e.x=newX; e.y=newY; } }
+
+    if(dist<40 && e.attackCooldown<=0){ player.hp-=Math.floor(5+Math.random()*10); e.attackCooldown=50;
       if(player.hp<=0){ player.hp=0; player.alive=false; let lose=Math.floor(55+Math.random()*16); trophies=Math.max(0,trophies-lose); localStorage.setItem("trophies", trophies); alert(`💀 Prehral si! -${lose} trofejí`); location.reload(); }
     }
+
     if(e.attackCooldown>0) e.attackCooldown--;
+    if(e.jumpCooldown>0) e.jumpCooldown--;
+    if(e.shootCooldown>0) e.shootCooldown--;
+    if(e.invisibleCooldown>0) e.invisibleCooldown--;
   });
 }
 
@@ -175,154 +178,128 @@ function moveEnemies(){
 function attack(){
   enemies.forEach(e=>{
     if(!e.alive) return;
-    const dx = player.x - e.x;
-    const dy = player.y - e.y;
-    if(Math.hypot(dx,dy)<45){
-      e.alive=false;
-      trophies += Math.floor(Math.random()*15)+1;
-      localStorage.setItem("trophies", trophies);
-      gainXP(5); // XP za zabitie nepriateľa
-      updateMission('kill');
-    }
+    const dx=player.x-e.x, dy=player.y-e.y;
+    if(Math.hypot(dx,dy)<45){ e.alive=false; trophies+=Math.floor(Math.random()*15)+1; localStorage.setItem("trophies", trophies); gainXP(5); updateMission('kill'); }
   });
 }
 
 // --- Level / XP ---
 function gainXP(amount){
-  playerXP += amount;
-  while(playerXP >= XP_to_next_level){
-    playerXP -= XP_to_next_level;
-    playerLevel++;
-    XP_to_next_level = Math.floor(XP_to_next_level * 1.5);
-    alert(`🎉 Nový level: ${playerLevel}!`);
-  }
-  localStorage.setItem("playerLevel", playerLevel);
-  localStorage.setItem("playerXP", playerXP);
-  localStorage.setItem("XP_to_next_level", XP_to_next_level);
+  playerXP+=amount;
+  while(playerXP>=XP_to_next_level){ playerXP-=XP_to_next_level; playerLevel++; XP_to_next_level=Math.floor(XP_to_next_level*1.5); alert(`🎉 Nový level: ${playerLevel}!`); }
+  localStorage.setItem("playerLevel", playerLevel); localStorage.setItem("playerXP", playerXP); localStorage.setItem("XP_to_next_level", XP_to_next_level);
 }
 
 // --- Misie ---
 function generateMission(){
-  const missionTypes = ['kill','heal','collect'];
-  const type = missionTypes[Math.floor(Math.random()*missionTypes.length)];
+  const types=['kill','heal','collect']; const type=types[Math.floor(Math.random()*types.length)];
   let target=0,text='';
-  if(type==='kill'){ target=5 + Math.floor(Math.random()*5); text=`Zabi ${target} nepriateľov`; }
-  else if(type==='heal'){ target=3 + Math.floor(Math.random()*3); text=`Použi ${target} liečivých predmetov`; }
-  else if(type==='collect'){ target=2 + Math.floor(Math.random()*3); text=`Zbieraj ${target} itemov`; }
-  currentMission = { text:text, type:type, target:target, progress:0 };
-  missionBox.innerText = 'Misie: ' + currentMission.text;
+  if(type==='kill'){ target=5+Math.floor(Math.random()*5); text=`Zabi ${target} nepriateľov`; }
+  else if(type==='heal'){ target=3+Math.floor(Math.random()*3); text=`Použi ${target} liečivých predmetov`; }
+  else if(type==='collect'){ target=2+Math.floor(Math.random()*3); text=`Zbieraj ${target} itemov`; }
+  currentMission={ text:text, type:type, target:target, progress:0 };
+  missionBox.innerText='Misie: '+currentMission.text;
 }
-
 function updateMission(action){
   if(currentMission.type===null) generateMission();
   if(currentMission.type==='kill' && action==='kill') currentMission.progress++;
   if(currentMission.type==='heal' && action==='heal') currentMission.progress++;
   if(currentMission.type==='collect' && action==='collect') currentMission.progress++;
-  if(currentMission.progress >= currentMission.target){
-    alert(`🎯 Misia dokončená: ${currentMission.text}`);
-    generateMission();
-  }
-}
-
-// --- Vykreslenie tvarov ---
-function drawShape(ctx, w, x, y){
-  ctx.fillStyle=w.color;
-  if(w.shape==="rect") ctx.fillRect(x,y,w.w,w.h);
-  else if(w.shape==="circle"){ ctx.beginPath(); ctx.arc(x+w.w/2,y+w.h/2,w.w/2,0,Math.PI*2); ctx.fill(); }
-  else if(w.shape==="triangle"){ ctx.beginPath(); ctx.moveTo(x+w.w/2,y); ctx.lineTo(x,y+w.h); ctx.lineTo(x+w.w,y+w.h); ctx.closePath(); ctx.fill(); }
-  else if(w.shape==="pentagon"){ 
-    ctx.beginPath();
-    for(let i=0;i<5;i++){
-      let angle = (Math.PI/2)+(i*2*Math.PI/5);
-      let px = x + w.w/2 + (w.w/2)*Math.cos(angle);
-      let py = y + w.h/2 + (w.h/2)*Math.sin(angle);
-      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-    }
-    ctx.closePath(); ctx.fill();
-  }
-  else if(w.shape==="hexagon"){
-    ctx.beginPath();
-    for(let i=0;i<6;i++){
-      let angle = Math.PI/6 + i*2*Math.PI/6;
-      let px = x + w.w/2 + (w.w/2)*Math.cos(angle);
-      let py = y + w.h/2 + (w.h/2)*Math.sin(angle);
-      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-    }
-    ctx.closePath(); ctx.fill();
-  }
-  else if(w.shape==="star"){
-    ctx.beginPath();
-    let cx = x + w.w/2, cy = y + w.h/2, spikes=5, outer=w.w/2, inner=w.w/4;
-    for(let i=0;i<spikes;i++){
-      let angle = i*Math.PI*2/spikes - Math.PI/2;
-      ctx.lineTo(cx+Math.cos(angle)*outer, cy+Math.sin(angle)*outer);
-      angle += Math.PI/spikes;
-      ctx.lineTo(cx+Math.cos(angle)*inner, cy+Math.sin(angle)*inner);
-    }
-    ctx.closePath(); ctx.fill();
-  }
-  else if(w.shape==="diamond"){
-    ctx.beginPath();
-    ctx.moveTo(x+w.w/2, y);
-    ctx.lineTo(x+w.w, y+w.h/2);
-    ctx.lineTo(x+w.w/2, y+w.h);
-    ctx.lineTo(x, y+w.h/2);
-    ctx.closePath(); ctx.fill();
-  }
+  if(currentMission.progress>=currentMission.target){ alert(`🎯 Misia dokončená: ${currentMission.text}`); generateMission(); }
 }
 
 // --- Vykreslenie ---
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  const camX = player.x - canvas.width/2;
-  const camY = player.y - canvas.height/2;
-
+  const camX=player.x-canvas.width/2, camY=player.y-canvas.height/2;
   ctx.fillStyle="#f7d94c"; ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle="green"; ctx.lineWidth=6; ctx.strokeRect(-camX,-camY,mapSize,mapSize);
 
-  // Steny
+  // steny
   walls.forEach(w=>{
-    drawShape(ctx, w, w.x-camX, w.y-camY);
+    const x=w.x-camX, y=w.y-camY;
+    ctx.fillStyle=w.color;
+    if(w.shape==="rect") ctx.fillRect(x,y,w.w,w.h);
+    else if(w.shape==="circle"){ ctx.beginPath(); ctx.arc(x+w.w/2,y+w.h/2,w.w/2,0,Math.PI*2); ctx.fill(); }
+    else if(w.shape==="triangle"){ ctx.beginPath(); ctx.moveTo(x+w.w/2,y); ctx.lineTo(x,y+w.h); ctx.lineTo(x+w.w,y+w.h); ctx.closePath(); ctx.fill(); }
   });
 
-  // Liečivé predmety
-  healPacks.forEach(h=>{ const x=h.x-camX, y=h.y-camY; ctx.fillStyle="red"; ctx.fillRect(x-5,y-15,10,30); ctx.fillRect(x-15,y-5,30,10); });
+  // liečivé predmety
+  healPacks.forEach(h=>{ const x=h.x-camX,y=h.y-camY; ctx.fillStyle="red"; ctx.fillRect(x-5,y-15,10,30); ctx.fillRect(x-15,y-5,30,10); });
 
-  // Hráč
+  // hráč
   ctx.fillStyle="red"; ctx.fillRect(player.x-camX,player.y-camY,player.size,player.size);
 
-  // Nepriatelia
+  // nepriatelia
   enemies.forEach(e=>{
     if(!e.alive) return;
-    const x=e.x-camX, y=e.y-camY;
+    if(e.shape==='pentagon' && !e.visible) return; // kamufláž
+    const x=e.x-camX,y=e.y-camY;
     ctx.fillStyle=e.color;
     if(e.shape==="rect") ctx.fillRect(x,y,e.size,e.size);
     else if(e.shape==="circle"){ ctx.beginPath(); ctx.arc(x+e.size/2,y+e.size/2,e.size/2,0,Math.PI*2); ctx.fill(); }
     else if(e.shape==="triangle"){ ctx.beginPath(); ctx.moveTo(x+e.size/2,y); ctx.lineTo(x,y+e.size); ctx.lineTo(x+e.size,y+e.size); ctx.closePath(); ctx.fill(); }
+    else if(e.shape==="hexagon"){ drawPolygon(ctx,x+e.size/2,y+e.size/2,6,e.size/2); ctx.fillStyle=e.color; ctx.fill(); }
+    else if(e.shape==="pentagon"){ drawPolygon(ctx,x+e.size/2,y+e.size/2,5,e.size/2); ctx.fillStyle=e.color; ctx.fill(); }
+    else if(e.shape==="star"){ drawStar(ctx,x+e.size/2,y+e.size/2,e.size/2,5); ctx.fillStyle=e.color; ctx.fill(); }
+    else if(e.shape==="octagon"){ drawPolygon(ctx,x+e.size/2,y+e.size/2,8,e.size/2); ctx.fillStyle=e.color; ctx.fill(); }
   });
 
   // HUD
-  ctx.fillStyle="black"; ctx.font="20px Arial"; ctx.fillText(`🏆 Trofeje: ${trophies}`, 20, 30);
+  ctx.fillStyle="black"; ctx.font="20px Arial"; ctx.fillText(`🏆 Trofeje: ${trophies}`,20,30);
   ctx.fillStyle="black"; ctx.fillRect(20,50,200,20);
   ctx.fillStyle="lime"; ctx.fillRect(20,50,(player.hp/player.maxHp)*200,20);
   ctx.strokeStyle="white"; ctx.strokeRect(20,50,200,20);
-  ctx.fillStyle="black"; ctx.font="16px Arial"; ctx.fillText(`${player.hp} / ${player.maxHp}`, 230, 65);
-  ctx.fillStyle="black"; ctx.font="20px Arial"; ctx.fillText(`Level: ${playerLevel} XP: ${playerXP}/${XP_to_next_level}`, 20, 90);
+  ctx.fillStyle="black"; ctx.font="16px Arial"; ctx.fillText(`${player.hp} / ${player.maxHp}`,230,65);
+
+  ctx.fillStyle="black"; ctx.font="20px Arial"; ctx.fillText(`Level: ${playerLevel} XP: ${playerXP}/${XP_to_next_level}`,20,90);
 
   drawRadar();
+}
+
+// --- Pomocné funkcie pre tvary ---
+function drawPolygon(ctx,x,y,sides,radius){
+  ctx.beginPath();
+  for(let i=0;i<sides;i++){
+    const angle=(i/sides)*2*Math.PI-Math.PI/2;
+    const px=x+radius*Math.cos(angle);
+    const py=y+radius*Math.sin(angle);
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.closePath();
+}
+
+function drawStar(ctx,x,y,radius,points){
+  const step=Math.PI/points;
+  ctx.beginPath();
+  for(let i=0;i<2*points;i++){
+    const r=i%2===0?radius:radius/2;
+    const angle=i*step-Math.PI/2;
+    const px=x+r*Math.cos(angle);
+    const py=y+r*Math.sin(angle);
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.closePath();
 }
 
 // --- Radar ---
 function drawRadar(){
   rCtx.clearRect(0,0,radar.width,radar.height);
   walls.forEach(w=>{
-    drawShape(rCtx, {...w, w:w.w*radarScale, h:w.h*radarScale}, w.x*radarScale, w.y*radarScale);
+    rCtx.fillStyle=w.color;
+    let x=w.x*radarScale, y=w.y*radarScale, wW=w.w*radarScale, wH=w.h*radarScale;
+    if(w.shape==="rect") rCtx.fillRect(x,y,wW,wH);
+    else if(w.shape==="circle") { rCtx.beginPath(); rCtx.arc(x+wW/2,y+wH/2,wW/2,0,Math.PI*2); rCtx.fill(); }
+    else if(w.shape==="triangle") { rCtx.beginPath(); rCtx.moveTo(x+wW/2,y); rCtx.lineTo(x,y+wH); rCtx.lineTo(x+wW,y+wH); rCtx.closePath(); rCtx.fill(); }
   });
+
   enemies.forEach(e=>{
     if(!e.alive) return;
+    if(e.shape==='pentagon' && !e.visible) return;
     rCtx.fillStyle=e.color;
     rCtx.fillRect(e.x*radarScale-2,e.y*radarScale-2,4,4);
   });
+
   rCtx.fillStyle="red";
   rCtx.fillRect(player.x*radarScale-3,player.y*radarScale-3,6,6);
 }
@@ -334,6 +311,7 @@ function loop(){
   draw();
   requestAnimationFrame(loop);
 }
+
 generateMission();
 loop();
 </script>
