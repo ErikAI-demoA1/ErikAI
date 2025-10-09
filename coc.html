@@ -1,24 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sk">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
-<title>ErikAI Mobile Clash — Levely & Misie</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>ErikAI Mobile Clash — Kompletná verzia</title>
 <style>
   :root{--yellow:#f7d94c}
   body{margin:0;background:#000;overflow:hidden;font-family:Inter,Arial,sans-serif;-webkit-user-select:none;user-select:none}
-  canvas#game{display:block;background:var(--yellow)}
+  canvas#game{display:block;background:var(--yellow);width:100vw;height:100vh}
   #joystick{position:fixed;bottom:60px;left:60px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px solid #fff;z-index:90;touch-action:none}
   #joyKnob{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.25);position:absolute;left:35px;top:35px}
   #attackBtn{position:fixed;right:20px;bottom:80px;width:98px;height:98px;border-radius:50%;background:#e74c3c;color:#fff;border:none;font-weight:700;z-index:90}
   #radar{position:fixed;top:10px;right:10px;width:150px;height:150px;background:rgba(0,0,0,0.45);border:2px solid #fff;border-radius:8px;z-index:90}
-  /* top UI */
   #hud{position:fixed;left:10px;top:6px;z-index:95;color:#000;background:rgba(255,255,255,0.9);padding:8px 10px;border-radius:8px;font-weight:700}
-  #hud .row{display:flex;gap:12px;align-items:center}
   #xpBar{width:220px;height:12px;background:#ddd;border-radius:8px;overflow:hidden}
   #xpFill{height:100%;background:linear-gradient(90deg,#6a9cff,#3b8bff);width:0%}
   #missionBox{position:fixed;left:10px;bottom:10px;background:rgba(0,0,0,0.6);color:#fff;padding:8px;border-radius:8px;z-index:95;max-width:60%}
-  /* level-up modal */
   #levelModal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#111;color:#fff;padding:16px;border-radius:12px;z-index:999;display:none;min-width:260px;text-align:center}
   #levelModal button{margin:8px;padding:10px 14px;border-radius:8px;border:none;cursor:pointer}
   #saveBtn{position:fixed;left:10px;top:56px;z-index:96;padding:6px 8px;border-radius:6px;border:none;background:#333;color:#fff}
@@ -33,14 +30,13 @@
 <div id="joystick"><div id="joyKnob"></div></div>
 <button id="attackBtn">ÚTOK</button>
 
-<!-- HUD -->
 <div id="hud">
-  <div class="row">
+  <div style="display:flex;gap:12px;align-items:center">
     <div id="playerName">ErikAI</div>
     <div>🏆 <span id="trophies">0</span></div>
     <div>Level <span id="level">1</span></div>
   </div>
-  <div style="margin-top:6px;">
+  <div style="margin-top:6px">
     <div id="xpBar"><div id="xpFill"></div></div>
     <div style="font-size:12px;margin-top:4px">XP: <span id="xp">0</span> / <span id="xpNext">100</span></div>
   </div>
@@ -48,7 +44,6 @@
 
 <div id="missionBox">Misie: žiadna aktívna</div>
 
-<!-- Level up modal (voľba bonusu) -->
 <div id="levelModal">
   <div style="font-size:20px;font-weight:800">Level Up!</div>
   <div style="margin-top:8px">Vyber si bonus:</div>
@@ -62,30 +57,25 @@
 <button id="clearBtn">Reset</button>
 
 <script>
-/* ===========================
-   Hra: ErikAI Mobile Clash
-   - Level systém s výberom bonusu pri level-up (B)
-   - Mini misie (random) + tracker
-   - Radar (steny + nepriatelia + hráč)
-   - Ukladanie stavu
-   =========================== */
-
-/* --- Canvas & základ --- */
+/* ---------------------
+   Kompletná fungujúca verzia
+   --------------------- */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const radar = document.getElementById('radar');
 const rCtx = radar.getContext('2d');
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+
+function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 resize(); window.addEventListener('resize', resize);
 radar.width = 150; radar.height = 150;
 
-const SAVE_KEY = 'erikai_full_save_v2';
+const SAVE_KEY = 'erikai_full_save_v3';
 const mapSize = 6000;
 const wallCount = 180;
 const itemCount = 8;
 const radarScale = radar.width / mapSize;
+const shapes = ['rect','circle','triangle'];
 
-/* --- Stav (persistovaný) --- */
 let state = {
   name: 'ErikAI',
   trophies: 0,
@@ -95,18 +85,17 @@ let state = {
   player: { x: mapSize/2, y: mapSize/2, size:30, speed:5, hp:100, maxHp:100, alive:true },
   walls: [],
   items: [],
-  enemies: [], // spawnované runtime
+  enemies: [],
   healPacks: [],
   missions: []
 };
 
-/* --- SAVE / LOAD --- */
+/* --- save/load --- */
 function saveState(){ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); updateHUD(); }
-function loadState(){ try{ const raw=localStorage.getItem(SAVE_KEY); if(raw){ state=JSON.parse(raw); } } catch(e){console.error(e);} updateHUD(); }
+function loadState(){ const raw = localStorage.getItem(SAVE_KEY); if(raw){ try{ state = JSON.parse(raw); }catch(e){ console.error('load err',e); } } updateHUD(); }
 function resetAll(){ if(confirm('Vymazať uložené dáta?')){ localStorage.removeItem(SAVE_KEY); location.reload(); } }
 
-/* --- Inicializácia mapy (len ak nie sú uložené steny/items) --- */
-const shapes = ['rect','circle','triangle'];
+/* --- init map (only if empty) --- */
 function initMapIfEmpty(){
   if(!state.walls || state.walls.length===0){
     state.walls = [];
@@ -123,23 +112,16 @@ function initMapIfEmpty(){
   }
   if(!state.items || state.items.length===0){
     state.items = [];
-    const itemTypes = ['sword','shield'];
+    const types = ['sword','shield'];
     for(let i=0;i<itemCount;i++){
-      state.items.push({
-        x: Math.random()*mapSize,
-        y: Math.random()*mapSize,
-        type: itemTypes[Math.floor(Math.random()*itemTypes.length)]
-      });
+      state.items.push({ x: Math.random()*mapSize, y: Math.random()*mapSize, type: types[Math.floor(Math.random()*types.length)] });
     }
   }
-  if(!state.enemies) state.enemies = [];
-  if(!state.healPacks) state.healPacks = [];
-  if(!state.missions) state.missions = [];
 }
 loadState();
 initMapIfEmpty();
 
-/* --- HUD references --- */
+/* --- HUD refs --- */
 const trophiesEl = document.getElementById('trophies');
 const levelEl = document.getElementById('level');
 const xpEl = document.getElementById('xp');
@@ -147,7 +129,6 @@ const xpNextEl = document.getElementById('xpNext');
 const xpFill = document.getElementById('xpFill');
 const missionBox = document.getElementById('missionBox');
 const playerNameEl = document.getElementById('playerName');
-
 function updateHUD(){
   trophiesEl.textContent = state.trophies;
   levelEl.textContent = state.level;
@@ -156,20 +137,13 @@ function updateHUD(){
   xpFill.style.width = Math.min(100, (state.xp/state.xpNext*100)) + '%';
   playerNameEl.textContent = state.name || 'ErikAI';
 }
+updateHUD();
 
-/* --- Joystick & input --- */
-const JOY = document.getElementById('joystick');
-const KNOB = document.getElementById('joyKnob');
-const attackBtn = document.getElementById('attackBtn');
-
-let input = { x:0, y:0 };
+/* --- input / joystick --- */
+const JOY = document.getElementById('joystick'), KNOB = document.getElementById('joyKnob');
+let input = { x:0,y:0 };
 let activePointer = null, joyRect = null;
-
-JOY.addEventListener('pointerdown', e=>{
-  activePointer = e.pointerId;
-  joyRect = JOY.getBoundingClientRect();
-  JOY.setPointerCapture(e.pointerId);
-});
+JOY.addEventListener('pointerdown', e=>{ activePointer = e.pointerId; joyRect = JOY.getBoundingClientRect(); JOY.setPointerCapture(e.pointerId); });
 JOY.addEventListener('pointermove', e=>{
   if(activePointer !== e.pointerId) return;
   const dx = e.clientX - (joyRect.left + joyRect.width/2);
@@ -180,16 +154,10 @@ JOY.addEventListener('pointermove', e=>{
   KNOB.style.transform = `translate(${nx*mag}px,${ny*mag}px)`;
   input.x = nx; input.y = ny;
 });
-JOY.addEventListener('pointerup', e=>{
-  if(activePointer !== e.pointerId) return;
-  JOY.releasePointerCapture(e.pointerId);
-  activePointer = null;
-  KNOB.style.transform = 'translate(0,0)';
-  input.x = 0; input.y = 0;
-});
+JOY.addEventListener('pointerup', e=>{ if(activePointer!==e.pointerId) return; JOY.releasePointerCapture(e.pointerId); activePointer=null; KNOB.style.transform='translate(0,0)'; input.x=0; input.y=0; });
+
 window.addEventListener('keydown', e=>{
-  if(e.key === ' ') attack(); // space attack
-  // WASD support (optional)
+  if(e.key === ' ') attack();
   if(e.key === 'w') input.y = -1;
   if(e.key === 's') input.y = 1;
   if(e.key === 'a') input.x = -1;
@@ -198,146 +166,93 @@ window.addEventListener('keydown', e=>{
 window.addEventListener('keyup', e=>{
   if(['w','a','s','d'].includes(e.key)) { input.x = 0; input.y = 0; }
 });
-attackBtn.addEventListener('touchstart', attack);
+document.getElementById('attackBtn').addEventListener('touchstart', attack);
 
-/* --- Enemy spawning (continuous) --- */
+/* --- enemy spawn --- */
 function spawnEnemy(){
   let r = Math.random();
-  const base = { x: Math.random()*mapSize, y: Math.random()*mapSize, size:30, alive:true, attackCooldown:0 };
-  if(r < 0.5){
-    base.speed = 2; base.shape = 'rect'; base.color = 'purple';
-  } else if(r < 0.75){
-    base.speed = state.player.speed * 1.1; base.shape = 'circle'; base.color = 'green';
-  } else {
-    base.speed = state.player.speed * 0.35; base.shape = 'triangle'; base.color = 'black';
-  }
+  const base = { x: Math.random()*mapSize, y: Math.random()*mapSize, size: 30, alive:true, attackCooldown:0, hp:30 };
+  if(r < 0.5){ base.speed = 2; base.shape = 'rect'; base.color = 'purple'; }
+  else if(r < 0.75){ base.speed = state.player.speed * 1.1; base.shape = 'circle'; base.color = 'green'; }
+  else { base.speed = state.player.speed * 0.35; base.shape = 'triangle'; base.color = 'black'; }
   state.enemies.push(base);
 }
-// spawn some initial
 for(let i=0;i<5;i++) spawnEnemy();
-// spawn every 2-3s
-setInterval(()=> spawnEnemy(), 2000 + Math.random()*1000);
+setInterval(()=> spawnEnemy(), 2000 + Math.floor(Math.random()*1000));
 
-/* --- Heal packs spawn every 5s --- */
-function spawnHealPack(){
-  state.healPacks.push({ x: Math.random()*mapSize, y: Math.random()*mapSize, size: 25 });
-}
+/* --- heal packs spawn --- */
+function spawnHealPack(){ state.healPacks.push({ x: Math.random()*mapSize, y: Math.random()*mapSize, size: 25 }); }
 setInterval(spawnHealPack, 5000);
 
-/* --- Mini misie ---
-   typy misie:
-   - kill N enemies (count)
-   - collect heal packs (count)
-   - survive seconds (time)
-   Misie sa generujú náhodne a majú reward (xp / trophies)
-*/
+/* --- missions generator --- */
 function genMission(){
   const types = ['kill','collect','survive'];
   const t = types[Math.floor(Math.random()*types.length)];
-  if(t === 'kill'){
-    const target = 1 + Math.floor(Math.random()*4);
-    return { id: 'm'+Date.now(), type:'kill', target, progress:0, rewardXP: 20*target, rewardT: Math.floor(target/2) };
-  } else if(t === 'collect'){
-    const target = 1 + Math.floor(Math.random()*3);
-    return { id:'m'+Date.now(), type:'collect', target, progress:0, rewardXP: 15*target, rewardT: Math.floor(target/2) };
-  } else {
-    const seconds = 6 + Math.floor(Math.random()*10);
-    return { id:'m'+Date.now(), type:'survive', target:seconds, progress:0, rewardXP: 25+seconds*2, rewardT: Math.max(1,Math.floor(seconds/6)) , running:false, startTime:0 };
-  }
+  if(t === 'kill'){ const target = 1 + Math.floor(Math.random()*4); return { id:'m'+Date.now(), type:'kill', target, progress:0, rewardXP:20*target, rewardT: Math.floor(target/2) }; }
+  if(t === 'collect'){ const target = 1 + Math.floor(Math.random()*3); return { id:'m'+Date.now(), type:'collect', target, progress:0, rewardXP:15*target, rewardT: Math.floor(target/2) }; }
+  const seconds = 6 + Math.floor(Math.random()*10); return { id:'m'+Date.now(), type:'survive', target:seconds, progress:0, rewardXP:25+seconds*2, rewardT: Math.max(1,Math.floor(seconds/6)), running:false, startTime:0 };
 }
-// keep max 2 concurrent missions
-function maybeSpawnMission(){
-  if(state.missions.length < 2 && Math.random() < 0.6){
-    state.missions.push(genMission());
-  }
-}
-setInterval(maybeSpawnMission, 15000); // každých 15s skúsi pridať misiu
+function maybeSpawnMission(){ if(state.missions.length < 2 && Math.random() < 0.6) state.missions.push(genMission()); }
+setInterval(maybeSpawnMission, 15000);
+if(state.missions.length === 0) state.missions.push(genMission());
 
-/* --- Mission update helpers --- */
-function updateMissionsOnKill(){
-  for(const m of state.missions){
-    if(m.type === 'kill'){ m.progress++; }
-  }
-}
-function updateMissionsOnCollect(){ 
-  for(const m of state.missions){
-    if(m.type === 'collect'){ m.progress++; }
-  }
-}
+/* --- mission updates --- */
+function updateMissionsOnKill(){ for(const m of state.missions) if(m.type === 'kill') m.progress++; }
+function updateMissionsOnCollect(){ for(const m of state.missions) if(m.type === 'collect') m.progress++; }
 
-/* --- Level system --- */
+/* --- level/xp --- */
 function addXP(amount){
-  state.xp += amount;
-  // level up loop (allow carryover)
+  state.xp = (state.xp||0) + amount;
   while(state.xp >= state.xpNext){
     state.xp -= state.xpNext;
     state.level += 1;
-    // increase next threshold (exponential-ish)
     state.xpNext = Math.floor(state.xpNext * 1.25) + 20;
-    // show level modal to choose bonus
-    showLevelModal();
+    // show modal
+    document.getElementById('levelModal').style.display = 'block';
+    saveState();
+    // break to wait for user choice (they can choose immediately)
+    break;
   }
   updateHUD();
   saveState();
 }
-
-/* --- Level modal (choice B: choose bonus) --- */
-const levelModal = document.getElementById('levelModal');
 document.getElementById('chooseSpeed').addEventListener('click', ()=>{
   state.player.speed = +(state.player.speed + 0.5).toFixed(2);
-  levelModal.style.display = 'none';
+  document.getElementById('levelModal').style.display = 'none';
   saveState();
 });
 document.getElementById('chooseHp').addEventListener('click', ()=>{
   state.player.maxHp += 10;
   state.player.hp = Math.min(state.player.maxHp, state.player.hp + 10);
-  levelModal.style.display = 'none';
+  document.getElementById('levelModal').style.display = 'none';
   saveState();
 });
-function showLevelModal(){
-  levelModal.style.display = 'block';
-}
 
-/* --- Collisions (wall shapes) --- */
+/* --- collision helpers --- */
 function collides(px,py,size,w){
-  if(w.shape === 'rect'){
-    return px < w.x + w.w && px + size > w.x && py < w.y + w.h && py + size > w.y;
-  } else if(w.shape === 'circle'){
-    const dx = (px+size/2) - (w.x + w.w/2);
-    const dy = (py+size/2) - (w.y + w.h/2);
-    return Math.hypot(dx,dy) < (size/2 + w.w/2);
-  } else { // triangle approx bounding box for simplicity
-    return px < w.x + w.w && px + size > w.x && py < w.y + w.h && py + size > w.y;
-  }
+  if(w.shape === 'rect'){ return px < w.x + w.w && px + size > w.x && py < w.y + w.h && py + size > w.y; }
+  if(w.shape === 'circle'){ const dx = (px+size/2) - (w.x + w.w/2); const dy = (py+size/2) - (w.y + w.h/2); return Math.hypot(dx,dy) < (size/2 + w.w/2); }
+  // triangle approx bounding box (fast)
+  return px < w.x + w.w && px + size > w.x && py < w.y + w.h && py + size > w.y;
 }
 
-/* --- Movement & enemy AI --- */
+/* --- movement --- */
 function movePlayer(){
   if(!state.player.alive) return;
   let newX = state.player.x + input.x * state.player.speed;
   let newY = state.player.y + input.y * state.player.speed;
-  // clamp
   newX = Math.max(0, Math.min(mapSize - state.player.size, newX));
   newY = Math.max(0, Math.min(mapSize - state.player.size, newY));
-  // collision with walls
-  let collision = state.walls.some(w => collides(newX,newY,state.player.size,w));
-  if(!collision){
-    state.player.x = newX; state.player.y = newY;
-  }
-  // pickup heal packs (triggers mission progress)
+  if(!state.walls.some(w => collides(newX,newY,state.player.size,w))){ state.player.x = newX; state.player.y = newY; }
+  // pick heal packs
   state.healPacks = state.healPacks.filter(h=>{
-    const dist = Math.hypot(state.player.x - h.x, state.player.y - h.y);
-    if(dist < 40){
-      state.player.hp = Math.min(state.player.maxHp, state.player.hp + 25);
-      updateMissionsOnCollect();
-      addXP(8);
-      return false;
-    }
+    const d = Math.hypot(state.player.x - h.x, state.player.y - h.y);
+    if(d < 40){ state.player.hp = Math.min(state.player.maxHp, state.player.hp + 25); updateMissionsOnCollect(); addXP(8); return false; }
     return true;
   });
 }
 
-/* --- Enemies move & attack & collisions --- */
+/* --- enemies --- */
 function moveEnemies(){
   for(const e of state.enemies){
     if(!e.alive) continue;
@@ -345,32 +260,29 @@ function moveEnemies(){
     const dy = state.player.y - e.y;
     const dist = Math.hypot(dx,dy);
     if(dist > 5){
-      const newX = e.x + dx/dist * e.speed;
-      const newY = e.y + dy/dist * e.speed;
-      if(!state.walls.some(w=> collides(newX,newY,e.size,w))){
-        e.x = newX; e.y = newY;
+      const nx = e.x + dx/dist * e.speed;
+      const ny = e.y + dy/dist * e.speed;
+      if(!state.walls.some(w=>collides(nx,ny,e.size,w))){
+        e.x = nx; e.y = ny;
       }
     }
     if(dist < 40 && e.attackCooldown <= 0 && state.player.alive){
       state.player.hp -= 8;
-      e.attackCooldown = 45; // ticks
+      e.attackCooldown = 45;
       if(state.player.hp <= 0){
-        state.player.hp = 0;
-        state.player.alive = false;
-        // penalize trophies strongly: 55-70
+        state.player.hp = 0; state.player.alive = false;
         const lose = Math.floor(55 + Math.random()*16);
         state.trophies = Math.max(0, state.trophies - lose);
         alert(`💀 Prehral si! -${lose} trofejí`);
         saveState();
-        // respawn after short delay
-        setTimeout(()=> respawnPlayer(), 1200);
+        setTimeout(respawnPlayer, 1200);
       }
     }
     if(e.attackCooldown > 0) e.attackCooldown--;
   }
 }
 
-/* --- Player attack (kills enemies) --- */
+/* --- attack (player) --- */
 function attack(){
   if(!state.player.alive) return;
   for(const e of state.enemies){
@@ -379,18 +291,16 @@ function attack(){
     const dy = state.player.y - e.y;
     if(Math.hypot(dx,dy) < 50){
       e.alive = false;
-      // reward
       const gained = Math.floor(Math.random()*15) + 1;
       state.trophies += gained;
       addXP(12);
       updateMissionsOnKill();
-      // small chance to give mission XP directly
       saveState();
     }
   }
 }
 
-/* --- Respawn player (after death) --- */
+/* --- respawn --- */
 function respawnPlayer(){
   state.player.x = mapSize/2 + (Math.random()*200 - 100);
   state.player.y = mapSize/2 + (Math.random()*200 - 100);
@@ -399,56 +309,42 @@ function respawnPlayer(){
   saveState();
 }
 
-/* --- Missions: tick and completion check --- */
-function updateMissionsTick(dt){
+/* --- missions tick --- */
+function updateMissionsTick(){
   for(let i = state.missions.length-1; i >= 0; i--){
     const m = state.missions[i];
     if(m.type === 'survive'){
-      if(!m.running){
-        m.running = true; m.startTime = Date.now();
-      } else {
-        m.progress = Math.floor((Date.now() - m.startTime)/1000);
-      }
+      if(!m.running){ m.running = true; m.startTime = Date.now(); }
+      else{ m.progress = Math.floor((Date.now() - m.startTime)/1000); }
     }
-    // check completion
+    // completion checks
     if((m.type === 'kill' || m.type === 'collect') && m.progress >= m.target){
-      addXP(m.rewardXP); state.trophies += m.rewardT;
-      state.missions.splice(i,1);
-      saveState();
-      continue;
+      addXP(m.rewardXP); state.trophies += m.rewardT; state.missions.splice(i,1); saveState(); continue;
     }
     if(m.type === 'survive' && m.progress >= m.target){
-      addXP(m.rewardXP); state.trophies += m.rewardT;
-      state.missions.splice(i,1); saveState(); continue;
+      addXP(m.rewardXP); state.trophies += m.rewardT; state.missions.splice(i,1); saveState(); continue;
     }
   }
-  // update mission UI
+  // update UI
   if(state.missions.length === 0) missionBox.textContent = 'Misie: žiadna aktívna';
-  else {
-    missionBox.innerHTML = '<strong>Misie:</strong><br>' + state.missions.map(m=>{
-      if(m.type === 'kill') return `Zabiť: ${m.progress}/${m.target}`;
-      if(m.type === 'collect') return `Zbierať: ${m.progress}/${m.target}`;
-      return `Prežiť: ${m.progress}/${m.target}s`;
-    }).join('<br>');
-  }
+  else missionBox.innerHTML = '<strong>Misie:</strong><br>' + state.missions.map(m=>{
+    if(m.type === 'kill') return `Zabiť: ${m.progress}/${m.target}`;
+    if(m.type === 'collect') return `Zbierať: ${m.progress}/${m.target}`;
+    return `Prežiť: ${m.progress}/${m.target}s`;
+  }).join('<br>');
 }
 
-/* --- Healing packs consumed by player maters done in movePlayer --- */
-
-/* --- DRAW / RENDER --- */
+/* --- draw & radar --- */
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const camX = state.player.x - canvas.width/2;
   const camY = state.player.y - canvas.height/2;
 
-  // map background
-  ctx.fillStyle = '#f7d94c';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  // background
+  ctx.fillStyle = '#f7d94c'; ctx.fillRect(0,0,canvas.width,canvas.height);
 
   // map border (green)
-  ctx.strokeStyle = 'green';
-  ctx.lineWidth = 6;
-  ctx.strokeRect(-camX, -camY, mapSize, mapSize);
+  ctx.strokeStyle = 'green'; ctx.lineWidth = 6; ctx.strokeRect(-camX, -camY, mapSize, mapSize);
 
   // walls
   for(const w of state.walls){
@@ -467,7 +363,7 @@ function draw(){
     ctx.fillRect(x-16, y-6, 32, 12);
   }
 
-  // items (sword/shield)
+  // items
   for(const it of state.items){
     const x = it.x - camX, y = it.y - camY;
     ctx.fillStyle = it.type === 'sword' ? 'silver' : 'lightblue';
@@ -479,9 +375,7 @@ function draw(){
     ctx.fillStyle = 'red';
     ctx.fillRect(state.player.x - camX, state.player.y - camY, state.player.size, state.player.size);
   } else {
-    ctx.fillStyle = 'black';
-    ctx.font = '48px Arial';
-    ctx.fillText('KONIEC', canvas.width/2 - 80, canvas.height/2);
+    ctx.fillStyle = 'black'; ctx.font = '48px Arial'; ctx.fillText('KONIEC', canvas.width/2 - 80, canvas.height/2);
   }
 
   // enemies
@@ -492,96 +386,69 @@ function draw(){
     if(e.shape === 'rect') ctx.fillRect(x,y,e.size,e.size);
     else if(e.shape === 'circle'){ ctx.beginPath(); ctx.arc(x + e.size/2, y + e.size/2, e.size/2, 0, Math.PI*2); ctx.fill(); }
     else { ctx.beginPath(); ctx.moveTo(x + e.size/2, y); ctx.lineTo(x, y + e.size); ctx.lineTo(x + e.size, y + e.size); ctx.closePath(); ctx.fill(); }
-    // hp bar small (optional)
+    // enemy small hp bar
     ctx.fillStyle = 'green';
     const hpW = (e.hp || 30) / 30 * e.size;
     ctx.fillRect(x, y - 8, hpW, 4);
   }
 
-  // draw HUD elements (xp/trophies handled by DOM)
+  // HUD overlays
+  ctx.fillStyle = 'black'; ctx.font = '20px Arial';
+  // xp/trophies are DOM
+  // draw player HP bar
+  ctx.fillStyle = 'black'; ctx.fillRect(20,50,200,20);
+  ctx.fillStyle = 'lime'; ctx.fillRect(20,50,(state.player.hp/state.player.maxHp)*200,20);
+  ctx.strokeStyle = 'white'; ctx.strokeRect(20,50,200,20);
+  ctx.fillStyle = 'black'; ctx.font = '16px Arial'; ctx.fillText(`${Math.floor(state.player.hp)} / ${state.player.maxHp}`, 230, 65);
+
   drawRadar();
 }
 
-/* --- Radar drawing (small map) --- */
+/* --- radar --- */
 function drawRadar(){
   rCtx.clearRect(0,0,radar.width,radar.height);
   // background
-  rCtx.fillStyle = 'rgba(0,0,0,0.35)';
-  rCtx.fillRect(0,0,radar.width,radar.height);
-
-  // walls (scaled)
+  rCtx.fillStyle = 'rgba(0,0,0,0.35)'; rCtx.fillRect(0,0,radar.width,radar.height);
+  // walls
   for(const w of state.walls){
     const x = w.x * radarScale, y = w.y * radarScale, wW = w.w * radarScale, wH = w.h * radarScale;
     rCtx.fillStyle = w.color;
     if(w.shape === 'rect') rCtx.fillRect(x,y,wW,wH);
-    else if(w.shape === 'circle'){ rCtx.beginPath(); rCtx.arc(x+wW/2,y+wH/2,wW/2,0,Math.PI*2); rCtx.fill(); }
-    else { rCtx.beginPath(); rCtx.moveTo(x+wW/2,y); rCtx.lineTo(x,y+wH); rCtx.lineTo(x+wW,y+wH); rCtx.closePath(); rCtx.fill(); }
+    else if(w.shape === 'circle'){ rCtx.beginPath(); rCtx.arc(x + wW/2, y + wH/2, wW/2, 0, Math.PI*2); rCtx.fill(); }
+    else { rCtx.beginPath(); rCtx.moveTo(x + wW/2, y); rCtx.lineTo(x, y + wH); rCtx.lineTo(x + wW, y + wH); rCtx.closePath(); rCtx.fill(); }
   }
-
   // enemies
-  for(const e of state.enemies){
-    if(!e.alive) continue;
-    rCtx.fillStyle = e.color || 'purple';
-    rCtx.fillRect(e.x*radarScale - 2, e.y*radarScale - 2, 4, 4);
-  }
-
+  for(const e of state.enemies){ if(!e.alive) continue; rCtx.fillStyle = e.color || 'purple'; rCtx.fillRect(e.x*radarScale-2, e.y*radarScale-2, 4, 4); }
   // player
-  rCtx.fillStyle = 'red';
-  rCtx.fillRect(state.player.x*radarScale - 3, state.player.y*radarScale - 3, 6, 6);
+  rCtx.fillStyle = 'red'; rCtx.fillRect(state.player.x*radarScale-3, state.player.y*radarScale-3, 6, 6);
 }
 
-/* --- Missions: spawn initial 1 mission to start --- */
-if(state.missions.length === 0) state.missions.push(genMission());
-
-/* --- Main loop --- */
+/* --- loop --- */
 let lastTime = performance.now();
 function loop(now){
   const dt = (now - lastTime)/1000;
   lastTime = now;
-
   movePlayer();
   moveEnemies();
-  updateMissionsTick(dt);
+  updateMissionsTick();
   draw();
   updateHUD();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
-/* --- Helpers: adding XP/Trophies exposed earlier --- */
-function addXP(amount){ addXP_impl(amount); }
-function addXP_impl(amount){
-  state.xp = (state.xp || 0) + amount;
-  // while loop to handle multiple level-ups
-  while(state.xp >= state.xpNext){
-    state.xp -= state.xpNext;
-    state.level = (state.level || 1) + 1;
-    // xpNext grows
-    state.xpNext = Math.floor((state.xpNext || 100)*1.25) + 20;
-    // pause and show modal for choice
-    showLevelModal();
-  }
-  updateHUD();
-  saveState();
-}
-
-/* --- Missions reward when killed etc already call addXP / updateMissionsOnKill / OnCollect --- */
-/* Hook kill progress: when enemy dies by any method we already update in attack() */
-
-function updateMissionsOnKill(){ for(const m of state.missions) if(m.type === 'kill') m.progress++; }
-function updateMissionsOnCollect(){ for(const m of state.missions) if(m.type === 'collect') m.progress++; }
-
-/* --- Save/Load buttons --- */
+/* --- helpers & UI buttons --- */
 document.getElementById('saveBtn').addEventListener('click', ()=>{ saveState(); alert('Uložené'); });
 document.getElementById('clearBtn').addEventListener('click', resetAll);
 
-/* --- Auto-save periodically --- */
-setInterval(()=> saveState(), 4000);
+/* --- auto spawn heal packs from state.healPacks (keep existing) --- */
+/* (heal packs are spawned by setInterval above already) */
+/* ensure state.healPacks is array (after load) */
+if(!Array.isArray(state.healPacks)) state.healPacks = [];
+if(!Array.isArray(state.enemies)) state.enemies = [];
 
-/* --- load state on start to ensure HUD shows correct values --- */
-updateHUD();
-saveState();
-
+/* --- Periodic autosave --- */
+setInterval(()=> saveState(), 5000);
 </script>
 </body>
-</html>
+  </html>
