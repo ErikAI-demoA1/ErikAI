@@ -1,240 +1,398 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sk">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Survive Arena</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+<title>ErikAI Mobile Clash — Finálna verzia</title>
 <style>
-body {
-  margin: 0;
-  background: #000;
-  overflow: hidden;
-  font-family: sans-serif;
-  color: white;
-  user-select: none;
-}
-canvas {
-  background: #111;
-  display: block;
-  margin: auto;
-  touch-action: none;
-}
-#ui {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 10;
-}
-button {
-  background: #333;
-  color: white;
-  border: 1px solid #777;
-  padding: 5px 10px;
-  margin: 2px;
-  border-radius: 5px;
-}
-#joystick {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  border: 2px solid #888;
-}
-#attackBtn {
-  position: fixed;
-  bottom: 40px;
-  right: 30px;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: red;
-  color: white;
-  border: none;
-  font-weight: bold;
-}
-#radar {
-  position: fixed;
-  right: 10px;
-  top: 10px;
-  border: 1px solid #444;
-  background: rgba(0,0,0,0.5);
-}
-#mission {
-  position: fixed;
-  bottom: 130px;
-  left: 10px;
-  background: rgba(0,0,0,0.6);
-  padding: 5px 10px;
-  border-radius: 6px;
-  font-size: 14px;
-}
+  :root{--yellow:#f7d94c}
+  html,body{height:100%;margin:0;background:#000;font-family:Inter,Arial,sans-serif;-webkit-user-select:none;user-select:none}
+  canvas#game{display:block;background:var(--yellow);width:100vw;height:100vh}
+  #radar{position:fixed;top:10px;right:10px;width:150px;height:150px;background:rgba(0,0,0,0.45);border:2px solid #fff;border-radius:8px;z-index:120}
+  #joystick{position:fixed;bottom:60px;left:60px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px solid #fff;z-index:110;touch-action:none}
+  #joyKnob{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.25);position:absolute;left:35px;top:35px}
+  #attackBtn{position:fixed;right:20px;bottom:80px;width:98px;height:98px;border-radius:50%;background:#e74c3c;color:#fff;border:none;font-weight:700;z-index:110}
+  #hud{position:fixed;left:10px;top:6px;z-index:115;color:#000;background:rgba(255,255,255,0.9);padding:8px 10px;border-radius:8px;font-weight:700}
+  #xpBar{width:220px;height:12px;background:#ddd;border-radius:8px;overflow:hidden}
+  #xpFill{height:100%;background:linear-gradient(90deg,#6a9cff,#3b8bff);width:0%}
+  #missionBox{position:fixed;left:10px;bottom:10px;background:rgba(0,0,0,0.6);color:#fff;padding:8px;border-radius:8px;z-index:115;max-width:60%}
+  #restartBtn{display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 22px;font-size:18px;background:#2ecc71;border:none;border-radius:12px;z-index:200;color:#000}
+  #saveBtn,#clearBtn{position:fixed;left:10px;top:56px;z-index:115;padding:6px 8px;border-radius:6px;border:none;background:#333;color:#fff}
+  #clearBtn{left:10px;top:96px;background:#a33}
+  /* small responsive tweak */
+  @media (max-width:520px){ #hud{font-size:13px} }
 </style>
 </head>
 <body>
+
 <canvas id="game"></canvas>
-<canvas id="radar" width="120" height="120"></canvas>
-<div id="ui">
-  <button id="saveBtn">💾 Uložiť</button>
-  <button id="resetBtn">♻️ Reset</button>
-</div>
-<div id="joystick"></div>
+<canvas id="radar"></canvas>
+
+<div id="joystick"><div id="joyKnob"></div></div>
 <button id="attackBtn">ÚTOK</button>
-<div id="mission"></div>
+<button id="restartBtn">🔁 Reštartovať</button>
+
+<div id="hud">
+  <div style="display:flex;gap:12px;align-items:center">
+    <div id="playerName">ErikAI</div>
+    <div>🏆 <span id="trophies">0</span></div>
+    <div>HP: <span id="hpText">100</span></div>
+  </div>
+</div>
+
+<div id="missionBox">Misie: žiadna aktívna</div>
+<button id="saveBtn">Uložiť</button>
+<button id="clearBtn">Reset</button>
+
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const radar = document.getElementById("radar");
-const rctx = radar.getContext("2d");
-let w, h;
-function resize(){ w=innerWidth; h=innerHeight; canvas.width=w; canvas.height=h; }
-resize();
-addEventListener("resize", resize);
+/* ---------- Finálna zlúčená verzia ---------- */
+/* Poznámka: všetko beží client-side. Ukladáme len niektoré údaje (trophies, name). */
 
-let player = {x:0,y:0, hp:100, exp:0, level:1};
-let enemies = [];
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const radar = document.getElementById('radar');
+const rCtx = radar.getContext('2d');
+const joystick = document.getElementById('joystick');
+const joyKnob = document.getElementById('joyKnob');
+const attackBtn = document.getElementById('attackBtn');
+const restartBtn = document.getElementById('restartBtn');
+const saveBtn = document.getElementById('saveBtn');
+const clearBtn = document.getElementById('clearBtn');
+
+function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+radar.width = 150; radar.height = 150;
+
+const SAVE_KEY_TROPH = 'erikai_trophies_v1';
+const SAVE_KEY_NAME = 'erikai_name_v1';
+
+const mapSize = 6000;
+const wallCount = 180;
+const itemCount = 8;
+const radarScale = radar.width / mapSize;
+const shapes = ['rect','circle','triangle'];
+
+// game state (fresh each load, trophies persist)
+let trophies = parseInt(localStorage.getItem(SAVE_KEY_TROPH)) || 0;
+let playerName = localStorage.getItem(SAVE_KEY_NAME) || 'ErikAI';
+
+let player = { x: mapSize/2, y: mapSize/2, size:30, speed:5, hp:100, maxHp:100, alive:true };
 let walls = [];
+let items = [];
+let enemies = [];
 let healPacks = [];
-let missions = [];
-let currentMission = "Poraz 5 nepriateľov!";
-let missionKills = 0;
+let keys = {};
 
-function initMapIfEmpty(){
-  if(walls.length===0){
-    for(let i=0;i<20;i++){
-      walls.push({x:Math.random()*2000-1000, y:Math.random()*2000-1000, w:50,h:50});
+// UI refs
+const trophiesEl = document.getElementById('trophies');
+const hpText = document.getElementById('hpText');
+document.getElementById('playerName').textContent = playerName;
+trophiesEl.textContent = trophies;
+hpText.textContent = player.hp;
+
+// --- init map / items / walls ---
+function genMap(){
+  walls = [];
+  for(let i=0;i<wallCount;i++){
+    walls.push({
+      x: Math.random()*mapSize,
+      y: Math.random()*mapSize,
+      w: 40 + Math.random()*80,
+      h: 40 + Math.random()*80,
+      shape: shapes[Math.floor(Math.random()*shapes.length)],
+      color: '#'+Math.floor(Math.random()*16777215).toString(16)
+    });
+  }
+  items = [];
+  const itemTypes = ['sword','shield'];
+  for(let i=0;i<itemCount;i++){
+    items.push({ x: Math.random()*mapSize, y: Math.random()*mapSize, type: itemTypes[Math.floor(Math.random()*itemTypes.length)] });
+  }
+}
+genMap();
+
+// --- spawn enemies (continuous) ---
+function spawnEnemy(){
+  const r = Math.random();
+  const base = { x: Math.random()*mapSize, y: Math.random()*mapSize, size:30, alive:true, attackCooldown:0, hp:30 };
+  if(r < 0.5){ base.speed = 2; base.shape = 'rect'; base.color = 'purple'; }
+  else if(r < 0.75){ base.speed = player.speed * 1.1; base.shape = 'circle'; base.color = 'green'; }
+  else { base.speed = player.speed * 0.35; base.shape = 'triangle'; base.color = 'black'; }
+  enemies.push(base);
+}
+for(let i=0;i<5;i++) spawnEnemy();
+setInterval(()=> spawnEnemy(), 2000 + Math.floor(Math.random()*1000)); // every ~2-3s
+
+// --- heal pack spawn every 5s ---
+function spawnHealPack(){ healPacks.push({ x: Math.random()*mapSize, y: Math.random()*mapSize, size: 25 }); }
+setInterval(spawnHealPack, 5000);
+
+// --- controls keyboard fallback ---
+window.addEventListener('keydown', e=>{ keys[e.key] = true; if(e.key===' ') attack(); });
+window.addEventListener('keyup', e=>{ keys[e.key] = false; });
+
+// --- joystick pointer logic ---
+let moveX = 0, moveY = 0, activePointer = null, rect = null;
+joystick.addEventListener('pointerdown', e=>{
+  activePointer = e.pointerId;
+  rect = joystick.getBoundingClientRect();
+  joystick.setPointerCapture(e.pointerId);
+});
+joystick.addEventListener('pointermove', e=>{
+  if(activePointer !== e.pointerId) return;
+  const dx = e.clientX - (rect.left + rect.width/2);
+  const dy = e.clientY - (rect.top + rect.height/2);
+  const mag = Math.min(40, Math.hypot(dx,dy));
+  const nx = mag ? dx/mag : 0;
+  const ny = mag ? dy/mag : 0;
+  joyKnob.style.transform = `translate(${nx*mag}px,${ny*mag}px)`;
+  moveX = nx; moveY = ny;
+});
+joystick.addEventListener('pointerup', e=>{
+  if(activePointer !== e.pointerId) return;
+  joystick.releasePointerCapture(e.pointerId);
+  activePointer = null;
+  joyKnob.style.transform = 'translate(0,0)';
+  moveX = 0; moveY = 0;
+});
+
+// attack button (touch + mouse)
+attackBtn.addEventListener('touchstart', e=>{ e.preventDefault(); attack(); });
+attackBtn.addEventListener('mousedown', ()=> attack());
+
+// restart button
+restartBtn.addEventListener('click', ()=>{
+  // respawn with penalty handled already in death; here we just respawn now if dead
+  if(!player.alive){
+    // on death we already subtracted trophies; pressing restart will respawn
+    respawnPlayerPostDeath();
+  }
+});
+
+// save/reset
+saveBtn.addEventListener('click', ()=>{
+  localStorage.setItem(SAVE_KEY_TROPH, String(trophies));
+  localStorage.setItem(SAVE_KEY_NAME, playerName);
+  alert('Uložené (trofeje + meno)');
+});
+clearBtn.addEventListener('click', ()=>{ if(confirm('Vymazať uložené trofeje a meno?')){ localStorage.removeItem(SAVE_KEY_TROPH); localStorage.removeItem(SAVE_KEY_NAME); trophies = 0; playerName = 'ErikAI'; document.getElementById('playerName').textContent = playerName; trophiesEl.textContent = trophies; alert('Vymazané'); } });
+
+// --- collision helpers (rect/circle/triangle) ---
+function collides(px,py,size,w){
+  if(w.shape === 'rect'){
+    return px < w.x + w.w && px + size > w.x && py < w.y + w.h && py + size > w.y;
+  } else if(w.shape === 'circle'){
+    const dx = (px+size/2) - (w.x + w.w/2);
+    const dy = (py+size/2) - (w.y + w.h/2);
+    return Math.hypot(dx,dy) < (size/2 + w.w/2);
+  } else { // triangle approx bounding box for speed (good enough)
+    return px < w.x + w.w && px + size > w.x && py < w.y + w.h && py + size > w.y;
+  }
+}
+
+// --- movement player ---
+function movePlayer(){
+  if(!player.alive) return;
+  // keyboard WASD priority then joystick
+  let vx = 0, vy = 0;
+  if(keys['a']) vx -= 1;
+  if(keys['d']) vx += 1;
+  if(keys['w']) vy -= 1;
+  if(keys['s']) vy += 1;
+  if(vx===0 && vy===0){ vx = moveX; vy = moveY; } // use joystick if no keys
+  let newX = player.x + vx * player.speed;
+  let newY = player.y + vy * player.speed;
+  newX = Math.max(0, Math.min(mapSize - player.size, newX));
+  newY = Math.max(0, Math.min(mapSize - player.size, newY));
+  if(!walls.some(w => collides(newX,newY,player.size,w))){
+    player.x = newX; player.y = newY;
+  }
+  // pick heal packs
+  healPacks = healPacks.filter(h=>{
+    const d = Math.hypot(player.x - h.x, player.y - h.y);
+    if(d < 40){
+      player.hp = Math.min(player.maxHp, player.hp + 25);
+      hpText.textContent = Math.floor(player.hp);
+      return false;
     }
-  }
-  if(enemies.length===0){
-    for(let i=0;i<10;i++){
-      enemies.push({x:Math.random()*1000-500, y:Math.random()*1000-500, hp:30, speed:1});
+    return true;
+  });
+  // pickup items (cosmetic) - could implement effects later
+  items = items.filter(it=>{
+    const d = Math.hypot(player.x - it.x, player.y - it.y);
+    if(d < 36){
+      // small XP reward for pickup
+      trophies += 0; // keep same for now
+      return false;
     }
-  }
+    return true;
+  });
 }
 
-function saveState(){
-  const data={player,enemies,walls,healPacks,missions,missionKills,currentMission};
-  localStorage.setItem("surviveData", JSON.stringify(data));
-  console.log("Uložené.");
-}
-
-function loadState(){
-  const data = JSON.parse(localStorage.getItem("surviveData")||"{}");
-  if(data.player) player = data.player;
-  if(data.enemies) enemies = data.enemies;
-  if(data.walls) walls = data.walls;
-  if(data.healPacks) healPacks = data.healPacks;
-  if(data.missions) missions = data.missions;
-  missionKills = data.missionKills||0;
-  currentMission = data.currentMission||"Poraz 5 nepriateľov!";
-  if(!Array.isArray(walls)) walls=[];
-  if(!Array.isArray(enemies)) enemies=[];
-  if(!Array.isArray(healPacks)) healPacks=[];
-  initMapIfEmpty();
-}
-loadState();
-
-let joy = {active:false,x:0,y:0,dx:0,dy:0};
-const joyDiv = document.getElementById("joystick");
-joyDiv.addEventListener("touchstart", e=>{
-  e.preventDefault();
-  joy.active=true;
-  const t=e.touches[0];
-  joy.x=t.clientX; joy.y=t.clientY;
-});
-joyDiv.addEventListener("touchmove", e=>{
-  e.preventDefault();
-  if(!joy.active)return;
-  const t=e.touches[0];
-  joy.dx=(t.clientX-joy.x)/50;
-  joy.dy=(t.clientY-joy.y)/50;
-});
-joyDiv.addEventListener("touchend", e=>{
-  e.preventDefault();
-  joy.active=false; joy.dx=0; joy.dy=0;
-});
-
-function attack(){
-  for(let e of enemies){
-    const dist=Math.hypot(e.x-player.x,e.y-player.y);
-    if(dist<100){ e.hp-=10; if(e.hp<=0){player.exp+=10; missionKills++; e.x=Math.random()*1000-500; e.y=Math.random()*1000-500; e.hp=30;} }
-  }
-  if(player.exp>=player.level*50){player.level++; player.exp=0;}
-  if(missionKills>=5){ currentMission="Nová misia čoskoro!"; missionKills=0; }
-}
-
-const attackButton = document.getElementById("attackBtn");
-attackButton.addEventListener("touchstart", e=>{e.preventDefault();attack();});
-attackButton.addEventListener("click", attack);
-attackButton.addEventListener("pointerdown", attack);
-
+// --- enemies AI & attack ---
 function moveEnemies(){
-  for(let e of enemies){
-    const dx=player.x-e.x, dy=player.y-e.y;
-    const dist=Math.hypot(dx,dy);
-    if(dist>5 && dist!==0){
-      e.x+=dx/dist*e.speed;
-      e.y+=dy/dist*e.speed;
+  for(const e of enemies){
+    if(!e.alive) continue;
+    const dx = player.x - e.x;
+    const dy = player.y - e.y;
+    const dist = Math.hypot(dx,dy);
+    if(dist > 5){
+      const newX = e.x + dx/dist * e.speed;
+      const newY = e.y + dy/dist * e.speed;
+      if(!walls.some(w => collides(newX,newY,e.size,w))){
+        e.x = newX; e.y = newY;
+      }
+    }
+    if(dist < 40 && e.attackCooldown <= 0 && player.alive){
+      player.hp -= 10;
+      hpText.textContent = Math.floor(player.hp);
+      e.attackCooldown = 50;
+      if(player.hp <= 0){
+        player.hp = 0;
+        player.alive = false;
+        // subtract trophies 55-70
+        const lose = Math.floor(55 + Math.random()*16);
+        trophies = Math.max(0, trophies - lose);
+        trophiesEl.textContent = trophies;
+        localStorage.setItem(SAVE_KEY_TROPH, String(trophies));
+        // show restart prompt and don't reload page
+        restartBtn.style.display = 'block';
+        alert(`💀 Prehral si! -${lose} trofejí\nStlač Reštartovať.`);
+      }
+    }
+    if(e.attackCooldown > 0) e.attackCooldown--;
+  }
+}
+
+// --- player attack ---
+function attack(){
+  if(!player.alive) return;
+  for(const e of enemies){
+    if(!e.alive) continue;
+    const dx = player.x - e.x;
+    const dy = player.y - e.y;
+    if(Math.hypot(dx,dy) < 50){
+      e.alive = false;
+      const gained = Math.floor(Math.random()*15) + 1;
+      trophies += gained;
+      trophiesEl.textContent = trophies;
+      localStorage.setItem(SAVE_KEY_TROPH, String(trophies));
     }
   }
 }
 
+// --- respawn after death (via restart button) ---
+function respawnPlayerPostDeath(){
+  // respawn near center
+  player.x = mapSize/2 + (Math.random()*200 - 100);
+  player.y = mapSize/2 + (Math.random()*200 - 100);
+  player.hp = Math.max(10, Math.floor(player.maxHp*0.6));
+  player.alive = true;
+  restartBtn.style.display = 'none';
+  hpText.textContent = Math.floor(player.hp);
+}
+
+// --- draw / render ---
 function draw(){
-  ctx.clearRect(0,0,w,h);
-  ctx.save();
-  ctx.translate(w/2, h/2);
-  ctx.fillStyle="green";
-  ctx.beginPath();
-  ctx.arc(0,0,15,0,Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle="gray";
-  for(let wall of walls){
-    ctx.fillRect(wall.x-player.x, wall.y-player.y, wall.w, wall.h);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const camX = player.x - canvas.width/2;
+  const camY = player.y - canvas.height/2;
+
+  // background
+  ctx.fillStyle = '#f7d94c';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // map border (green)
+  ctx.strokeStyle = 'green';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(-camX, -camY, mapSize, mapSize);
+
+  // walls
+  for(const w of walls){
+    const x = w.x - camX, y = w.y - camY;
+    ctx.fillStyle = w.color;
+    if(w.shape === 'rect') ctx.fillRect(x,y,w.w,w.h);
+    else if(w.shape === 'circle'){ ctx.beginPath(); ctx.arc(x + w.w/2, y + w.h/2, w.w/2, 0, Math.PI*2); ctx.fill(); }
+    else { ctx.beginPath(); ctx.moveTo(x + w.w/2, y); ctx.lineTo(x, y + w.h); ctx.lineTo(x + w.w, y + w.h); ctx.closePath(); ctx.fill(); }
   }
-  ctx.fillStyle="red";
-  for(let e of enemies){
-    ctx.beginPath();
-    ctx.arc(e.x-player.x,e.y-player.y,10,0,Math.PI*2);
-    ctx.fill();
+
+  // heal packs
+  for(const h of healPacks){
+    const x = h.x - camX, y = h.y - camY;
+    ctx.fillStyle = 'red';
+    ctx.fillRect(x-5,y-15,10,30);
+    ctx.fillRect(x-15,y-5,30,10);
   }
-  ctx.restore();
-  // Radar
-  rctx.clearRect(0,0,radar.width,radar.height);
-  const cx=radar.width/2, cy=radar.height/2;
-  rctx.fillStyle="lime";
-  rctx.beginPath();
-  rctx.arc(cx,cy,3,0,Math.PI*2);
-  rctx.fill();
-  rctx.fillStyle="red";
-  for(let e of enemies){
-    const rx = cx + e.x/50;
-    const ry = cy + e.y/50;
-    rctx.fillRect(rx,ry,2,2);
+
+  // items
+  for(const it of items){
+    const x = it.x - camX, y = it.y - camY;
+    ctx.fillStyle = it.type === 'sword' ? 'silver' : 'lightblue';
+    ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI*2); ctx.fill();
   }
+
+  // player
+  if(player.alive){
+    ctx.fillStyle = 'red';
+    ctx.fillRect(player.x - camX, player.y - camY, player.size, player.size);
+  } else {
+    ctx.fillStyle = 'black';
+    ctx.font = '48px Arial';
+    ctx.fillText('KONIEC', canvas.width/2 - 80, canvas.height/2);
+  }
+
+  // enemies
+  for(const e of enemies){
+    if(!e.alive) continue;
+    const x = e.x - camX, y = e.y - camY;
+    ctx.fillStyle = e.color || 'purple';
+    if(e.shape === 'rect') ctx.fillRect(x,y,e.size,e.size);
+    else if(e.shape === 'circle'){ ctx.beginPath(); ctx.arc(x + e.size/2, y + e.size/2, e.size/2, 0, Math.PI*2); ctx.fill(); }
+    else { ctx.beginPath(); ctx.moveTo(x + e.size/2, y); ctx.lineTo(x, y + e.size); ctx.lineTo(x + e.size, y + e.size); ctx.closePath(); ctx.fill(); }
+    // small hp bar
+    ctx.fillStyle = 'green';
+    const hpW = (e.hp || 30) / 30 * e.size;
+    ctx.fillRect(x, y - 8, hpW, 4);
+  }
+
+  // HUD overlays (HP bar)
+  ctx.fillStyle = 'black'; ctx.fillRect(20,50,200,20);
+  ctx.fillStyle = 'lime'; ctx.fillRect(20,50,(player.hp/player.maxHp)*200,20);
+  ctx.strokeStyle = 'white'; ctx.strokeRect(20,50,200,20);
+  ctx.fillStyle = 'black'; ctx.font = '16px Arial'; ctx.fillText(`${Math.floor(player.hp)} / ${player.maxHp}`, 230, 65);
+
+  drawRadar();
 }
 
-function update(){
-  player.x += joy.dx*5;
-  player.y += joy.dy*5;
-  moveEnemies();
-  document.getElementById("mission").textContent=`🎯 ${currentMission} (Zabití: ${missionKills}) | 🧠 Level ${player.level} | ❤️ HP ${player.hp}`;
+// --- radar ---
+function drawRadar(){
+  rCtx.clearRect(0,0,radar.width,radar.height);
+  // bg
+  rCtx.fillStyle = 'rgba(0,0,0,0.35)';
+  rCtx.fillRect(0,0,radar.width,radar.height);
+  // walls
+  for(const w of walls){
+    const x = w.x * radarScale, y = w.y * radarScale, wW = w.w * radarScale, wH = w.h * radarScale;
+    rCtx.fillStyle = w.color;
+    if(w.shape === 'rect') rCtx.fillRect(x,y,wW,wH);
+    else if(w.shape === 'circle'){ rCtx.beginPath(); rCtx.arc(x + wW/2, y + wH/2, wW/2, 0, Math.PI*2); rCtx.fill(); }
+    else { rCtx.beginPath(); rCtx.moveTo(x + wW/2, y); rCtx.lineTo(x, y + wH); rCtx.lineTo(x + wW, y + wH); rCtx.closePath(); rCtx.fill(); }
+  }
+  // enemies
+  for(const e of enemies){ if(!e.alive) continue; rCtx.fillStyle = e.color || 'purple'; rCtx.fillRect(e.x*radarScale-2, e.y*radarScale-2, 4, 4); }
+  // player
+  rCtx.fillStyle = 'red'; rCtx.fillRect(player.x*radarScale-3, player.y*radarScale-3, 6, 6);
 }
 
+// --- main loop ---
 function loop(){
-  update();
+  movePlayer();
+  moveEnemies();
   draw();
   requestAnimationFrame(loop);
 }
+requestAnimationFrame(loop);
 
-document.getElementById("saveBtn").addEventListener("click", saveState);
-document.getElementById("resetBtn").addEventListener("click", ()=>{
-  localStorage.removeItem("surviveData");
-  location.reload();
-});
-
-setInterval(saveState,5000);
-loop();
 </script>
 </body>
-</html>
+  </html>
