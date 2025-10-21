@@ -1,112 +1,186 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sk">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>🌍 ErikAI Živá Poloha</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>ErikAI — Moja poloha (Leaflet)</title>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-sA+e2qkGQ3Yk6l2n3gQw3YcFv2kE6X0C1b+q0m0g6wE=" crossorigin=""/>
+
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    text-align: center;
-    background-color: #e6f0fa;
+  html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif}
+  #map{width:100%;height:100vh;display:block}
+  #ui {
+    position: fixed; left:10px; top:10px; z-index:1000;
+    display:flex; gap:8px; flex-direction:column;
   }
-  #map {
-    width: 100%;
-    height: 90vh;
+  .btn {
+    background: rgba(0,0,0,0.6); color:#fff; border:none; padding:8px 10px;
+    border-radius:8px; font-weight:700; backdrop-filter: blur(4px);
+    box-shadow:0 2px 6px rgba(0,0,0,0.4);
   }
-  #controls {
-    padding: 10px;
-  }
-  button {
-    padding: 8px 12px;
-    font-size: 16px;
-    margin: 5px;
-    cursor: pointer;
-  }
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
+  #status {
+    position: fixed; left:50%; transform:translateX(-50%); bottom:12px;
+    background: rgba(255,255,255,0.9); color:#000; padding:6px 10px;
+    border-radius:8px; font-weight:600; z-index:1000;
   }
 </style>
 </head>
 <body>
 
-<div id="controls">
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-  <p id="status">Získavam polohu...</p>
+<div id="ui">
+  <button id="centerBtn" class="btn">Zamerať na mňa</button>
+  <button id="startBtn" class="btn">Spusti sledovanie</button>
+  <button id="stopBtn" class="btn" disabled>Zastaviť sledovanie</button>
 </div>
 
 <div id="map"></div>
+<div id="status">Stav: čakám na spustenie</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-o9N1j6k1XG4+6hU6a8f5kVf0bQmJ6D2Qv9v9z+7r4r8=" crossorigin=""></script>
 
 <script>
-let map, marker;
+/* Leaflet + Geolocation (watchPosition) — zadarmo, bez API kľúča */
 
-// Tmavý režim
-function toggleTheme() {
-  document.body.classList.toggle('dark-mode');
+// inicializácia mapy (OpenStreetMap tile server)
+const map = L.map('map', { zoomControl: false }).setView([48.148598, 17.107748], 13);
+
+// OpenStreetMap dlaždice (zadarmo)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+// UI prvky
+const statusEl = document.getElementById('status');
+const centerBtn = document.getElementById('centerBtn');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+
+let watchId = null;
+let positionMarker = null; // červená bodka
+let accuracyCircle = null;  // kruh presnosti
+
+// vytvoríme vlastný malý červený kruhový marker (nie pin), alebo môžeš použiť circleMarker
+function createMarker(lat, lng) {
+  // použijeme circleMarker (zamknutý pixel-size pri rôznych zoomoch? circleMarker je v pixeloch)
+  return L.circleMarker([lat,lng], {
+    radius: 8,
+    color: '#8B0000',
+    fillColor: '#ff2d2d',
+    fillOpacity: 1,
+    weight: 2
+  }).addTo(map);
 }
 
-// Inicializácia mapy
-function initMap() {
-  map = new google.maps.Map(document.getElementById("map"), {
-    zoom: 16,
-    center: { lat: 0, lng: 0 },
-    styles: [ // jemný tmavý štýl pre mapu
-      { elementType: 'geometry', stylers: [{color: '#242f3e'}] },
-      { elementType: 'labels.text.stroke', stylers: [{color: '#242f3e'}] },
-      { elementType: 'labels.text.fill', stylers: [{color: '#746855'}] },
-      { featureType: 'water', elementType: 'geometry', stylers: [{color: '#17263c'}] },
-      { featureType: 'road', elementType: 'geometry', stylers: [{color: '#38414e'}] },
-      { featureType: 'road', elementType: 'geometry.stroke', stylers: [{color: '#212a37'}] },
-      { featureType: 'poi', elementType: 'geometry', stylers: [{color: '#263c3f'}] },
-      { featureType: 'transit', elementType: 'geometry', stylers: [{color: '#2f3948'}] },
-      { featureType: 'administrative', elementType: 'geometry', stylers: [{color: '#2f3948'}] }
-    ]
-  });
-
-  // Skontrolujeme, či zariadenie podporuje geolokáciu
-  if (navigator.geolocation) {
-    navigator.geolocation.watchPosition(
-      (position) => {
-        const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
-        document.getElementById('status').innerText = `🌐 Aktuálna poloha: ${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`;
-
-        // Ak marker ešte neexistuje, vytvoríme ho
-        if (!marker) {
-          marker = new google.maps.Marker({
-            position: pos,
-            map: map,
-            title: "Ty si tu!",
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 10,
-              fillColor: "red",
-              fillOpacity: 1,
-              strokeWeight: 1,
-              strokeColor: "white"
-            }
-          });
-          map.setCenter(pos);
-        } else {
-          // Marker sa pohybuje podľa polohy
-          marker.setPosition(pos);
-          map.panTo(pos);
-        }
-      },
-      () => {
-        document.getElementById('status').innerText = "❌ Nepodarilo sa získať polohu.";
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-    );
+// aktualizovať alebo vytvoriť marker a kruh presnosti
+function updatePosition(lat, lng, accuracy) {
+  if (!positionMarker) {
+    positionMarker = createMarker(lat, lng);
   } else {
-    document.getElementById('status').innerText = "❌ Geolokácia nie je podporovaná.";
+    positionMarker.setLatLng([lat, lng]);
+  }
+
+  if (!accuracyCircle) {
+    accuracyCircle = L.circle([lat, lng], { radius: accuracy, color: '#ff6666', fillColor: '#ffcccc', fillOpacity: 0.25 }).addTo(map);
+  } else {
+    accuracyCircle.setLatLng([lat,lng]);
+    accuracyCircle.setRadius(accuracy);
   }
 }
+
+// handler chýb geolokácie
+function handleGeoError(err) {
+  console.warn('Geolocation error', err);
+  if (err.code === 1) statusEl.textContent = 'Stav: Prístup k polohe odmietnutý';
+  else if (err.code === 2) statusEl.textContent = 'Stav: Nenašlo sa poloha (chyba signálu)';
+  else if (err.code === 3) statusEl.textContent = 'Stav: Vypršal čas pri zisťovaní polohy';
+  else statusEl.textContent = 'Stav: Neznáma chyba pri geolokácii';
+}
+
+// funkcia pre update polohy cez watchPosition
+function startWatch() {
+  if (!navigator.geolocation) {
+    statusEl.textContent = 'Stav: Geolokácia nie je podporovaná';
+    return;
+  }
+  // nastavenie options — highAccuracy = true => mobilny GPS
+  const options = { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 };
+
+  watchId = navigator.geolocation.watchPosition(pos => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const acc = pos.coords.accuracy || 20;
+
+    updatePosition(lat, lng, acc);
+    // prvé spustenie alebo pri kliknutí na center zobrazíme približovaciu hladinu
+    statusEl.textContent = `Stav: Poloha ${lat.toFixed(5)}, ${lng.toFixed(5)} (presnosť ${Math.round(acc)} m)`;
+    // ak je marker mimo obrazovky, neprenásilíme view pre plynulosť — necháme používatela stredí manuálne
+  }, err => {
+    handleGeoError(err);
+  }, options);
+
+  // UI
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  centerBtn.disabled = false;
+  statusEl.textContent = 'Stav: Sledujem polohu...';
+}
+
+// zastavenie sledovania
+function stopWatch() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    statusEl.textContent = 'Stav: Sledovanie zastavené';
+  }
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+}
+
+// center mapy na marker
+function centerOnMe() {
+  if (!positionMarker) {
+    statusEl.textContent = 'Stav: Nie je dostupná žiadna poloha (spusti sledovanie)';
+    return;
+  }
+  const latlng = positionMarker.getLatLng();
+  // animate to current position with reasonable zoom
+  map.setView(latlng, Math.max(map.getZoom(), 15), { animate: true });
+}
+
+// pri načítaní stránky zistíme jednorázovo polohu (nie watch) — len ak chceme
+function oneShotLocate() {
+  if (!navigator.geolocation) {
+    statusEl.textContent = 'Stav: Geolokácia nie je podporovaná';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos => {
+    updatePosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy || 20);
+    map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+    statusEl.textContent = `Stav: Nájdená počiatočná poloha`;
+  }, err => {
+    handleGeoError(err);
+  }, { enableHighAccuracy: true, timeout: 8000 });
+}
+
+// tlačidlá
+centerBtn.addEventListener('click', centerOnMe);
+startBtn.addEventListener('click', startWatch);
+stopBtn.addEventListener('click', stopWatch);
+
+// zobraziť jednoduché ovládanie zoomu pre mobil
+L.control.zoom({ position: 'topright' }).addTo(map);
+
+// pri štarte načítame počiatočnú polohu (nepovinné, ale pekné)
+oneShotLocate();
+
+// TIP: ak chceš, aby bodka vždy ostala v strede — spusti startWatch() a potom map.locate({setView:true}) atď.
+// ale radšej nechávam centráciu manuálnu cez tlačidlo, aby používateľ mohol posúvať mapu.
 </script>
-
-<script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap"></script>
-
 </body>
 </html>
