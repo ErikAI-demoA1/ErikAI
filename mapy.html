@@ -5,18 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0" />
 <title>ErikAI — Moja poloha (Leaflet)</title>
 
-<!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-sA+e2qkGQ3Yk6l2n3gQw3YcFv2kE6X0C1b+q0m0g6wE=" crossorigin=""/>
 
 <style>
 html, body { height:100%; margin:0; font-family:Arial,Helvetica,sans-serif; }
-#map { width:100%; height:100vh; display:block; touch-action: pan-x pan-y; }
+#map { width:100%; height:100vh; display:block; }
 
 #ui {
-  position: fixed; left:10px; top:10px; z-index:1100;
+  position: fixed; left:10px; top:10px; z-index:10000;
   display:flex; flex-direction:column; gap:8px;
-  pointer-events: auto;
 }
 .btn {
   background: rgba(0,0,0,0.6);
@@ -25,8 +23,6 @@ html, body { height:100%; margin:0; font-family:Arial,Helvetica,sans-serif; }
   padding: 8px 12px;
   border-radius: 8px;
   font-weight: 700;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
   cursor: pointer;
   pointer-events: auto;
 }
@@ -34,7 +30,7 @@ html, body { height:100%; margin:0; font-family:Arial,Helvetica,sans-serif; }
 #status {
   position: fixed; left:50%; transform:translateX(-50%); bottom:12px;
   background: rgba(255,255,255,0.9); color:#000; padding:6px 10px;
-  border-radius:8px; font-weight:600; z-index:1100;
+  border-radius:8px; font-weight:600; z-index:10000;
 }
 </style>
 </head>
@@ -49,15 +45,12 @@ html, body { height:100%; margin:0; font-family:Arial,Helvetica,sans-serif; }
 <div id="map"></div>
 <div id="status">Stav: čakám na spustenie</div>
 
-<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-o9N1j6k1XG4+6hU6a8f5kVf0bQmJ6D2Qv9v9z+7r4r8=" crossorigin=""></script>
 
 <script>
-// --- Inicializácia mapy ---
+// --- Mapa ---
 const map = L.map('map', { zoomControl: true }).setView([48.148598, 17.107748], 13);
-
-// OpenStreetMap tiles
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
   attribution: '&copy; OpenStreetMap contributors'
@@ -100,7 +93,7 @@ function updatePosition(lat,lng,accuracy){
   }
 }
 
-// --- Chyby geolokácie ---
+// --- Geolokácia ---
 function handleGeoError(err){
   console.warn('Geolocation error', err);
   if(err.code===1) statusEl.textContent='Stav: Prístup k polohe odmietnutý';
@@ -109,12 +102,12 @@ function handleGeoError(err){
   else statusEl.textContent='Stav: Neznáma chyba pri geolokácii';
 }
 
-// --- Sledovanie polohy ---
 function startWatch(){
   if(!navigator.geolocation){
     statusEl.textContent='Stav: Geolokácia nie je podporovaná';
     return;
   }
+
   const options = { enableHighAccuracy:true, maximumAge:1000, timeout:10000 };
   watchId = navigator.geolocation.watchPosition(pos=>{
     const lat = pos.coords.latitude;
@@ -129,7 +122,6 @@ function startWatch(){
   centerBtn.disabled=false;
 }
 
-// --- Zastavenie sledovania ---
 function stopWatch(){
   if(watchId!==null){
     navigator.geolocation.clearWatch(watchId);
@@ -140,7 +132,6 @@ function stopWatch(){
   stopBtn.disabled=true;
 }
 
-// --- Zamerať mapu na marker ---
 function centerOnMe(){
   if(!positionMarker){
     statusEl.textContent='Stav: Nie je dostupná žiadna poloha (spusti sledovanie)';
@@ -149,7 +140,6 @@ function centerOnMe(){
   map.setView(positionMarker.getLatLng(), Math.max(map.getZoom(),15), { animate:true });
 }
 
-// --- Jednorázové zistenie polohy ---
 function oneShotLocate(){
   if(!navigator.geolocation){
     statusEl.textContent='Stav: Geolokácia nie je podporovaná';
@@ -159,10 +149,10 @@ function oneShotLocate(){
     updatePosition(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy||20);
     map.setView([pos.coords.latitude,pos.coords.longitude],15);
     statusEl.textContent='Stav: Nájdená počiatočná poloha';
-  }, err=>handleGeoError(err), { enableHighAccuracy:true, timeout:8000 });
+  }, err => handleGeoError(err), { enableHighAccuracy:true, timeout:8000 });
 }
 
-// --- Tlačidlá ---
+// --- Eventy tlačidiel ---
 centerBtn.addEventListener('click', centerOnMe);
 startBtn.addEventListener('click', startWatch);
 stopBtn.addEventListener('click', stopWatch);
@@ -170,7 +160,7 @@ stopBtn.addEventListener('click', stopWatch);
 // --- Zoom ovládanie ---
 L.control.zoom({ position:'topright' }).addTo(map);
 
-// --- Inicializácia počiatočnej polohy ---
+// --- Počiatočná poloha ---
 oneShotLocate();
 </script>
 
