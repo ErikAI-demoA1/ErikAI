@@ -3,146 +3,144 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ErikAI Kompas</title>
+  <title>ErikAI Kompas – Profesionálny</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #fefefe; margin: 0; padding: 20px; }
-    h2 { color: #d10000; margin-top: 10px; }
-    .kompas-wrapper { margin: 20px auto; width: 200px; height: 200px; border: 4px solid red; border-radius: 50%; position: relative; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #fefefe;
+      color: #111;
+      margin: 0;
+      padding: 20px;
+    }
+    body.dark-mode {
+      background: #121212;
+      color: #fff;
+    }
+    h2 {
+      color: #d10000;
+      margin-top: 10px;
+    }
+    .kompas-wrapper {
+      margin: 20px auto;
+      width: 250px;
+      height: 250px;
+      border: 4px solid red;
+      border-radius: 50%;
+      position: relative;
+      background: radial-gradient(circle at center, #fff 90%, #ddd 100%);
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
     .ručička {
-      width: 2px;
-      height: 90px;
-      background-color: red;
+      width: 4px;
+      height: 100px;
+      background: red;
       position: absolute;
-      top: 10px;
+      top: 25px;
       left: 50%;
       transform-origin: bottom center;
       transition: transform 0.2s ease-out;
+      border-radius: 2px;
     }
-    .uhol { margin-top: 15px; font-size: 20px; font-weight: bold; }
-    .upozornenie {
-      background-color: #fff3cd;
-      border-left: 6px solid #ffcc00;
-      padding: 10px;
-      margin: 25px auto;
-      max-width: 500px;
-      font-size: 14px;
-      text-align: left;
+    .stred {
+      width: 12px;
+      height: 12px;
+      background: red;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
     }
-    .button { margin: 10px; padding: 10px 20px; background-color: #d10000; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    .button:hover { background-color: #b30000; }
+    .smer-label {
+      position: absolute;
+      font-weight: bold;
+      color: #d10000;
+    }
+    .uhol {
+      margin-top: 15px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .button {
+      margin: 10px;
+      padding: 10px 20px;
+      background-color: #d10000;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .button:hover {
+      background-color: #b30000;
+    }
   </style>
 </head>
 <body>
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+
+<button class="button" onclick="toggleTheme()">🌓 Zmeniť režim</button>
+
+<h2>🧭 ErikAI Kompas</h2>
+
+<div class="kompas-wrapper" id="kompas">
+  <div class="ručička" id="rucicka"></div>
+  <div class="stred"></div>
+</div>
+
+<div class="uhol" id="uholText">Smer: 0° (Sever)</div>
+
+<p class="upozornenie" style="max-width:500px; margin:auto; background:#fff3cd; padding:10px; border-left:6px solid #ffcc00;">
+  ℹ️ ErikAI Kompas funguje <strong>lokálne</strong> na vašom zariadení, žiadne dáta sa neodosielajú. <br>
+  ✅ Podporované: Android (Chrome), iOS (Safari od verzie 13.4)<br>
+  ❗ Nepodporované na: starších zariadeniach, niektorých desktopových prehliadačoch, PC bez senzora.
+</p>
 
 <script>
   function toggleTheme() {
     document.body.classList.toggle('dark-mode');
   }
+
+  function getSmer(angle) {
+    const smery = ["Sever", "Severovýchod", "Východ", "Juhovýchod", "Juh", "Juhozápad", "Západ", "Severozápad"];
+    const index = Math.round(angle / 45) % 8;
+    return smery[index];
+  }
+
+  function aktualizujKompas(uhol) {
+    const rucicka = document.getElementById("rucicka");
+    const uholText = document.getElementById("uholText");
+    rucicka.style.transform = `rotate(${uhol}deg)`;
+    uholText.textContent = `Smer: ${Math.round(uhol)}° (${getSmer(uhol)})`;
+  }
+
+  function inicializujKompas() {
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+      // iOS
+      DeviceOrientationEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === "granted") {
+            window.addEventListener("deviceorientationabsolute", handler);
+          } else {
+            alert("Prístup k senzoru zamietnutý.");
+          }
+        })
+        .catch(console.error);
+    } else {
+      // Android a iné
+      window.addEventListener("deviceorientationabsolute", handler);
+    }
+  }
+
+  function handler(event) {
+    if (event.alpha !== null) {
+      const uhol = 360 - event.alpha;
+      aktualizujKompas(uhol);
+    }
+  }
+
+  inicializujKompas();
 </script>
 
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
-
-<p id="cas" style="font-size: 18px;"></p>
-
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
-
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
-  }
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  <h2>🧭 ErikAI Kompas</h2>
-
-  <div class="kompas-wrapper">
-    <div class="ručička" id="rucicka"></div>
-  </div>
-
-  <div class="uhol" id="uholText">Smer: 0° (Sever)</div>
-
-  <div class="upozornenie">
-    <strong>ℹ️ Informácia o súkromí a podpore:</strong><br>
-    ErikAI Kompas <strong>nesleduje ani neposiela žiadne dáta</strong> na server. Funguje <strong>lokálne</strong> na vašom zariadení.<br><br>
-    ✅ Podporované: Android (Chrome), iOS (Safari od verzie 13.4)<br>
-    ❗ Nepodporované na: starších zariadeniach, niektorých desktopových prehliadačoch, PC bez senzora.
-  </div>
-
-  
-  <script>
-    function getSmer(angle) {
-      const smery = ["Sever", "Severovýchod", "Východ", "Juhovýchod", "Juh", "Juhozápad", "Západ", "Severozápad"];
-      const index = Math.round(angle / 45) % 8;
-      return smery[index];
-    }
-
-    function aktualizujKompas(uhol) {
-      const rucicka = document.getElementById("rucicka");
-      const uholText = document.getElementById("uholText");
-      rucicka.style.transform = `rotate(${uhol}deg)`;
-      uholText.textContent = `Smer: ${Math.round(uhol)}° (${getSmer(uhol)})`;
-    }
-
-    function inicializujKompas() {
-      if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
-        // iOS
-        DeviceOrientationEvent.requestPermission()
-          .then(permissionState => {
-            if (permissionState === "granted") {
-              window.addEventListener("deviceorientationabsolute", handler);
-            } else {
-              alert("Prístup k senzoru zamietnutý.");
-            }
-          })
-          .catch(console.error);
-      } else {
-        // Android a iné
-        window.addEventListener("deviceorientationabsolute", handler);
-      }
-    }
-
-    function handler(event) {
-      if (event.alpha !== null) {
-        const uhol = 360 - event.alpha; // Sever = 0°
-        aktualizujKompas(uhol);
-      }
-    }
-
-    inicializujKompas();
-  </script>
-
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-  </p>
 </body>
 </html>
