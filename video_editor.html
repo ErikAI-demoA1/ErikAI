@@ -83,7 +83,7 @@
   </div>
 
   <div class="progress"><i></i></div>
-  <div class="status" id="statusText">Stav: čakám na súbor</div>
+  <div class="status" id="statusText">Stav: čakám na súbor | Čas: 0.00 / 0.00 s</div>
   <a id="downloadLink" class="download" style="display:none;">⬇ Stiahnuť výsledok</a>
 </div>
 
@@ -109,7 +109,7 @@
 
   function resetUI(){
     progressBar.style.width='0%';
-    statusText.textContent='Stav: čakám na súbor';
+    statusText.textContent='Stav: čakám na súbor | Čas: 0.00 / 0.00 s';
     downloadLink.style.display='none';
     stopBtn.disabled=true;
     startBtn.disabled=false;
@@ -128,6 +128,7 @@
       endSec.value=Math.min(endSec.value||5, preview.duration);
       startSec.max=Math.floor(preview.duration);
       endSec.max=Math.floor(preview.duration);
+      statusText.textContent = `Stav: pripravené | Čas: ${parseFloat(startSec.value).toFixed(2)} / ${parseFloat(endSec.value).toFixed(2)} s`;
     };
   });
 
@@ -173,7 +174,6 @@
     }catch(err){}
     audioTracks.forEach(t=>stream.addTrack(t));
 
-    // striktne MP4
     const mime='video/mp4';
     try{
       recorder=new MediaRecorder(stream,{mimeType:mime});
@@ -195,20 +195,22 @@
       progressBar.style.width='100%';
     };
 
-    recorder.start();
-    let current=s;
-    const frameTime=1/fps;
+    let current = s;
+    const duration = e - s;
+    const frameTime = 1/fps;
 
     function renderFrame(){
       if(!processing){ if(recorder.state!=='inactive') recorder.stop(); return; }
       if(current>=e || preview.ended){ if(recorder.state!=='inactive') recorder.stop(); return; }
+
       ctx.save();
-      ctx.filter=filter;
+      ctx.filter = filter;
       ctx.drawImage(preview,0,0,previewCanvas.width,previewCanvas.height);
       ctx.restore();
+
       if(overlay){
-        const fs=Math.max(20,Math.floor(previewCanvas.width/28));
-        ctx.font=`${fs}px Inter,Arial`;
+        const fs = Math.max(20,Math.floor(previewCanvas.width/28));
+        ctx.font = `${fs}px Inter,Arial`;
         ctx.textBaseline='bottom';
         ctx.fillStyle='rgba(255,255,255,0.95)';
         ctx.strokeStyle='rgba(0,0,0,0.6)';
@@ -217,15 +219,22 @@
         ctx.strokeText(overlay,pad,previewCanvas.height-pad);
         ctx.fillText(overlay,pad,previewCanvas.height-pad);
       }
-      progressBar.style.width=Math.min(1,(current-s)/(e-s))*100+'%';
-      current+=frameTime*speed;
-      preview.currentTime=current;
-      frameTimer=setTimeout(renderFrame,1000/fps);
+
+      const progress = Math.min(1,(current-s)/duration);
+      progressBar.style.width = (progress*100)+'%';
+      statusText.textContent = `Spracovanie... | Čas: ${current.toFixed(2)} / ${e.toFixed(2)} s`;
+
+      current += frameTime*speed;
+      preview.currentTime = Math.min(current, e);
+
+      frameTimer = setTimeout(renderFrame, 1000/fps);
     }
+
+    recorder.start();
     renderFrame();
   });
 
 })();
 </script>
 </body>
-                               </html>
+  </html>
