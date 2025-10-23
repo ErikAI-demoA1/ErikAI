@@ -6,93 +6,101 @@
 <title>ErikAI TV Režim</title>
 <style>
   body {
-    margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
+    margin: 0; padding: 0;
     background: #000;
-    color: white;
+    color: #fff;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
     height: 100vh;
   }
-  h1 {
-    margin: 10px;
-    color: #1a73e8;
-  }
-  iframe {
-    border: none;
-    width: 90%;
-    max-width: 1280px;
-    height: 70vh;
-    margin-top: 20px;
-    border-radius: 10px;
-  }
-  .controls {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 90%;
-    max-width: 400px;
-  }
-  input, button {
-    width: 100%;
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 5px;
-    border: none;
-    font-size: 1rem;
-  }
+  h1 { margin: 20px; color: #1a73e8; }
   input {
-    font-size: 1rem;
+    width: 80%;
+    padding: 10px;
+    font-size: 18px;
+    border-radius: 8px;
+    border: none;
+    margin-bottom: 10px;
   }
   button {
+    padding: 10px 20px;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
     background-color: #1a73e8;
     color: white;
     cursor: pointer;
+    margin-bottom: 20px;
   }
-  button:hover {
-    background-color: #1558a5;
+  button:hover { background-color: #1558a5; }
+  #videoContainer {
+    flex: 1;
+    width: 90%;
+    max-width: 1200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  iframe {
+    width: 100%;
+    height: 80%;
+    border: none;
+    border-radius: 12px;
+  }
+  .external {
+    font-size: 20px;
+    color: #1a73e8;
+    text-decoration: underline;
+    cursor: pointer;
   }
 </style>
 </head>
 <body>
 
 <h1>📺 ErikAI TV Režim</h1>
+<input type="text" id="linkInput" placeholder="Vlož odkaz na YouTube, Vimeo alebo Instagram/TikTok">
+<button onclick="prehrat()">▶️ Prehrať</button>
 
-<iframe id="tvScreen" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
-
-<div class="controls">
-  <input type="text" id="videoURL" placeholder="Vlož URL videa (YouTube, Vimeo...)">
-  <button onclick="playVideo()">▶️ Prehrať video</button>
+<div id="videoContainer">
+  <p>Sem sa zobrazí video alebo odkaz...</p>
 </div>
 
 <script>
-function playVideo() {
-  const url = document.getElementById('videoURL').value.trim();
-  if (!url) return alert("Zadaj URL videa!");
-  
-  let embedURL = url;
+function prehrat() {
+  const link = document.getElementById('linkInput').value.trim();
+  const container = document.getElementById('videoContainer');
+  container.innerHTML = '';
 
-  // Automatická konverzia YouTube URL na embed
-  if (url.includes("youtube.com/watch?v=")) {
-    const videoId = url.split("v=")[1].split("&")[0];
-    embedURL = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-  }
-  // Automatická konverzia youtu.be URL
-  else if (url.includes("youtu.be/")) {
-    const videoId = url.split("youtu.be/")[1].split("?")[0];
-    embedURL = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  if (!link) {
+    container.innerHTML = '<p>Zadaj prosím odkaz!</p>';
+    return;
   }
 
-  // Vimeo embed
-  else if (url.includes("vimeo.com/")) {
-    const videoId = url.split("vimeo.com/")[1].split("?")[0];
-    embedURL = `https://player.vimeo.com/video/${videoId}?autoplay=1`;
+  // YouTube
+  if (link.includes('youtube.com') || link.includes('youtu.be')) {
+    let videoID = '';
+    if (link.includes('youtu.be/')) {
+      videoID = link.split('youtu.be/')[1].split(/[?&]/)[0];
+    } else {
+      const urlParams = new URLSearchParams(new URL(link).search);
+      videoID = urlParams.get('v');
+    }
+    container.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoID}" allowfullscreen></iframe>`;
+    return;
   }
 
-  document.getElementById('tvScreen').src = embedURL;
+  // Vimeo
+  if (link.includes('vimeo.com')) {
+    const videoID = link.split('vimeo.com/')[1].split(/[?&]/)[0];
+    container.innerHTML = `<iframe src="https://player.vimeo.com/video/${videoID}" allowfullscreen></iframe>`;
+    return;
+  }
+
+  // Instagram / TikTok / ostatné (iframe nepodporuje)
+  container.innerHTML = `<p>Pre túto platformu klikni sem pre otvorenie:</p>
+  <a class="external" href="${link}" target="_blank">Otvoriť obsah</a>`;
 }
 </script>
 
