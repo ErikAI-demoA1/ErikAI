@@ -3,83 +3,50 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI QR Pozvánka</title>
+<title>ErikAI QR Pozvánka Kontakt</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background-color: #f9f9f9;
-    text-align: center;
-    padding: 2rem;
-    color: #222;
-  }
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-  h1 { color: #1a73e8; }
-  input[type=text] {
-    width: 80%;
-    padding: 0.7rem;
-    font-size: 1rem;
-    margin: 1rem 0;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-  }
-  button {
-    padding: 0.7rem 1.5rem;
-    font-size: 1rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    background-color: #1a73e8;
-    color: white;
-    font-weight: bold;
-  }
-  button:hover { background-color: #1558a5; }
+  body { font-family: Arial, sans-serif; text-align: center; background: #f9f9f9; padding: 2rem; }
+  body.dark-mode { background: #121212; color: white; }
+  input, textarea { width: 80%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
+  button { padding: 10px 20px; font-weight: bold; border: none; border-radius: 5px; background: #1a73e8; color: white; cursor: pointer; }
+  button:hover { background: #1558a5; }
   #qrcode { margin-top: 20px; }
 </style>
 </head>
 <body>
 
-<h1>📲 ErikAI QR Pozvánka</h1>
+<h1>📲 ErikAI QR Kontakt</h1>
 
 <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
 
 <div>
-  <input type="text" id="inviteLink" placeholder="Sem vlož odkaz alebo text pozvánky">
+  <input type="text" id="kontaktMeno" placeholder="Meno kontaktu">
+  <textarea id="pozvankaText" placeholder="Správa / pozvánka na kontakt (Messenger, WhatsApp...)"></textarea>
   <br>
-  <button onclick="generateQRCode()">🖨 Generovať QR kód</button>
+  <button onclick="generujQR()">🖨 Generovať QR kód</button>
 </div>
 
 <div id="qrcode"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 <script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
+function toggleTheme() { document.body.classList.toggle('dark-mode'); }
 
-  function generateQRCode() {
-    const text = document.getElementById('inviteLink').value.trim();
-    if (!text) {
-      alert("❌ Zadaj odkaz alebo text pozvánky!");
-      return;
-    }
+function generujQR() {
+  const meno = document.getElementById('kontaktMeno').value.trim();
+  const sprava = document.getElementById('pozvankaText').value.trim();
+  if (!meno || !sprava) return alert("❌ Vyplň meno aj správu!");
 
-    const qrContainer = document.getElementById('qrcode');
-    qrContainer.innerHTML = "";
-    
-    QRCode.toCanvas(qrContainer, text, { width: 200, margin: 2 }, function (error) {
-      if (error) console.error(error);
-      else console.log('✅ QR kód vygenerovaný!');
-    });
-  }
+  const data = `Kontakt: ${meno}\nPozvánka: ${sprava}`;
+  const qrContainer = document.getElementById('qrcode');
+  qrContainer.innerHTML = "";
+  
+  QRCode.toCanvas(qrContainer, data, { width: 220, margin: 2 }, function(error) {
+    if (error) console.error(error);
+    else console.log('✅ QR kód vygenerovaný!');
+  });
+}
 </script>
-
-<p style="font-size:14px; color:gray; margin-top:30px;">
-  📌 Tento QR kód môže byť použitý v akejkoľvek aplikácii podporujúcej odkazy alebo text.  
-  © 2025 Erik Mohylák – All rights reserved.
-</p>
 
 </body>
 </html>
