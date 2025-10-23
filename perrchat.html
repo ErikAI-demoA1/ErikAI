@@ -8,7 +8,7 @@
   body { font-family: Arial, sans-serif; text-align: center; background: #f9f9f9; padding: 2rem; }
   body.dark-mode { background: #121212; color: white; }
   input, textarea { width: 80%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
-  button { padding: 10px 20px; font-weight: bold; border: none; border-radius: 5px; background: #1a73e8; color: white; cursor: pointer; }
+  button { padding: 10px 20px; font-weight: bold; border: none; border-radius: 5px; background: #1a73e8; color: white; cursor: pointer; margin: 5px;}
   button:hover { background: #1558a5; }
   canvas { margin-top: 20px; border: 1px solid #ccc; }
 </style>
@@ -24,6 +24,8 @@
   <textarea id="pozvankaText" placeholder="Správa / pozvánka na kontakt (Messenger, WhatsApp...)"></textarea>
   <br>
   <button onclick="generujQR()">🖨 Generovať QR kód</button>
+  <button onclick="stiahniQR()">💾 Stiahnuť QR</button>
+  <button onclick="zdieľajQR()">📤 Zdieľať QR</button>
 </div>
 
 <canvas id="qrcode"></canvas>
@@ -44,8 +46,36 @@ function generujQR() {
     if (error) {
       console.error(error);
       alert("❌ Chyba pri generovaní QR kódu!");
-    } else {
-      console.log('✅ QR kód vygenerovaný!');
+    }
+  });
+}
+
+// Stiahnuť QR kód
+function stiahniQR() {
+  const canvas = document.getElementById('qrcode');
+  const url = canvas.toDataURL("image/png");
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ErikAI_QR.png';
+  a.click();
+}
+
+// Zdieľať QR kód (ak prehliadač podporuje)
+async function zdieľajQR() {
+  if (!navigator.canShare || !navigator.canShare()) {
+    alert("📱 Zdieľanie nie je podporované týmto prehliadačom.");
+    return;
+  }
+  const canvas = document.getElementById('qrcode');
+  canvas.toBlob(async function(blob) {
+    try {
+      await navigator.share({
+        files: [new File([blob], 'ErikAI_QR.png', { type: 'image/png' })],
+        title: 'ErikAI QR Kontakt',
+        text: 'Pozri si môj QR kód na kontakt!'
+      });
+    } catch (err) {
+      console.error(err);
     }
   });
 }
