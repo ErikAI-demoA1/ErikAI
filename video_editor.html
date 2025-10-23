@@ -5,26 +5,26 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>🎞️ ErikAI Profi Video Editor</title>
 <style>
-  :root{
-    --bg:#0f1720; --card:#0b1220; --accent:#ef4444; --muted:#94a3b8;
-  }
-  body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:#e6eef6;padding:20px;}
-  h1{font-size:22px;margin-bottom:12px;}
-  .wrap{max-width:960px;margin:0 auto;padding:20px;background:var(--card);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.5);}
-  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
-  label{font-size:13px;color:var(--muted);}
-  input[type=file],input[type=number],input[type=text],select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;}
-  button{padding:10px 14px;border-radius:10px;border:none;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;}
-  button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);}
-  .preview-wrap{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;}
-  video{width:100%;max-width:640px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:black;}
-  canvas.previewCanvas{max-width:640px;border-radius:8px;border:1px dashed rgba(255,255,255,0.06);}
-  .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
-  .progress{width:100%;height:12px;background:rgba(255,255,255,0.04);border-radius:8px;overflow:hidden;margin-top:12px;}
-  .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#34d399,#60a5fa);transition:width 0.1s;}
-  .status{margin-top:10px;font-size:14px;color:var(--muted);}
-  .download{display:inline-block;margin-top:12px;padding:10px 14px;border-radius:10px;background:#10b981;color:#fff;text-decoration:none;font-weight:800;}
-  @media(max-width:760px){.row{flex-direction:column;align-items:stretch;}}
+:root{
+  --bg:#0f1720; --card:#0b1220; --accent:#ef4444; --muted:#94a3b8;
+}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:#e6eef6;padding:20px;}
+h1{font-size:22px;margin-bottom:12px;}
+.wrap{max-width:960px;margin:0 auto;padding:20px;background:var(--card);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.5);}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+label{font-size:13px;color:var(--muted);}
+input[type=file],input[type=number],input[type=text],select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;}
+button{padding:10px 14px;border-radius:10px;border:none;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;}
+button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);}
+.preview-wrap{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;}
+video{width:100%;max-width:640px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:black;}
+canvas.previewCanvas{max-width:640px;border-radius:8px;border:1px dashed rgba(255,255,255,0.06);}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+.progress{width:100%;height:12px;background:rgba(255,255,255,0.04);border-radius:8px;overflow:hidden;margin-top:12px;}
+.progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#34d399,#60a5fa);transition:width 0.1s;}
+.status{margin-top:10px;font-size:14px;color:var(--muted);}
+.download{display:inline-block;margin-top:12px;padding:10px 14px;border-radius:10px;background:#10b981;color:#fff;text-decoration:none;font-weight:800;}
+@media(max-width:760px){.row{flex-direction:column;align-items:stretch;}}
 </style>
 </head>
 <body>
@@ -35,13 +35,6 @@
     <div style="flex:1">
       <label>Vybrať video</label><br>
       <input type="file" id="videoFile" accept="video/*">
-    </div>
-    <div style="width:220px">
-      <label>Výstupný formát</label><br>
-      <select id="mimeSelect">
-        <option value="video/webm">webm (vp8/opus)</option>
-        <option value="video/mp4">mp4 (len ak podporuje MediaRecorder)</option>
-      </select>
     </div>
   </div>
 
@@ -98,7 +91,8 @@
 (function(){
   const videoFile = document.getElementById('videoFile');
   const preview = document.getElementById('preview');
-  const previewCanvas = document.getElementById('previewCanvas');
+  const canvas = document.getElementById('previewCanvas');
+  const ctx = canvas.getContext('2d');
   const startBtn = document.getElementById('startBtn');
   const stopBtn = document.getElementById('stopBtn');
   const downloadLink = document.getElementById('downloadLink');
@@ -111,19 +105,20 @@
   const overlayText = document.getElementById('overlayText');
   const filterSelect = document.getElementById('filterSelect');
   const fpsSelect = document.getElementById('fpsSelect');
-  const mimeSelect = document.getElementById('mimeSelect');
 
-  let inputFile=null,fileURL=null,processing=false,recorder=null,recordedChunks=[],ctx=null,frameTimer=null;
+  let inputFile=null,fileURL=null,processing=false,recorder=null,recordedChunks=[],frameTimer=null;
 
   function resetUI(){
     progressBar.style.width='0%';
     statusText.textContent='Stav: čakám na súbor';
     downloadLink.style.display='none';
     stopBtn.disabled=true;
+    startBtn.disabled=false;
+    canvas.style.display='none';
   }
 
   videoFile.addEventListener('change', e=>{
-    const f = e.target.files[0];
+    const f=e.target.files[0];
     if(!f) return;
     inputFile=f;
     if(fileURL) URL.revokeObjectURL(fileURL);
@@ -151,16 +146,16 @@
     if(processing) return alert('Spracovanie už prebieha');
     processing=true;
     recordedChunks=[];
-    const mime = mimeSelect.value;
+    stopBtn.disabled=false; startBtn.disabled=true;
+    statusText.textContent='Spracovanie...';
+
     const fps=parseInt(fpsSelect.value)||30;
     const speed=parseFloat(speedSelect.value)||1;
     const filter=filterSelect.value||'none';
     const overlay=overlayText.value||'';
-    const s=parseFloat(startSec.value)||0;
-    const e=Math.min(parseFloat(endSec.value)||preview.duration, preview.duration);
+    let s=parseFloat(startSec.value)||0;
+    let e=Math.min(parseFloat(endSec.value)||preview.duration, preview.duration);
     if(s>=e){ alert('Štart musí byť menší než koniec'); processing=false; return; }
-    stopBtn.disabled=false; startBtn.disabled=true;
-    statusText.textContent='Spracovanie...';
 
     preview.pause();
     preview.currentTime=s;
@@ -168,13 +163,11 @@
       const check=()=>{ if(preview.readyState>=2) r(); else setTimeout(check,50); }; check();
     });
 
-    // canvas
-    previewCanvas.width=preview.videoWidth;
-    previewCanvas.height=preview.videoHeight;
-    previewCanvas.style.display='block';
-    ctx=previewCanvas.getContext('2d');
+    canvas.width=preview.videoWidth;
+    canvas.height=preview.videoHeight;
+    canvas.style.display='block';
 
-    const stream=previewCanvas.captureStream(fps);
+    const stream=canvas.captureStream(fps);
     let audioTracks=[];
     try{
       const audStream=preview.captureStream? preview.captureStream(): null;
@@ -182,17 +175,13 @@
     }catch(err){}
     audioTracks.forEach(t=>stream.addTrack(t));
 
-    try{
-      recorder=new MediaRecorder(stream,{mimeType:mime});
-    }catch(err){
-      recorder=new MediaRecorder(stream);
-    }
+    recorder=new MediaRecorder(stream,{mimeType:'video/webm'});
     recorder.ondataavailable=e=>{ if(e.data.size) recordedChunks.push(e.data); };
     recorder.onstop=()=>{
       processing=false;
       startBtn.disabled=false;
       stopBtn.disabled=true;
-      const blob=new Blob(recordedChunks,{type:mime});
+      const blob=new Blob(recordedChunks,{type:'video/webm'});
       const url=URL.createObjectURL(blob);
       downloadLink.href=url;
       downloadLink.style.display='inline-block';
@@ -200,29 +189,32 @@
       statusText.textContent='Hotovo — klikni na stiahnutie';
       progressBar.style.width='100%';
     };
-
     recorder.start();
+
     let current=s;
     const frameTime=1/fps;
 
     function renderFrame(){
-      if(!processing) { if(recorder.state!=='inactive') recorder.stop(); return; }
+      if(!processing){ if(recorder.state!=='inactive') recorder.stop(); return; }
       if(current>=e || preview.ended){ if(recorder.state!=='inactive') recorder.stop(); return; }
+
       ctx.save();
       ctx.filter=filter;
-      ctx.drawImage(preview,0,0,previewCanvas.width,previewCanvas.height);
+      ctx.drawImage(preview,0,0,canvas.width,canvas.height);
       ctx.restore();
+
       if(overlay){
-        const fs=Math.max(20,Math.floor(previewCanvas.width/28));
+        const fs=Math.max(20,Math.floor(canvas.width/28));
         ctx.font=`${fs}px Inter,Arial`;
         ctx.textBaseline='bottom';
         ctx.fillStyle='rgba(255,255,255,0.95)';
         ctx.strokeStyle='rgba(0,0,0,0.6)';
         ctx.lineWidth=Math.max(3,fs/12);
         const pad=16;
-        ctx.strokeText(overlay,pad,previewCanvas.height-pad);
-        ctx.fillText(overlay,pad,previewCanvas.height-pad);
+        ctx.strokeText(overlay,pad,canvas.height-pad);
+        ctx.fillText(overlay,pad,canvas.height-pad);
       }
+
       progressBar.style.width=Math.min(1,(current-s)/(e-s))*100+'%';
       current+=frameTime*speed;
       preview.currentTime=current;
@@ -234,4 +226,4 @@
 })();
 </script>
 </body>
-          </html>
+</html>
