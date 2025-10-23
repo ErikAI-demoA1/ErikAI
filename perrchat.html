@@ -1,110 +1,103 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <title>ErikAI Peer Chat - Spojenie kódom</title>
-  <style>
-    body { font-family: sans-serif; padding: 1rem; background: #f4f4f4; }
-    textarea, input[type=text] { width: 100%; margin-bottom: 10px; padding: 10px; }
-    button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; margin-bottom: 10px; }
-    .log { height: 150px; background: #fff; overflow-y: auto; border: 1px solid #ccc; padding: 0.5rem; }
-    .status { font-weight: bold; color: green; margin-bottom: 10px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI Peer Chat – Jeden klik</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; text-align: center; }
+  h2 { color: #1a73e8; }
+  textarea, input[type=text] { width: 100%; padding: 10px; margin-bottom: 10px; font-size: 1rem; }
+  button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; background: #1a73e8; color: white; cursor: pointer; font-weight: bold; }
+  button:hover { background: #1558a5; }
+  .log { height: 200px; overflow-y: auto; border: 1px solid #ccc; background: #fff; padding: 10px; margin-top: 10px; text-align: left; }
+  .status { font-weight: bold; margin: 10px 0; }
+</style>
 </head>
 <body>
-  <div style="background: #ffdddd; color: #900; padding: 10px; border: 1px solid #f00; margin-bottom: 10px;">
-  ⚠️ <b>Upozornenie:</b> Aktuálne táto funkcia spoľahlivo funguje len na zariadeniach <b>Huawei</b>. Na iných značkách (napr. Xiaomi, Apple) môže byť pripojenie zablokované alebo nefunkčné.
-  </div>
 
-  <h2>💬 ErikAI Peer Chat (cez kód)</h2>
+<h2>💬 ErikAI Peer Chat</h2>
 
-  <!-- Krok 1 - Vytvorenie kódu (mobil 1) -->
-  <button onclick="vytvorKod()">🔐 Vytvor kód (mobil 1)</button>
-  <textarea id="vygenerovanyKod" placeholder="Tu sa zobrazí tvoj kód..."></textarea>
+<p class="status" id="status">❌ Zatiaľ nie ste spojení</p>
 
-  <!-- Krok 2 - Pripojenie (mobil 2) -->
-  <input type="text" id="prijatyKod" placeholder="Sem vlož kód od kamoša (mobil 2)">
-  <button onclick="pripojKod()">🔓 Pripoj sa (mobil 2)</button>
+<!-- Kód na pripojenie -->
+<button onclick="vytvorKod()">🔐 Generovať a skopírovať kód</button>
+<textarea id="kod" placeholder="Tu sa zobrazí kód..." readonly></textarea>
 
-  <!-- Krok 3 - Mobil 1 vloží spätný kód (ANSWER) -->
-  <textarea id="answerFromFriend" placeholder="Sem vlož spätný kód z mobilu 2..."></textarea>
-  <button onclick="vlozAnswer()">✅ Vložiť spätný kód (mobil 1)</button>
+<input type="text" id="vlozKod" placeholder="Sem vlož kód od kamoša">
+<button onclick="pripojSa()">🔓 Pripojiť sa k priateľovi</button>
 
-  <!-- Stav a chat -->
-  <div class="status" id="stavSpojenia">❌ Zatiaľ nie ste spojení</div>
-  <input type="text" id="sprava" placeholder="Napíš správu...">
-  <button onclick="odosliSpravu()">✉️ Poslať</button>
-  <div class="log" id="chat"></div>
+<input type="text" id="sprava" placeholder="Napíš správu...">
+<button onclick="odosliSpravu()">✉️ Poslať správu</button>
+
+<div class="log" id="chat"></div>
 
 <script>
-  let pc;
-  let dc;
-  let spojene = false;
+let pc, dc, spojene = false;
 
-  async function vytvorKod() {
-    pc = new RTCPeerConnection();
-    dc = pc.createDataChannel("chat");
-    nastavChat();
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    document.getElementById("vygenerovanyKod").value = btoa(JSON.stringify(offer));
-  }
-
-  async function pripojKod() {
-    const kod = document.getElementById("prijatyKod").value;
-    const offer = JSON.parse(atob(kod));
-    pc = new RTCPeerConnection();
-    pc.ondatachannel = (e) => {
-      dc = e.channel;
-      nastavChat();
-    };
-    await pc.setRemoteDescription(offer);
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    const kodAnswer = btoa(JSON.stringify(answer));
-    prompt("Pošli tento spätný kód (ANSWER) naspäť prvému mobilu:", kodAnswer);
-  }
-
-  async function vlozAnswer() {
-    const answer = JSON.parse(atob(document.getElementById("answerFromFriend").value));
-    await pc.setRemoteDescription(answer);
-  }
-
-  function nastavChat() {
-    dc.onopen = () => {
-      spojene = true;
-      document.getElementById("stavSpojenia").textContent = "✅ Ste spojení, môžte písať!";
-      document.getElementById("stavSpojenia").style.color = "green";
-    };
-    dc.onmessage = (e) => {
-      document.getElementById("chat").innerHTML += `<div><b>🟢 Kamoš:</b> ${e.data}</div>`;
-    };
-  }
-
-  function odosliSpravu() {
-    const text = document.getElementById("sprava").value;
-    if (!spojene) {
-      alert("Najprv sa musíte spojiť cez kód!");
-      return;
-    }
-    dc.send(text);
-    document.getElementById("chat").innerHTML += `<div><b>🔵 Ty:</b> ${text}</div>`;
-    document.getElementById("sprava").value = "";
-  }
-</script>
-<script>
-  const povoleneRef = ["erikai-demoa1.github.io", "erikaios.online"];
-
-let pristupOk = false;
-povoleneRef.forEach(ref => {
-  if (document.referrer.includes(ref)) pristupOk = true;
-});
-
-if (!pristupOk) {
-  alert("Prístup zakázaný: túto stránku nemožno otvoriť priamo.");
-  window.location.href = "https://erikaios.online/";
+// Automatické nastavenie chatu
+function nastavChat() {
+  dc.onopen = () => {
+    spojene = true;
+    document.getElementById("status").textContent = "✅ Ste spojení!";
+    document.getElementById("status").style.color = "green";
+  };
+  dc.onmessage = e => {
+    const chat = document.getElementById("chat");
+    chat.innerHTML += `<div><b>🟢 Kamoš:</b> ${e.data}</div>`;
+    chat.scrollTop = chat.scrollHeight;
+  };
 }
-  </script>
+
+// Generovanie kódu
+async function vytvorKod() {
+  pc = new RTCPeerConnection();
+  dc = pc.createDataChannel("chat");
+  nastavChat();
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  const kod = btoa(JSON.stringify(offer));
+  document.getElementById("kod").value = kod;
+
+  // Automaticky skopíruj do schránky
+  navigator.clipboard.writeText(kod).then(() => {
+    alert("Kód skopírovaný do schránky! Pošli ho kamoškovi.");
+  });
+}
+
+// Pripojenie sa k priateľovi
+async function pripojSa() {
+  const vlozenyKod = document.getElementById("vlozKod").value;
+  if (!vlozenyKod) return alert("Sem vlož kód od kamoša!");
+  const offer = JSON.parse(atob(vlozenyKod));
+
+  pc = new RTCPeerConnection();
+  pc.ondatachannel = e => { dc = e.channel; nastavChat(); };
+  await pc.setRemoteDescription(offer);
+
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+
+  // Automaticky skopírovať answer kód a pošli späť prvému
+  const kodAnswer = btoa(JSON.stringify(answer));
+  navigator.clipboard.writeText(kodAnswer).then(() => {
+    alert("✅ Pripojenie pripravené! Skopíruj a pošli spätný kód prvému kamarátovi.");
+  });
+}
+
+// Posielanie správ
+function odosliSpravu() {
+  const sprava = document.getElementById("sprava").value;
+  if (!spojene) return alert("Najprv sa pripojte k priateľovi!");
+  dc.send(sprava);
+  const chat = document.getElementById("chat");
+  chat.innerHTML += `<div><b>🔵 Ty:</b> ${sprava}</div>`;
+  chat.scrollTop = chat.scrollHeight;
+  document.getElementById("sprava").value = "";
+}
+</script>
 
 </body>
 </html>
