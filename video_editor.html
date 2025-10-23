@@ -1,225 +1,125 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="sk">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>🎞️ ErikAI Video Trim & Export — Plynulé</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎞️ ErikAI Trim & Export Fix</title>
 <style>
-:root{
-  --bg:#0f1720; --accent:#ef4444; --muted:#94a3b8;
-}
-html,body{margin:0;padding:0;font-family:Inter,Arial,sans-serif;background:linear-gradient(180deg,#071026,#071022);color:#e6eef6;}
-.wrap{max-width:980px;margin:28px auto;padding:20px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.6);}
-h1{margin:0 0 12px;font-size:22px;text-align:center;}
-.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:10px;}
-label{font-size:13px;color:var(--muted);}
-input[type=file], input[type=number], select, input[type=text]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;width:100%;}
-button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700;}
-button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);}
-.preview-wrap{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;}
-video{width:100%;max-width:640px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:black;}
-canvas.previewCanvas{max-width:640px;border-radius:8px;border:1px dashed rgba(255,255,255,0.06);display:block;}
-.controls{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;}
-.progress{width:100%;height:12px;background:rgba(255,255,255,0.04);border-radius:8px;overflow:hidden;margin-top:12px;}
-.progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#34d399,#60a5fa);transition:width 0.15s;}
-.status{margin-top:10px;font-size:14px;color:var(--muted);}
-.download{display:inline-block;margin-top:12px;padding:10px 14px;border-radius:10px;background:#10b981;color:#fff;text-decoration:none;font-weight:800;}
+body { font-family: Inter, Arial, sans-serif; background:#111; color:white; text-align:center; padding:20px; }
+input, select, button { margin:5px; padding:8px; border-radius:6px; }
+video { max-width: 100%; border:1px solid #333; border-radius:6px; background:black; }
+canvas { display:none; }
+.download { display:inline-block; margin-top:12px; padding:10px 14px; border-radius:10px; background:#10b981; color:white; text-decoration:none; font-weight:700; }
 </style>
 </head>
 <body>
-<div class="wrap">
-<h1>🎞️ ErikAI — Plynulé Video Trim & Export</h1>
 
-<div class="row">
-  <div style="flex:1">
-    <label>Vybrať video (mp4/webm)</label>
-    <input id="videoFile" type="file" accept="video/*">
-  </div>
-  <div style="width:220px">
-    <label>Výstupný formát</label>
-    <select id="mimeSelect">
-      <option value="video/webm">webm (vp8/opus)</option>
-      <option value="video/mp4">mp4 (môže byť nepodporované)</option>
-    </select>
-  </div>
-</div>
+<h1>🎞️ ErikAI Video Trim & Export – Fix</h1>
 
-<div class="row">
-  <div style="flex:1">
-    <label>Od (sekundy)</label>
-    <input id="startSec" type="number" min="0" step="0.1" value="0">
-  </div>
-  <div style="flex:1">
-    <label>Do (sekundy)</label>
-    <input id="endSec" type="number" min="0" step="0.1" value="10">
-  </div>
-  <div style="width:170px">
-    <label>Rýchlosť</label>
-    <select id="speedSelect">
-      <option value="1">1×</option>
-      <option value="0.5">0.5×</option>
-      <option value="1.5">1.5×</option>
-      <option value="2">2×</option>
-    </select>
-  </div>
-</div>
+<input type="file" id="videoFile" accept="video/*"><br>
+<label>Od (s)</label>
+<input type="number" id="startTime" value="0" step="0.01" min="0">
+<label>Do (s)</label>
+<input type="number" id="endTime" value="5" step="0.01" min="0"><br>
+<label>FPS</label>
+<select id="fpsSelect">
+  <option value="30">30</option>
+  <option value="24">24</option>
+  <option value="15">15</option>
+</select><br>
 
-<div class="row" style="margin-top:10px;">
-  <div style="flex:1">
-    <label>Overlay text</label>
-    <input id="overlayText" type="text" placeholder="Napr.: ErikAI demo">
-  </div>
-  <div style="flex:1">
-    <label>Filter</label>
-    <select id="filterSelect">
-      <option value="none">Žiadny</option>
-      <option value="grayscale(100%)">B&W</option>
-      <option value="sepia(100%)">Sepia</option>
-      <option value="invert(100%)">Invert</option>
-    </select>
-  </div>
-  <div style="width:120px">
-    <label>FPS</label>
-    <select id="fpsSelect">
-      <option value="30">30</option>
-      <option value="24">24</option>
-      <option value="15">15</option>
-    </select>
-  </div>
-</div>
+<button id="startBtn">✂️ Spustiť trim</button>
+<div id="status">Stav: čakám na súbor</div>
+<video id="preview" controls></video>
+<a id="downloadLink" class="download" style="display:none;">⬇ Stiahnuť výsledok</a>
 
-<div class="preview-wrap">
-  <video id="preview" controls></video>
-  <canvas class="previewCanvas" id="previewCanvas" style="display:none"></canvas>
-</div>
-
-<div class="controls">
-  <button id="startBtn">✂️ Spustiť & Export</button>
-  <button id="stopBtn" class="secondary" disabled>⏸ Zrušiť</button>
-</div>
-<div class="progress"><i id="progressBar"></i></div>
-<div class="status" id="statusText">Stav: čakám na súbor</div>
-<a id="downloadLink" class="download" style="display:none"></a>
-</div>
+<canvas id="workCanvas"></canvas>
 
 <script>
-const fileInput = document.getElementById('videoFile');
-const preview = document.getElementById('preview');
-const previewCanvas = document.getElementById('previewCanvas');
+const videoFileInput = document.getElementById('videoFile');
 const startBtn = document.getElementById('startBtn');
-const stopBtn = document.getElementById('stopBtn');
-const progressBar = document.getElementById('progressBar');
-const statusText = document.getElementById('statusText');
+const preview = document.getElementById('preview');
 const downloadLink = document.getElementById('downloadLink');
-const mimeSelect = document.getElementById('mimeSelect');
-const startSec = document.getElementById('startSec');
-const endSec = document.getElementById('endSec');
-const overlayText = document.getElementById('overlayText');
-const filterSelect = document.getElementById('filterSelect');
+const status = document.getElementById('status');
+const startTimeInput = document.getElementById('startTime');
+const endTimeInput = document.getElementById('endTime');
 const fpsSelect = document.getElementById('fpsSelect');
-const speedSelect = document.getElementById('speedSelect');
+const canvas = document.getElementById('workCanvas');
+const ctx = canvas.getContext('2d');
 
-let inputFile=null, fileURL=null, processing=false, recorder=null, recordedChunks=[], workCtx=null, canvasStream=null;
+let fileURL, videoElement, mediaRecorder, recordedChunks = [];
 
-fileInput.addEventListener('change', e=>{
-  const f = e.target.files[0];
-  if(!f) return;
-  inputFile=f;
+videoFileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
   if(fileURL) URL.revokeObjectURL(fileURL);
-  fileURL=URL.createObjectURL(f);
-  preview.src=fileURL;
+  fileURL = URL.createObjectURL(file);
+  preview.src = fileURL;
   preview.load();
-  preview.onloadedmetadata=()=>{ endSec.value=Math.min(endSec.value||10, preview.duration); startSec.max=endSec.max=Math.floor(preview.duration); };
-  statusText.textContent=`Načítané: ${f.name}`;
+  status.textContent = `Načítané: ${file.name}`;
 });
 
-startBtn.addEventListener('click', async()=>{
-  if(!inputFile || processing) return alert('Najprv vyber video.');
-  processing=true;
-  recordedChunks=[];
-  startBtn.disabled=true; stopBtn.disabled=false; previewCanvas.style.display='block';
-  statusText.textContent='Spracovanie...';
-  
-  const s=parseFloat(startSec.value)||0;
-  const e=parseFloat(endSec.value)||Math.min(s+10, preview.duration);
-  if(s>=e){ alert('Od musí byť menšie než Do'); processing=false; return; }
+startBtn.addEventListener('click', async () => {
+  if(!videoFileInput.files[0]) return alert('Vyber video súbor');
+  const start = parseFloat(startTimeInput.value);
+  const end = parseFloat(endTimeInput.value);
+  const fps = parseInt(fpsSelect.value);
 
-  const fps=parseInt(fpsSelect.value)||30;
-  const speed=parseFloat(speedSelect.value)||1;
-  const filter=filterSelect.value||'none';
-  const overlay=overlayText.value||'';
+  if(start >= end) return alert('Štart musí byť menší než koniec');
 
-  // canvas setup (nižšie rozlíšenie pre výkon)
-  previewCanvas.width=preview.videoWidth/2;
-  previewCanvas.height=preview.videoHeight/2;
-  workCtx=previewCanvas.getContext('2d');
+  // priprav video element pre trim
+  videoElement = document.createElement('video');
+  videoElement.src = fileURL;
+  videoElement.muted = true;
+  videoElement.crossOrigin = "anonymous";
 
-  // captureStream
-  canvasStream=previewCanvas.captureStream(fps);
-  const audStream=preview.captureStream ? preview.captureStream().getAudioTracks() : [];
-  audStream.forEach(t=>canvasStream.addTrack(t));
+  await new Promise(res => videoElement.onloadedmetadata = res);
 
-  const mime=MediaRecorder.isTypeSupported(mimeSelect.value)?mimeSelect.value:'video/webm';
-  recorder=new MediaRecorder(canvasStream,{mimeType:mime});
-  recorder.ondataavailable=e=>{ if(e.data.size>0) recordedChunks.push(e.data); updateProgress(); };
-  recorder.onstop=()=>finishExport();
-  recorder.start();
+  canvas.width = videoElement.videoWidth;
+  canvas.height = videoElement.videoHeight;
 
-  preview.currentTime=s;
-  preview.play();
+  const stream = canvas.captureStream(fps);
+  const audioStream = videoElement.captureStream ? videoElement.captureStream().getAudioTracks() : [];
+  const combinedStream = new MediaStream([...stream.getVideoTracks(), ...audioStream]);
 
-  let lastFrameTime=0;
-  function renderLoop(timestamp){
-    if(!processing) return recorder.stop();
-    const dt=(timestamp-lastFrameTime)/1000;
-    lastFrameTime=timestamp;
+  recordedChunks = [];
+  mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm; codecs=vp8,opus' });
+  mediaRecorder.ondataavailable = e => { if(e.data.size > 0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = onRecordingComplete;
 
-    if(preview.currentTime>=e || preview.ended){ processing=false; return recorder.stop(); }
+  status.textContent = 'Spúšťam trimovanie...';
+  mediaRecorder.start();
 
-    // draw video
-    workCtx.save();
-    workCtx.filter=filter;
-    workCtx.drawImage(preview,0,0,previewCanvas.width,previewCanvas.height);
-    workCtx.restore();
+  // presun na start
+  videoElement.currentTime = start;
+  await new Promise(res => {
+    videoElement.addEventListener('seeked', res, {once:true});
+  });
 
-    // overlay
-    if(overlay){
-      const fs=Math.max(20, Math.floor(workCanvas.width/28));
-      workCtx.font=`${fs}px Inter, Arial`;
-      workCtx.textBaseline='bottom';
-      workCtx.fillStyle='rgba(255,255,255,0.95)';
-      workCtx.strokeStyle='rgba(0,0,0,0.6)';
-      workCtx.lineWidth=Math.max(3, fs/12);
-      workCtx.strokeText(overlay,16,previewCanvas.height-16);
-      workCtx.fillText(overlay,16,previewCanvas.height-16);
+  videoElement.play();
+
+  function renderFrame(){
+    if(videoElement.currentTime >= end || videoElement.ended){
+      videoElement.pause();
+      mediaRecorder.stop();
+      return;
     }
-
-    // advance frame manually
-    preview.currentTime=Math.min(e, preview.currentTime+(1/fps)*speed);
-    requestAnimationFrame(renderLoop);
+    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+    requestAnimationFrame(renderFrame);
   }
-
-  requestAnimationFrame(renderLoop);
+  renderFrame();
 });
 
-stopBtn.addEventListener('click', ()=>{
-  if(processing){ processing=false; statusText.textContent='Spracovanie zrušené'; recorder.stop(); startBtn.disabled=false; stopBtn.disabled=true; }
-});
-
-function finishExport(){
-  const blob=new Blob(recordedChunks,{type:recorder.mimeType});
-  const url=URL.createObjectURL(blob);
-  downloadLink.href=url;
-  downloadLink.download=inputFile.name.replace(/\.[^/.]+$/,'')+'-trim.webm';
-  downloadLink.style.display='inline-block';
-  downloadLink.textContent='⬇ Stiahnuť video';
-  statusText.textContent='Hotovo!';
-  startBtn.disabled=false; stopBtn.disabled=true;
-}
-
-function updateProgress(){
-  progressBar.style.width=Math.min(100,(recordedChunks.length/50)*100)+'%';
+function onRecordingComplete(){
+  const blob = new Blob(recordedChunks, { type: 'video/webm' });
+  const url = URL.createObjectURL(blob);
+  downloadLink.href = url;
+  downloadLink.style.display = 'inline-block';
+  downloadLink.download = `trim-${Date.now()}.webm`;
+  status.textContent = 'Trim dokončený — klikni na stiahnutie';
+  preview.src = url;
 }
 </script>
+
 </body>
-  </html>
+</html>
