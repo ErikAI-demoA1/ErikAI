@@ -3,74 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI Vyhľadávač</title>
+<title>ErikAI Vyhľadávač v iframe</title>
 <style>
   body {
     font-family: Arial, sans-serif;
-    background: #000;
+    margin: 0; padding: 0;
+    background: #111;
     color: #fff;
     display: flex;
     flex-direction: column;
     align-items: center;
     height: 100vh;
-    margin: 0;
-    padding: 20px;
   }
-  h1 { color: #1a73e8; }
-  input, select, button {
-    font-size: 16px;
+  h1 { margin: 20px; color: #1a73e8; }
+  select, input, button {
     padding: 10px;
     margin: 5px;
+    font-size: 16px;
     border-radius: 6px;
     border: none;
   }
   button {
     background-color: #1a73e8;
-    color: #fff;
+    color: white;
     cursor: pointer;
   }
   button:hover { background-color: #1558a5; }
-  #searchFrame {
-    margin-top: 20px;
-    width: 90%;
+  iframe {
     flex: 1;
-    border: 2px solid #1a73e8;
-    border-radius: 10px;
+    width: 90%;
+    border: none;
+    border-radius: 12px;
+    margin-top: 10px;
   }
 </style>
 </head>
 <body>
 
-<h1>🔍 ErikAI Vyhľadávač</h1>
+<h1>ErikAI Vyhľadávač v iframe</h1>
 
-<input type="text" id="searchInput" placeholder="Zadaj hľadaný výraz">
 <select id="searchEngine">
-  <option value="duckduckgo">DuckDuckGo</option>
-  <option value="startpage">Startpage</option>
+  <option value="https://duckduckgo.com">DuckDuckGo</option>
+  <option value="https://www.qwant.com">Qwant</option>
+  <option value="https://startpage.com">Startpage</option>
 </select>
-<button onclick="search()">Hľadať</button>
+<input type="text" id="searchQuery" placeholder="Napíš, čo chceš vyhľadať">
+<button onclick="search()">🔍 Vyhľadať</button>
 
-<iframe id="searchFrame"></iframe>
+<iframe id="searchFrame" src=""></iframe>
 
 <script>
 function search() {
-  const query = encodeURIComponent(document.getElementById('searchInput').value.trim());
   const engine = document.getElementById('searchEngine').value;
-  const frame = document.getElementById('searchFrame');
+  const query = encodeURIComponent(document.getElementById('searchQuery').value.trim());
+  const iframe = document.getElementById('searchFrame');
 
-  if(!query){
-    alert("Zadaj prosím hľadaný výraz!");
+  if(!query) {
+    alert("Zadaj, čo chceš vyhľadať!");
     return;
   }
 
+  // URL vyhľadávania podľa vybraného vyhľadávača
   let url = "";
-  if(engine === "duckduckgo"){
-    url = `https://duckduckgo.com/?q=${query}&t=h_&ia=web`;
-  } else if(engine === "startpage"){
-    url = `https://www.startpage.com/sp/search?q=${query}`;
-  }
-
-  frame.src = url;
+  if(engine.includes("duckduckgo")) url = `${engine}/?q=${query}`;
+  else if(engine.includes("qwant")) url = `${engine}/?q=${query}`;
+  else if(engine.includes("startpage")) url = `${engine}/do/search?q=${query}`;
+  
+  iframe.src = url;
 }
 </script>
 
