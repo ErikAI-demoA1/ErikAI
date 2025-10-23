@@ -1,182 +1,306 @@
-<!DOCTYPE html><html lang="sk">
+<!doctype html>
+<html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ErikAI Video Editor – jednoduché strihanie</title>
-  <style>
-    body {
-      background: #111;
-      color: white;
-      font-family: sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    input, button {
-      padding: 8px;
-      margin: 5px;
-    }
-    video {
-      max-width: 100%;
-      margin: 10px 0;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ErikAI Video Editor — Pro mini</title>
+<style>
+  :root{--accent:#d40000}
+  body{font-family:Inter,Arial,sans-serif;background:#0f1724;color:#e6eef8;margin:0;padding:18px;display:flex;flex-direction:column;align-items:center}
+  header{width:100%;max-width:980px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  h1{margin:0;color:var(--accent)}
+  main{width:100%;max-width:980px;background:#0b1220;padding:14px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+  video, canvas{width:100%;max-height:480px;border-radius:10px;background:black;display:block;margin:10px 0}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .group{background:#07101a;padding:10px;border-radius:8px}
+  label{font-size:13px;color:#9fb2c8}
+  input[type="range"]{width:220px}
+  select,button,input[type="number"],input[type="text"]{padding:8px;border-radius:6px;border:none;background:#071827;color:#e6eef8}
+  button{background:var(--accent);cursor:pointer;font-weight:700}
+  button.secondary{background:#1f6f8b}
+  #progress{width:100%;height:10px;background:#05303f;border-radius:6px;overflow:hidden;margin-top:8px}
+  #progress > i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#ff6b6b)}
+  .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  .small{font-size:13px;color:#9fb2c8}
+</style>
 </head>
 <body>
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<header>
+  <h1>🎬 ErikAI Video Editor — Pro mini</h1>
+  <div><button onclick="toggleTheme()">🌓 Téma</button></div>
+</header>
 
-<script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
-</script>
-
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
-
-<p id="cas" style="font-size: 18px;"></p>
-
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
-
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
-  }
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  <h1>🎥 ErikAI Video Editor</h1>
-<button onclick="startVoice('startTime')">od🎤</button>
-<button onclick="startVoice('endTime')">do🎤</button>
-<script>
-  function startVoice(targetId) {
-  const recognition = new webkitSpeechRecognition();
-  recognition.lang = 'sk-SK';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-
-  recognition.onresult = function(event) {
-    let text = event.results[0][0].transcript;
-    text = text.replace(/[^\d]/g, ''); // Odstráň všetko okrem číslic
-    document.getElementById(targetId).value = text;
-  };
-
-  recognition.onerror = function(event) {
-    alert("Chyba pri rozpoznaní hlasu: " + event.error);
-  };
-
-  recognition.start();
-}
-</script>
-  <p>Vyber si video, nastav úsek a urob strih ako profík – bez zložitostí.</p><input type="file" id="videoInput" accept="video/*"><br> <label>Od (sekundy):</label> <input type="number" id="startTime" value="0"> <label>Do (sekundy):</label> <input type="number" id="endTime" value="10"> <br> <button onclick="trimVideo()">✂️ Strihnúť video</button>
-
-  <h3>🎦 Náhľada videa</h3>
-  <video id="preview" controls></video>  <h3>🔽 Strihnutý úsek</h3>
-  <video id="outputVideo" controls></video>
-  <a id="downloadLink" href="#" download="erikai-strih.mp4" style="display:none;color:#0f0">Stiahnuť video</a>  <script>
-    let inputVideoFile;
-
-    document.getElementById('videoInput').addEventListener('change', function(e) {
-      inputVideoFile = e.target.files[0];
-      const url = URL.createObjectURL(inputVideoFile);
-      const video = document.getElementById('preview');
-      video.src = url;
-    });
-
-    function trimVideo() {
-      if (!inputVideoFile) {
-        alert('Prosím vyber video.');
-        return;
-      }
-
-      const start = parseFloat(document.getElementById('startTime').value);
-      const end = parseFloat(document.getElementById('endTime').value);
-
-      const video = document.createElement('video');
-      video.src = URL.createObjectURL(inputVideoFile);
-      video.muted = true;
-      video.crossOrigin = "anonymous";
-
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      let chunks = [];
-      let recorder;
-
-      video.addEventListener('loadedmetadata', () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        const stream = canvas.captureStream();
-        recorder = new MediaRecorder(stream);
-        recorder.ondataavailable = e => chunks.push(e.data);
-
-        recorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'video/webm' });
-          const outUrl = URL.createObjectURL(blob);
-          const outVid = document.getElementById('outputVideo');
-          outVid.src = outUrl;
-          document.getElementById('downloadLink').href = outUrl;
-          document.getElementById('downloadLink').style.display = 'block';
-        };
-
-        let now = 0;
-        const fps = 30;
-        recorder.start();
-        video.currentTime = start;
-
-        const draw = () => {
-          if (video.currentTime >= end || video.ended) {
-            recorder.stop();
-            return;
-          }
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          setTimeout(draw, 1000 / fps);
-        };
-
-        video.play();
-        draw();
-      });
-    }
-  </script>
-
-  <div style="background-color:#f5f5dc; padding:10px; border-radius:8px; margin-bottom:12px; font-size:14px; color:#333;">
-  🛈 <strong>Poznámka:</strong> Strih videa môže trvať niekoľko sekúnd až minút podľa dĺžky videa a výkonu zariadenia.<br>
-  Zadaj čas „Od“ a „Do“ v sekundách – napríklad od <code>5</code> do <code>12</code>.<br>
-  Čas „Od“ musí byť menší než „Do“. Video sa zobrazí až po spracovaní. Buď trpezlivý. 😉
+<main>
+  <div class="group">
+    <label>Vyber video súbor</label><br>
+    <input id="videoInput" type="file" accept="video/*">
   </div>
 
-  
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-  </p>
+  <video id="preview" controls></video>
 
+  <div class="controls" style="margin-top:8px">
+    <div class="group">
+      <label>Od (s)</label><br>
+      <input id="startSlider" type="range" min="0" max="0" step="0.1" value="0">
+      <div class="small">Start: <span id="startVal">0</span>s</div>
+    </div>
+
+    <div class="group">
+      <label>Do (s)</label><br>
+      <input id="endSlider" type="range" min="0" max="0" step="0.1" value="0">
+      <div class="small">End: <span id="endVal">0</span>s</div>
+    </div>
+
+    <div class="group">
+      <label>Filter</label><br>
+      <select id="filterSelect">
+        <option value="none">Žiadny</option>
+        <option value="grayscale(100%)">Č/B</option>
+        <option value="sepia(100%)">Sepia</option>
+        <option value="contrast(140%)">Kontrast</option>
+        <option value="blur(2px)">Rozmazanie</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <label>Rýchlosť</label><br>
+      <select id="speedSelect">
+        <option value="0.5">0.5×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.5">1.5×</option>
+        <option value="2">2×</option>
+      </select>
+    </div>
+
+    <div class="group">
+      <label>Text (overlay)</label><br>
+      <input id="overlayText" type="text" placeholder="Napis titulok (voliteľné)">
+    </div>
+
+    <div class="group">
+      <label>Fade audio (s)</label><br>
+      <input id="fadeSeconds" type="number" value="1" min="0" max="10">
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+    <button onclick="startTrim()">▶︎ Náhľad & Spracuj</button>
+    <button class="secondary" onclick="stopProcess()">■ Stop</button>
+    <button onclick="downloadOutput()" id="downloadBtn" style="display:none">⬇️ Stiahnuť</button>
+  </div>
+
+  <div id="progress" aria-hidden="true"><i id="progressFill"></i></div>
+  <div class="meta">
+    <div class="small">Dĺžka: <span id="duration">0</span>s</div>
+    <div class="small">Stav: <span id="status">čakám</span></div>
+  </div>
+</main>
+
+<script>
+  // jednoduchá téma
+  function toggleTheme(){ document.body.classList.toggle('dark-mode'); }
+  document.body.classList.add('dark-mode');
+
+  const input = document.getElementById('videoInput');
+  const preview = document.getElementById('preview');
+  const startSlider = document.getElementById('startSlider');
+  const endSlider = document.getElementById('endSlider');
+  const startVal = document.getElementById('startVal');
+  const endVal = document.getElementById('endVal');
+  const filterSelect = document.getElementById('filterSelect');
+  const speedSelect = document.getElementById('speedSelect');
+  const overlayText = document.getElementById('overlayText');
+  const fadeSeconds = document.getElementById('fadeSeconds');
+  const status = document.getElementById('status');
+  const progressFill = document.getElementById('progressFill');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const durationEl = document.getElementById('duration');
+
+  let inputFile, inputUrl, videoElem;
+  let processing = false;
+  let recordedChunks = [];
+  let mediaRecorder;
+  let outBlobUrl;
+
+  input.addEventListener('change', (e)=>{
+    inputFile = e.target.files && e.target.files[0];
+    if(!inputFile) return;
+    inputUrl = URL.createObjectURL(inputFile);
+    preview.src = inputUrl;
+    preview.onloadedmetadata = ()=>{
+      const d = Math.floor(preview.duration);
+      durationEl.textContent = d;
+      startSlider.max = d; endSlider.max = d;
+      endSlider.value = d; endVal.textContent = d;
+      startVal.textContent = startSlider.value;
+    };
+  });
+
+  startSlider.addEventListener('input', ()=>{ startVal.textContent = Number(startSlider.value).toFixed(1); if(+startSlider.value >= +endSlider.value) endSlider.value = (+startSlider.value + 0.5); });
+  endSlider.addEventListener('input', ()=>{ endVal.textContent = Number(endSlider.value).toFixed(1); if(+endSlider.value <= +startSlider.value) startSlider.value = (+endSlider.value - 0.5); });
+
+  // hlavná funkcia: render (canvas->MediaRecorder)
+  async function startTrim(){
+    if(!inputFile) return alert('Vyber video!');
+    if(processing) return alert('Už prebieha spracovanie');
+    processing = true; status.textContent='pripravujem';
+    progressFill.style.width='0%'; downloadBtn.style.display='none';
+    recordedChunks = [];
+
+    const start = parseFloat(startSlider.value);
+    const end = parseFloat(endSlider.value);
+    if(start >= end) return alert('Štart musí byť menší ako End');
+
+    // vytvorenie hráča (neviditeľného) pre rýchly rendering
+    const v = document.createElement('video');
+    v.src = inputUrl;
+    v.muted = true;
+    v.crossOrigin = 'anonymous';
+    await v.play().catch(()=>{}); // ensure metadata
+    await new Promise(res => v.onloadedmetadata = res);
+
+    // canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = v.videoWidth;
+    canvas.height = v.videoHeight;
+    const ctx = canvas.getContext('2d');
+
+    // WebAudio: pre fade audio - create AudioContext and connect video element
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const sourceNode = audioCtx.createMediaElementSource(v);
+    const gainNode = audioCtx.createGain();
+    sourceNode.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    // do MediaRecorder: použijeme canvas stream + video audio (mix)
+    const canvasStream = canvas.captureStream(30); // 30fps
+    // Problém: canvasStream nemá audio -> pridáme audio track z MediaStream created from video element via captureStream
+    let audioStream = null;
+    try {
+      audioStream = v.captureStream().getAudioTracks();
+    } catch(e){ audioStream = []; }
+
+    // add audio tracks to canvasStream if exist
+    if(audioStream && audioStream.length){
+      const outStream = new MediaStream();
+      canvasStream.getVideoTracks().forEach(t=>outStream.addTrack(t));
+      audioStream.forEach(t=>outStream.addTrack(t));
+      startMediaRecording(outStream);
+    } else {
+      startMediaRecording(canvasStream);
+    }
+
+    // set preview to show rendered canvas while processing
+    preview.style.display = 'none';
+    const previewCanvasBlobUrl = null; // not used
+
+    // render loop: advance video.currentTime and draw frames onto canvas
+    v.currentTime = start;
+    await playSegment(v, ctx, start, end, overlayText.value, filterSelect.value, +speedSelect.value, +fadeSeconds.value, (progress)=> {
+      progressFill.style.width = (progress*100)+'%';
+    });
+
+    // cleanup
+    status.textContent='ukončujem';
+    // ensure recorder stops a počkáme
+    processing = false;
+    preview.style.display = '';
+    status.textContent='hotovo';
+  }
+
+  function startMediaRecording(stream){
+    mediaRecorder = new MediaRecorder(stream, {mimeType: 'video/webm; codecs=vp8,opus'});
+    mediaRecorder.ondataavailable = e => { if(e.data.size) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = ()=> {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      if(outBlobUrl) URL.revokeObjectURL(outBlobUrl);
+      outBlobUrl = URL.createObjectURL(blob);
+      downloadBtn.href = outBlobUrl;
+      downloadBtn.download = `erikai-cut-${new Date().toISOString().replace(/[:.]/g,'-')}.webm`;
+      downloadBtn.style.display = 'inline-block';
+      status.textContent = 'export pripravený';
+    };
+    mediaRecorder.start();
+  }
+
+  // vracia Promise, ktorý renderuje a pokrýva audio fade (basic)
+  function playSegment(videoEl, ctx, start, end, overlay, filter, speed, fadeSec, onProgress){
+    return new Promise((resolve, reject)=>{
+      const fps = 30;
+      const frameDuration = 1 / fps;
+      let time = start;
+      videoEl.playbackRate = speed;
+      videoEl.currentTime = start;
+
+      // draw loop
+      function draw(){
+        if(time >= end || videoEl.ended){
+          // stop recording after small timeout to flush frames
+          setTimeout(()=> {
+            if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            resolve();
+          }, 200);
+          return;
+        }
+        // draw current frame
+        ctx.save();
+        if(filter !== 'none') ctx.filter = filter; else ctx.filter = 'none';
+        ctx.drawImage(videoEl, 0, 0, ctx.canvas.width, ctx.canvas.height);
+        // overlay text
+        if(overlay){
+          ctx.font = `${Math.max(24, ctx.canvas.width/30)}px Arial`;
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+          ctx.lineWidth = Math.max(3, ctx.canvas.width/200);
+          const x = 20;
+          const y = ctx.canvas.height - 40;
+          ctx.strokeText(overlay, x, y);
+          ctx.fillText(overlay, x, y);
+        }
+        ctx.restore();
+
+        // update progress callback
+        const progress = (time - start) / (end - start);
+        onProgress && onProgress(Math.max(0, Math.min(1, progress)));
+
+        // advance time
+        time += frameDuration * speed;
+        videoEl.currentTime = time;
+        // schedule next draw (approx)
+        setTimeout(draw, 1000 / fps);
+      }
+
+      // ensure video is ready; sometimes seeking takes time
+      let seekTries = 0;
+      function tryStart(){
+        if(Math.abs(videoEl.currentTime - start) < 0.05 || seekTries++ > 50){
+          draw();
+        } else {
+          setTimeout(tryStart, 50);
+        }
+      }
+      tryStart();
+    });
+  }
+
+  function stopProcess(){
+    if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    processing = false;
+    status.textContent = 'zastavené';
+  }
+
+  function downloadOutput(){
+    if(!outBlobUrl) return alert('Žiadny výstup pripravený');
+    const a = document.createElement('a');
+    a.href = outBlobUrl;
+    a.download = downloadBtn.download;
+    a.click();
+  }
+
+  // bezpečnostné small UX
+  window.addEventListener('beforeunload', e=>{
+    if(processing) e.returnValue = 'Spracovanie prebieha — naozaj opustiť?';
+  });
+</script>
 </body>
-</html>
+  </html>
