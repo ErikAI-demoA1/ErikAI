@@ -3,53 +3,74 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI TV Režim - iframe demo</title>
+<title>ErikAI Vyhľadávač</title>
 <style>
-body { font-family: Arial; margin:0; padding:0; background:#000; color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh; }
-h1 { margin:20px; color:#1a73e8; }
-input, select { width:80%; padding:10px; font-size:16px; border-radius:8px; border:none; margin-bottom:10px; }
-button { padding:10px 20px; font-size:16px; border:none; border-radius:8px; background:#1a73e8; color:#fff; cursor:pointer; margin-bottom:20px; }
-button:hover { background:#1558a5; }
-#videoContainer { width:90%; max-width:1200px; height:600px; display:flex; justify-content:center; align-items:center; }
-iframe { width:100%; height:100%; border:none; border-radius:12px; }
+  body {
+    font-family: Arial, sans-serif;
+    background: #000;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    padding: 20px;
+  }
+  h1 { color: #1a73e8; }
+  input, select, button {
+    font-size: 16px;
+    padding: 10px;
+    margin: 5px;
+    border-radius: 6px;
+    border: none;
+  }
+  button {
+    background-color: #1a73e8;
+    color: #fff;
+    cursor: pointer;
+  }
+  button:hover { background-color: #1558a5; }
+  #searchFrame {
+    margin-top: 20px;
+    width: 90%;
+    flex: 1;
+    border: 2px solid #1a73e8;
+    border-radius: 10px;
+  }
 </style>
 </head>
 <body>
 
-<h1>📺 ErikAI TV Režim - iframe demo</h1>
+<h1>🔍 ErikAI Vyhľadávač</h1>
 
-<input type="text" id="queryInput" placeholder="Napíš čo chceš hľadať">
-<select id="sourceSelect">
-  <option value="youtube">YouTube</option>
-  <option value="vimeo">Vimeo</option>
+<input type="text" id="searchInput" placeholder="Zadaj hľadaný výraz">
+<select id="searchEngine">
+  <option value="duckduckgo">DuckDuckGo</option>
+  <option value="startpage">Startpage</option>
 </select>
-<button onclick="search()">🔍 Vyhľadať</button>
+<button onclick="search()">Hľadať</button>
 
-<div id="videoContainer">
-  <p>Tu sa zobrazí video...</p>
-</div>
+<iframe id="searchFrame"></iframe>
 
 <script>
 function search() {
-  const query = document.getElementById('queryInput').value.trim();
-  const source = document.getElementById('sourceSelect').value;
-  const container = document.getElementById('videoContainer');
-  container.innerHTML = '';
+  const query = encodeURIComponent(document.getElementById('searchInput').value.trim());
+  const engine = document.getElementById('searchEngine').value;
+  const frame = document.getElementById('searchFrame');
 
-  if(!query){ container.innerHTML = '<p>Zadaj hľadaný výraz!</p>'; return; }
-
-  if(source === 'youtube'){
-    // Demo: vložíme prvý video ID (tu môžeme neskôr automatizovať cez API)
-    const demoID = 'dQw4w9WgXcQ'; // príklad video ID
-    container.innerHTML = `<iframe src="https://www.youtube.com/embed/${demoID}" allowfullscreen></iframe>`;
+  if(!query){
+    alert("Zadaj prosím hľadaný výraz!");
     return;
   }
 
-  if(source === 'vimeo'){
-    const demoID = '76979871'; // príklad Vimeo video ID
-    container.innerHTML = `<iframe src="https://player.vimeo.com/video/${demoID}" allowfullscreen></iframe>`;
-    return;
+  let url = "";
+  if(engine === "duckduckgo"){
+    url = `https://duckduckgo.com/?q=${query}&t=h_&ia=web`;
+  } else if(engine === "startpage"){
+    url = `https://www.startpage.com/sp/search?q=${query}`;
   }
+
+  frame.src = url;
 }
 </script>
 
