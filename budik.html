@@ -1,203 +1,239 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⏰ ErikAI Budík</title>
-  <style>
-    body { text-align: center; font-family: Arial; background: #f9f9f9; }
-    h1 { color: red; }
-    .clock {
-      width: 200px;
-      height: 200px;
-      border: 10px solid red;
-      border-radius: 50%;
-      margin: auto;
-      position: relative;
-    }
-    .hand, .center {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform-origin: bottom;
-      transform: translate(-50%, -100%) rotate(0deg);
-      background: black;
-    }
-    .hour { width: 6px; height: 50px; z-index: 3; }
-    .minute { width: 4px; height: 70px; z-index: 2; }
-    .second { width: 2px; height: 90px; background: red; z-index: 1; }
-    .center { width: 8px; height: 8px; border-radius: 50%; background: black; transform: translate(-50%, -50%); }
-    select, button, label { margin-top: 10px; font-size: 16px; }
-    .alarm-item { margin-top: 5px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⏰ ErikAI Budík - Profesionálny</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    background: #f5f6fa;
+    color: #222;
+    margin: 0; padding: 20px;
+    transition: background 0.3s, color 0.3s;
+    text-align: center;
+  }
+
+  body.dark-mode {
+    background: #121212;
+    color: #e0e0e0;
+  }
+
+  h1 {
+    color: #1a73e8;
+    margin-bottom: 20px;
+  }
+
+  .clock {
+    width: 250px;
+    height: 250px;
+    border: 8px solid #1a73e8;
+    border-radius: 50%;
+    margin: 30px auto;
+    position: relative;
+    background: radial-gradient(circle, #f9f9f9 95%, #e0e0e0 100%);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+  }
+
+  .hand, .center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: bottom;
+    transform: translate(-50%, -100%) rotate(0deg);
+    transition: transform 0.5s cubic-bezier(0.4, 2.3, 0.3, 1);
+  }
+
+  .hand.hour { width: 6px; height: 50px; background: #1a73e8; z-index:3; border-radius:3px; }
+  .hand.minute { width: 4px; height: 70px; background: #1a73e8; z-index:2; border-radius:2px; }
+  .hand.second { width: 2px; height: 90px; background: #dc3545; z-index:1; }
+  .center { width: 10px; height: 10px; border-radius: 50%; background: #222; transform: translate(-50%, -50%); z-index:4; }
+
+  #digitalTime {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1a73e8;
+    margin-top: 10px;
+  }
+
+  select, input[type=checkbox], button {
+    margin-top: 10px;
+    font-size: 16px;
+    padding: 8px 12px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+
+  button {
+    cursor: pointer;
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    font-weight: 600;
+    transition: background 0.3s;
+  }
+
+  button:hover { background-color: #1558a5; }
+
+  .alarms {
+    max-width: 400px;
+    margin: 20px auto;
+    text-align: left;
+  }
+
+  .alarm-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    margin-top: 8px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  }
+
+  .alarm-item button {
+    background: #dc3545;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: none;
+  }
+
+  .alarm-item button:hover { background: #a71d2a; }
+
+  #notificationBanner {
+    display: none;
+    background: #1a73e8;
+    color: white;
+    padding: 12px;
+    border-radius: 6px;
+    margin: 15px auto;
+    max-width: 400px;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  #themeToggle {
+    margin-top: 20px;
+  }
+</style>
 </head>
 <body>
-  <h1>⏰ ErikAI Budík</h1>
-  <div class="clock">
-    <div class="hand hour" id="hourHand"></div>
-    <div class="hand minute" id="minuteHand"></div>
-    <div class="hand second" id="secondHand"></div>
-    <div class="center"></div>
-  </div>
 
-  <p>
-    <label for="alarmTime">Nastav budík:</label>
-    <select id="alarmTime"></select>
-    <input type="checkbox" id="daily"> Každý deň
-  </p>
-  <p>
-    <button onclick="activateAlarm()">Aktivuj</button>
-  </p>
+<h1>⏰ ErikAI Budík</h1>
 
-  <audio id="alarmSound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"></audio>
+<div class="clock">
+  <div class="hand hour" id="hourHand"></div>
+  <div class="hand minute" id="minuteHand"></div>
+  <div class="hand second" id="secondHand"></div>
+  <div class="center"></div>
+</div>
 
-  <div id="alarmList"></div>
+<p id="digitalTime">00:00</p>
 
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<div>
+  <label for="alarmTime">Nastav budík:</label>
+  <select id="alarmTime"></select>
+  <input type="checkbox" id="daily"> Každý deň
+  <button onclick="activateAlarm()">Aktivuj</button>
+</div>
 
-  <p id="cas" style="font-size: 18px;"></p>
+<div class="alarms" id="alarmList"></div>
 
-  <div id="google_translate_element"></div>
+<div id="notificationBanner">⏰ Budík zvoní!</div>
 
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-    To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-    © 2025 Erik Mohylák – All rights reserved.
-  </p>
+<button id="themeToggle" onclick="toggleTheme()">🌓 Zmeniť režim</button>
 
-  <script>
-    const hourHand = document.getElementById('hourHand');
-    const minuteHand = document.getElementById('minuteHand');
-    const secondHand = document.getElementById('secondHand');
-    const alarmSelect = document.getElementById('alarmTime');
-    const alarmSound = document.getElementById('alarmSound');
-    const daily = document.getElementById('daily');
-    const alarmList = document.getElementById('alarmList');
+<audio id="alarmSound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" preload="auto"></audio>
 
-    let alarms = [];
+<p style="font-size: 14px; color: gray; margin-top: 30px;">
+© 2025 Erik Mohylák – Všetky práva vyhradené
+</p>
 
-    function updateClock() {
-      const now = new Date();
-      const h = now.getHours();
-      const m = now.getMinutes();
-      const s = now.getSeconds();
+<script>
+const hourHand = document.getElementById('hourHand');
+const minuteHand = document.getElementById('minuteHand');
+const secondHand = document.getElementById('secondHand');
+const digitalTime = document.getElementById('digitalTime');
+const alarmSelect = document.getElementById('alarmTime');
+const alarmSound = document.getElementById('alarmSound');
+const daily = document.getElementById('daily');
+const alarmList = document.getElementById('alarmList');
+const notificationBanner = document.getElementById('notificationBanner');
 
-      hourHand.style.transform = `translate(-50%, -100%) rotate(${(h % 12 + m / 60) * 30}deg)`;
-      minuteHand.style.transform = `translate(-50%, -100%) rotate(${(m + s / 60) * 6}deg)`;
-      secondHand.style.transform = `translate(-50%, -100%) rotate(${s * 6}deg)`;
+let alarms = [];
 
-      const currentTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      alarms.forEach((alarm, index) => {
-        if (alarm.time === currentTime) {
-  // Prehrať zvuk
-  alarmSound.play().catch(e => console.log("Nepodarilo sa prehrať zvuk:", e));
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const s = now.getSeconds();
 
-  // Zobraziť notifikáciu (ak povolené)
-  if (Notification.permission === "granted") {
-    new Notification("⏰ ErikAI Budík", {
-      body: `Zvoní budík: ${alarm.time}`,
-      icon: "icon-192.png"
-    });
+  hourHand.style.transform = `translate(-50%, -100%) rotate(${(h % 12 + m/60) * 30}deg)`;
+  minuteHand.style.transform = `translate(-50%, -100%) rotate(${(m + s/60) * 6}deg)`;
+  secondHand.style.transform = `translate(-50%, -100%) rotate(${s * 6}deg)`;
+
+  const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  digitalTime.textContent = timeStr;
+
+  alarms.forEach((alarm, index) => {
+    if(alarm.time === timeStr){
+      alarmSound.play().catch(e => console.log(e));
+      notificationBanner.style.display = "block";
+      setTimeout(()=>{notificationBanner.style.display="none"},5000);
+      if(!alarm.repeat) removeAlarm(index);
+    }
+  });
+}
+
+function fillTimes(){
+  for(let h=0; h<24; h++){
+    for(let m=0; m<60; m++){
+      const t = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      const option = document.createElement('option');
+      option.value = t; option.textContent = t;
+      alarmSelect.appendChild(option);
+    }
   }
+}
 
-  // Odstrániť ak nie je opakujúci
-  if (!alarm.repeat) {
-    removeAlarm(index);
-  }
-        }
-}); // ← Táto zátvorka chýbala
-    }
+function activateAlarm(){
+  const selectedTime = alarmSelect.value;
+  const isDaily = daily.checked;
+  alarms.push({time:selectedTime, repeat:isDaily});
+  renderAlarms();
+  alert(`Budík nastavený na ${selectedTime}`);
+}
 
-    function fillTimes() {
-      for (let h = 0; h < 24; h++) {
-        for (let m = 0; m < 60; m++) {
-          const t = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-          const option = document.createElement('option');
-          option.value = t;
-          option.textContent = t;
-          alarmSelect.appendChild(option);
-        }
-      }
-    }
+function removeAlarm(index){
+  alarms.splice(index,1);
+  renderAlarms();
+}
 
-    function activateAlarm() {
-      const selectedTime = alarmSelect.value;
-      const isDaily = daily.checked;
-      const alarm = {
-        time: selectedTime,
-        repeat: isDaily
-      };
-      alarms.push(alarm);
-      renderAlarms();
-      alert(`Budík nastavený na ${selectedTime}`);
-    }
+function renderAlarms(){
+  alarmList.innerHTML="<h3>⏱ Aktívne budíky:</h3>";
+  alarms.forEach((alarm,index)=>{
+    const div = document.createElement('div');
+    div.className="alarm-item";
+    div.innerHTML=`🕒 ${alarm.time} ${alarm.repeat?'(každý deň)':''} <button onclick="removeAlarm(${index})">Zrušiť</button>`;
+    alarmList.appendChild(div);
+  });
+}
 
-    function removeAlarm(index) {
-      alarms.splice(index, 1);
-      renderAlarms();
-    }
+function toggleTheme(){
+  document.body.classList.toggle('dark-mode');
+}
 
-    function renderAlarms() {
-      alarmList.innerHTML = "<h3>⏱ Aktívne budíky:</h3>";
-      alarms.forEach((alarm, index) => {
-        const div = document.createElement('div');
-        div.className = "alarm-item";
-        div.innerHTML = `🕒 ${alarm.time} ${alarm.repeat ? '(každý deň)' : ''} 
-          <button onclick="removeAlarm(${index})">Zrušiť</button>`;
-        alarmList.appendChild(div);
-      });
-    }
-
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-    }
-
-    function toggleTheme() {
-      document.body.classList.toggle('dark-mode');
-    }
-
-    window.onload = () => {
+window.onload=()=>{
   fillTimes();
-  aktualizujCas();
-  if (Notification.permission !== "granted") {
-    Notification.requestPermission();
-  }
+  updateClock();
+  if(Notification.permission!=="granted") Notification.requestPermission();
 };
 
-setInterval(updateClock, 1000);
-setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-    fillTimes();
-  </script>
-
-  <style>
-    body.dark-mode {
-      background-color: #121212;
-      color: white;
-    }
-  </style>
-
-  <script type="text/javascript">
-    function googleTranslateElementInit() {
-      new google.translate.TranslateElement({
-        pageLanguage: 'sk',
-        includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-      }, 'google_translate_element');
-    }
-  </script>
-  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+setInterval(updateClock,1000);
+</script>
 
 </body>
 </html>
