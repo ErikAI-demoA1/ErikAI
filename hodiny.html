@@ -1,84 +1,110 @@
-<!DOCTYPE html><html lang="sk">
+<!DOCTYPE html>
+<html lang="sk">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⏐ ErikAI - Aktuálny Čas + Stopky</title>
+  <title>🕓 ErikAI Time Pro</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: "Segoe UI", sans-serif;
       text-align: center;
-      background: #f5f5f5;
-      color: #111;
+      background: #000;
+      color: lime;
+      margin: 0;
+      padding: 0;
     }
     h1 {
-      color: red;
-      margin-top: 30px;
+      color: lime;
+      margin-top: 20px;
+      text-shadow: 0 0 10px lime;
     }
-    canvas {
-      background: white;
+    #clockCanvas {
+      background: radial-gradient(circle at center, #111 60%, #000 100%);
       border-radius: 50%;
+      box-shadow: 0 0 20px lime;
       margin: 30px auto;
       display: block;
     }
     .stopky {
+      margin-top: 20px;
       font-size: 2em;
-      margin: 20px 0;
     }
     button {
       font-size: 1em;
       padding: 10px 20px;
       margin: 10px;
-      background: red;
-      color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px;
       cursor: pointer;
+      transition: 0.3s;
     }
-    a {
-      display: block;
-      margin-top: 30px;
-      color: blue;
+    .start { background: lime; color: black; }
+    .stop { background: red; color: white; }
+    .reset { background: dodgerblue; color: white; }
+    .lap { background: orange; color: black; }
+    button:hover { transform: scale(1.1); }
+
+    #laps {
+      margin-top: 15px;
+      font-size: 1em;
+      max-height: 200px;
+      overflow-y: auto;
+      text-align: left;
+      display: inline-block;
+      border: 1px solid lime;
+      padding: 10px;
+      border-radius: 10px;
+      width: 250px;
     }
+
+    .themeBtn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: 1px solid lime;
+      color: lime;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    body.light {
+      background: #f5f5f5;
+      color: #111;
+    }
+    body.light h1 { color: red; text-shadow: none; }
+    body.light #clockCanvas { background: white; box-shadow: 0 0 10px gray; }
+    body.light button { color: white; }
   </style>
 </head>
 <body>
-  <h1>🕒 ErikAI – Aktuálny Čas + Stopky</h1>
+  <button class="themeBtn" onclick="toggleTheme()">🌓</button>
+  <h1>🕓 ErikAI – Time Pro</h1>
 
-<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+  <canvas id="clockCanvas" width="250" height="250"></canvas>
 
-<script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
-</script>
-
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
-
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
-  }
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  
-  <canvas id="clockCanvas" width="200" height="200"></canvas>  <div class="stopky">
-    ⏱ Stopky<br>
-    <span id="stopwatch">00:00:00</span><br>
-    <button onclick="toggleStopwatch()">🔺 Štart / Stop</button>
-    <button onclick="resetStopwatch()">🔄 Reset</button>
+  <div class="stopky">
+    ⏱ <span id="stopwatch">00:00:00.0</span><br>
+    <button class="start" onclick="startStopwatch()">▶ Štart</button>
+    <button class="stop" onclick="stopStopwatch()">⏸ Stop</button>
+    <button class="reset" onclick="resetStopwatch()">🔄 Reset</button>
+    <button class="lap" onclick="recordLap()">📍 Medzičas</button>
   </div>
+
+  <div id="laps"><b>Medzičasy:</b><br></div>
+
+  <p id="cas" style="font-size: 16px; margin-top: 30px;"></p>
+
   <script>
+    // === Téma ===
+    function toggleTheme() {
+      document.body.classList.toggle('light');
+    }
+
+    // === Hodiny ===
     const canvas = document.getElementById("clockCanvas");
     const ctx = canvas.getContext("2d");
     const radius = canvas.height / 2;
@@ -86,31 +112,47 @@
 
     function drawClock() {
       const now = new Date();
-      const hour = now.getHours();
-      const minute = now.getMinutes();
-      const second = now.getSeconds();
-
       ctx.clearRect(-radius, -radius, canvas.width, canvas.height);
 
       // ciferník
       ctx.beginPath();
-      ctx.arc(0, 0, radius - 1, 0, 2 * Math.PI);
+      ctx.arc(0, 0, radius * 0.95, 0, 2 * Math.PI);
+      ctx.fillStyle = "transparent";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "lime";
       ctx.stroke();
 
-      // hodinová ručička
-      let hourAngle = ((hour % 12) + minute / 60) * (Math.PI / 6);
+      // čísla
+      ctx.font = radius * 0.15 + "px Arial";
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      for (let num = 1; num <= 12; num++) {
+        let ang = num * Math.PI / 6;
+        ctx.rotate(ang);
+        ctx.translate(0, -radius * 0.8);
+        ctx.rotate(-ang);
+        ctx.fillText(num.toString(), 0, 0);
+        ctx.rotate(ang);
+        ctx.translate(0, radius * 0.8);
+        ctx.rotate(-ang);
+      }
+
+      // ručičky
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+      const second = now.getSeconds() + now.getMilliseconds() / 1000;
+
+      const hourAngle = ((hour % 12) + minute / 60) * Math.PI / 6;
+      const minuteAngle = (minute + second / 60) * Math.PI / 30;
+      const secondAngle = second * Math.PI / 30;
+
       drawHand(hourAngle, radius * 0.5, 6);
-
-      // minútová ručička
-      let minuteAngle = (minute + second / 60) * (Math.PI / 30);
-      drawHand(minuteAngle, radius * 0.8, 4);
-
-      // sekundová ručička
-      let secondAngle = second * (Math.PI / 30);
+      drawHand(minuteAngle, radius * 0.7, 4);
       drawHand(secondAngle, radius * 0.9, 2, "red");
     }
 
-    function drawHand(pos, length, width, color = "black") {
+    function drawHand(pos, length, width, color = "lime") {
       ctx.beginPath();
       ctx.lineWidth = width;
       ctx.lineCap = "round";
@@ -122,20 +164,23 @@
       ctx.rotate(-pos);
     }
 
-    setInterval(drawClock, 1000);
+    setInterval(drawClock, 50);
 
-    // stopky
-    let stopwatchInterval;
-    let startTime;
+    // === Stopky ===
+    let startTime, stopwatchInterval;
     let elapsedTime = 0;
     let running = false;
 
-    function toggleStopwatch() {
+    function startStopwatch() {
       if (!running) {
         startTime = Date.now() - elapsedTime;
-        stopwatchInterval = setInterval(updateStopwatch, 1000);
+        stopwatchInterval = setInterval(updateStopwatch, 100);
         running = true;
-      } else {
+      }
+    }
+
+    function stopStopwatch() {
+      if (running) {
         clearInterval(stopwatchInterval);
         elapsedTime = Date.now() - startTime;
         running = false;
@@ -146,22 +191,31 @@
       clearInterval(stopwatchInterval);
       elapsedTime = 0;
       running = false;
-      document.getElementById("stopwatch").textContent = "00:00:00";
+      document.getElementById("stopwatch").textContent = "00:00:00.0";
+      document.getElementById("laps").innerHTML = "<b>Medzičasy:</b><br>";
     }
 
     function updateStopwatch() {
       const time = Date.now() - startTime;
-      const totalSeconds = Math.floor(time / 1000);
+      const totalSeconds = time / 1000;
       const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
       const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-      const seconds = String(totalSeconds % 60).padStart(2, '0');
-      document.getElementById("stopwatch").textContent = `${hours}:${minutes}:${seconds}`;
+      const seconds = String(Math.floor(totalSeconds % 60)).padStart(2, '0');
+      const tenths = String(Math.floor((time % 1000) / 100));
+      document.getElementById("stopwatch").textContent = `${hours}:${minutes}:${seconds}.${tenths}`;
     }
-  </script>
 
-  <p id="cas" style="font-size: 18px;"></p>
+    function recordLap() {
+      if (elapsedTime > 0) {
+        const lapList = document.getElementById("laps");
+        const currentTime = document.getElementById("stopwatch").textContent;
+        const entry = document.createElement("div");
+        entry.textContent = "⏱ " + currentTime;
+        lapList.appendChild(entry);
+      }
+    }
 
-  <script>
+    // === Aktuálny dátum/čas ===
     function aktualizujCas() {
       const teraz = new Date();
       const moznosti = {
@@ -173,19 +227,14 @@
         minute: '2-digit',
         second: '2-digit'
       };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
+      document.getElementById('cas').innerText = `📅 ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
     }
     setInterval(aktualizujCas, 1000);
     aktualizujCas();
-        </script>
+  </script>
 
-  
-<p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-</p>
-  
+  <p style="font-size: 13px; color: gray; margin-top: 30px;">
+    © 2025 Erik Mohylák – ErikAI Time Pro | Creative Commons BY-NC-ND 4.0  
+  </p>
 </body>
 </html>
