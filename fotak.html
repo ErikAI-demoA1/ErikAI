@@ -1,248 +1,198 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <title>📷 ErikAI Kamera Pro – Fotka & Video</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #f4f4f4;
-      color: #222;
-      margin: 0;
-      padding: 0;
-    }
-    h2 { color: #d40000; margin-top: 15px; }
-    video, canvas, img {
-      width: 90%;
-      max-width: 340px;
-      border-radius: 12px;
-      border: 3px solid #d40000;
-      margin: 12px 0;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    }
-    button {
-      margin: 6px;
-      padding: 10px 18px;
-      font-size: 16px;
-      background-color: #d40000;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    button:hover {
-      background-color: #a80000;
-      transform: scale(1.05);
-    }
-    .zoom-controls {
-      margin-top: 15px;
-      background: #fff;
-      padding: 10px;
-      border-radius: 10px;
-      display: inline-block;
-      box-shadow: 0 0 6px rgba(0,0,0,0.1);
-    }
-    input[type=range] {
-      width: 200px;
-      margin: 5px;
-    }
-    body.dark-mode {
-      background-color: #121212;
-      color: white;
-    }
-    .info-box {
-      background-color: #fff3cd;
-      border-left: 6px solid #ffc107;
-      padding: 12px;
-      margin: 15px;
-      border-radius: 10px;
-      text-align: left;
-      font-size: 14px;
-    }
-    footer {
-      font-size: 13px;
-      color: gray;
-      margin-top: 20px;
-      padding-bottom: 10px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📷 ErikAI Kamera Pro+</title>
+<style>
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    margin: 0; padding: 20px;
+    background: #f4f4f4; color: #222;
+    text-align: center;
+  }
+  body.dark-mode { background: #121212; color: white; }
+  h1 { color: #d40000; margin-bottom: 10px; }
+  video, canvas, img {
+    width: 90%; max-width: 400px;
+    border-radius: 12px;
+    border: 2px solid #d40000;
+    margin: 10px 0;
+  }
+  .buttons, .zoom-controls { 
+    display: flex; flex-wrap: wrap; justify-content: center; 
+    gap: 10px; margin: 10px 0; 
+  }
+  button {
+    padding: 10px 15px; font-size: 16px;
+    background: #d40000; color: white;
+    border: none; border-radius: 8px; cursor: pointer;
+  }
+  button:hover { background: #a80000; }
+  .filter-btn { background: #1a73e8; }
+  .filter-btn:hover { background: #1558a5; }
+  .history { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+  .history img, .history video { width: 120px; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; }
+  .zoom-controls label { font-weight: bold; }
+  input[type="range"] { width: 200px; }
+</style>
 </head>
 <body>
+<h1>📷 ErikAI Kamera Pro+</h1>
+<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
 
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-  <p id="cas" style="font-size: 18px;"></p>
+<video id="video" autoplay playsinline muted></video>
+<canvas id="canvas" style="display:none;"></canvas>
+<img id="photo" src="" alt="Fotka">
 
-  <h2>📸 ErikAI Kamera Pro – Fotka & Video</h2>
+<div class="buttons">
+  <button onclick="takePhoto()">📸 Odfotiť</button>
+  <button onclick="downloadPhoto()">💾 Stiahnuť</button>
+  <button onclick="startRecording()">🎬 Nahrať</button>
+  <button onclick="stopRecording()">🛑 Stop</button>
+  <button onclick="downloadVideo()">📥 Stiahnuť video</button>
+  <button onclick="switchCamera()">🔄 Prepnúť kameru</button>
+</div>
 
-  <div class="info-box">
-    <strong>ℹ️ Ochrana súkromia & kompatibilita:</strong><br>
-    🔐 <u>Žiadne dáta sa neodosielajú</u> – všetko prebieha <strong>lokálne na tvojom zariadení</strong>.<br>
-    📱 <strong>Podporované:</strong> Android 7+, iOS 14.3+, Chrome, Edge, Firefox, Safari.<br>
-    ❗ Niektoré staršie zariadenia nemusia podporovať zoom alebo video nahrávanie.
-  </div>
+<div class="buttons">
+  <button class="filter-btn" onclick="applyFilter('none')">🔳 Žiadny</button>
+  <button class="filter-btn" onclick="applyFilter('grayscale(100%)')">⚫ B&W</button>
+  <button class="filter-btn" onclick="applyFilter('sepia(100%)')">🟤 Sepia</button>
+  <button class="filter-btn" onclick="applyFilter('invert(100%)')">🔄 Invert</button>
+</div>
 
-  <video id="video" autoplay playsinline muted></video><br>
-  <canvas id="canvas" style="display:none;"></canvas>
-  <img id="photo" src=""><br>
+<label for="timer">⏱ Časovač:</label>
+<select id="timer">
+  <option value="0">Bez</option>
+  <option value="3">3s</option>
+  <option value="5">5s</option>
+  <option value="10">10s</option>
+</select>
 
-  <div>
-    <button onclick="takePhoto()">📸 Odfotiť</button>
-    <button onclick="downloadPhoto()">💾 Stiahnuť fotku</button>
-    <br>
-    <button onclick="startRecording()">🎬 Nahrať video</button>
-    <button onclick="stopRecording()">🛑 Zastaviť video</button>
-    <button onclick="downloadVideo()">📥 Stiahnuť video</button>
-    <br>
-    <button onclick="switchCamera()">🔄 Prepnúť kameru</button>
-  </div>
+<h3>🔍 Zoom</h3>
+<div class="zoom-controls">
+  <button onclick="setZoom(0.5)">0.5×</button>
+  <button onclick="setZoom(1)">1×</button>
+  <button onclick="setZoom(2)">2×</button>
+  <button onclick="setZoom(5)">5×</button>
+  <button onclick="setZoom(10)">10×</button>
+  <label>Vlastné:</label>
+  <input type="range" id="zoomRange" min="1" max="5" step="0.1" value="1" oninput="setZoom(this.value)">
+  <span id="zoomValue">1×</span>
+</div>
 
-  <!-- 🔍 Zoom ovládanie -->
-  <div class="zoom-controls">
-    <label for="zoomRange">🔍 Zoom:</label><br>
-    <input type="range" id="zoomRange" min="1" max="1" step="0.1" value="1">
-    <span id="zoomValue">1x</span>
-    <br>
-    <button onclick="setZoom(0.5)">0.5×</button>
-    <button onclick="setZoom(1)">1×</button>
-    <button onclick="setZoom(2)">2×</button>
-    <button onclick="setZoom(5)">5×</button>
-    <button onclick="setZoom(10)">10×</button>
-  </div>
+<h3>📂 História</h3>
+<div class="history" id="history"></div>
 
-  <div id="google_translate_element" style="margin-top: 10px;"></div>
+<script>
+let video = document.getElementById('video');
+let canvas = document.getElementById('canvas');
+let photo = document.getElementById('photo');
+let mediaRecorder;
+let recordedChunks = [];
+let currentStream;
+let useFront = true;
+let filter = 'none';
+let zoom = 1;
+let maxZoom = 5;
+let historyDiv = document.getElementById('history');
 
-  <footer>
-    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
-    © 2025 Erik Mohylák – All rights reserved.
-  </footer>
+async function startCamera() {
+  if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+  currentStream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: useFront ? 'user' : 'environment' },
+    audio: true
+  });
+  video.srcObject = currentStream;
 
-  <script>
-    let video = document.getElementById("video");
-    let canvas = document.getElementById("canvas");
-    let photo = document.getElementById("photo");
-    let mediaRecorder;
-    let recordedChunks = [];
-    let currentStream;
-    let track;
-    let useFront = true;
+  const track = currentStream.getVideoTracks()[0];
+  const capabilities = track.getCapabilities();
+  if (capabilities.zoom) {
+    maxZoom = capabilities.zoom.max;
+    document.getElementById('zoomRange').max = maxZoom;
+  }
+  applyZoom();
+}
 
-    const zoomRange = document.getElementById("zoomRange");
-    const zoomValue = document.getElementById("zoomValue");
+function applyZoom() {
+  const track = currentStream.getVideoTracks()[0];
+  const capabilities = track.getCapabilities();
+  if (!capabilities.zoom) return;
+  track.applyConstraints({ advanced: [{ zoom: zoom }] });
+  document.getElementById('zoomValue').textContent = zoom.toFixed(1) + '×';
+}
 
-    async function startCamera() {
-      if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+function setZoom(value) {
+  zoom = parseFloat(value);
+  applyZoom();
+  document.getElementById('zoomRange').value = zoom;
+}
 
-      currentStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: useFront ? "user" : "environment" },
-        audio: true
-      });
-      video.srcObject = currentStream;
-
-      track = currentStream.getVideoTracks()[0];
-      const capabilities = track.getCapabilities();
-      if (capabilities.zoom) {
-        zoomRange.min = capabilities.zoom.min;
-        zoomRange.max = capabilities.zoom.max;
-        zoomRange.step = capabilities.zoom.step || 0.1;
-        zoomRange.value = track.getSettings().zoom || 1;
-        zoomRange.style.display = "inline";
-      } else {
-        zoomRange.style.display = "none";
-      }
-    }
-
-    function takePhoto() {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext("2d").drawImage(video, 0, 0);
-      photo.src = canvas.toDataURL("image/png");
-    }
-
-    function downloadPhoto() {
-      if (!photo.src) return alert("Najprv odfoť!");
-      const link = document.createElement("a");
-      link.href = photo.src;
-      link.download = "erikai-fotka.png";
-      link.click();
-    }
-
-    function startRecording() {
-      recordedChunks = [];
-      mediaRecorder = new MediaRecorder(currentStream);
-      mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
-      mediaRecorder.start();
-    }
-
-    function stopRecording() {
-      if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
-    }
-
-    function downloadVideo() {
-      if (!recordedChunks.length) return alert("Najprv nahraj video!");
+function toggleTheme() {
+  document.body.classList.toggle('dark-mode');
+}
+function applyFilter(f) {
+  filter = f;
+  video.style.filter = f;
+}
+function takePhoto() {
+  const timer = parseInt(document.getElementById('timer').value);
+  timer > 0 ? setTimeout(capturePhoto, timer * 1000) : capturePhoto();
+}
+function capturePhoto() {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.filter = filter;
+  ctx.drawImage(video, 0, 0);
+  photo.src = canvas.toDataURL('image/png');
+  addToHistory('photo', photo.src);
+}
+function downloadPhoto() {
+  if (!photo.src) return alert('Najprv odfoť!');
+  const a = document.createElement('a');
+  a.href = photo.src;
+  a.download = 'erikai-fotka.png';
+  a.click();
+}
+function startRecording() {
+  recordedChunks = [];
+  mediaRecorder = new MediaRecorder(currentStream);
+  mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+  mediaRecorder.start();
+}
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+    mediaRecorder.onstop = () => {
       const blob = new Blob(recordedChunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "erikai-video.webm";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+      addToHistory('video', url);
+    };
+  }
+}
+function downloadVideo() {
+  if (!recordedChunks.length) return alert('Najprv nahraj video!');
+  const blob = new Blob(recordedChunks, { type: 'video/webm' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'erikai-video.webm';
+  a.click();
+}
+function switchCamera() {
+  useFront = !useFront;
+  startCamera();
+}
+function addToHistory(type, src) {
+  const el = type === 'photo' ? document.createElement('img') : document.createElement('video');
+  el.src = src;
+  if (type === 'video') el.controls = true;
+  el.onclick = () => { if (type === 'photo') photo.src = src; };
+  historyDiv.appendChild(el);
+}
 
-    function switchCamera() {
-      useFront = !useFront;
-      startCamera();
-    }
-
-    async function setZoom(value) {
-      if (!track) return;
-      try {
-        await track.applyConstraints({ advanced: [{ zoom: value }] });
-        zoomRange.value = value;
-        zoomValue.textContent = value + "×";
-      } catch (e) {
-        console.error("Nepodarilo sa nastaviť zoom:", e);
-      }
-    }
-
-    zoomRange.addEventListener("input", async () => {
-      const zoom = parseFloat(zoomRange.value);
-      zoomValue.textContent = zoom.toFixed(1) + "×";
-      try {
-        await track.applyConstraints({ advanced: [{ zoom }] });
-      } catch (e) {
-        console.error("Nepodarilo sa zmeniť zoom:", e);
-      }
-    });
-
-    function toggleTheme() {
-      document.body.classList.toggle('dark-mode');
-    }
-
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-                         hour: '2-digit', minute: '2-digit', second: '2-digit' };
-      document.getElementById('cas').innerText =
-        `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-
-    startCamera();
-  </script>
-
-  <script type="text/javascript">
-    function googleTranslateElementInit() {
-      new google.translate.TranslateElement({
-        pageLanguage: 'sk',
-        includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-      }, 'google_translate_element');
-    }
-  </script>
-  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
+startCamera();
+</script>
 </body>
   </html>
