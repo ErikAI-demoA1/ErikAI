@@ -3,84 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI PDFsk – Word/Excel/Text → PDF</title>
-<style>
-  body { font-family: Arial, sans-serif; text-align: center; background: #f9f9f9; padding: 20px; }
-  h1 { color: #1a73e8; }
-  button { padding: 10px 20px; margin: 10px; border: none; border-radius: 5px; cursor: pointer; color: white; background: #1a73e8; }
-  button:hover { background: #155ab6; }
-  #selectedFile { margin-top: 10px; font-weight: bold; color: green; }
-</style>
+<title>ErikAI – Export do PDF</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
+<h2>📄 ErikAI – Export do PDF</h2>
 
-<h1>📘 ErikAI PDFsk – Word/Excel/Text → PDF</h1>
-
-<input type="file" id="fileInput" accept=".docx,.txt,.xlsx">
-<div id="selectedFile"></div>
-<button onclick="convertToPDF()">➡️ Previesť do PDF</button>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.21.0/pdf-lib.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.14/mammoth.browser.min.js"></script>
+<!-- Výber súboru -->
+<input type="file" id="fileInput" accept=".txt,.doc,.docx,.csv,.xlsx">
+<button onclick="exportPDF()">📥 Exportovať do PDF</button>
 
 <script>
-let selectedFile = null;
+const { jsPDF } = window.jspdf;
 
-document.getElementById("fileInput").addEventListener("change", function() {
-  selectedFile = this.files[0];
-  if (selectedFile) {
-    document.getElementById("selectedFile").textContent = "✅ Súbor: " + selectedFile.name;
-  } else {
-    document.getElementById("selectedFile").textContent = "";
-  }
-});
+function exportPDF() {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    if(!file) { alert("Vyber súbor!"); return; }
 
-async function convertToPDF() {
-  if (!selectedFile) { alert("❌ Vyber súbor najprv."); return; }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
 
-  const pdfDoc = await PDFLib.PDFDocument.create();
+        const doc = new jsPDF();
 
-  const fileExt = selectedFile.name.split('.').pop().toLowerCase();
-  if (fileExt === "txt") {
-    // Text → PDF
-    const text = await selectedFile.text();
-    const page = pdfDoc.addPage();
-    page.drawText(text, { x: 50, y: page.getHeight() - 50, size: 12 });
-  } else if (fileExt === "docx") {
-    // Word → PDF
-    const arrayBuffer = await selectedFile.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    const text = result.value;
-    const page = pdfDoc.addPage();
-    page.drawText(text, { x: 50, y: page.getHeight() - 50, size: 12 });
-  } else if (fileExt === "xlsx") {
-    // Excel → PDF
-    const arrayBuffer = await selectedFile.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: "array" });
-    let text = "";
-    workbook.SheetNames.forEach(name => {
-      const sheet = workbook.Sheets[name];
-      text += name + "\n";
-      text += XLSX.utils.sheet_to_csv(sheet) + "\n\n";
-    });
-    const page = pdfDoc.addPage();
-    page.drawText(text, { x: 50, y: page.getHeight() - 50, size: 12 });
-  } else {
-    alert("❌ Nepodporovaný formát.");
-    return;
-  }
+        // Základné rozdelenie textu a riadkov pre Word/Text
+        const lines = content.split(/\r?\n/);
+        let y = 20;
+        lines.forEach(line => {
+            doc.text(line, 10, y);
+            y += 10;
+        });
 
-  const pdfBytes = await pdfDoc.save();
-  const blob = new Blob([pdfBytes], { type: "application/pdf" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = selectedFile.name.replace(/\.\w+$/, ".pdf");
-  link.click();
-  alert("✅ PDF pripravené na stiahnutie!");
+        // TODO: Pre Excel/CSV – vytvoriť tabuľku (môžeme pridať neskôr)
+        doc.save(file.name.replace(/\.(txt|doc|docx|csv|xlsx)$/i, '.pdf'));
+    };
+
+    // Rozlíšiť typ súboru
+    if(file.name.endsWith('.txt') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+        reader.readAsText(file);
+    } else if(file.name.endsWith('.csv') || file.name.endsWith('.xlsx')) {
+        reader.readAsText(file); // neskôr môže byť komplexnejšie pre XLSX
+    } else {
+        alert("Nepodporovaný formát");
+    }
 }
 </script>
-
 </body>
 </html>
