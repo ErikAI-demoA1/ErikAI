@@ -1,246 +1,136 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <title>ErikAI PDFsk</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background-color: #f9f9f9;
-    }
-    h1 {
-      color: #1a73e8;
-    }
-    .section {
-      margin-top: 20px;
-    }
-    button {
-      margin: 5px;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 5px;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .green { background-color: #28a745; }
-    .orange { background-color: #f0ad4e; }
-    .yellow { background-color: #ffc107; color: black; }
-    .danger { background-color: #dc3545; }
-    .tag {
-      display: inline-block;
-      padding: 5px 10px;
-      background-color: #fff3cd;
-      color: #856404;
-      border-radius: 5px;
-      margin: 3px;
-    }
-    #warning {
-      display: none;
-      background-color: #fff3cd;
-      color: #856404;
-      border: 1px solid #ffeeba;
-      padding: 10px;
-      margin-top: 15px;
-      border-radius: 6px;
-    }
-  </style>
-</head>
-<body>
-<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI PDFsk – Profesionálne PDF nástroje</title>
 
-<script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
-</script>
+<!-- PDF.js knižnica -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.106/pdf.min.js"></script>
 
 <style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    margin: 0; padding: 20px;
+    background: #f9f9f9; color: #222;
+    transition: background 0.3s, color 0.3s;
   }
+  body.dark-mode { background: #121212; color: white; }
+  h1 { color: #1a73e8; text-align: center; }
+  #fileInput { margin-top: 10px; }
+  #dropZone {
+    border: 2px dashed #1a73e8; padding: 20px; margin: 20px auto;
+    width: 90%; max-width: 600px; border-radius: 10px; text-align: center;
+    cursor: pointer; transition: background 0.3s;
+  }
+  #dropZone.hover { background: rgba(26, 115, 232, 0.1); }
+  #pdfContainer { margin-top: 20px; text-align: center; }
+  canvas { border: 1px solid #ccc; margin: 10px auto; display: block; }
+  button { margin: 5px; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; background: #1a73e8; color: white; font-weight: bold; }
+  button:hover { background: #1558a5; }
+  .miniatures { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 20px; gap: 10px; }
+  .miniatures canvas { width: 100px; height: auto; border: 1px solid #ccc; cursor: pointer; }
+  .section { margin-top: 20px; }
 </style>
+</head>
+<body>
 
-<p id="cas" style="font-size: 18px;"></p>
+<h1>📘 ErikAI PDFsk</h1>
 
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
+<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
 
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
+<div class="section">
+  <div id="dropZone">🖱 Klikni alebo potiahni PDF sem</div>
+  <input type="file" id="fileInput" accept="application/pdf" style="display:none;">
+  <div id="selectedFile" style="margin-top: 10px; font-weight:bold; color:green;"></div>
+</div>
+
+<div id="pdfContainer"></div>
+<div class="miniatures" id="pdfThumbnails"></div>
+
+<div class="section">
+  <strong>📄 Export:</strong><br>
+  <button onclick="downloadPDF()">💾 Stiahnuť PDF lokálne</button>
+</div>
+
+<script>
+  let pdfDoc = null;
+  let currentFile = null;
+  const pdfContainer = document.getElementById("pdfContainer");
+  const thumbnails = document.getElementById("pdfThumbnails");
+
+  function toggleTheme() {
+    document.body.classList.toggle("dark-mode");
   }
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  <h1>📘 ErikAI PDFsk</h1>
 
-  <div class="section">
-    <strong>Vyber PDF s obrázkami:</strong><br>
-    <input type="file" id="fileInput" accept=".pdf">
-    <div id="selectedFile" style="margin-top: 8px; font-weight: bold; color: green;"></div>
-  </div>
+  const dropZone = document.getElementById("dropZone");
+  dropZone.addEventListener("click", () => document.getElementById("fileInput").click());
+  dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("hover"); });
+  dropZone.addEventListener("dragleave", e => dropZone.classList.remove("hover"));
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault(); dropZone.classList.remove("hover");
+    handleFile(e.dataTransfer.files[0]);
+  });
 
-  <div id="warning">
-    ⚠️ <strong>Upozornenie:</strong> Tento PDF súbor vyzerá ako naskenovaný obrázok a neobsahuje čitateľný text.
-    Export do Wordu, Textu alebo Excelu nemusí fungovať správne.
-  </div>
+  document.getElementById("fileInput").addEventListener("change", e => handleFile(e.target.files[0]));
 
-  <div class="section">
-    <strong>📁 Možnosti konverzie:</strong><br>
-    <button class="green" onclick="downloadFormat('text')">📄 Stiahnuť ako Text</button>
-    <button class="green" onclick="downloadFormat('word')">📄 Stiahnuť ako Word</button>
-    <button class="green" onclick="downloadFormat('excel')">📊 Stiahnuť ako Excel</button>
-  </div>
+  function handleFile(file) {
+    if (!file || file.type !== "application/pdf") return alert("❌ Vyber PDF súbor!");
+    currentFile = file;
+    document.getElementById("selectedFile").textContent = `✅ Súbor: ${file.name}`;
 
-  <div class="section">
-    <strong>📂 Lokálna práca:</strong><br>
-    <button class="orange" onclick="saveLocal()">💾 Uložiť PDF lokálne</button>
-    <button class="orange" onclick="loadLocal()">📂 Načítať PDF</button>
-  </div>
+    const reader = new FileReader();
+    reader.onload = function() {
+      const typedarray = new Uint8Array(this.result);
+      pdfjsLib.getDocument(typedarray).promise.then(pdf => {
+        pdfDoc = pdf;
+        renderPDF();
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
 
-  <div class="section">
-    <strong>📖 Uložené PDF dokumenty:</strong><br>
-    <div id="pdfList"></div>
-  </div>
+  function renderPDF() {
+    pdfContainer.innerHTML = "";
+    thumbnails.innerHTML = "";
 
-  <script>
-    let currentPDF = null;
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      pdfDoc.getPage(i).then(page => {
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.height = viewport.height; canvas.width = viewport.width;
+        page.render({ canvasContext: ctx, viewport: viewport }).promise.then(() => {
+          pdfContainer.appendChild(canvas);
 
-    function showWarningIfImageOnly(content) {
-      const hasText = /\/Font|\/Text|\/Contents/.test(content);
-      document.getElementById('warning').style.display = hasText ? 'none' : 'block';
-    }
-
-    document.getElementById('fileInput').addEventListener('change', function () {
-      const file = this.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function () {
-        const content = reader.result;
-        currentPDF = { name: file.name, content: content };
-        document.getElementById('selectedFile').textContent = `✅ Súbor: ${file.name}`;
-        showWarningIfImageOnly(content);
-      };
-      reader.readAsText(file);
-    });
-
-    function downloadFormat(format) {
-      if (!currentPDF) {
-        alert("❌ Najprv vyber PDF súbor.");
-        return;
-      }
-
-      const blob = new Blob([currentPDF.content], { type: "text/plain" });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      let ext = format === "text" ? ".txt" : format === "word" ? ".doc" : ".xls";
-      link.download = currentPDF.name.replace(".pdf", ext);
-      link.click();
-    }
-
-    function saveLocal() {
-      if (!currentPDF) {
-        alert("❌ Nemáš žiadny súbor na uloženie.");
-        return;
-      }
-      localStorage.setItem("pdf_" + currentPDF.name, currentPDF.content);
-      updatePDFList();
-    }
-
-    function loadLocal() {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith("pdf_"));
-      if (keys.length === 0) return;
-
-      const name = keys[0].replace("pdf_", "");
-      const content = localStorage.getItem(keys[0]);
-      currentPDF = { name: name, content: content };
-      document.getElementById('selectedFile').textContent = `✅ Súbor: ${name}`;
-      showWarningIfImageOnly(content);
-    }
-
-    function updatePDFList() {
-      const list = document.getElementById("pdfList");
-      list.innerHTML = "";
-      Object.keys(localStorage).forEach(k => {
-        if (k.startsWith("pdf_")) {
-          const fileName = k.replace("pdf_", "");
-          const span = document.createElement("span");
-          span.className = "tag";
-          span.textContent = fileName;
-          span.onclick = () => {
-            currentPDF = { name: fileName, content: localStorage.getItem(k) };
-            document.getElementById('selectedFile').textContent = `✅ Súbor: ${fileName}`;
-            showWarningIfImageOnly(currentPDF.content);
-          };
-
-          const removeBtn = document.createElement("button");
-          removeBtn.textContent = "❌";
-          removeBtn.className = "danger";
-          removeBtn.style.marginLeft = "8px";
-          removeBtn.onclick = () => {
-            localStorage.removeItem(k);
-            updatePDFList();
-            if (currentPDF && currentPDF.name === fileName) {
-              currentPDF = null;
-              document.getElementById("selectedFile").textContent = "";
-              document.getElementById("warning").style.display = "none";
-            }
-          };
-
-          const wrapper = document.createElement("div");
-          wrapper.appendChild(span);
-          wrapper.appendChild(removeBtn);
-          list.appendChild(wrapper);
-        }
+          // Miniatura
+          const mini = document.createElement("canvas");
+          const miniCtx = mini.getContext("2d");
+          const scale = 100 / viewport.width;
+          mini.width = 100; mini.height = viewport.height * scale;
+          miniCtx.drawImage(canvas, 0, 0, mini.width, mini.height);
+          mini.addEventListener("click", () => {
+            canvas.scrollIntoView({ behavior: "smooth" });
+          });
+          thumbnails.appendChild(mini);
+        });
       });
     }
+  }
 
-    updatePDFList();
-  </script>
+  function downloadPDF() {
+    if (!currentFile) return alert("❌ Žiadny PDF súbor na stiahnutie.");
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(currentFile);
+    link.download = currentFile.name;
+    link.click();
+  }
+</script>
 
-  <div style="margin-top: 20px; padding: 10px; background-color: #fff3cd; border-left: 6px solid #ffc107; color: #856404; font-size: 15px;">
-  ⚠️ <strong>Upozornenie:</strong><br>
-  Niektoré PDF súbory (napr. skenované alebo obrázkové dokumenty) nemusia obsahovať čitateľný text. 
-  Export do <strong>Text / Word / Excel</strong> preto nemusí fungovať správne alebo môže byť nečitateľný. 
-  Skontroluj, či súbor obsahuje skutočný text.
-</div>
-
-<div style="margin-top: 30px; padding: 12px; background-color: #e2f0ff; border-left: 6px solid #007bff; color: #004085; font-size: 14px;">
-  📘 <strong>ErikAI PDFsk</strong> funguje offline len v tomto prehliadači a zariadení. 
-  Všetky dáta zostávajú len u teba. Ďakujeme za používanie!
-</div>
-
-    
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-  </p>
+<p style="font-size:14px; color:gray; margin-top:20px;">
+  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+  © 2025 Erik Mohylák – All rights reserved.
+</p>
 
 </body>
 </html>
