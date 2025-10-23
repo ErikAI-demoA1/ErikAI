@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI QR Pozvánka Kontakt</title>
+<title>ErikAI QR Kontakt</title>
 <style>
   body { font-family: Arial, sans-serif; text-align: center; background: #f9f9f9; padding: 2rem; }
   body.dark-mode { background: #121212; color: white; }
   input, textarea { width: 80%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
   button { padding: 10px 20px; font-weight: bold; border: none; border-radius: 5px; background: #1a73e8; color: white; cursor: pointer; }
   button:hover { background: #1558a5; }
-  #qrcode { margin-top: 20px; }
+  canvas { margin-top: 20px; border: 1px solid #ccc; }
 </style>
 </head>
 <body>
@@ -26,7 +26,7 @@
   <button onclick="generujQR()">🖨 Generovať QR kód</button>
 </div>
 
-<div id="qrcode"></div>
+<canvas id="qrcode"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 <script>
@@ -38,12 +38,15 @@ function generujQR() {
   if (!meno || !sprava) return alert("❌ Vyplň meno aj správu!");
 
   const data = `Kontakt: ${meno}\nPozvánka: ${sprava}`;
-  const qrContainer = document.getElementById('qrcode');
-  qrContainer.innerHTML = "";
-  
-  QRCode.toCanvas(qrContainer, data, { width: 220, margin: 2 }, function(error) {
-    if (error) console.error(error);
-    else console.log('✅ QR kód vygenerovaný!');
+  const qrCanvas = document.getElementById('qrcode');
+
+  QRCode.toCanvas(qrCanvas, data, { width: 220, margin: 2 }, function(error) {
+    if (error) {
+      console.error(error);
+      alert("❌ Chyba pri generovaní QR kódu!");
+    } else {
+      console.log('✅ QR kód vygenerovaný!');
+    }
   });
 }
 </script>
