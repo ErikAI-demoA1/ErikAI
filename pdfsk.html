@@ -3,134 +3,84 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI PDFsk – Profesionálne PDF nástroje</title>
-
-<!-- PDF.js knižnica -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.106/pdf.min.js"></script>
-
+<title>ErikAI PDFsk – Word/Excel/Text → PDF</title>
 <style>
-  body {
-    font-family: 'Inter', Arial, sans-serif;
-    margin: 0; padding: 20px;
-    background: #f9f9f9; color: #222;
-    transition: background 0.3s, color 0.3s;
-  }
-  body.dark-mode { background: #121212; color: white; }
-  h1 { color: #1a73e8; text-align: center; }
-  #fileInput { margin-top: 10px; }
-  #dropZone {
-    border: 2px dashed #1a73e8; padding: 20px; margin: 20px auto;
-    width: 90%; max-width: 600px; border-radius: 10px; text-align: center;
-    cursor: pointer; transition: background 0.3s;
-  }
-  #dropZone.hover { background: rgba(26, 115, 232, 0.1); }
-  #pdfContainer { margin-top: 20px; text-align: center; }
-  canvas { border: 1px solid #ccc; margin: 10px auto; display: block; }
-  button { margin: 5px; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; background: #1a73e8; color: white; font-weight: bold; }
-  button:hover { background: #1558a5; }
-  .miniatures { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 20px; gap: 10px; }
-  .miniatures canvas { width: 100px; height: auto; border: 1px solid #ccc; cursor: pointer; }
-  .section { margin-top: 20px; }
+  body { font-family: Arial, sans-serif; text-align: center; background: #f9f9f9; padding: 20px; }
+  h1 { color: #1a73e8; }
+  button { padding: 10px 20px; margin: 10px; border: none; border-radius: 5px; cursor: pointer; color: white; background: #1a73e8; }
+  button:hover { background: #155ab6; }
+  #selectedFile { margin-top: 10px; font-weight: bold; color: green; }
 </style>
 </head>
 <body>
 
-<h1>📘 ErikAI PDFsk</h1>
+<h1>📘 ErikAI PDFsk – Word/Excel/Text → PDF</h1>
 
-<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<input type="file" id="fileInput" accept=".docx,.txt,.xlsx">
+<div id="selectedFile"></div>
+<button onclick="convertToPDF()">➡️ Previesť do PDF</button>
 
-<div class="section">
-  <div id="dropZone">🖱 Klikni alebo potiahni PDF sem</div>
-  <input type="file" id="fileInput" accept="application/pdf" style="display:none;">
-  <div id="selectedFile" style="margin-top: 10px; font-weight:bold; color:green;"></div>
-</div>
-
-<div id="pdfContainer"></div>
-<div class="miniatures" id="pdfThumbnails"></div>
-
-<div class="section">
-  <strong>📄 Export:</strong><br>
-  <button onclick="downloadPDF()">💾 Stiahnuť PDF lokálne</button>
-</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.21.0/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.14/mammoth.browser.min.js"></script>
 
 <script>
-  let pdfDoc = null;
-  let currentFile = null;
-  const pdfContainer = document.getElementById("pdfContainer");
-  const thumbnails = document.getElementById("pdfThumbnails");
+let selectedFile = null;
 
-  function toggleTheme() {
-    document.body.classList.toggle("dark-mode");
+document.getElementById("fileInput").addEventListener("change", function() {
+  selectedFile = this.files[0];
+  if (selectedFile) {
+    document.getElementById("selectedFile").textContent = "✅ Súbor: " + selectedFile.name;
+  } else {
+    document.getElementById("selectedFile").textContent = "";
+  }
+});
+
+async function convertToPDF() {
+  if (!selectedFile) { alert("❌ Vyber súbor najprv."); return; }
+
+  const pdfDoc = await PDFLib.PDFDocument.create();
+
+  const fileExt = selectedFile.name.split('.').pop().toLowerCase();
+  if (fileExt === "txt") {
+    // Text → PDF
+    const text = await selectedFile.text();
+    const page = pdfDoc.addPage();
+    page.drawText(text, { x: 50, y: page.getHeight() - 50, size: 12 });
+  } else if (fileExt === "docx") {
+    // Word → PDF
+    const arrayBuffer = await selectedFile.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    const text = result.value;
+    const page = pdfDoc.addPage();
+    page.drawText(text, { x: 50, y: page.getHeight() - 50, size: 12 });
+  } else if (fileExt === "xlsx") {
+    // Excel → PDF
+    const arrayBuffer = await selectedFile.arrayBuffer();
+    const workbook = XLSX.read(arrayBuffer, { type: "array" });
+    let text = "";
+    workbook.SheetNames.forEach(name => {
+      const sheet = workbook.Sheets[name];
+      text += name + "\n";
+      text += XLSX.utils.sheet_to_csv(sheet) + "\n\n";
+    });
+    const page = pdfDoc.addPage();
+    page.drawText(text, { x: 50, y: page.getHeight() - 50, size: 12 });
+  } else {
+    alert("❌ Nepodporovaný formát.");
+    return;
   }
 
-  const dropZone = document.getElementById("dropZone");
-  dropZone.addEventListener("click", () => document.getElementById("fileInput").click());
-  dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("hover"); });
-  dropZone.addEventListener("dragleave", e => dropZone.classList.remove("hover"));
-  dropZone.addEventListener("drop", e => {
-    e.preventDefault(); dropZone.classList.remove("hover");
-    handleFile(e.dataTransfer.files[0]);
-  });
-
-  document.getElementById("fileInput").addEventListener("change", e => handleFile(e.target.files[0]));
-
-  function handleFile(file) {
-    if (!file || file.type !== "application/pdf") return alert("❌ Vyber PDF súbor!");
-    currentFile = file;
-    document.getElementById("selectedFile").textContent = `✅ Súbor: ${file.name}`;
-
-    const reader = new FileReader();
-    reader.onload = function() {
-      const typedarray = new Uint8Array(this.result);
-      pdfjsLib.getDocument(typedarray).promise.then(pdf => {
-        pdfDoc = pdf;
-        renderPDF();
-      });
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function renderPDF() {
-    pdfContainer.innerHTML = "";
-    thumbnails.innerHTML = "";
-
-    for (let i = 1; i <= pdfDoc.numPages; i++) {
-      pdfDoc.getPage(i).then(page => {
-        const viewport = page.getViewport({ scale: 1.5 });
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        canvas.height = viewport.height; canvas.width = viewport.width;
-        page.render({ canvasContext: ctx, viewport: viewport }).promise.then(() => {
-          pdfContainer.appendChild(canvas);
-
-          // Miniatura
-          const mini = document.createElement("canvas");
-          const miniCtx = mini.getContext("2d");
-          const scale = 100 / viewport.width;
-          mini.width = 100; mini.height = viewport.height * scale;
-          miniCtx.drawImage(canvas, 0, 0, mini.width, mini.height);
-          mini.addEventListener("click", () => {
-            canvas.scrollIntoView({ behavior: "smooth" });
-          });
-          thumbnails.appendChild(mini);
-        });
-      });
-    }
-  }
-
-  function downloadPDF() {
-    if (!currentFile) return alert("❌ Žiadny PDF súbor na stiahnutie.");
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(currentFile);
-    link.download = currentFile.name;
-    link.click();
-  }
+  const pdfBytes = await pdfDoc.save();
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = selectedFile.name.replace(/\.\w+$/, ".pdf");
+  link.click();
+  alert("✅ PDF pripravené na stiahnutie!");
+}
 </script>
-
-<p style="font-size:14px; color:gray; margin-top:20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
-  © 2025 Erik Mohylák – All rights reserved.
-</p>
 
 </body>
 </html>
