@@ -3,127 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI PDFsk – Zlúčenie PDF</title>
-
-<!-- PDF.js knižnica pre náhľad -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.106/pdf.min.js"></script>
-<!-- PDF-LIB pre manipuláciu a zlúčenie PDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.19.1/pdf-lib.min.js"></script>
-
+<title>ErikAI PDF Zlúčenie</title>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <style>
-  body { font-family: 'Inter', Arial, sans-serif; margin: 0; padding: 20px; background: #f9f9f9; color: #222; transition: background 0.3s, color 0.3s; }
-  body.dark-mode { background: #121212; color: white; }
-  h1 { color: #1a73e8; text-align: center; }
-  #dropZone { border: 2px dashed #1a73e8; padding: 20px; margin: 20px auto; width: 90%; max-width: 600px; border-radius: 10px; text-align: center; cursor: pointer; transition: background 0.3s; }
-  #dropZone.hover { background: rgba(26,115,232,0.1); }
-  #pdfContainer { margin-top: 20px; text-align: center; }
-  canvas { border: 1px solid #ccc; margin: 10px auto; display: block; }
-  button { margin: 5px; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; background: #1a73e8; color: white; font-weight: bold; }
-  button:hover { background: #1558a5; }
-  .miniatures { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 20px; gap: 10px; }
-  .miniatures canvas { width: 100px; height: auto; border: 1px solid #ccc; cursor: pointer; }
+  body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; text-align:center; }
+  h1 { color: #1a73e8; }
+  input, button { margin: 10px; padding: 10px; font-size: 16px; }
+  button { cursor:pointer; border:none; border-radius:5px; background:#1a73e8; color:white; }
+  button:hover { background:#1558a5; }
 </style>
 </head>
 <body>
 
-<h1>📘 ErikAI PDFsk – Zlúčenie PDF</h1>
-<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<h1>📘 ErikAI PDF Zlúčenie</h1>
 
-<div id="dropZone">🖱 Klikni alebo potiahni PDF sem (viac súborov možné)</div>
-<input type="file" id="fileInput" accept="application/pdf" style="display:none;" multiple>
-<div id="selectedFiles" style="margin-top:10px; font-weight:bold; color:green;"></div>
-
-<div id="pdfContainer"></div>
-<div class="miniatures" id="pdfThumbnails"></div>
-
-<div>
-  <button onclick="mergePDFs()">📄 Zlúčiť všetky PDF</button>
-</div>
+<p>Vyber 2 alebo viac PDF súborov na zlúčenie:</p>
+<input type="file" id="pdfFiles" accept="application/pdf" multiple>
+<br>
+<button onclick="mergePDFs()">💾 Zlúčiť PDF</button>
 
 <script>
-let pdfDocs = [];
-const pdfContainer = document.getElementById("pdfContainer");
-const thumbnails = document.getElementById("pdfThumbnails");
-
-function toggleTheme() { document.body.classList.toggle("dark-mode"); }
-
-const dropZone = document.getElementById("dropZone");
-dropZone.addEventListener("click", () => document.getElementById("fileInput").click());
-dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("hover"); });
-dropZone.addEventListener("dragleave", e => dropZone.classList.remove("hover"));
-dropZone.addEventListener("drop", e => {
-    e.preventDefault(); dropZone.classList.remove("hover");
-    handleFiles(e.dataTransfer.files);
-});
-
-document.getElementById("fileInput").addEventListener("change", e => handleFiles(e.target.files));
-
-function handleFiles(files) {
-    Array.from(files).forEach(file => {
-        if (file.type !== "application/pdf") return alert("❌ Vyber PDF súbor!");
-        const reader = new FileReader();
-        reader.onload = function() {
-            const typedarray = new Uint8Array(this.result);
-            pdfjsLib.getDocument(typedarray).promise.then(pdf => {
-                pdfDocs.push({ file, typedarray });
-                renderPDF(pdf, typedarray);
-                updateSelectedFiles();
-            });
-        };
-        reader.readAsArrayBuffer(file);
-    });
-}
-
-function updateSelectedFiles() {
-    const names = pdfDocs.map(doc => doc.file.name).join(', ');
-    document.getElementById("selectedFiles").textContent = `✅ Súbory: ${names}`;
-}
-
-function renderPDF(pdf, typedarray) {
-    for (let i = 1; i <= pdf.numPages; i++) {
-        pdf.getPage(i).then(page => {
-            const viewport = page.getViewport({ scale: 1.5 });
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-            canvas.height = viewport.height; canvas.width = viewport.width;
-            page.render({ canvasContext: ctx, viewport: viewport });
-            pdfContainer.appendChild(canvas);
-
-            // Miniatura
-            const mini = document.createElement("canvas");
-            const miniCtx = mini.getContext("2d");
-            const scale = 100 / viewport.width;
-            mini.width = 100; mini.height = viewport.height * scale;
-            miniCtx.drawImage(canvas, 0, 0, mini.width, mini.height);
-            mini.addEventListener("click", () => canvas.scrollIntoView({ behavior: "smooth" }));
-            thumbnails.appendChild(mini);
-        });
-    }
-}
-
 async function mergePDFs() {
-    if (pdfDocs.length === 0) return alert("❌ Žiadne PDF súbory na zlúčenie!");
+    const files = document.getElementById("pdfFiles").files;
+    if (files.length < 2) return alert("Vyber aspoň 2 PDF súbory!");
+
     const mergedPdf = await PDFLib.PDFDocument.create();
 
-    for (let docObj of pdfDocs) {
-        const pdf = await PDFLib.PDFDocument.load(docObj.typedarray);
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
         const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
         copiedPages.forEach(page => mergedPdf.addPage(page));
     }
 
-    const pdfBytes = await mergedPdf.save();
-    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const mergedPdfBytes = await mergedPdf.save();
+    const blob = new Blob([mergedPdfBytes], { type: "application/pdf" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "Merged.pdf";
+    link.download = "ErikAI_merged.pdf";
     link.click();
+    alert("✅ PDF úspešne zlúčené!");
 }
 </script>
-
-<p style="font-size:14px; color:gray; margin-top:20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
-  © 2025 Erik Mohylák – All rights reserved.
-</p>
 
 </body>
 </html>
