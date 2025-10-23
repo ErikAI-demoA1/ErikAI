@@ -3,99 +3,78 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI Peer Chat – Jeden klik</title>
+<title>ErikAI QR Peer Chat</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; text-align: center; }
-  h2 { color: #1a73e8; }
-  textarea, input[type=text] { width: 100%; padding: 10px; margin-bottom: 10px; font-size: 1rem; }
-  button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; background: #1a73e8; color: white; cursor: pointer; font-weight: bold; }
-  button:hover { background: #1558a5; }
-  .log { height: 200px; overflow-y: auto; border: 1px solid #ccc; background: #fff; padding: 10px; margin-top: 10px; text-align: left; }
-  .status { font-weight: bold; margin: 10px 0; }
+  body { font-family: sans-serif; padding: 20px; text-align: center; background: #f4f4f4; }
+  #qr { margin: 20px auto; }
+  #chat { width: 100%; height: 200px; border: 1px solid #ccc; overflow-y: auto; margin-bottom: 10px; padding: 5px; background: white; }
+  #message { width: 80%; padding: 5px; }
+  button { padding: 10px 15px; margin: 5px; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
-<h2>💬 ErikAI Peer Chat</h2>
+<h2>ErikAI QR Peer Chat</h2>
+<div>
+  <button onclick="generateOffer()">🔐 Vytvoriť QR pre spojenie</button>
+</div>
+<div id="qr"></div>
 
-<p class="status" id="status">❌ Zatiaľ nie ste spojení</p>
-
-<!-- Kód na pripojenie -->
-<button onclick="vytvorKod()">🔐 Generovať a skopírovať kód</button>
-<textarea id="kod" placeholder="Tu sa zobrazí kód..." readonly></textarea>
-
-<input type="text" id="vlozKod" placeholder="Sem vlož kód od kamoša">
-<button onclick="pripojSa()">🔓 Pripojiť sa k priateľovi</button>
-
-<input type="text" id="sprava" placeholder="Napíš správu...">
-<button onclick="odosliSpravu()">✉️ Poslať správu</button>
-
-<div class="log" id="chat"></div>
+<div id="chat"></div>
+<input type="text" id="message" placeholder="Napíš správu...">
+<button onclick="sendMessage()">✉️ Poslať</button>
 
 <script>
-let pc, dc, spojene = false;
+let pc, dc;
 
-// Automatické nastavenie chatu
-function nastavChat() {
-  dc.onopen = () => {
-    spojene = true;
-    document.getElementById("status").textContent = "✅ Ste spojení!";
-    document.getElementById("status").style.color = "green";
-  };
-  dc.onmessage = e => {
-    const chat = document.getElementById("chat");
-    chat.innerHTML += `<div><b>🟢 Kamoš:</b> ${e.data}</div>`;
-    chat.scrollTop = chat.scrollHeight;
-  };
-}
-
-// Generovanie kódu
-async function vytvorKod() {
+// Vytvorenie QR a offer
+async function generateOffer() {
   pc = new RTCPeerConnection();
   dc = pc.createDataChannel("chat");
-  nastavChat();
+  setupChat();
 
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
 
-  const kod = btoa(JSON.stringify(offer));
-  document.getElementById("kod").value = kod;
+  const offerStr = btoa(JSON.stringify(offer));
+  document.getElementById("qr").innerHTML = "";
+  new QRCode(document.getElementById("qr"), offerStr);
 
-  // Automaticky skopíruj do schránky
-  navigator.clipboard.writeText(kod).then(() => {
-    alert("Kód skopírovaný do schránky! Pošli ho kamoškovi.");
-  });
+  pc.onicecandidate = event => {
+    if (event.candidate) return;
+    // Offer už kompletný
+  };
 }
 
-// Pripojenie sa k priateľovi
-async function pripojSa() {
-  const vlozenyKod = document.getElementById("vlozKod").value;
-  if (!vlozenyKod) return alert("Sem vlož kód od kamoša!");
-  const offer = JSON.parse(atob(vlozenyKod));
-
+// Druhý používateľ naskenuje QR a nastaví answer
+async function connectWithOffer(offerStr) {
+  const offer = JSON.parse(atob(offerStr));
   pc = new RTCPeerConnection();
-  pc.ondatachannel = e => { dc = e.channel; nastavChat(); };
-  await pc.setRemoteDescription(offer);
+  pc.ondatachannel = e => { dc = e.channel; setupChat(); };
 
+  await pc.setRemoteDescription(offer);
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
 
-  // Automaticky skopírovať answer kód a pošli späť prvému
-  const kodAnswer = btoa(JSON.stringify(answer));
-  navigator.clipboard.writeText(kodAnswer).then(() => {
-    alert("✅ Pripojenie pripravené! Skopíruj a pošli spätný kód prvému kamarátovi.");
-  });
+  const answerStr = btoa(JSON.stringify(answer));
+  prompt("Pošli tento spätný QR kód naspäť prvému používateľovi (A) alebo ho nechaj vygenerovať QR)", answerStr);
 }
 
-// Posielanie správ
-function odosliSpravu() {
-  const sprava = document.getElementById("sprava").value;
-  if (!spojene) return alert("Najprv sa pripojte k priateľovi!");
-  dc.send(sprava);
-  const chat = document.getElementById("chat");
-  chat.innerHTML += `<div><b>🔵 Ty:</b> ${sprava}</div>`;
-  chat.scrollTop = chat.scrollHeight;
-  document.getElementById("sprava").value = "";
+// Chat
+function setupChat() {
+  dc.onopen = () => alert("✅ Spojenie aktívne!");
+  dc.onmessage = e => {
+    document.getElementById("chat").innerHTML += `<div><b>Partner:</b> ${e.data}</div>`;
+  };
+}
+
+function sendMessage() {
+  const msg = document.getElementById("message").value;
+  if (!dc || dc.readyState !== "open") { alert("Spojenie nie je otvorené!"); return; }
+  dc.send(msg);
+  document.getElementById("chat").innerHTML += `<div><b>Ty:</b> ${msg}</div>`;
+  document.getElementById("message").value = "";
 }
 </script>
 
