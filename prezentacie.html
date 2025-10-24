@@ -2,69 +2,65 @@
 <html lang="sk">
 <head>
   <meta charset="UTF-8">
-  <title>ErikAI Prezentácie – Profesionálne</title>
+  <title>ErikAI Prezentácie</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f0f2f5; }
-    h2 { color: #a30000; }
-    button { margin: 4px; padding: 8px 16px; font-size: 16px; cursor: pointer; }
-    #slideContainer {
-      margin-top: 20px;
-      width: 80%;
-      max-width: 900px;
-      height: 400px;
-      margin-left: auto;
-      margin-right: auto;
-      border-radius: 15px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-      padding: 20px;
-      background: linear-gradient(135deg, #ffffff, #e0e0e0);
-      overflow-y: auto;
-      font-size: 24px;
-      color: #222;
-      line-height: 1.5;
-      position: relative;
-      transition: background 0.5s, color 0.5s;
-    }
-    #slideTextInput {
-      width: 100%;
-      height: 100%;
-      border: none;
-      outline: none;
-      background: transparent;
-      font-size: 24px;
-      line-height: 1.5;
-      color: inherit;
-      resize: none;
-    }
-    .controls, .storage { margin-top: 10px; text-align: center; }
-    .saved-name { margin: 4px 0; }
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #fefefe; transition: background 0.3s, color 0.3s; }
+    textarea { width: 100%; height: 180px; font-size: 22px; padding: 10px; border-radius: 10px; border: 1px solid #ccc; resize: vertical; }
+    button { margin: 4px; padding: 10px 18px; font-size: 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+    button:hover { transform: scale(1.05); }
+    .controls, .storage { margin-top: 10px; }
+    .saved-name { margin: 6px 0; }
+    .slide-container { position: relative; margin-top: 20px; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); background: linear-gradient(135deg,#ffffff,#e0e0e0); min-height: 300px; }
+    .slide-container img { position: absolute; cursor: move; max-width: 200px; max-height: 150px; border-radius: 10px; }
     body.dark-mode { background-color: #121212; color: white; }
-    body.dark-mode #slideContainer { background: linear-gradient(135deg, #222, #444); color: #eee; }
+    .slide-text { font-size: 22px; line-height: 1.5; color: #222; }
+    body.dark-mode .slide-text { color: #eee; }
   </style>
 </head>
 <body>
 
-<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
 
 <p id="cas" style="font-size: 18px;"></p>
 
-<div id="google_translate_element"></div>
+<script>
+function aktualizujCas() {
+  const teraz = new Date();
+  const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' };
+  const casText = teraz.toLocaleDateString('sk-SK', moznosti);
+  document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
+}
+setInterval(aktualizujCas, 1000);
+aktualizujCas();
 
-<h2>📄 ErikAI Prezentácie – Profesionálne</h2>
+function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+</script>
+
+<div id="google_translate_element"></div>
+<script type="text/javascript">
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'sk',
+    includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
+    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+  }, 'google_translate_element');
+}
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+<h2>📄 ErikAI Prezentácie</h2>
 
 <!-- Mikrofón pre názov prezentácie -->
 <button onclick="startVoiceInput('presentationName')">🎙️ Názov</button>
 
 <!-- Mikrofón pre snímku -->
-<button onclick="startRecognition('slideTextInput')">🎙️ Snímka</button>
+<button onclick="startRecognition('slideText')">🎙️ Snímka</button>
 
+<label>Vybrať Excel alebo CSV: <input type="file" id="csvImport"></label><br>
 <label>📁 Názov prezentácie: <input id="presentationName" value="Moja prezentácia"></label>
 
-<p id="slideCount">Snímka: 1 / 1</p>
-
-<div id="slideContainer">
-  <textarea id="slideTextInput" placeholder="Sem napíš alebo nadiktuj text..."></textarea>
-</div>
+<p id="slideCount">Snimka: 1 / 1</p>
+<textarea id="slideText"></textarea>
 
 <div class="controls">
   <button onclick="prevSlide()">◄ Predchádzajúce</button>
@@ -72,6 +68,9 @@
   <button onclick="newSlide()">➕ Nový slide</button>
   <button onclick="savePresentation()">✅ Uložiť</button>
   <button onclick="deleteCurrentSlide()">🗑 Vymazať</button>
+  <button onclick="downloadPPTX()">⬇ Stiahnuť ako text</button>
+  <button onclick="downloadHTML()">⬇ Stiahnuť ako HTML</button>
+  <label>Pridať obrázok: <input type="file" id="imgUpload" onchange="addImage(event)"></label>
 </div>
 
 <div class="storage">
@@ -79,92 +78,170 @@
   <div id="savedList"></div>
 </div>
 
+<div class="slide-container" id="slideContainer">
+  <div class="slide-text" id="slideTextDisplay"></div>
+</div>
+
 <script>
-let slides = [""], current = 0;
+// Slide data
+let slides = [{text:"", images:[]}], current=0;
 
-// Aktualizácia času
-function aktualizujCas() {
-  const teraz = new Date();
-  const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' };
-  document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
+// Update slide
+function updateSlide() {
+  const slide = slides[current];
+  document.getElementById('slideText').value = slide.text;
+  document.getElementById('slideCount').innerText = `Snimka: ${current+1} / ${slides.length}`;
+  
+  const container = document.getElementById('slideContainer');
+  container.innerHTML = `<div class="slide-text" id="slideTextDisplay">${slide.text.replace(/\n/g,'<br>')}</div>`;
+  slide.images.forEach((imgData, idx) => {
+    const img = document.createElement('img');
+    img.src = imgData;
+    img.draggable = true;
+    img.style.left = imgData.left || '0px';
+    img.style.top = imgData.top || '0px';
+    img.onmousedown = startDrag;
+    container.appendChild(img);
+  });
 }
-setInterval(aktualizujCas, 1000);
-aktualizujCas();
 
-function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+// Drag images
+let dragObj = null, offsetX=0, offsetY=0;
+function startDrag(e) {
+  dragObj = e.target;
+  offsetX = e.offsetX; offsetY = e.offsetY;
+  document.onmousemove = dragMove;
+  document.onmouseup = dragEnd;
+}
+function dragMove(e) {
+  if (!dragObj) return;
+  dragObj.style.left = (e.clientX - offsetX - slideContainer.getBoundingClientRect().left) + "px";
+  dragObj.style.top = (e.clientY - offsetY - slideContainer.getBoundingClientRect().top) + "px";
+}
+function dragEnd(e) {
+  if (!dragObj) return;
+  const idx = Array.from(slideContainer.querySelectorAll('img')).indexOf(dragObj);
+  slides[current].images[idx] = dragObj.src;
+  dragObj.style.left = dragObj.style.left; dragObj.style.top = dragObj.style.top;
+  dragObj = null;
+  document.onmousemove = null;
+  document.onmouseup = null;
+}
 
-// Hlasové zadávanie
+// Add image
+function addImage(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    slides[current].images.push(ev.target.result);
+    updateSlide();
+  };
+  reader.readAsDataURL(file);
+}
+
+// Save slide text
+function saveCurrent() {
+  slides[current].text = document.getElementById('slideText').value;
+}
+
+// Navigation
+function nextSlide(){ saveCurrent(); if(current<slides.length-1) current++; updateSlide();}
+function prevSlide(){ saveCurrent(); if(current>0) current--; updateSlide();}
+function newSlide(){ saveCurrent(); slides.push({text:"", images:[]}); current=slides.length-1; updateSlide();}
+function deleteCurrentSlide(){ if(slides.length<=1) return; slides.splice(current,1); if(current>=slides.length) current=slides.length-1; updateSlide();}
+
+// Voice recognition
 function startRecognition(targetId) {
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = 'sk-SK';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-  recognition.onresult = function(event) {
-    const transcript = event.results[0][0].transcript;
+  recognition.lang = "sk-SK";
+  recognition.interimResults=false;
+  recognition.maxAlternatives=1;
+  recognition.onresult = function(event){
+    const transcript=event.results[0][0].transcript;
     document.getElementById(targetId).value += transcript;
-    slides[current] = document.getElementById(targetId).value;
+    if(targetId==='slideText') updateSlide();
   };
-  recognition.onerror = function(event){ alert("Chyba pri rozpoznávaní hlasu: "+event.error); }
+  recognition.onerror = e=>alert("Chyba pri rozpoznávaní hlasu: "+e.error);
   recognition.start();
 }
-function startVoiceInput(inputId) { startRecognition(inputId); }
+function startVoiceInput(inputId){ startRecognition(inputId); }
 
-// Správa snímok
-function updateSlide() {
-  document.getElementById('slideTextInput').value = slides[current];
-  document.getElementById('slideCount').innerText = `Snímka: ${current + 1} / ${slides.length}`;
-}
-function saveCurrent() { slides[current] = document.getElementById('slideTextInput').value; }
-function nextSlide() { saveCurrent(); if(current<slides.length-1) current++; updateSlide(); }
-function prevSlide() { saveCurrent(); if(current>0) current--; updateSlide(); }
-function newSlide() { saveCurrent(); slides.push(""); current=slides.length-1; updateSlide(); }
-function deleteCurrentSlide() { if(slides.length<=1) return; slides.splice(current,1); if(current>=slides.length) current=slides.length-1; updateSlide(); }
-
-// Ukladanie a načítanie
+// Storage
 function savePresentation() {
   saveCurrent();
   const name = document.getElementById("presentationName").value;
-  localStorage.setItem("presentation_" + name, JSON.stringify(slides));
+  localStorage.setItem("presentation_"+name, JSON.stringify(slides));
   renderSaved();
   alert("Prezentácia bola uložená.");
 }
-function renderSaved() {
-  const container = document.getElementById("savedList");
-  container.innerHTML = "";
+function renderSaved(){
+  const container=document.getElementById("savedList");
+  container.innerHTML="";
   Object.keys(localStorage).filter(k=>k.startsWith("presentation_")).forEach(key=>{
-    const name = key.replace("presentation_","");
-    const div = document.createElement("div");
+    const name=key.replace("presentation_","");
+    const div=document.createElement("div");
     div.className="saved-name";
-    div.innerHTML = `${name} <button onclick="loadPresentation('${name}')">Načítať</button> <button onclick="deletePresentation('${name}')">X</button>`;
+    div.innerHTML=`${name} <button onclick="loadPresentation('${name}')">Načítať</button> <button onclick="deletePresentation('${name}')">X</button>`;
     container.appendChild(div);
   });
 }
 function loadPresentation(name){
-  const raw = localStorage.getItem("presentation_" + name);
+  const raw=localStorage.getItem("presentation_"+name);
   if(!raw) return;
-  slides = JSON.parse(raw); current=0;
+  slides=JSON.parse(raw);
+  current=0;
   document.getElementById("presentationName").value=name;
   updateSlide();
 }
 function deletePresentation(name){
-  localStorage.removeItem("presentation_" + name);
+  localStorage.removeItem("presentation_"+name);
   renderSaved();
 }
 
-// Download – textová náhrada pre PowerPoint
+// Download
 function downloadPPTX(){
   saveCurrent();
-  let content = slides.map((txt,i)=>`Slide ${i+1}\n====\n${txt}\n`).join("\n\n");
-  const blob = new Blob([content],{type:'text/plain;charset=utf-8'});
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = document.getElementById("presentationName").value+".ppt.txt";
+  let content = slides.map((s,i)=>`Slide ${i+1}\n====\n${s.text}\n`).join("\n\n");
+  const blob = new Blob([content],{type:'text/plain'});
+  const link=document.createElement("a");
+  link.href=URL.createObjectURL(blob);
+  link.download=document.getElementById("presentationName").value+".txt";
   link.click();
 }
 
+function downloadHTML(){
+  saveCurrent();
+  let slidesHTML = slides.map((s,i)=>`
+    <div style="width:800px;height:400px;padding:20px;margin:20px auto;border-radius:15px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.2);background:linear-gradient(135deg,#ffffff,#e0e0e0);
+      font-size:24px; line-height:1.5; color:#222; position:relative;">
+      <h2>Slide ${i+1}</h2>
+      <p>${s.text.replace(/\n/g,"<br>")}</p>
+      ${s.images.map(img=>`<img src="${img}" style="max-width:200px;max-height:150px;border-radius:10px;">`).join('')}
+    </div>
+  `).join("\n");
+
+  const htmlContent = `<!DOCTYPE html>
+  <html lang="sk"><head><meta charset="UTF-8"><title>${document.getElementById("presentationName").value}</title></head>
+  <body style="font-family:'Segoe UI',sans-serif;background:#f0f2f5;">${slidesHTML}</body></html>`;
+
+  const blob = new Blob([htmlContent],{type:'text/html'});
+  const link=document.createElement("a");
+  link.href=URL.createObjectURL(blob);
+  link.download=document.getElementById("presentationName").value+".html";
+  link.click();
+}
+
+// Init
 updateSlide();
 renderSaved();
 </script>
 
+<p style="font-size: 14px; color: gray; margin-top: 20px;">
+This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/<br>
+© 2025 Erik Mohylák – All rights reserved.
+</p>
 </body>
-</html>
+  </html>
