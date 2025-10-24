@@ -1,240 +1,103 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ErikAI Dokumenty</title>
-  <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f8f9fa;
-      color: #222;
-      text-align: center;
-      padding: 2rem;
-    }
-    h1 {
-      color: #0d6efd;
-    }
-    textarea {
-      width: 100%;
-      max-width: 800px;
-      height: 400px;
-      margin: 1rem auto;
-      padding: 1rem;
-      font-size: 1rem;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      resize: vertical;
-      display: block;
-    }
-    input[type="file"],
-    input[type="text"] {
-      margin: 0.5rem;
-      padding: 0.5rem;
-      width: 80%;
-      max-width: 500px;
-      font-size: 1rem;
-    }
-    button {
-      background-color: #0d6efd;
-      color: white;
-      border: none;
-      padding: 0.6rem 1.2rem;
-      margin: 0.4rem;
-      border-radius: 6px;
-      font-size: 1rem;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0b5ed7;
-    }
-    .info {
-      font-size: 0.9rem;
-      color: gray;
-      margin-top: 1rem;
-    }
-    .doc-list {
-      margin-top: 1.5rem;
-    }
-    .doc-item {
-      display: inline-block;
-      margin: 4px;
-      background-color: #e9ecef;
-      padding: 5px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .doc-item:hover {
-      background-color: #ced4da;
-    }
-    .image-preview {
-      max-width: 200px;
-      margin: 5px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI Dokumenty s fotkami</title>
+<style>
+  body { font-family: Arial; padding: 20px; text-align: center; background: #f8f9fa; }
+  textarea { width: 100%; max-width: 800px; height: 300px; margin: 10px 0; padding: 10px; }
+  .preview img { max-width: 200px; margin: 5px; }
+  button, input { margin: 5px; padding: 8px; }
+</style>
 </head>
 <body>
-<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-
-<script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
-</script>
-
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
-
-<p id="cas" style="font-size: 18px;"></p>
-<script>
-function aktualizujCas() {
-  const teraz = new Date();
-  const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' };
-  const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-  document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-}
-setInterval(aktualizujCas, 1000);
-aktualizujCas();
-</script>
-
-<div id="google_translate_element"></div>
-<script type="text/javascript">
-function googleTranslateElementInit() {
-  new google.translate.TranslateElement({
-    pageLanguage: 'sk',
-    includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-  }, 'google_translate_element');
-}
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
 <h1>📄 ErikAI Dokumenty</h1>
 
-<input type="file" id="fileInput" accept=".txt,.docx" />
-<input type="text" id="docName" placeholder="Zadaj názov dokumentu..." />
+<input type="file" id="imageInput" accept="image/*" multiple>
+<div class="preview" id="imagePreview"></div>
 
-<textarea id="textArea" placeholder="Tu bude tvoj dokument alebo si napíš vlastný..."></textarea>
-
-<!-- Mikrofón pre názov dokumentu -->
-<button onclick="rozpravaDoInputu('docName')">🎙️ Názov</button>
-<!-- Mikrofón pre obsah dokumentu -->
-<button onclick="rozpravaDoTextArea('textArea')">🎤 Text</button>
-
-<!-- Tlačidlo na vloženie obrázka -->
-<input type="file" id="imgInput" accept="image/*" multiple>
-<button onclick="vlozObrazky()">🖼️ Pridať obrázok</button>
-<div id="imgPreview"></div>
+<input type="text" id="docName" placeholder="Zadaj názov dokumentu">
+<textarea id="textArea" placeholder="Tu bude text dokumentu..."></textarea>
 
 <div>
   <button onclick="ulozDokument()">💾 Uložiť</button>
   <button onclick="nacitajDokument()">📂 Načítať</button>
-  <button onclick="stiahniTXT()">⬇️ TXT</button>
-  <button onclick="stiahniDOCX()">⬇️ DOCX</button>
-  <button onclick="stiahniHTML()">⬇️ HTML</button>
+  <button onclick="stiahniTXT()">⬇ TXT</button>
+  <button onclick="stiahniDOCX()">⬇ DOCX</button>
+  <button onclick="stiahniHTML()">⬇ HTML</button>
   <button onclick="vymazDokument()">🗑️ Vymazať</button>
 </div>
 
-<div class="info" id="statusInfo">Automatické ukladanie prebieha každé 3 sekundy.</div>
-<div class="doc-list" id="docList"></div>
+<div id="docList"></div>
 
 <script>
-const textarea = document.getElementById("textArea");
+const textArea = document.getElementById("textArea");
 const docNameInput = document.getElementById("docName");
-const statusInfo = document.getElementById("statusInfo");
+const imagePreview = document.getElementById("imagePreview");
 
-// Mikrofón funkcie
-function rozpravaDoInputu(id) {
-  const input = document.getElementById(id);
-  const rec = new webkitSpeechRecognition();
-  rec.lang = 'sk-SK';
-  rec.onresult = (e) => { input.value += e.results[0][0].transcript; };
-  rec.start();
-}
-
-function rozpravaDoTextArea(id) {
-  const pole = document.getElementById(id);
-  const rec = new webkitSpeechRecognition();
-  rec.lang = 'sk-SK';
-  rec.onresult = (e) => {
-    const text = e.results[0][0].transcript;
-    const start = pole.selectionStart;
-    const end = pole.selectionEnd;
-    pole.value = pole.value.substring(0, start) + text + pole.value.substring(end);
-    pole.setSelectionRange(start + text.length, start + text.length);
-    pole.focus();
-  };
-  rec.start();
-}
-
-// Vloženie obrázkov
-function vlozObrazky() {
-  const input = document.getElementById("imgInput");
-  const preview = document.getElementById("imgPreview");
-  for (let i=0; i<input.files.length; i++){
-    const file = input.files[i];
+// pridanie obrázkov do preview
+document.getElementById("imageInput").addEventListener("change", function() {
+  imagePreview.innerHTML = '';
+  const files = Array.from(this.files);
+  files.forEach(file => {
     const reader = new FileReader();
-    reader.onload = function(e){
-      const imgTag = `<img src="${e.target.result}" class="image-preview">`;
-      textarea.value += `\n${imgTag}\n`;
-      preview.innerHTML += imgTag;
+    reader.onload = function(e) {
+      const img = document.createElement("img");
+      img.src = e.target.result;
+      imagePreview.appendChild(img);
     };
     reader.readAsDataURL(file);
-  }
-}
+  });
+});
 
-// Uložiť dokument
+// uloženie dokumentu (text + Base64 obrázky do localStorage ako objekt)
 function ulozDokument() {
   const name = docNameInput.value.trim();
-  if (!name) return alert("Zadaj názov dokumentu.");
-  localStorage.setItem("erikai_doc_" + name, textarea.value);
-  statusInfo.innerText = `✅ Dokument "${name}" uložený.`;
+  if(!name) return alert("Zadaj názov dokumentu.");
+  const images = Array.from(imagePreview.querySelectorAll("img")).map(img => img.src);
+  const obj = { text: textArea.value, images };
+  localStorage.setItem("erikai_doc_" + name, JSON.stringify(obj));
   refreshZoznam();
 }
 
-// Načítať dokument podľa mena
+// načítanie dokumentu
 function nacitajDokument() {
   const name = docNameInput.value.trim();
   const data = localStorage.getItem("erikai_doc_" + name);
-  if (data) {
-    textarea.value = data;
-    statusInfo.innerText = `✅ Dokument "${name}" načítaný.`;
-    zobrazObrazky();
-  } else {
-    alert("Dokument s týmto názvom neexistuje.");
-  }
+  if(!data) return alert("Dokument neexistuje.");
+  const obj = JSON.parse(data);
+  textArea.value = obj.text;
+  imagePreview.innerHTML = '';
+  obj.images.forEach(src => {
+    const img = document.createElement("img");
+    img.src = src;
+    imagePreview.appendChild(img);
+  });
 }
 
-// Vymazať dokument
+// vymazanie dokumentu
 function vymazDokument() {
   const name = docNameInput.value.trim();
-  if (!name) return;
+  if(!name) return;
   localStorage.removeItem("erikai_doc_" + name);
-  textarea.value = "";
-  document.getElementById("imgPreview").innerHTML = "";
-  statusInfo.innerText = `🗑️ Dokument "${name}" vymazaný.`;
+  textArea.value = '';
+  imagePreview.innerHTML = '';
   refreshZoznam();
 }
 
-// Stiahnuť TXT
+// stiahnutie TXT
 function stiahniTXT() {
-  const blob = new Blob([textarea.value], { type: 'text/plain;charset=utf-8' });
+  const blob = new Blob([textArea.value], { type: 'text/plain;charset=utf-8' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = (docNameInput.value || "erikai_dokument") + ".txt";
   link.click();
 }
 
-// Stiahnuť DOCX (základne)
+// stiahnutie DOCX (iba text)
 function stiahniDOCX() {
-  const content = textarea.value;
+  const content = textArea.value;
   const blob = new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -242,70 +105,37 @@ function stiahniDOCX() {
   link.click();
 }
 
-// Stiahnuť HTML s obrázkami
+// stiahnutie HTML (text + obrázky)
 function stiahniHTML() {
-  const content = `
-    <html><head><meta charset="UTF-8"><title>${docNameInput.value}</title></head>
-    <body>${textarea.value}</body></html>`;
-  const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
+  const images = Array.from(imagePreview.querySelectorAll("img")).map(img => `<img src="${img.src}">`).join("<br>");
+  const htmlContent = `<html><head><meta charset="UTF-8"><title>${docNameInput.value || 'Dokument'}</title></head><body><p>${textArea.value.replace(/\n/g,"<br>")}</p>${images}</body></html>`;
+  const blob = new Blob([htmlContent], { type: 'text/html' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = (docNameInput.value || "erikai_dokument") + ".html";
   link.click();
 }
 
-// Zobrazenie obrázkov v preview po načítaní
-function zobrazObrazky() {
-  const preview = document.getElementById("imgPreview");
-  const regex = /<img[^>]+src="([^">]+)"/g;
-  preview.innerHTML = "";
-  let match;
-  while ((match = regex.exec(textarea.value)) !== null) {
-    preview.innerHTML += `<img src="${match[1]}" class="image-preview">`;
-  }
-}
-
-// Načítanie súborov
-document.getElementById("fileInput").addEventListener("change", function () {
-  const file = this.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  if (file.name.endsWith(".docx")) {
-    reader.onload = function(event) {
-      const arrayBuffer = event.target.result;
-      mammoth.extractRawText({ arrayBuffer: arrayBuffer })
-        .then(result => textarea.value = result.value)
-        .catch(err => alert("Chyba pri načítaní .docx súboru"));
-    };
-    reader.readAsArrayBuffer(file);
-  } else {
-    reader.onload = function(event) { textarea.value = event.target.result; };
-    reader.readAsText(file, "UTF-8");
-  }
-});
-
-// Zoznam uložených dokumentov
+// zoznam uložených dokumentov
 function refreshZoznam() {
   const keys = Object.keys(localStorage).filter(k => k.startsWith("erikai_doc_"));
-  const listDiv = document.getElementById("docList");
-  listDiv.innerHTML = "<h3>📚 Uložené dokumenty:</h3>";
+  const div = document.getElementById("docList");
+  div.innerHTML = "<h3>📚 Uložené dokumenty:</h3>";
   keys.forEach(k => {
     const name = k.replace("erikai_doc_", "");
     const el = document.createElement("div");
-    el.className = "doc-item";
     el.innerText = name;
-    el.onclick = () => { textarea.value = localStorage.getItem(k); docNameInput.value = name; statusInfo.innerText = `✅ Dokument "${name}" načítaný.`; zobrazObrazky(); };
-    listDiv.appendChild(el);
+    el.style.cursor = "pointer";
+    el.style.margin = "2px";
+    el.onclick = () => {
+      docNameInput.value = name;
+      nacitajDokument();
+    };
+    div.appendChild(el);
   });
 }
 
 refreshZoznam();
 </script>
-
-<p style="font-size: 14px; color: gray; margin-top: 20px;">
-This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-</p>
 </body>
   </html>
