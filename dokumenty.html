@@ -1,185 +1,95 @@
-<!DOCTYPE html>
-<html lang="sk">
+<!DOCTYPE html><html lang="sk">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ErikAI Dokumenty</title>
+<title>ErikAI Dokumenty v2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.2.1/docx.umd.js"></script>
 <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
 <style>
-  body { font-family: Arial, sans-serif; background-color: #f4f6f8; color: #222; text-align: center; padding: 2rem; transition: background 0.3s, color 0.3s; }
-  body.dark-mode { background-color: #121212; color: #f0f0f0; }
-  h1 { color: #0d6efd; margin-bottom: 1rem; }
-  textarea { width: 100%; max-width: 800px; height: 400px; margin: 1rem auto; padding: 1rem; font-size: 1rem; border-radius: 8px; border: 1px solid #ccc; resize: vertical; display: block; background: #fff; color: #000; transition: background 0.3s, color 0.3s; }
-  body.dark-mode textarea { background: #1e1e1e; color: #f0f0f0; }
-  input[type="file"], input[type="text"] { margin: 0.5rem; padding: 0.5rem; width: 80%; max-width: 500px; font-size: 1rem; border-radius: 5px; border: 1px solid #ccc; }
-  button { background-color: #0d6efd; color: white; border: none; padding: 0.6rem 1.2rem; margin: 0.3rem; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: background 0.3s; }
+  body { font-family: Arial, sans-serif; background-color: #f8f9fa; color: #222; text-align: center; padding: 2rem; }
+  h1 { color: #0d6efd; }
+  textarea { width: 100%; max-width: 800px; height: 400px; margin: 1rem auto; padding: 1rem; font-size: 1rem; border-radius: 8px; border: 1px solid #ccc; resize: vertical; display: block; }
+  input[type="file"], input[type="text"] { margin: 0.5rem; padding: 0.5rem; width: 80%; max-width: 500px; font-size: 1rem; }
+  button { background-color: #0d6efd; color: white; border: none; padding: 0.6rem 1.2rem; margin: 0.4rem; border-radius: 6px; font-size: 1rem; cursor: pointer; }
   button:hover { background-color: #0b5ed7; }
-  button.delete { background-color: #f44336; }
-  button.delete:hover { background-color: #c62828; }
-  .doc-list { margin-top: 1.5rem; display: flex; flex-wrap: wrap; justify-content: center; }
-  .doc-item { display: inline-block; margin: 4px; background-color: #e9ecef; padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background 0.3s; }
+  .info { font-size: 0.9rem; color: gray; margin-top: 1rem; }
+  .doc-list { margin-top: 1.5rem; }
+  .doc-item { display: inline-block; margin: 4px; background-color: #e9ecef; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
   .doc-item:hover { background-color: #ced4da; }
-  #statusInfo { font-size: 0.9rem; color: gray; margin-top: 1rem; }
 </style>
 </head>
 <body>
-
 <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-<p id="cas"></p>
-
-<h1>📄 ErikAI Dokumenty</h1>
-
-<input type="file" id="fileInput" accept=".txt,.docx" />
+<script>
+function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+</script>
+<style>body.dark-mode { background-color: #121212; color: white; }</style>
+<p id="cas" style="font-size: 18px;"></p>
+<script>
+function aktualizujCas() {
+  const teraz = new Date();
+  const moznosti = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+  const casText = teraz.toLocaleDateString('sk-SK', moznosti);
+  document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
+}
+setInterval(aktualizujCas, 1000);
+aktualizujCas();
+</script>
+<div id="google_translate_element"></div>
+<script type="text/javascript">
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({ pageLanguage: 'sk', includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN', layout: google.translate.TranslateElement.InlineLayout.SIMPLE }, 'google_translate_element');
+}
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+<h1>📄 ErikAI Dokumenty v2</h1>
+<input type="file" id="fileInput" accept=".txt,.docx,.png,.jpg,.jpeg" multiple />
 <input type="text" id="docName" placeholder="Zadaj názov dokumentu..." />
 <textarea id="textArea" placeholder="Tu bude tvoj dokument alebo si napíš vlastný..."></textarea>
-
-<div>
-  <button onclick="rozpravaDoInputu('docName')">🎙️ Názov</button>
-  <button onclick="rozpravaDoTextArea('textArea')">🎤 Text</button>
-</div>
-
+<!-- Mikrofón pre názov dokumentu -->
+<button onclick="rozpravaDoInputu('docName')">🎙️ Názov</button>
+<!-- Mikrofón pre obsah dokumentu -->
+<button onclick="rozpravaDoTextArea('textArea')">🎤 Text</button>
+<button onclick="pridajObrazok()">🖼️ Pridať obrázok</button>
 <div>
   <button onclick="ulozDokument()">💾 Uložiť</button>
   <button onclick="nacitajDokument()">📂 Načítať</button>
   <button onclick="stiahniTXT()">⬇️ TXT</button>
   <button onclick="stiahniDOCX()">⬇️ DOCX</button>
-  <button class="delete" onclick="vymazDokument()">🗑️ Vymazať</button>
+  <button onclick="stiahniHTML()">⬇️ HTML</button>
+  <button onclick="vymazDokument()">🗑️ Vymazať</button>
 </div>
-
-<div id="statusInfo">Automatické ukladanie prebieha každé 3 sekundy.</div>
+<div class="info" id="statusInfo">Automatické ukladanie prebieha každé 3 sekundy.</div>
 <div class="doc-list" id="docList"></div>
-
 <script>
-function toggleTheme() { document.body.classList.toggle('dark-mode'); }
-
-function aktualizujCas() {
-  const teraz = new Date();
-  const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' };
-  document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
-}
-setInterval(aktualizujCas, 1000); aktualizujCas();
-
 const textarea = document.getElementById("textArea");
 const docNameInput = document.getElementById("docName");
-const statusInfo = document.getElementById("statusInfo");
+const statusInfo = document.getElementById("statusInfo");function refreshZoznam() { const keys = Object.keys(localStorage).filter(k => k.startsWith("erikai_doc_")); const listDiv = document.getElementById("docList"); listDiv.innerHTML = "<h3>📚 Uložené dokumenty:</h3>"; keys.forEach(k => { const name = k.replace("erikai_doc_", ""); const el = document.createElement("div"); el.className = "doc-item"; el.innerText = name; el.onclick = () => { textarea.value = localStorage.getItem(k); docNameInput.value = name; statusInfo.innerText = ✅ Dokument "${name}" načítaný.; }; listDiv.appendChild(el); }); }
 
-function refreshZoznam() {
-  const keys = Object.keys(localStorage).filter(k => k.startsWith("erikai_doc_"));
-  const listDiv = document.getElementById("docList");
-  listDiv.innerHTML = "";
-  keys.forEach(k => {
-    const name = k.replace("erikai_doc_", "");
-    const el = document.createElement("div");
-    el.className = "doc-item";
-    el.innerText = name;
-    el.onclick = () => { textarea.value = localStorage.getItem(k); docNameInput.value = name; statusInfo.innerText = `✅ Dokument "${name}" načítaný.`; };
-    listDiv.appendChild(el);
-  });
-}
+function ulozDokument() { const name = docNameInput.value.trim(); if (!name) return alert("Zadaj názov dokumentu."); localStorage.setItem("erikai_doc_" + name, textarea.value); statusInfo.innerText = ✅ Dokument "${name}" uložený.; refreshZoznam(); }
 
-// Uloženie dokumentu
-function ulozDokument() {
-  const name = docNameInput.value.trim();
-  if (!name) return alert("Zadaj názov dokumentu.");
-  localStorage.setItem("erikai_doc_" + name, textarea.value);
-  statusInfo.innerText = `✅ Dokument "${name}" uložený.`;
-  refreshZoznam();
-}
+function nacitajDokument() { const name = docNameInput.value.trim(); const data = localStorage.getItem("erikai_doc_" + name); if (data) { textarea.value = data; statusInfo.innerText = ✅ Dokument "${name}" načítaný.; } else { alert("Dokument s týmto názvom neexistuje."); } }
 
-// Načítať dokument podľa mena
-function nacitajDokument() {
-  const name = docNameInput.value.trim();
-  const data = localStorage.getItem("erikai_doc_" + name);
-  if (data) { textarea.value = data; statusInfo.innerText = `✅ Dokument "${name}" načítaný.`; } 
-  else alert("Dokument s týmto názvom neexistuje.");
-}
+function vymazDokument() { const name = docNameInput.value.trim(); if (!name) return; localStorage.removeItem("erikai_doc_" + name); textarea.value = ""; statusInfo.innerText = 🗑️ Dokument "${name}" vymazaný.; refreshZoznam(); }
 
-// Vymazať dokument
-function vymazDokument() {
-  const name = docNameInput.value.trim();
-  if (!name) return;
-  localStorage.removeItem("erikai_doc_" + name);
-  textarea.value = "";
-  statusInfo.innerText = `🗑️ Dokument "${name}" vymazaný.`;
-  refreshZoznam();
-}
+function stiahniTXT() { const blob = new Blob([textarea.value], { type: 'text/plain;charset=utf-8' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = (docNameInput.value || "erikai_dokument") + ".txt"; link.click(); }
 
-// Stiahnuť ako TXT
-function stiahniTXT() {
-  const blob = new Blob([textarea.value], { type: 'text/plain;charset=utf-8' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = (docNameInput.value || "erikai_dokument") + ".txt";
-  link.click();
-}
+function stiahniHTML() { const htmlContent = <html><head><meta charset='UTF-8'><title>${docNameInput.value}</title></head><body>${textarea.value.replace(/\n/g,'<br>')}</body></html>; const blob = new Blob([htmlContent], { type: 'text/html' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = (docNameInput.value || "erikai_dokument") + ".html"; link.click(); }
 
-// Stiahnuť ako DOCX (jednoduchý obsah)
-function stiahniDOCX() {
-  const content = textarea.value.replace(/\n/g, "</w:t></w:r></w:p><w:p><w:r><w:t>");
-  const docxContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-  <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body><w:p><w:r><w:t>${content}</w:t></w:r></w:p></w:body>
-  </w:document>`;
-  const blob = new Blob([docxContent], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = (docNameInput.value || "erikai_dokument") + ".docx";
-  link.click();
-}
+function stiahniDOCX() { const { Document, Packer, Paragraph, TextRun } = docx; const doc = new Document(); const paragraphs = textarea.value.split('\n').map(line => new Paragraph({ children: [new TextRun(line)] })); doc.addSection({ children: paragraphs }); Packer.toBlob(doc).then(blob => { const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = (docNameInput.value || "erikai_dokument") + ".docx"; link.click(); }); }
 
-// Načítať z txt alebo docx
-document.getElementById("fileInput").addEventListener("change", function () {
-  const file = this.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  if (file.name.endsWith(".docx")) {
-    reader.onload = function (event) {
-      const arrayBuffer = event.target.result;
-      mammoth.extractRawText({ arrayBuffer: arrayBuffer })
-        .then(result => textarea.value = result.value)
-        .catch(err => alert("Chyba pri načítaní .docx súboru"));
-    };
-    reader.readAsArrayBuffer(file);
-  } else {
-    reader.onload = function (event) { textarea.value = event.target.result; };
-    reader.readAsText(file, "UTF-8");
-  }
-});
+function pridajObrazok() { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = e => { const file = e.target.files[0]; const reader = new FileReader(); reader.onload = function(evt) { textarea.value += <img src='${evt.target.result}' alt='obrazok'>\n; }; reader.readAsDataURL(file); }; input.click(); }
 
-// Hlasové zadávanie
-function rozpravaDoInputu(id) {
-  const input = document.getElementById(id);
-  const rec = new webkitSpeechRecognition();
-  rec.lang = 'sk-SK';
-  rec.onresult = (e) => { input.value += e.results[0][0].transcript; };
-  rec.start();
-}
-function rozpravaDoTextArea(id) {
-  const pole = document.getElementById(id);
-  const rec = new webkitSpeechRecognition();
-  rec.lang = 'sk-SK';
-  rec.onresult = (e) => {
-    const text = e.results[0][0].transcript;
-    const start = pole.selectionStart;
-    const end = pole.selectionEnd;
-    pole.value = pole.value.substring(0, start) + text + pole.value.substring(end);
-    pole.setSelectionRange(start + text.length, start + text.length);
-    pole.focus();
-  };
-  rec.start();
-}
+function rozpravaDoInputu(id) { const input = document.getElementById(id); const rec = new webkitSpeechRecognition(); rec.lang = 'sk-SK'; rec.onresult = (e) => { input.value += e.results[0][0].transcript; }; rec.start(); } function rozpravaDoTextArea(id) { const pole = document.getElementById(id); const rec = new webkitSpeechRecognition(); rec.lang = 'sk-SK'; rec.onresult = (e) => { const text = e.results[0][0].transcript; const start = pole.selectionStart; const end = pole.selectionEnd; pole.value = pole.value.substring(0, start) + text + pole.value.substring(end); pole.setSelectionRange(start + text.length, start + text.length); pole.focus(); }; rec.start(); }
 
-// Automatické ukladanie každé 3 sekundy
-setInterval(() => { if (docNameInput.value.trim()) ulozDokument(); }, 3000);
+// Načítanie súborov z PC (txt, docx, obrázky) document.getElementById("fileInput").addEventListener("change", function() { const files = this.files; Array.from(files).forEach(file => { const reader = new FileReader(); if(file.name.endsWith('.docx')) { reader.onload = function(event) { mammoth.extractRawText({ arrayBuffer: event.target.result }).then(result => textarea.value += result.value + '\n'); }; reader.readAsArrayBuffer(file); } else if(file.name.endsWith('.txt')) { reader.onload = e => textarea.value += e.target.result + '\n'; reader.readAsText(file, 'UTF-8'); } else if(file.type.startsWith('image/')) { reader.onload = e => textarea.value += <img src='${e.target.result}' alt='obrazok'>\n; reader.readAsDataURL(file); } }); });
 
-refreshZoznam();
-</script>
+refreshZoznam(); </script>
 
 <p style="font-size: 14px; color: gray; margin-top: 20px;">
-This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
+This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/<br>
 © 2025 Erik Mohylák – All rights reserved.
 </p>
-
 </body>
   </html>
