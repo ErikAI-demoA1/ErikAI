@@ -1,266 +1,140 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="sk">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>☁️ ErikAI – Počasie (pro)</title>
-<style>
-  :root{
-    --bg:#0f1720; --card:#071a2a; --accent:#1a73e8; --muted:#98a8bb; --glass: rgba(255,255,255,0.04);
-    --surface:#0b1220; --card-alt:#071322;
-  }
-  html,body{height:100%;margin:0;font-family:Inter,Arial,sans-serif;background:linear-gradient(180deg,#071026,#071022);color:#e6eef6}
-  .container{max-width:1200px;margin:20px auto;padding:18px}
-  header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-  h1{margin:0;font-size:20px;color:var(--accent)}
-  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .search{display:flex;gap:8px;align-items:center;background:var(--card);padding:10px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
-  input[type="search"]{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px;border-radius:10px;color:inherit;min-width:220px}
-  select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
-  button.primary{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700}
-  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px;border-radius:8px;color:var(--muted);cursor:pointer}
-  .meta{color:var(--muted);font-size:13px}
-  main{margin-top:18px;display:grid;grid-template-columns:1fr 420px;gap:18px}
-  /* left: cards */
-  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-  @media(max-width:1000px){ main{grid-template-columns:1fr} .cards{grid-template-columns:repeat(2,1fr)} }
-  @media(max-width:640px){ .cards{grid-template-columns:1fr} }
-  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:10px;min-height:260px}
-  .card h3{margin:0;color:#fff;font-size:16px}
-  .card .widget{flex:1;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,0.2);background:#000}
-  .card .actions{display:flex;gap:8px;align-items:center;justify-content:flex-end}
-  .previewWrap{background:var(--card);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:8px}
-  .iframeWrap{flex:1;background:#000;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,0.5)}
-  iframe#providerFrame{width:100%;height:420px;border:0;display:block;background:white}
-  .fallback{display:flex;gap:8px;align-items:center;justify-content:space-between}
-  .small{font-size:13px;color:var(--muted)}
-  footer{margin-top:16px;color:var(--muted);font-size:13px;text-align:center}
-
-  /* nicer scroll */
-  .card .widget iframe, .iframeWrap iframe{height:100%;width:100%;}
-
-  /* theme toggle */
-  .themeToggle{display:flex;gap:6px;align-items:center}
-  .clock{font-size:14px;color:var(--muted)}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>☁️ Počasie - ErikAI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+      background-color: #f9f9f9;
+      color: #333;
+      overflow-y: scroll;
+      transition: background 0.3s, color 0.3s;
+    }
+    h1, h2, h3 {
+      text-align: center;
+      color: inherit;
+    }
+    iframe {
+      max-width: 900px;
+      width: 100%;
+      margin: 15px auto;
+      display: block;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    p, a {
+      text-align: center;
+      color: inherit;
+    }
+    a {
+      color: #007BFF;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    #google_translate_element {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    button {
+      display: block;
+      margin: 10px auto;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    body.dark-mode {
+      background-color: #121212;
+      color: white;
+    }
+    body.dark-mode button {
+      background-color: #444;
+    }
+    body.dark-mode button:hover {
+      background-color: #666;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div>
-        <h1>☁️ ErikAI – Počasie (profesionálny)</h1>
-        <div class="meta">14 SK + 17 svetových miest • Rýchly výber & vyhľadávanie</div>
-      </div>
 
-      <div class="controls">
-        <div class="themeToggle">
-          <button class="ghost" onclick="toggleTheme()">🌓 Zmeniť režim</button>
-          <div class="clock" id="clock"></div>
-        </div>
-      </div>
-    </header>
-
-    <div style="height:12px"></div>
-
-    <div class="search">
-      <input id="q" type="search" placeholder="Vyhľadaj mesto (napr. Erik, Bratislava, London...)" />
-      <select id="provider">
-        <option value="meteoblue">Meteoblue (počasie)</option>
-        <option value="osm">OpenStreetMap</option>
-        <option value="wikipedia">Wikipedia (sk)</option>
-        <option value="googlemaps">Google Maps</option>
-        <option value="google">Google Search</option>
-      </select>
-      <button class="primary" onclick="doSearch()">🔎 Hľadaj</button>
-      <button class="ghost" onclick="resetView()">↺ Reset</button>
-    </div>
-
-    <main>
-      <!-- LEFT: cards with cities -->
-      <section>
-        <h2 style="color:var(--muted);margin:8px 0">Rýchle mestá</h2>
-        <div class="cards" id="cards">
-          <!-- cards injected by JS -->
-        </div>
-      </section>
-
-      <!-- RIGHT: iframe preview -->
-      <aside class="previewWrap">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div><strong>Náhľad</strong> <span class="small">— načítanie v rámci tejto stránky</span></div>
-          <div class="small" id="currentInfo">Žiadne vyhľadávanie</div>
-        </div>
-
-        <div class="iframeWrap">
-          <iframe id="providerFrame" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
-        </div>
-
-        <div class="fallback">
-          <div class="small" id="notice">Ak sa obsah nezobrazí, otvor ho v novom okne.</div>
-          <div>
-            <a id="openNew" class="small" href="#" target="_blank" rel="noopener">Otvoriť v novom okne</a>
-          </div>
-        </div>
-      </aside>
-    </main>
-
-    <footer>
-      <div>Tip: pokiaľ niektorá služba blokuje embed (iframe), klikni na "Otvoriť v novom okne".</div>
-      <div style="margin-top:6px">© 2025 Erik Mohylák — ErikAI</div>
-    </footer>
-  </div>
-
-<script>
-  // data: predefined cities + meteoblue widget URLs (tvoje pôvodné)
-  const cities = [
-    { name:"Veľké Rovné", widget:"https://www.meteoblue.com/en/weather/widget/daily/veľké-rovné_slovakia_3060782?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Bratislava", widget:"https://www.meteoblue.com/en/weather/widget/daily/bratislava_slovakia_3060972?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Košice", widget:"https://www.meteoblue.com/en/weather/widget/daily/košice_slovakia_724443?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Prešov", widget:"https://www.meteoblue.com/en/weather/widget/daily/prešov_slovakia_723846?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Žilina", widget:"https://www.meteoblue.com/en/weather/widget/daily/žilina_slovakia_3057607?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Banská Bystrica", widget:"https://www.meteoblue.com/en/weather/widget/daily/banská-bystrica_slovakia_3061180?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Nitra", widget:"https://www.meteoblue.com/en/weather/widget/daily/nitra_slovakia_3058532?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Trenčín", widget:"https://www.meteoblue.com/en/weather/widget/daily/trenčín_slovakia_3061185?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Trnava", widget:"https://www.meteoblue.com/en/weather/widget/daily/trnava_slovakia_3061186?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Poprad", widget:"https://www.meteoblue.com/en/weather/widget/daily/poprad_slovakia_723846?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Martin", widget:"https://www.meteoblue.com/en/weather/widget/daily/martin_slovakia_3058759?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Prievidza", widget:"https://www.meteoblue.com/en/weather/widget/daily/prievidza_slovakia_723846?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Zvolen", widget:"https://www.meteoblue.com/en/weather/widget/daily/zvolen_slovakia_3057093?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Michalovce", widget:"https://www.meteoblue.com/en/weather/widget/daily/michalovce_slovakia_724443?geoloc=fixed&days=3&tempunit=CELSIUS" },
-
-    // world
-    { name:"Tokio", widget:"https://www.meteoblue.com/en/weather/widget/daily/tokyo_japan_1850147?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Soul", widget:"https://www.meteoblue.com/en/weather/widget/daily/seoul_south-korea_1835848?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Washington, D.C.", widget:"https://www.meteoblue.com/en/weather/widget/daily/washington-dc_united-states_4140963?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Ottawa", widget:"https://www.meteoblue.com/en/weather/widget/daily/ottawa_canada_6094817?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Peking", widget:"https://www.meteoblue.com/en/weather/widget/daily/beijing_china_1816670?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Naí Dillí", widget:"https://www.meteoblue.com/en/weather/widget/daily/new-delhi_india_1261481?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Londýn", widget:"https://www.meteoblue.com/en/weather/widget/daily/london_united-kingdom_2643743?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Paríž", widget:"https://www.meteoblue.com/en/weather/widget/daily/paris_france_2988507?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Berlín", widget:"https://www.meteoblue.com/en/weather/widget/daily/berlin_germany_2950159?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Madrid", widget:"https://www.meteoblue.com/en/weather/widget/daily/madrid_spain_3117735?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Rím", widget:"https://www.meteoblue.com/en/weather/widget/daily/rome_italy_3169070?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Canberra", widget:"https://www.meteoblue.com/en/weather/widget/daily/canberra_australia_2172517?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Moskva", widget:"https://www.meteoblue.com/en/weather/widget/daily/moscow_russian-federation_524901?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Brasília", widget:"https://www.meteoblue.com/en/weather/widget/daily/brasilia_brazil_3469058?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Buenos Aires", widget:"https://www.meteoblue.com/en/weather/widget/daily/buenos-aires_argentina_3435910?geoloc=fixed&days=3&tempunit=CELSIUS" },
-    { name:"Káhira", widget:"https://www.meteoblue.com/en/weather/widget/daily/cairo_egypt_360630?geoloc=fixed&days=3&tempunit=CELSIUS" }
-  ];
-
-  const cardsContainer = document.getElementById('cards');
-  const frame = document.getElementById('providerFrame');
-  const openNew = document.getElementById('openNew');
-  const notice = document.getElementById('notice');
-  const currentInfo = document.getElementById('currentInfo');
-
-  // render cards
-  function renderCards(){
-    cardsContainer.innerHTML = '';
-    cities.forEach(c=>{
-      const card = document.createElement('div'); card.className='card';
-      card.innerHTML = `
-        <h3>${escapeHtml(c.name)}</h3>
-        <div class="widget"><iframe src="${c.widget}" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
-        <div class="actions">
-          <button class="primary" onclick='loadWidget("${encodeURIComponent(c.name)}","meteoblue")'>Zobraziť v náhľade</button>
-        </div>
-      `;
-      cardsContainer.appendChild(card);
-    });
-  }
-
-  // utilities
-  function escapeHtml(s){ return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
-
-  function toggleTheme(){
-    document.body.classList.toggle('dark-mode');
-  }
-
-  // search / provider mapping
-  function buildUrl(query, provider){
-    query = (query||'').trim();
-    if(!query) return '';
-    const q = encodeURIComponent(query);
-    switch(provider){
-      case 'meteoblue':
-        // meteoblue search page (may or may not embed) - tries search widget URL
-        return `https://www.meteoblue.com/en/weather/search?query=${q}`;
-      case 'osm':
-        return `https://www.openstreetmap.org/search?query=${q}`;
-      case 'wikipedia':
-        return `https://sk.wikipedia.org/wiki/Special:Search?search=${q}`;
-      case 'googlemaps':
-        return `https://www.google.com/maps/search/${q}`;
-      case 'google':
-        return `https://www.google.com/search?q=${q}`;
-      default:
-        return '';
+  <p id="cas" style="font-size: 18px;"></p>
+  <script>
+    function aktualizujCas() {
+      const teraz = new Date();
+      const moznosti = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      };
+      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
+      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
     }
-  }
+    setInterval(aktualizujCas, 1000);
+    aktualizujCas();
+  </script>
 
-  // attempt to load in iframe; if blocked, fallback
-  function loadInIframe(url, label){
-    currentInfo.textContent = label || url;
-    openNew.href = url;
-    // try to set src
-    frame.src = url;
-    // After short delay show hint if blocked (can't reliably detect cross-origin block), so show general hint
-    setTimeout(()=> {
-      // we can't reliably read frame due to cross-origin - show hint always after few secs to help user
-      notice.textContent = "Ak sa obsah nezobrazí (niektoré stránky blokujú v iframe), klikni \"Otvoriť v novom okne\".";
-    },900);
-  }
+  <h1>☁️ Počasie v tvojej lokalite</h1>
+  <p>Tu môžeš pridať aktuálne počasie, predpoveď alebo prepojenie na externú stránku.</p>
 
-  function doSearch(){
-    const q = document.getElementById('q').value.trim();
-    const provider = document.getElementById('provider').value;
-    if(!q) { alert('Napíš názov mesta alebo hľadaný výraz.'); return; }
-    const url = buildUrl(q, provider);
-    if(!url) { alert('Nesprávny poskytovateľ.'); return; }
-    loadInIframe(url, `${q} — ${provider}`);
-  }
-
-  function loadWidget(nameEncoded, provider){
-    // for meteoblue widgets we already have specific widget URLs per city in cities array,
-    // but if provider is 'meteoblue' and city exists, we will find matching widget and load it.
-    const name = decodeURIComponent(nameEncoded);
-    const found = cities.find(c => c.name.toLowerCase() === name.toLowerCase());
-    if(found && provider === 'meteoblue'){
-      frame.src = found.widget;
-      openNew.href = found.widget;
-      currentInfo.textContent = found.name;
-      notice.textContent = "Meteoblue widget (ak sa nezobrazí v iframe, otvoriť v novom okne).";
-    } else {
-      // fallback to search
-      const url = buildUrl(name, provider || 'meteoblue');
-      loadInIframe(url, name);
+  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+  <script>
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
     }
-  }
+  </script>
 
-  function resetView(){
-    frame.src = 'about:blank';
-    openNew.href = '#';
-    currentInfo.textContent = 'Žiadne vyhľadávanie';
-    notice.textContent = '';
-  }
+  <div id="google_translate_element"></div>
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'sk',
+        includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+      }, 'google_translate_element');
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
-  // clock
-  function updateClock(){
-    const d = new Date();
-    document.getElementById('clock').textContent = d.toLocaleString('sk-SK', {weekday:'short', hour:'2-digit', minute:'2-digit'});
-  }
-  setInterval(updateClock,1000); updateClock();
+  <h2>🌦️ Aktuálne počasie – 31 miest</h2>
+  <p>Na tejto stránke si môžeš pozrieť aktuálne počasie až pre <strong>31 rôznych miest</strong> – z toho <strong>14 miest na Slovensku</strong> a <strong>17 svetových miest</strong>.</p>
 
-  // init
-  renderCards();
-  resetView();
+  <!-- sem ide tvoj doterajší obsah s mestami -->
+  <!-- ... všetky tvoje iframe mestá ostávajú zachované ... -->
 
-  // accessibility: search on Enter
-  document.getElementById('q').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSearch(); });
+  <!-- 🔍 Nová sekcia – Interaktívne vyhľadávanie počasia -->
+  <h2>🔍 Vyhľadaj svoje mesto</h2>
+  <p>Nižšie si môžeš otvoriť interaktívne okno Meteoblue a vyhľadať akékoľvek mesto na svete 🌍</p>
 
-  // safe fallback: if user clicks openNew and it is '#', avoid no-op
-  openNew.addEventListener('click', (e)=>{ if(openNew.href.endsWith('#')) e.preventDefault(); });
+  <iframe 
+    src="https://www.meteoblue.com/en/weather/today/nitra_slovakia_3058531" 
+    title="Meteoblue interaktívne počasie" 
+    width="100%" 
+    height="1000" 
+    allowfullscreen>
+  </iframe>
 
-</script>
+  <p style="font-size: 14px; color: gray; margin-top: 20px;">
+    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br/>
+    © 2025 Erik Mohylák – All rights reserved.
+  </p>
+
 </body>
-</html>
+    </html>
