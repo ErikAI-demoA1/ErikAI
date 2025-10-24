@@ -1,283 +1,309 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <title>ErikAI Kalendár</title>
-  <style>
-    body {
-  font-family: sans-serif;
-  background: #f2f2f2;
-  color: #222;
-  padding: 20px 10px;
-  max-width: 1320px;
-  margin: 0 auto;
-}
-
-h1 {
-  text-align: center;
-}
-
-.controls {
-  text-align: center;
-  margin-bottom: 20px;
-  display: flex;
-  justify-content: center;
-  gap: 15px;
-  flex-wrap: wrap;
-}
-
-#calendar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-evenly;
-  gap: 15px;
-}
-
-.month {
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  width: 220px;
-  padding: 10px;
-  text-align: center;
-}
-
-.month h3 {
-  margin: 0 0 10px;
-}
-
-.days {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
-}
-
-.day {
-  text-align: center;
-  padding: 5px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.today {
-  background: red;
-  color: white;
-  font-weight: bold;
-}
-
-.holiday {
-  background: #00cc66;
-  color: white;
-}
-
-.note {
-  background: #ffeb3b;
-  font-weight: bold;
-}
-
-.legend {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.legend span {
-  display: inline-block;
-  padding: 3px 6px;
-  margin: 0 5px;
-  border-radius: 4px;
-  color: white;
-  font-weight: bold;
-}
-
-.legend .today {
-  background: red;
-}
-
-.legend .holiday {
-  background: #00cc66;
-}
-
-.legend .note {
-  background: #ffeb3b;
-  color: black;
-}
-  </style>
-</head>
-<body>
-  <h1>ErikAI Kalendár</h1>
-  <div class="controls">
-    <button onclick="changeYear(-1)">◀ Rok späť</button>
-    <span id="yearDisplay"></span>
-    <button onclick="changeYear(1)">Rok vpred ▶</button>
-  </div>
-
-  <div id="calendar" class="calendar"></div>
-
-  <div class="legend">
-    <strong>Legenda:</strong>
-    <span class="today">Dnes</span>
-    <span class="holiday">Sviatok</span>
-    <span class="note">Udalosť</span>
-  </div>
-
-  <p id="cas" style="margin-top: 15px; font-weight: bold;"></p>
-
-  <script>
-    const holidays = {
-      "1.1": "Nový rok",
-      "6.1": "Zjavenie Pána",
-      "1.5": "Sviatok práce",
-      "8.5": "Deň víťazstva nad fašizmom",
-      "5.7": "Cyril a Metod",
-      "29.8": "Výročie SNP",
-      "1.9": "Deň Ústavy",
-      "15.9": "Sedembolestná Panna Mária",
-      "1.11": "Sviatok všetkých svätých",
-      "17.11": "Deň boja za slobodu",
-      "24.12": "Štedrý deň",
-      "25.12": "1. sviatok vianočný",
-      "26.12": "2. sviatok vianočný"
-    };
-
-    const daysShort = ["Po", "Ut", "St", "Št", "Pi", "So", "Ne"];
-    const monthNames = ["Január", "Február", "Marec", "Apríl", "Máj", "Jún", "Júl", "August", "September", "Október", "November", "December"];
-    let currentYear = new Date().getFullYear();
-
-    function renderCalendar(year) {
-      document.getElementById("calendar").innerHTML = "";
-      document.getElementById("yearDisplay").textContent = year;
-      const today = new Date();
-
-      for (let m = 0; m < 12; m++) {
-        const month = document.createElement("div");
-        month.className = "month";
-
-        const h3 = document.createElement("h3");
-        h3.textContent = monthNames[m];
-        month.appendChild(h3);
-
-        const daysDiv = document.createElement("div");
-        daysDiv.className = "days";
-
-        for (let i = 0; i < 7; i++) {
-          const dow = document.createElement("div");
-          dow.className = "dow";
-          dow.textContent = daysShort[i];
-          daysDiv.appendChild(dow);
-        }
-
-        const firstDay = new Date(year, m, 1);
-        let startDay = (firstDay.getDay() + 6) % 7;
-
-        for (let i = 0; i < startDay; i++) {
-          daysDiv.appendChild(document.createElement("div"));
-        }
-
-        const totalDays = new Date(year, m + 1, 0).getDate();
-
-        for (let d = 1; d <= totalDays; d++) {
-          const dateKey = `${d}.${m+1}`;
-          const div = document.createElement("div");
-          div.className = "day";
-          div.textContent = d;
-
-          const dateId = `${year}-${m+1}-${d}`;
-          const note = localStorage.getItem(dateId);
-          if (note) div.classList.add("note");
-
-          if (holidays[dateKey]) {
-            div.classList.add("holiday");
-            div.title = holidays[dateKey];
-          }
-
-          if (
-            d === today.getDate() &&
-            m === today.getMonth() &&
-            year === today.getFullYear()
-          ) {
-            div.classList.add("today");
-          }
-
-          div.onclick = () => {
-            const text = prompt(`Pridať poznámku na ${d}.${m+1}.${year}:`, note || "");
-            if (text) {
-              localStorage.setItem(dateId, text);
-              div.classList.add("note");
-            } else {
-              localStorage.removeItem(dateId);
-              div.classList.remove("note");
-            }
-          };
-
-          daysDiv.appendChild(div);
-        }
-
-        month.appendChild(daysDiv);
-        document.getElementById("calendar").appendChild(month);
-      }
-    }
-
-    function changeYear(offset) {
-      currentYear += offset;
-      renderCalendar(currentYear);
-    }
-    renderCalendar(currentYear);
-</script>
-    <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-
-<script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
-</script>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI Kalendár</title>
 <style>
-  body.dark-mode {
-    background-color: #121212;
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+    color: #222;
+    padding: 20px;
+    max-width: 1320px;
+    margin: 0 auto;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  h1 {
+    text-align: center;
+    color: #d10000;
+    margin-bottom: 20px;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 25px;
+  }
+
+  .controls button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background: #d10000;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+  }
+
+  .controls button:hover {
+    background: #990000;
+    transform: translateY(-2px);
+  }
+
+  #calendar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    gap: 20px;
+  }
+
+  .month {
+    background: white;
+    border-radius: 12px;
+    width: 230px;
+    padding: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+  }
+
+  .month:hover {
+    transform: translateY(-4px);
+  }
+
+  .month h3 {
+    margin-bottom: 10px;
+    color: #d10000;
+  }
+
+  .days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+  }
+
+  .dow {
+    font-weight: bold;
+    color: #555;
+  }
+
+  .day {
+    text-align: center;
+    padding: 8px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .day:hover {
+    background: #d10000;
     color: white;
   }
-</style>
 
-<p id="cas" style="font-size: 18px;"></p>
-
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
-
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
+  .today {
+    background: #d10000;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 0 8px rgba(209,0,0,0.7);
   }
+
+  .holiday {
+    background: #00cc66;
+    color: white;
+  }
+
+  .note {
+    background: #ffeb3b;
+    color: black;
+    font-weight: bold;
+  }
+
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
+    flex-wrap: wrap;
+  }
+
+  .legend span {
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-weight: bold;
+  }
+
+  .legend .today { background: #d10000; color: white; }
+  .legend .holiday { background: #00cc66; color: white; }
+  .legend .note { background: #ffeb3b; color: black; }
+
+  button#themeToggle {
+    margin: 20px auto;
+    display: block;
+    padding: 10px 25px;
+    font-size: 16px;
+    background: #333;
+    color: white;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  button#themeToggle:hover {
+    background: #555;
+  }
+
+  body.dark-mode {
+    background-color: #121212;
+    color: #ddd;
+  }
+
+  body.dark-mode .month {
+    background: #1f1f1f;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+
+  body.dark-mode .dow { color: #bbb; }
+  body.dark-mode .day:hover { background: #d10000; color: white; }
+</style>
+</head>
+<body>
+
+<h1>ErikAI Kalendár</h1>
+
+<div class="controls">
+  <button onclick="changeYear(-1)">◀ Rok späť</button>
+  <span id="yearDisplay"></span>
+  <button onclick="changeYear(1)">Rok vpred ▶</button>
+</div>
+
+<div id="calendar" class="calendar"></div>
+
+<div class="legend">
+  <strong>Legenda:</strong>
+  <span class="today">Dnes</span>
+  <span class="holiday">Sviatok</span>
+  <span class="note">Udalosť</span>
+</div>
+
+<button id="themeToggle" onclick="toggleTheme()">🌓 Zmeniť režim</button>
+
+<p id="cas" style="margin-top: 15px; font-weight: bold;"></p>
+
+<script>
+const holidays = {
+  "1.1": "Nový rok",
+  "6.1": "Zjavenie Pána",
+  "1.5": "Sviatok práce",
+  "8.5": "Deň víťazstva nad fašizmom",
+  "5.7": "Cyril a Metod",
+  "29.8": "Výročie SNP",
+  "1.9": "Deň Ústavy",
+  "15.9": "Sedembolestná Panna Mária",
+  "1.11": "Sviatok všetkých svätých",
+  "17.11": "Deň boja za slobodu",
+  "24.12": "Štedrý deň",
+  "25.12": "1. sviatok vianočný",
+  "26.12": "2. sviatok vianočný"
+};
+
+const daysShort = ["Po", "Ut", "St", "Št", "Pi", "So", "Ne"];
+const monthNames = ["Január","Február","Marec","Apríl","Máj","Jún","Júl","August","September","Október","November","December"];
+let currentYear = new Date().getFullYear();
+
+function renderCalendar(year) {
+  const calendar = document.getElementById("calendar");
+  calendar.innerHTML = "";
+  document.getElementById("yearDisplay").textContent = year;
+  const today = new Date();
+
+  for(let m=0;m<12;m++){
+    const month = document.createElement("div");
+    month.className = "month";
+
+    const h3 = document.createElement("h3");
+    h3.textContent = monthNames[m];
+    month.appendChild(h3);
+
+    const daysDiv = document.createElement("div");
+    daysDiv.className = "days";
+
+    for(let i=0;i<7;i++){
+      const dow = document.createElement("div");
+      dow.className = "dow";
+      dow.textContent = daysShort[i];
+      daysDiv.appendChild(dow);
+    }
+
+    const firstDay = new Date(year,m,1);
+    let startDay = (firstDay.getDay()+6)%7;
+
+    for(let i=0;i<startDay;i++) daysDiv.appendChild(document.createElement("div"));
+
+    const totalDays = new Date(year,m+1,0).getDate();
+
+    for(let d=1;d<=totalDays;d++){
+      const div = document.createElement("div");
+      div.className = "day";
+      div.textContent = d;
+
+      const dateId = `${year}-${m+1}-${d}`;
+      const note = localStorage.getItem(dateId);
+      if(note) div.classList.add("note");
+
+      const dateKey = `${d}.${m+1}`;
+      if(holidays[dateKey]){
+        div.classList.add("holiday");
+        div.title = holidays[dateKey];
+      }
+
+      if(d===today.getDate() && m===today.getMonth() && year===today.getFullYear()){
+        div.classList.add("today");
+      }
+
+      div.onclick = () => {
+        const text = prompt(`Pridať poznámku na ${d}.${m+1}.${year}:`, note||"");
+        if(text){
+          localStorage.setItem(dateId,text);
+          div.classList.add("note");
+        } else {
+          localStorage.removeItem(dateId);
+          div.classList.remove("note");
+        }
+      }
+
+      daysDiv.appendChild(div);
+    }
+
+    month.appendChild(daysDiv);
+    calendar.appendChild(month);
+  }
+}
+
+function changeYear(offset){ currentYear+=offset; renderCalendar(currentYear); }
+renderCalendar(currentYear);
+
+function toggleTheme(){ document.body.classList.toggle('dark-mode'); }
+
+function aktualizujCas(){
+  const teraz=new Date();
+  const moznosti={weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'};
+  const casText = teraz.toLocaleDateString('sk-SK', moznosti);
+  document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
+}
+setInterval(aktualizujCas,1000);
+aktualizujCas();
 </script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
+
+<div id="google_translate_element"></div>
+<script type="text/javascript">
+function googleTranslateElementInit(){
+  new google.translate.TranslateElement({
+    pageLanguage:'sk',
+    includedLanguages:'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
+    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+  },'google_translate_element');
+</script>
+
+<p style="font-size:14px;color:gray;margin-top:20px;">
+This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
 To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
 © 2025 Erik Mohylák – All rights reserved.
-  </p>
+</p>
+
 </body>
 </html>
