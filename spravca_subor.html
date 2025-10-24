@@ -11,9 +11,8 @@
       background: #f9f9f9;
       padding: 20px;
     }
-    h1 {
-      color: darkred;
-    }
+    body.dark-mode { background: #121212; color: white; }
+    h1 { color: darkred; }
     .súbor {
       border: 1px solid #ccc;
       margin: 15px auto;
@@ -22,25 +21,25 @@
       max-width: 400px;
       background: #fff;
       border-radius: 10px;
+      text-align: center;
     }
-    .súbor img,
-    .súbor video,
-    .súbor iframe {
+    body.dark-mode .súbor { background: #1e1e1e; color: white; border: 1px solid #555; }
+    .súbor img, .súbor video, .súbor audio, .súbor iframe {
       max-width: 100%;
       border-radius: 8px;
+      margin-bottom: 5px;
     }
-    .zmazat {
-      background-color: red;
-      color: white;
-      border: none;
+    .zmazat, .stiahni {
+      margin: 5px 5px 0 5px;
       padding: 5px 10px;
-      margin-top: 5px;
-      cursor: pointer;
+      border: none;
       border-radius: 5px;
+      cursor: pointer;
     }
-    .zmazat:hover {
-      background-color: darkred;
-    }
+    .zmazat { background: red; color: white; }
+    .zmazat:hover { background: darkred; }
+    .stiahni { background: #0d6efd; color: white; }
+    .stiahni:hover { background: #0b5ed7; }
     .vymazat-vsetko {
       background-color: #333;
       color: white;
@@ -50,163 +49,121 @@
       margin-top: 20px;
       cursor: pointer;
     }
-    .vymazat-vsetko:hover {
-      background-color: black;
-    }
+    .vymazat-vsetko:hover { background-color: black; }
   </style>
 </head>
 <body>
 
-    <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
 
 <script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
+  function toggleTheme() { document.body.classList.toggle('dark-mode'); }
 </script>
-
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
 
 <p id="cas" style="font-size: 18px;"></p>
-
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
-
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
+<script>
+  function aktualizujCas() {
+    const teraz = new Date();
+    const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'};
+    document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
   }
+  setInterval(aktualizujCas,1000);
+  aktualizujCas();
+</script>
+
+<div id="google_translate_element"></div>
+<script type="text/javascript">
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'sk',
+    includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
+    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+  }, 'google_translate_element');
+}
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  <h1>📁 ErikAI Správca súborov</h1>
-  <p>Vyber súbory (obrázky, videá, apk, pdf, Word, Excel...):</p>
-  <input type="file" id="súbory" multiple>
-  <div id="výstup"></div>
-  <button class="vymazat-vsetko" onclick="vymažVšetko()">🧹 Vymazať všetko</button>
 
-  <script>
-    const vstup = document.getElementById('súbory');
-    const výstup = document.getElementById('výstup');
+<h1>📁 ErikAI Správca súborov</h1>
+<p>Vyber súbory (PDF, Word, Excel, prezentácie, obrázky, audio, video alebo ostatné):</p>
+<input type="file" id="súbory" multiple>
+<div id="výstup"></div>
+<button class="vymazat-vsetko" onclick="vymažVšetko()">🧹 Vymazať všetko</button>
 
-    function zobraziťSúbor(názov, obsah, typ) {
-      const kontajner = document.createElement("div");
-      kontajner.className = "súbor";
-      let element;
+<script>
+const vstup = document.getElementById('súbory');
+const výstup = document.getElementById('výstup');
 
-      if (typ.startsWith("image/")) {
-        element = document.createElement("img");
-        element.src = obsah;
-      } else if (typ.startsWith("video/")) {
-        element = document.createElement("video");
-        element.src = obsah;
-        element.controls = true;
-      } else if (typ.startsWith("audio/")) {
-        element = document.createElement("audio");
-        element.src = obsah;
-        element.controls = true;
-      } else if (typ === "application/pdf") {
-        element = document.createElement("iframe");
-        element.src = obsah;
-        element.width = "100%";
-        element.height = "400";
-        element.style.border = "1px solid #999";
-      } else if (
-        typ.includes("msword") ||
-        typ.includes("officedocument.word") ||
-        typ.includes("excel") ||
-        typ.includes("spreadsheetml")
-      ) {
-        element = document.createElement("a");
-        element.href = obsah;
-        element.target = "_blank";
-        element.textContent = "📄 Otvoriť dokument";
-        element.style.fontWeight = "bold";
-      } else {
-        element = document.createElement("div");
-        element.innerHTML = "<p>📦 Súbor: " + názov + "</p>";
-      }
+function zobraziťSúbor(názov, obsah, typ) {
+  const kontajner = document.createElement("div");
+  kontajner.className = "súbor";
+  let element;
 
-      const názovEl = document.createElement("p");
-      názovEl.textContent = názov;
+  if (typ.startsWith("image/")) {
+    element = document.createElement("img"); element.src = obsah;
+  } else if (typ.startsWith("video/")) {
+    element = document.createElement("video"); element.src = obsah; element.controls = true;
+  } else if (typ.startsWith("audio/")) {
+    element = document.createElement("audio"); element.src = obsah; element.controls = true;
+  } else if (typ === "application/pdf") {
+    element = document.createElement("iframe"); element.src = obsah; element.width="100%"; element.height="400"; element.style.border="1px solid #999";
+  } else if (typ.includes("word") || typ.includes("officedocument.word") || typ.includes("excel") || typ.includes("spreadsheetml") || typ.includes("presentation")) {
+    element = document.createElement("a"); element.href = obsah; element.target="_blank"; element.textContent="📄 Otvoriť dokument"; element.style.fontWeight="bold";
+  } else {
+    element = document.createElement("div"); element.innerHTML = "<p>📦 Súbor: " + názov + "</p>";
+  }
 
-      const tlačidlo = document.createElement("button");
-      tlačidlo.textContent = "Zmazať";
-      tlačidlo.className = "zmazat";
-      tlačidlo.onclick = () => {
-        výstup.removeChild(kontajner);
-        localStorage.removeItem(názov);
-      };
+  const názovEl = document.createElement("p"); názovEl.textContent = názov;
 
-      kontajner.appendChild(element);
-      kontajner.appendChild(názovEl);
-      kontajner.appendChild(tlačidlo);
-      výstup.appendChild(kontajner);
-    }
+  const tlačidloStiahni = document.createElement("button");
+  tlačidloStiahni.textContent = "⬇️ Stiahnuť"; tlačidloStiahni.className="stiahni";
+  tlačidloStiahni.onclick = () => {
+    const a = document.createElement("a");
+    a.href = obsah; a.download = názov; a.click();
+  };
 
-    vstup.addEventListener('change', () => {
-      for (const súbor of vstup.files) {
-        const čítač = new FileReader();
-        čítač.onload = (e) => {
-          const obsah = e.target.result;
-          const typ = súbor.type;
-          localStorage.setItem(súbor.name, JSON.stringify({ obsah, typ }));
-          zobraziťSúbor(súbor.name, obsah, typ);
-        };
-        čítač.readAsDataURL(súbor);
-      }
-    });
+  const tlačidloZmazat = document.createElement("button");
+  tlačidloZmazat.textContent="Zmazať"; tlačidloZmazat.className="zmazat";
+  tlačidloZmazat.onclick=()=>{výstup.removeChild(kontajner); localStorage.removeItem(názov);};
 
-    // 🔁 Pri načítaní obnoviť všetky lokálne súbory
-    window.addEventListener('load', () => {
-      for (let i = 0; i < localStorage.length; i++) {
-        const kľúč = localStorage.key(i);
-        const dáta = JSON.parse(localStorage.getItem(kľúč));
-        if (dáta?.obsah && dáta?.typ) {
-          zobraziťSúbor(kľúč, dáta.obsah, dáta.typ);
-        }
-      }
-    });
+  kontajner.appendChild(element);
+  kontajner.appendChild(názovEl);
+  kontajner.appendChild(tlačidloStiahni);
+  kontajner.appendChild(tlačidloZmazat);
+  výstup.appendChild(kontajner);
+}
 
-    function vymažVšetko() {
-      if (confirm("Naozaj chceš vymazať všetky súbory?")) {
-        localStorage.clear();
-        výstup.innerHTML = "";
-      }
-    }
-  </script>
+vstup.addEventListener('change',()=> {
+  for(const súbor of vstup.files){
+    const čítač = new FileReader();
+    čítač.onload=(e)=>{
+      const obsah=e.target.result;
+      const typ=súbor.type;
+      localStorage.setItem(súbor.name, JSON.stringify({obsah,typ}));
+      zobraziťSúbor(súbor.name,obsah,typ);
+    };
+    čítač.readAsDataURL(súbor);
+  }
+});
 
+// Načítanie z localStorage pri refresh
+window.addEventListener('load',()=>{
+  for(let i=0;i<localStorage.length;i++){
+    const kľúč=localStorage.key(i);
+    const dáta=JSON.parse(localStorage.getItem(kľúč));
+    if(dáta?.obsah && dáta?.typ){ zobraziťSúbor(kľúč,dáta.obsah,dáta.typ); }
+  }
+});
 
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
+function vymažVšetko(){
+  if(confirm("Naozaj chceš vymazať všetky súbory?")){ localStorage.clear(); výstup.innerHTML=""; }
+}
+</script>
+
+<p style="font-size: 14px; color: gray; margin-top: 20px;">
+This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/<br>
 © 2025 Erik Mohylák – All rights reserved.
-  </p>
+</p>
+
 </body>
 </html>
