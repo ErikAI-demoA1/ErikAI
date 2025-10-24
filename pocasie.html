@@ -1,157 +1,222 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>☁️ Počasie - ErikAI</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      margin: 0;
-      background-color: #f9f9f9;
-      color: #333;
-      transition: background 0.3s, color 0.3s;
-    }
-    body.dark-mode {
-      background-color: #121212;
-      color: white;
-    }
-    h1, h2, h3 {
-      text-align: center;
-      margin: 10px 0;
-    }
-    .kontajner {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-      max-height: 800px;
-      overflow-y: auto;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      background: #fff;
-      transition: background 0.3s;
-    }
-    body.dark-mode .kontajner {
-      background: #1e1e1e;
-    }
-    .widget {
-      flex: 1 1 250px;
-      min-width: 250px;
-      max-width: 300px;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-    iframe {
-      width: 100%;
-      height: 250px;
-      border: none;
-    }
-    #google_translate_element {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .search-section {
-      text-align: center;
-      margin: 20px 0;
-    }
-    button {
-      padding: 6px 12px;
-      margin: 5px;
-      border-radius: 5px;
-      border: none;
-      cursor: pointer;
-      background-color: #0d6efd;
-      color: white;
-      font-size: 1rem;
-    }
-    button:hover {
-      background-color: #0b5ed7;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>🌤️ ErikAI Počasie — 31 miest</title>
+<link rel="preconnect" href="https://wttr.in">
+<style>
+  :root{
+    --bg:#f4f7fb;
+    --card:#ffffff;
+    --accent:#1a73e8;
+    --muted:#6b7280;
+    --glass: rgba(255,255,255,0.6);
+  }
+  html,body{height:100%;margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:#0b1220}
+  .container{max-width:1180px;margin:24px auto;padding:18px}
+  header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  h1{margin:0;font-size:20px;color:var(--accent);display:flex;align-items:center;gap:8px}
+  .top-right{display:flex;gap:10px;align-items:center}
+  .time{font-size:14px;color:var(--muted)}
+  .controls{display:flex;gap:8px;align-items:center}
+  input[type="search"]{padding:10px 12px;border-radius:10px;border:1px solid rgba(11,17,32,0.06);min-width:260px}
+  button, .chip{padding:9px 12px;border-radius:10px;border:none;background:var(--accent);color:white;cursor:pointer;font-weight:600}
+  .chip.secondary{background:transparent;color:var(--accent);border:1px solid rgba(26,115,232,0.12)}
+  .grid{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  .card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(12,18,30,0.06);display:flex;flex-direction:column;gap:10px;align-items:center}
+  .city-title{font-weight:700;color:#0b1220}
+  .city-sub{font-size:13px;color:var(--muted)}
+  .thumb{width:100%;max-width:200px;border-radius:8px;border:1px solid rgba(11,17,32,0.04)}
+  .actions{display:flex;gap:8px;width:100%;justify-content:center}
+  a.open{background:transparent;border:1px solid rgba(11,17,32,0.06);color:var(--accent);padding:8px 10px;border-radius:8px;text-decoration:none}
+  .big-view{margin-top:20px;background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.8));border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(2,6,23,0.06)}
+  .big-view h3{margin:0 0 8px}
+  .big-img{width:100%;height:auto;border-radius:10px;border:1px solid rgba(11,17,32,0.06)}
+  footer{margin-top:20px;text-align:center;color:var(--muted);font-size:13px}
+  /* Dark mode */
+  body.dark-mode{background:#071022;color:#e6eef6}
+  body.dark-mode .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 6px 24px rgba(0,0,0,0.6)}
+  body.dark-mode .chip.secondary{border-color:rgba(255,255,255,0.06);color:#e6eef6}
+  body.dark-mode a.open{border-color:rgba(255,255,255,0.06);color:#9fd1ff}
+  @media (max-width:560px){ header{flex-direction:column;align-items:flex-start} .controls{width:100%;justify-content:space-between} }
+</style>
 </head>
 <body>
+  <div class="container">
+    <header>
+      <h1>🌤️ ErikAI Počasie — 31 miest</h1>
+      <div class="top-right">
+        <div class="controls">
+          <input id="searchInput" type="search" placeholder="Vyhľadaj mesto (napr. Nitra alebo 'Paris')" />
+          <button id="searchBtn">🔎 Hľadať</button>
+          <button class="chip secondary" id="toggleTheme">🌓 Režim</button>
+        </div>
+        <div class="time" id="timeDisplay">🕓 —</div>
+      </div>
+    </header>
 
-  <p id="cas" style="font-size: 18px;"></p>
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' };
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
+    <!-- veľké vyhľadávanie / preview -->
+    <div class="big-view" id="bigView" style="display:none">
+      <h3 id="bigTitle">Výsledok vyhľadávania</h3>
+      <p id="bigSub" style="margin:0 0 8px;color:var(--muted)">Klikni na otvorenie detailov (otvorí sa v novej záložke).</p>
+      <a id="bigLink" href="#" target="_blank" style="text-decoration:none">
+        <img id="bigImg" class="big-img" src="" alt="Počasie" />
+      </a>
+    </div>
 
-  <div id="google_translate_element"></div>
-  <script type="text/javascript">
-    function googleTranslateElementInit() {
-      new google.translate.TranslateElement({
-        pageLanguage: 'sk',
-        includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-      }, 'google_translate_element');
-    }
-  </script>
-  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <!-- grid miest -->
+    <section class="grid" id="citiesGrid" aria-live="polite"></section>
 
-  <h1>☁️ Počasie v tvojej lokalite</h1>
-
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-  <script>
-    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
-  </script>
-
-  <div class="search-section">
-    <h2>🔍 Vyhľadanie vlastného mesta</h2>
-    <iframe src="https://www.meteoblue.com/en/weather/map" width="600" height="400"></iframe>
+    <footer>
+      <div id="google_translate_element"></div>
+      <div style="margin-top:8px">© 2025 Erik Mohylák — ErikAI • Zdroj predpovedí: wttr.in (public)</div>
+    </footer>
   </div>
 
-  <h2>🌦️ Slovenské mestá (14)</h2>
-  <div class="kontajner">
-    <div class="widget"><h3>Veľké Rovné</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/veľké-rovné_slovakia_3060782?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Bratislava</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/bratislava_slovakia_3060972?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Košice</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/košice_slovakia_724443?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Prešov</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/prešov_slovakia_723846?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Žilina</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/žilina_slovakia_3057607?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Banská Bystrica</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/banská-bystrica_slovakia_3061180?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Nitra</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/nitra_slovakia_3058532?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Trenčín</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/trenčín_slovakia_3061185?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Trnava</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/trnava_slovakia_3061186?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Poprad</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/poprad_slovakia_723846?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Martin</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/martin_slovakia_3058759?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Prievidza</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/prievidza_slovakia_723846?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Zvolen</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/zvolen_slovakia_3057093?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Michalovce</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/michalovce_slovakia_724443?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-  </div>
+<script>
+/*
+  Implementácia:
+  - Používame wttr.in pre obrázkové "embedy" (https://wttr.in/<city>.png)
+  - Kliknutím na kartu sa otvorí detail na wttr.in/<city> v novej záložke
+  - Search vytvorí veľké preview (bigView) s odkazom
+  - Zoznam miest je zoznam stringov; upraviteľné
+*/
 
-  <h2>🌍 Svetové hlavné mestá (17)</h2>
-  <div class="kontajner">
-    <div class="widget"><h3>Tokio</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/tokyo_japan_1850147?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Seoul</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/seoul_south-korea_1835848?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Washington D.C.</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/washington-dc_united-states_4140963?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Ottawa</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/ottawa_canada_6094817?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Peking</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/beijing_china_1816670?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Naí Dillí</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/new-delhi_india_1261481?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Londýn</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/london_united-kingdom_2643743?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Paríž</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/paris_france_2988507?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Berlín</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/berlin_germany_2950159?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Madrid</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/madrid_spain_3117735?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Rím</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/rome_italy_3169070?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Canberra</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/canberra_australia_2172517?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Moskva</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/moscow_russian-federation_524901?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Brasília</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/brasilia_brazil_3469058?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Buenos Aires</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/buenos-aires_argentina_3435910?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-    <div class="widget"><h3>Káhira</h3><iframe src="https://www.meteoblue.com/en/weather/widget/daily/cairo_egypt_360630?geoloc=fixed&days=3&tempunit=CELSIUS"></iframe></div>
-  </div>
+const cities = [
+  // 14 SK miest
+  "Veľké Rovné", "Bratislava", "Košice", "Prešov", "Žilina",
+  "Banská Bystrica", "Nitra", "Trenčín", "Trnava", "Poprad",
+  "Martin", "Prievidza", "Zvolen", "Michalovce",
+  // 17 svetových
+  "Tokyo", "Seoul", "Washington DC", "Ottawa", "Beijing", "New Delhi",
+  "London", "Paris", "Berlin", "Madrid", "Rome", "Canberra",
+  "Moscow", "Brasilia", "Buenos Aires", "Cairo", "Los Angeles"
+];
 
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br/>
-    © 2025 Erik Mohylák – All rights reserved.
-  </p>
+// utility: build a safe wttr URL (png preview and full link)
+function wttrPreviewUrl(q){
+  // wttr.in accepts city names, spaces -> + or %20; use encodeURIComponent
+  // we request small image: .png with width param; wttr supports size via ?m, ?u etc.
+  // We'll use PNG: https://wttr.in/<city>_0q.png - fallback: just <city>.png
+  const safe = encodeURIComponent(q.trim());
+  // use the "graphic" PNG (wttr.in/<city>.png) — add &m (metric) to ensure C
+  return `https://wttr.in/${safe}.png`;
+}
+function wttrPageUrl(q){
+  const safe = encodeURIComponent(q.trim());
+  return `https://wttr.in/${safe}`;
+}
 
+const grid = document.getElementById('citiesGrid');
+
+function createCard(city){
+  const div = document.createElement('div');
+  div.className = 'card';
+
+  const title = document.createElement('div');
+  title.className = 'city-title';
+  title.textContent = city;
+
+  const sub = document.createElement('div');
+  sub.className = 'city-sub';
+  sub.textContent = 'Aktuálna predpoveď';
+
+  const img = document.createElement('img');
+  img.className = 'thumb';
+  img.alt = `Počasie ${city}`;
+  img.loading = 'lazy';
+
+  // set src and fallback error handler
+  const src = wttrPreviewUrl(city);
+  img.src = src;
+  img.onerror = function(){
+    // pokus o alternatívny formát bez png extension (wttr render)
+    img.src = `https://wttr.in/${encodeURIComponent(city)}?format=%25l:+%25c+%25t.png`;
+    img.onerror = function(){
+      // ak ani toto nefunguje, ukáž placeholder
+      img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='400' height='140'><rect width='100%' height='100%' fill='#eee'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='#999' font-size='14'>Počasie nedostupné</text></svg>`);
+    };
+  };
+
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+
+  const open = document.createElement('a');
+  open.className = 'open';
+  open.textContent = 'Otvoriť';
+  open.href = wttrPageUrl(city);
+  open.target = '_blank';
+  open.rel = 'noopener noreferrer';
+
+  // when user clicks thumbnail or title -> open big preview (in-page)
+  function openBig(){
+    document.getElementById('bigView').style.display = 'block';
+    document.getElementById('bigTitle').textContent = `Počasie — ${city}`;
+    const bigImg = document.getElementById('bigImg');
+    bigImg.src = wttrPreviewUrl(city) + '?m';
+    document.getElementById('bigLink').href = wttrPageUrl(city);
+    document.getElementById('bigSub').textContent = `Zobrazené: ${city} • Klikni pre detail (otvorí wttr.in).`;
+    // scroll to view
+    document.getElementById('bigView').scrollIntoView({behavior:'smooth', block:'center'});
+  }
+
+  img.addEventListener('click', openBig);
+  title.addEventListener('click', openBig);
+
+  actions.appendChild(open);
+
+  div.appendChild(title);
+  div.appendChild(sub);
+  div.appendChild(img);
+  div.appendChild(actions);
+
+  return div;
+}
+
+// render all cards
+function renderGrid(){
+  grid.innerHTML = '';
+  cities.forEach(c => grid.appendChild(createCard(c)));
+}
+renderGrid();
+
+// search
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+searchBtn.addEventListener('click', doSearch);
+searchInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSearch(); });
+
+function doSearch(){
+  const q = searchInput.value.trim();
+  if(!q) { alert('Zadaj názov mesta alebo PSČ.'); return; }
+  const big = document.getElementById('bigView');
+  document.getElementById('bigTitle').textContent = `Počasie — ${q}`;
+  document.getElementById('bigImg').src = wttrPreviewUrl(q) + '?m';
+  document.getElementById('bigLink').href = wttrPageUrl(q);
+  document.getElementById('bigSub').textContent = `Vyhľadávanie: ${q} • Klikni pre detail (otvorí wttr.in).`;
+  big.style.display = 'block';
+  big.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+// time display
+function aktualizujCas(){
+  const teraz = new Date();
+  const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' };
+  const casText = teraz.toLocaleDateString('sk-SK', moznosti);
+  document.getElementById('timeDisplay').innerText = `🕓 Aktuálny čas: ${casText}`;
+}
+setInterval(aktualizujCas,1000); aktualizujCas();
+
+// theme toggle
+document.getElementById('toggleTheme').addEventListener('click', ()=>{
+  document.body.classList.toggle('dark-mode');
+});
+
+// Google Translate init
+function googleTranslateElementInit(){ new google.translate.TranslateElement({pageLanguage:'sk', includedLanguages:'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,ja,zh-CN', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element'); }
+(function(){ var s = document.createElement('script'); s.src='//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit'; document.head.appendChild(s); })();
+
+</script>
 </body>
-    </html>
+        </html>
