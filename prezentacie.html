@@ -2,51 +2,43 @@
 <html lang="sk">
 <head>
   <meta charset="UTF-8">
-  <title>ErikAI Prezentácie</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.10.0/pptxgen.min.js"></script>
+  <title>ErikAI Prezentácie PRO</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.10.0/pptxgen.bundle.js"></script>
   <style>
     body { font-family: sans-serif; padding: 20px; background: #fefefe; }
-    textarea { width: 100%; height: 150px; font-size: 18px; }
-    button { margin: 4px; padding: 8px 16px; font-size: 16px; cursor:pointer; }
+    textarea { width: 100%; height: 150px; font-size: 18px; margin-top: 10px; }
+    button { margin: 4px 2px; padding: 8px 16px; font-size: 16px; }
     .controls, .storage { margin-top: 10px; }
     .saved-name { margin: 4px 0; }
-    .slide-image { max-width:200px; max-height:150px; display:block; margin-top:10px; cursor:move; }
+    input[type=file] { margin-top: 5px; }
   </style>
 </head>
 <body>
 
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<h2>📄 ErikAI Prezentácie PRO</h2>
 
+<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
 <script>
   function toggleTheme() {
     document.body.classList.toggle('dark-mode');
   }
 </script>
-
 <style>
   body.dark-mode { background-color: #121212; color: white; }
 </style>
 
-<p id="cas" style="font-size: 18px;"></p>
+<p id="cas"></p>
 <script>
 function aktualizujCas() {
   const teraz = new Date();
-  const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'};
-  const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-  document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
+  document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleString('sk-SK')}`;
 }
-setInterval(aktualizujCas,1000); aktualizujCas();
+setInterval(aktualizujCas, 1000); aktualizujCas();
 </script>
 
-<h2>📄 ErikAI Prezentácie</h2>
-
 <label>📁 Názov prezentácie: <input id="presentationName" value="Moja prezentácia"></label>
-<p id="slideCount">Snímka: 1 / 1</p>
+<div id="slideCount">Snímka: 1 / 1</div>
 <textarea id="slideText"></textarea>
-
-<!-- Upload obrázka -->
-<input type="file" id="slideImageInput" accept="image/*">
-<img id="slideImage" class="slide-image" style="display:none;" draggable="true">
 
 <div class="controls">
   <button onclick="prevSlide()">◄ Predchádzajúce</button>
@@ -55,6 +47,8 @@ setInterval(aktualizujCas,1000); aktualizujCas();
   <button onclick="savePresentation()">✅ Uložiť</button>
   <button onclick="deleteCurrentSlide()">🗑 Vymazať</button>
   <button onclick="downloadPPTX()">⬇ Stiahnuť PPTX</button>
+  <br><br>
+  <label>🖼️ Pridať obrázok: <input type="file" id="imgUpload" onchange="addImage(event)"></label>
 </div>
 
 <div class="storage">
@@ -63,110 +57,82 @@ setInterval(aktualizujCas,1000); aktualizujCas();
 </div>
 
 <script>
-let slides = [{text:"", image:null}], current = 0;
+let slides = [{ text: "", images: [] }], current = 0;
 
 function updateSlide() {
   document.getElementById('slideText').value = slides[current].text;
-  if(slides[current].image){
-    const imgEl = document.getElementById('slideImage');
-    imgEl.src = slides[current].image;
-    imgEl.style.display = 'block';
-  } else {
-    document.getElementById('slideImage').style.display = 'none';
-  }
-  document.getElementById('slideCount').innerText = `Snímka: ${current+1} / ${slides.length}`;
+  document.getElementById('slideCount').innerText = `Snímka: ${current + 1} / ${slides.length}`;
 }
 
-function saveCurrent(){
+function saveCurrent() {
   slides[current].text = document.getElementById('slideText').value;
 }
 
-function nextSlide(){ saveCurrent(); if(current<slides.length-1) current++; updateSlide();}
-function prevSlide(){ saveCurrent(); if(current>0) current--; updateSlide();}
-function newSlide(){ saveCurrent(); slides.push({text:"", image:null}); current=slides.length-1; updateSlide();}
-function deleteCurrentSlide(){ if(slides.length<=1)return; slides.splice(current,1); if(current>=slides.length) current=slides.length-1; updateSlide(); }
+function nextSlide() { saveCurrent(); if(current < slides.length-1) current++; updateSlide(); }
+function prevSlide() { saveCurrent(); if(current >0) current--; updateSlide(); }
+function newSlide() { saveCurrent(); slides.push({text:"", images:[]}); current = slides.length-1; updateSlide(); }
+function deleteCurrentSlide() { if(slides.length<=1) return; slides.splice(current,1); if(current>=slides.length) current = slides.length-1; updateSlide(); }
 
-function savePresentation(){
+function savePresentation() {
   saveCurrent();
   const name = document.getElementById("presentationName").value;
-  localStorage.setItem("presentation_"+name, JSON.stringify(slides));
+  const timestamp = new Date().toISOString().replace(/[-:.]/g,"");
+  const key = `presentation_${name}_${timestamp}`;
+  localStorage.setItem(key, JSON.stringify(slides));
   renderSaved();
-  alert("Prezentácia bola uložená.");
+  alert("Prezentácia bola uložená!");
 }
 
-function renderSaved(){
-  const container = document.getElementById("savedList"); container.innerHTML="";
+function renderSaved() {
+  const container = document.getElementById("savedList");
+  container.innerHTML = "";
   Object.keys(localStorage).filter(k=>k.startsWith("presentation_")).forEach(key=>{
     const name = key.replace("presentation_","");
-    const div = document.createElement("div"); div.className="saved-name";
-    div.innerHTML = `${name} <button onclick="loadPresentation('${name}')">Načítať</button> <button onclick="deletePresentation('${name}')">X</button>`;
+    const div = document.createElement("div");
+    div.className="saved-name";
+    div.innerHTML=`${name} <button onclick="loadPresentation('${key}')">Načítať</button> <button onclick="deletePresentation('${key}')">X</button>`;
     container.appendChild(div);
   });
 }
 
-function loadPresentation(name){
-  const raw = localStorage.getItem("presentation_"+name);
-  if(!raw) return;
-  slides = JSON.parse(raw);
-  current = 0;
+function loadPresentation(key) {
+  const raw = localStorage.getItem(key); if(!raw) return;
+  slides = JSON.parse(raw); current = 0;
+  const name = key.replace("presentation_","");
   document.getElementById("presentationName").value = name;
   updateSlide();
 }
 
-function deletePresentation(name){
-  localStorage.removeItem("presentation_"+name);
-  renderSaved();
-}
+function deletePresentation(key){ localStorage.removeItem(key); renderSaved(); }
 
-// Pridanie obrázka
-document.getElementById('slideImageInput').addEventListener('change', function(e){
-  const file = e.target.files[0];
+function addImage(event) {
+  const file = event.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = function(evt){
-    slides[current].image = evt.target.result;
-    updateSlide();
+  reader.onload = function(e) {
+    slides[current].images.push(e.target.result);
+    alert("Obrázok pridaný do snímky!");
   }
   reader.readAsDataURL(file);
-});
+}
 
-// Drag & drop obrázka
-const imgEl = document.getElementById('slideImage');
-let offsetX=0, offsetY=0, dragging=false;
-
-imgEl.addEventListener('mousedown', e=>{
-  dragging=true;
-  offsetX = e.offsetX;
-  offsetY = e.offsetY;
-});
-document.addEventListener('mouseup', e=>{dragging=false;});
-document.addEventListener('mousemove', e=>{
-  if(dragging){
-    imgEl.style.position='absolute';
-    imgEl.style.left = (e.pageX - offsetX) + 'px';
-    imgEl.style.top = (e.pageY - offsetY) + 'px';
-  }
-});
-
-// Export PPTX
-function downloadPPTX(){
+function downloadPPTX() {
   saveCurrent();
-  let pptx = new PptxGenJS();
+  const pptx = new PptxGenJS();
   slides.forEach(s=>{
-    let slide = pptx.addSlide();
-    slide.addText(s.text, { x:0.5, y:0.5, w:8, h:3, fontSize:18, color:'363636' });
-    if(s.image) slide.addImage({ data:s.image, x:0.5, y:2, w:6, h:3 });
+    const slide = pptx.addSlide();
+    slide.addText(s.text, { x:0.5, y:0.5, w:8, h:3, fontSize:18 });
+    s.images.forEach((img, i)=>{
+      slide.addImage({ data: img, x:1, y:1.5+i*2, w:4, h:2.5 });
+    });
   });
-  pptx.writeFile({ fileName: document.getElementById("presentationName").value+".pptx" });
+  const name = document.getElementById("presentationName").value;
+  pptx.writeFile({ fileName: name+".pptx" });
 }
 
 updateSlide();
 renderSaved();
 </script>
 
-<p style="font-size:14px; color:gray; margin-top:20px;">
-This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
-© 2025 Erik Mohylák – All rights reserved.
-</p>
 </body>
 </html>
