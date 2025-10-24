@@ -2,23 +2,111 @@
 <html lang="sk">
 <head>
   <meta charset="UTF-8">
-  <title>ErikAI Záznam zvuku</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎤 ErikAI Záznam zvuku</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+      color: #222;
+      text-align: center;
+      padding: 20px;
+      transition: background 0.5s, color 0.5s;
+    }
+    h2 {
+      color: #0077cc;
+      margin-bottom: 20px;
+    }
+    .recorder {
+      display: inline-block;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    button {
+      background: #0077cc;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      margin: 5px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover:not(:disabled) {
+      background: #005fa3;
+    }
+    button:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+    }
+    button.recording {
+      background: #d10000;
+    }
+    audio {
+      margin-top: 15px;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 8px;
+    }
+    a.download-link {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 15px;
+      background: #00aa44;
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+    a.download-link:hover {
+      background: #007722;
+    }
+    body.dark-mode {
+      background: linear-gradient(135deg, #121212, #1c1c1c);
+      color: white;
+    }
+    body.dark-mode button {
+      background: #3399ff;
+    }
+    body.dark-mode button:hover:not(:disabled) {
+      background: #0077cc;
+    }
+    body.dark-mode a.download-link {
+      background: #22cc66;
+    }
+    body.dark-mode a.download-link:hover {
+      background: #00aa44;
+    }
+  </style>
 </head>
 <body>
+
   <h2>🎤 ErikAI – Nahrávanie zvuku</h2>
 
-  <button id="start">▶️ Spustiť nahrávanie</button>
-  <button id="stop" disabled>⏹️ Stop</button>
-  <button id="reset" disabled>♻️ Reset</button>
-  <br><br>
-  <audio id="audio" controls></audio>
-  <br><br>
-  <a id="download" href="#" download="erikai-zaznam.webm" style="display:none;">⬇️ Stiahnuť nahrávku</a>
+  <div class="recorder">
+    <button id="start">▶️ Spustiť nahrávanie</button>
+    <button id="stop" disabled>⏹️ Stop</button>
+    <button id="reset" disabled>♻️ Reset</button>
+    <br>
+    <audio id="audio" controls></audio>
+    <br>
+    <a id="download" class="download-link" href="#" download="erikai-zaznam.webm" style="display:none;">⬇️ Stiahnuť nahrávku</a>
+  </div>
+
+  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+
+  <p id="cas" style="font-size: 18px; font-weight:bold;"></p>
 
   <script>
     let mediaRecorder, chunks = [];
+    const startBtn = document.getElementById("start");
 
-    document.getElementById("start").onclick = async () => {
+    startBtn.onclick = async () => {
       let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
       chunks = [];
@@ -30,17 +118,19 @@
         document.getElementById("audio").src = url;
         document.getElementById("download").href = url;
         document.getElementById("download").style.display = "inline";
+        startBtn.classList.remove("recording");
       };
 
       mediaRecorder.start();
-      document.getElementById("start").disabled = true;
+      startBtn.disabled = true;
+      startBtn.classList.add("recording");
       document.getElementById("stop").disabled = false;
       document.getElementById("reset").disabled = false;
     };
 
     document.getElementById("stop").onclick = () => {
       mediaRecorder.stop();
-      document.getElementById("start").disabled = false;
+      startBtn.disabled = false;
       document.getElementById("stop").disabled = true;
     };
 
@@ -49,61 +139,19 @@
       document.getElementById("download").style.display = "none";
       document.getElementById("reset").disabled = true;
     };
-  </script>
 
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+    }
 
-<script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
-</script>
-
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
-
-<p id="cas" style="font-size: 18px;"></p>
-
-  <script>
     function aktualizujCas() {
       const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
+      const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' };
+      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
     }
     setInterval(aktualizujCas, 1000);
     aktualizujCas();
   </script>
 
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
-  }
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-    
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-  </p>
 </body>
 </html>
