@@ -1,134 +1,224 @@
-<!DOCTYPE html>
-<html lang="sk">
+<!DOCTYPE html><html lang="sk">
 <head>
   <meta charset="UTF-8">
-  <title>ErikAI Prezentácie 2.0</title>
+  <title>ErikAI Prezentácie</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; color: #222; }
-    h2 { color: #a30000; }
-    textarea { width: 100%; height: 150px; font-size: 18px; margin-bottom: 10px; }
-    button { margin: 5px; padding: 8px 16px; font-size: 16px; cursor: pointer; border-radius: 6px; border: none; background-color: #a30000; color: white; }
-    button:hover { background-color: #c50000; }
-    .controls { margin-top: 10px; }
-    .storage { margin-top: 20px; }
-    .slide-image { max-width: 100%; border: 2px solid #ccc; margin-top: 10px; border-radius: 8px; }
-    body.dark-mode { background-color: #121212; color: white; }
+    body { font-family: sans-serif; padding: 20px; background: #fefefe; }
+    textarea { width: 100%; height: 200px; font-size: 22px; }
+    button { margin: 4px; padding: 8px 16px; font-size: 16px; }
+    .controls, .storage { margin-top: 10px; }
+    .saved-name { margin: 4px 0; }
   </style>
 </head>
 <body>
+
   <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-  <p id="cas" style="font-size: 18px;"></p>
+
+<script>
+  function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+  }
+</script>
+
+<style>
+  body.dark-mode {
+    background-color: #121212;
+    color: white;
+  }
+</style>
+
+<p id="cas" style="font-size: 18px;"></p>
+
   <script>
-    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
     function aktualizujCas() {
       const teraz = new Date();
-      const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'};
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
+      const moznosti = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      };
+      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
+      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
     }
-    setInterval(aktualizujCas,1000);
+    setInterval(aktualizujCas, 1000);
     aktualizujCas();
   </script>
 
-  <h2>📄 ErikAI Prezentácie 2.0</h2>
+  <div id="google_translate_element"></div>
+<script type="text/javascript">
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+      pageLanguage: 'sk',
+      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
+      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+    }, 'google_translate_element');
+  }
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+  
+  <h2>📄 ErikAI Prezentácie</h2>
+  <!-- Mikrofón pre názov prezentácie -->
+<button onclick="startVoiceInput('presentationName')">🎙️ Názov</button>
 
-  <label>📁 Názov prezentácie: <input id="presentationName" value="Moja prezentácia"></label><br>
-  <p id="slideCount">Snímka: 1 / 1</p>
-  <textarea id="slideText" placeholder="Text snímky..."></textarea>
-  <input type="file" id="slideImageInput" accept="image/*"><br>
-  <img id="slideImage" class="slide-image" src="" alt="Obrázok snímky" />
+  <!-- Mikrofón pre snímku -->
+<button onclick="startRecognition('slideText')">🎙️ Snímka</button>
 
-  <div class="controls">
+<script>
+function startRecognition(targetId) {
+  const recognition = new webkitSpeechRecognition();
+  recognition.lang = "sk-SK"; // alebo 'cs-CZ' podľa potreby
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = function(event) {
+    const transcript = event.results[0][0].transcript;
+    document.getElementById(targetId).value += transcript;
+  };
+
+  recognition.onerror = function(event) {
+    alert("Chyba pri rozpoznávaní hlasu: " + event.error);
+  };
+
+  recognition.start();
+}
+</script>
+<script>
+function startVoiceInput(inputId) {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'sk-SK';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        const inputField = document.getElementById(inputId);
+
+        if (inputField) {
+            inputField.value = transcript;
+
+            // Ak ide o textarea pre slideText, hneď aktualizuj snímku
+            if (inputId === 'slideText') {
+                updateSlide(); // spustí funkciu, ktorá prepíše obsah snímky
+            }
+        }
+    };
+
+    recognition.onerror = function(event) {
+        alert("Chyba pri rozpoznávaní hlasu: " + event.error);
+    };
+
+    recognition.start();
+}
+</script>
+
+  
+  <label>Vybrať Excel alebo CSV: <input type="file" id="csvImport"></label><br> <label>📁 Názov prezentácie: <input id="presentationName" value="Moja prezentácia"></label>
+
+  <p id="slideCount">Snimka: 1 / 1</p>
+  <textarea id="slideText"></textarea>  <div class="controls">
     <button onclick="prevSlide()">◄ Predchádzajúce</button>
     <button onclick="nextSlide()">► Ďalší</button>
     <button onclick="newSlide()">➕ Nový slide</button>
     <button onclick="savePresentation()">✅ Uložiť</button>
     <button onclick="deleteCurrentSlide()">🗑 Vymazať</button>
-    <button onclick="downloadPPTX()">⬇ Stiahnuť PPTX</button>
-  </div>
-
-  <div class="storage">
+    <button onclick="downloadPPTX()">⬇ Stiahnuť ako PowerPoint</button>
+  </div>  <div class="storage">
     <p>📁 Uložené prezentácie:</p>
     <div id="savedList"></div>
-  </div>
+  </div>  <script>
+    let slides = [""], current = 0;
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PptxGenJS/3.12.0/pptxgen.min.js"></script>
-<script>
-  let slides = [{ text:"", image:"" }], current = 0;
-
-  function updateSlide() {
-    document.getElementById('slideText').value = slides[current].text;
-    document.getElementById('slideCount').innerText = `Snímka: ${current+1} / ${slides.length}`;
-    document.getElementById('slideImage').src = slides[current].image || "";
-  }
-
-  document.getElementById('slideImageInput').addEventListener('change', function(){
-    const file = this.files[0];
-    if(file){
-      const reader = new FileReader();
-      reader.onload = function(e){
-        slides[current].image = e.target.result;
-        updateSlide();
-      }
-      reader.readAsDataURL(file);
+    function updateSlide() {
+      document.getElementById('slideText').value = slides[current];
+      document.getElementById('slideCount').innerText = `Snimka: ${current + 1} / ${slides.length}`;
     }
-  });
 
-  function saveCurrent() { slides[current].text = document.getElementById('slideText').value; }
+    function saveCurrent() {
+      slides[current] = document.getElementById('slideText').value;
+    }
 
-  function nextSlide() { saveCurrent(); if(current<slides.length-1) current++; updateSlide(); }
-  function prevSlide() { saveCurrent(); if(current>0) current--; updateSlide(); }
-  function newSlide() { saveCurrent(); slides.push({text:"", image:""}); current=slides.length-1; updateSlide(); }
-  function deleteCurrentSlide() { if(slides.length<=1) return; slides.splice(current,1); if(current>=slides.length) current=slides.length-1; updateSlide(); }
+    function nextSlide() {
+      saveCurrent();
+      if (current < slides.length - 1) current++;
+      updateSlide();
+    }
 
-  function savePresentation(){
-    saveCurrent();
-    const name = document.getElementById('presentationName').value;
-    localStorage.setItem('presentation_'+name, JSON.stringify(slides));
-    renderSaved();
-    alert("Prezentácia uložená!");
-  }
+    function prevSlide() {
+      saveCurrent();
+      if (current > 0) current--;
+      updateSlide();
+    }
 
-  function renderSaved(){
-    const container = document.getElementById('savedList');
-    container.innerHTML="";
-    Object.keys(localStorage).filter(k=>k.startsWith("presentation_")).forEach(key=>{
-      const name = key.replace("presentation_","");
-      const div = document.createElement('div');
-      div.innerHTML = `${name} <button onclick="loadPresentation('${name}')">Načítať</button> <button onclick="deletePresentation('${name}')">X</button>`;
-      container.appendChild(div);
-    });
-  }
+    function newSlide() {
+      saveCurrent();
+      slides.push("");
+      current = slides.length - 1;
+      updateSlide();
+    }
 
-  function loadPresentation(name){
-    const raw = localStorage.getItem('presentation_'+name);
-    if(!raw) return;
-    slides = JSON.parse(raw);
-    current=0;
-    document.getElementById('presentationName').value=name;
+    function deleteCurrentSlide() {
+      if (slides.length <= 1) return;
+      slides.splice(current, 1);
+      if (current >= slides.length) current = slides.length - 1;
+      updateSlide();
+    }
+
+    function savePresentation() {
+      saveCurrent();
+      const name = document.getElementById("presentationName").value;
+      localStorage.setItem("presentation_" + name, JSON.stringify(slides));
+      renderSaved();
+      alert("Prezentácia bola uložená.");
+    }
+
+    function renderSaved() {
+      const container = document.getElementById("savedList");
+      container.innerHTML = "";
+      Object.keys(localStorage).filter(k => k.startsWith("presentation_")).forEach(key => {
+        const name = key.replace("presentation_", "");
+        const div = document.createElement("div");
+        div.className = "saved-name";
+        div.innerHTML = `${name} <button onclick="loadPresentation('${name}')">Načítať</button>` +
+                        ` <button onclick="deletePresentation('${name}')">X</button>`;
+        container.appendChild(div);
+      });
+    }
+
+    function loadPresentation(name) {
+      const raw = localStorage.getItem("presentation_" + name);
+      if (!raw) return;
+      slides = JSON.parse(raw);
+      current = 0;
+      document.getElementById("presentationName").value = name;
+      updateSlide();
+    }
+
+    function deletePresentation(name) {
+      localStorage.removeItem("presentation_" + name);
+      renderSaved();
+    }
+
+    function downloadPPTX() {
+      let content = slides.map((txt, i) => `Slide ${i+1}\n====\n${txt}\n`).join("\n\n");
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = document.getElementById("presentationName").value + ".ppt.txt";
+      link.click();
+    }
+
     updateSlide();
-  }
-
-  function deletePresentation(name){
-    localStorage.removeItem('presentation_'+name);
     renderSaved();
-  }
-
-  function downloadPPTX(){
-    saveCurrent();
-    let pptx = new PptxGenJS();
-    slides.forEach(s=>{
-      let slide = pptx.addSlide();
-      slide.addText(s.text,{x:0.5, y:0.5, w:9, h:2, fontSize:18});
-      if(s.image){
-        slide.addImage({data:s.image, x:0.5, y:2.5, w:8, h:4.5});
-      }
-    });
-    const name = document.getElementById('presentationName').value;
-    pptx.writeFile({fileName:name+".pptx"});
-  }
-
-  updateSlide();
-  renderSaved();
-</script>
+  </script>
+  
+  <p style="font-size: 14px; color: gray; margin-top: 20px;">
+  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
+To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
+© 2025 Erik Mohylák – All rights reserved.
+  </p>
 </body>
-</html>
+  </html>
