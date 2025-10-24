@@ -1,234 +1,114 @@
-<!DOCTYPE html><html lang="sk">
+<!DOCTYPE html>
+<html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <title>ErikAI Tabuľky</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f8f8f8; }
-    h1 { color: #1e90ff; }
-    table { border-collapse: collapse; margin-top: 20px; }
-    td, th {
-      border: 1px solid #ccc;
-      min-width: 80px;
-      height: 30px;
-      text-align: center;
-    }
-    input[type="text"] {
-      width: 100%;
-      height: 100%;
-      border: none;
-      padding: 5px;
-      box-sizing: border-box;
-      text-align: center;
-    }
-    .controls { margin-top: 20px; }
-    .controls button, .controls input[type="file"] {
-      margin-right: 10px;
-      padding: 10px;
-    }
-    .saved-list { margin-top: 20px; }
-    .active-cell { background-color: #e6f7ff; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📊 ErikAI Tabuľky 2.0</title>
+<style>
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f4f7fb;
+    color: #222;
+    text-align: center;
+    padding: 20px;
+  }
+  h1 {
+    color: #1a73e8;
+    margin-bottom: 10px;
+  }
+  .controls {
+    margin-bottom: 20px;
+  }
+  input {
+    width: 70px;
+    padding: 8px;
+    margin: 5px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    text-align: center;
+  }
+  button {
+    background: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  button:hover {
+    background: #1558a5;
+  }
+  table {
+    border-collapse: collapse;
+    margin: 0 auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    min-width: 80px;
+    height: 30px;
+    text-align: center;
+  }
+  td:focus {
+    outline: 2px solid #1a73e8;
+    background-color: #e8f0fe;
+  }
+  .export-btn {
+    margin-top: 20px;
+  }
+</style>
 </head>
 <body>
 
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<h1>📊 ErikAI Tabuľky 2.0</h1>
+
+<div class="controls">
+  <label>Riadky:</label>
+  <input type="number" id="rows" value="5" min="1" max="100">
+  <label>Stĺpce:</label>
+  <input type="number" id="cols" value="5" min="1" max="100">
+  <button onclick="createTable()">Vytvoriť tabuľku</button>
+</div>
+
+<div id="tableContainer"></div>
+
+<button class="export-btn" onclick="exportTable()">💾 Exportovať do HTML</button>
 
 <script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
+function createTable() {
+  const rows = parseInt(document.getElementById("rows").value);
+  const cols = parseInt(document.getElementById("cols").value);
+  const container = document.getElementById("tableContainer");
+
+  if (rows < 1 || cols < 1) {
+    alert("Zadaj platné čísla!");
+    return;
   }
+
+  let html = "<table contenteditable='true'>";
+  for (let r = 0; r < rows; r++) {
+    html += "<tr>";
+    for (let c = 0; c < cols; c++) {
+      html += "<td></td>";
+    }
+    html += "</tr>";
+  }
+  html += "</table>";
+  container.innerHTML = html;
+}
+
+function exportTable() {
+  const tableHTML = document.getElementById("tableContainer").innerHTML;
+  const blob = new Blob([tableHTML], { type: "text/html" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "ErikAI_Tabulka.html";
+  link.click();
+  alert("✅ Tabuľka bola exportovaná!");
+}
 </script>
 
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
-
-<p id="cas" style="font-size: 18px;"></p>
-
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
-
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
-  }
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  <h1>📊 ErikAI Tabuľky</h1>
-  <p>Maximálne rozmery: 100 x 100 (označenie A1 až CV100)</p><label for="fileInput">Vybrať Excel alebo CSV:</label> <input type="file" id="fileInput" accept=".csv, .xlsx">
-
-  <div>
-    <label for="tableName">📁 Názov tabuľky:</label>
-    <input type="text" id="tableName" placeholder="napr. moja_tabulka">
-  </div>  <table id="spreadsheet"></table>  <div class="controls">
-    <button onclick="saveTable()">📄 Uložiť</button>
-    <button onclick="loadTable()">📂 Načítať</button>
-    <button onclick="exportCSV()">📃 CSV</button>
-    <button onclick="clearTable()" style="background-color:#f44336; color:white">🔧 Vymazať</button>
-  </div>  <div class="saved-list">
-    <h3>📂 Uložené tabuľky:</h3>
-    <div id="savedTables"></div>
-  </div>  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>  <script>
-    const cols = 100;
-    const rows = 100;
-    const table = document.getElementById("spreadsheet");
-
-    function createTable() {
-      table.innerHTML = "";
-      const header = table.insertRow();
-      header.insertCell();
-      for (let c = 0; c < cols; c++) {
-        const cell = header.insertCell();
-        cell.textContent = toColumnName(c);
-      }
-      for (let r = 0; r < rows; r++) {
-        const row = table.insertRow();
-        const rowHeader = row.insertCell();
-        rowHeader.textContent = r + 1;
-        for (let c = 0; c < cols; c++) {
-          const cell = row.insertCell();
-          const input = document.createElement("input");
-          input.type = "text";
-          input.dataset.cell = toColumnName(c) + (r + 1);
-          input.addEventListener("focus", e => e.target.classList.add("active-cell"));
-          input.addEventListener("blur", e => e.target.classList.remove("active-cell"));
-          cell.appendChild(input);
-        }
-      }
-    }
-
-    function toColumnName(n) {
-      let name = "";
-      while (n >= 0) {
-        name = String.fromCharCode(n % 26 + 65) + name;
-        n = Math.floor(n / 26) - 1;
-      }
-      return name;
-    }
-
-    function saveTable() {
-      const name = document.getElementById("tableName").value || "tabulka";
-      const data = [];
-      for (let r = 1; r <= rows; r++) {
-        const row = [];
-        for (let c = 0; c < cols; c++) {
-          const cell = document.querySelector(`[data-cell='${toColumnName(c)}${r}']`);
-          row.push(cell.value);
-        }
-        data.push(row);
-      }
-      localStorage.setItem("tabulka_" + name, JSON.stringify(data));
-      refreshSavedList();
-    }
-
-    function loadTable() {
-      const name = document.getElementById("tableName").value;
-      const data = JSON.parse(localStorage.getItem("tabulka_" + name));
-      if (!data) return alert("Tabuľka nebola nájdená.");
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const cell = document.querySelector(`[data-cell='${toColumnName(c)}${r + 1}']`);
-          cell.value = (data[r] && data[r][c]) || "";
-        }
-      }
-    }
-
-    function clearTable() {
-      document.querySelectorAll("input[type='text']").forEach(cell => cell.value = "");
-    }
-
-    function exportCSV() {
-      let csv = "";
-      for (let r = 1; r <= rows; r++) {
-        let row = [];
-        for (let c = 0; c < cols; c++) {
-          const cell = document.querySelector(`[data-cell='${toColumnName(c)}${r}']`).value;
-          row.push('"' + cell.replace(/"/g, '""') + '"');
-        }
-        csv += row.join(",") + "\n";
-      }
-      const blob = new Blob([csv], { type: "text/csv" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "tabulka.csv";
-      link.click();
-    }
-
-    function refreshSavedList() {
-      const saved = Object.keys(localStorage).filter(k => k.startsWith("tabulka_"));
-      const list = document.getElementById("savedTables");
-      list.innerHTML = "";
-      saved.forEach(k => {
-        const name = k.replace("tabulka_", "");
-        const div = document.createElement("div");
-        div.innerHTML = `<button onclick='loadSaved("${name}")'>${name}</button> <button onclick='deleteSaved("${name}")' style='color:red'>❌</button>`;
-        list.appendChild(div);
-      });
-    }
-
-    function loadSaved(name) {
-      document.getElementById("tableName").value = name;
-      loadTable();
-    }
-
-    function deleteSaved(name) {
-      localStorage.removeItem("tabulka_" + name);
-      refreshSavedList();
-    }
-
-    document.getElementById("fileInput").addEventListener("change", function (e) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const parsed = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-        parsed.forEach((row, r) => {
-          row.forEach((val, c) => {
-            if (r < rows && c < cols) {
-              const cell = document.querySelector(`[data-cell='${toColumnName(c)}${r + 1}']`);
-              cell.value = val;
-            }
-          });
-        });
-      };
-      reader.readAsArrayBuffer(file);
-    });
-
-    createTable();
-    refreshSavedList();
-  </script>
-  
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-  </p>
 </body>
 </html>
