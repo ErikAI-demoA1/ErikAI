@@ -3,28 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📊 ErikAI Tabuľky 2.0</title>
+<title>📊 ErikAI Tabuľky 3.0</title>
 <style>
   body {
     font-family: "Segoe UI", Arial, sans-serif;
-    background: #f4f7fb;
-    color: #222;
+    background: #f5f7fb;
     text-align: center;
     padding: 20px;
+    color: #222;
   }
   h1 {
     color: #1a73e8;
-    margin-bottom: 10px;
   }
   .controls {
-    margin-bottom: 20px;
+    margin: 20px 0;
   }
   input {
-    width: 70px;
+    width: 80px;
     padding: 8px;
     margin: 5px;
-    border-radius: 8px;
     border: 1px solid #ccc;
+    border-radius: 8px;
     text-align: center;
   }
   button {
@@ -36,45 +35,51 @@
     cursor: pointer;
     transition: 0.2s;
   }
-  button:hover {
-    background: #1558a5;
-  }
+  button:hover { background: #1558a5; }
   table {
     border-collapse: collapse;
     margin: 0 auto;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
   }
-  td {
+  th, td {
     border: 1px solid #ddd;
-    padding: 8px;
     min-width: 80px;
     height: 30px;
     text-align: center;
+    padding: 4px;
+  }
+  th {
+    background: #e8f0fe;
+    color: #333;
+    font-weight: bold;
   }
   td:focus {
     outline: 2px solid #1a73e8;
     background-color: #e8f0fe;
   }
-  .export-btn {
+  .export-btns {
     margin-top: 20px;
   }
 </style>
 </head>
 <body>
 
-<h1>📊 ErikAI Tabuľky 2.0</h1>
+<h1>📊 ErikAI Tabuľky 3.0</h1>
 
 <div class="controls">
   <label>Riadky:</label>
   <input type="number" id="rows" value="5" min="1" max="100">
   <label>Stĺpce:</label>
-  <input type="number" id="cols" value="5" min="1" max="100">
+  <input type="number" id="cols" value="5" min="1" max="26">
   <button onclick="createTable()">Vytvoriť tabuľku</button>
 </div>
 
 <div id="tableContainer"></div>
 
-<button class="export-btn" onclick="exportTable()">💾 Exportovať do HTML</button>
+<div class="export-btns">
+  <button onclick="exportHTML()">💾 Stiahnuť ako HTML</button>
+  <button onclick="exportCSV()">📈 Stiahnuť ako CSV (Excel)</button>
+</div>
 
 <script>
 function createTable() {
@@ -87,26 +92,57 @@ function createTable() {
     return;
   }
 
-  let html = "<table contenteditable='true'>";
+  let html = "<table contenteditable='true'><thead><tr><th></th>";
+  for (let c = 0; c < cols; c++) {
+    html += `<th>${String.fromCharCode(65 + c)}</th>`;
+  }
+  html += "</tr></thead><tbody>";
+
   for (let r = 0; r < rows; r++) {
-    html += "<tr>";
+    html += `<tr><th>${r + 1}</th>`;
     for (let c = 0; c < cols; c++) {
       html += "<td></td>";
     }
     html += "</tr>";
   }
-  html += "</table>";
+
+  html += "</tbody></table>";
   container.innerHTML = html;
 }
 
-function exportTable() {
-  const tableHTML = document.getElementById("tableContainer").innerHTML;
-  const blob = new Blob([tableHTML], { type: "text/html" });
+function exportHTML() {
+  const table = document.querySelector("table");
+  if (!table) return alert("Najprv vytvor tabuľku!");
+  
+  const cleanTable = table.cloneNode(true);
+  cleanTable.querySelectorAll("th:first-child").forEach(th => th.remove());
+  cleanTable.querySelector("thead tr th:first-child").remove();
+
+  const blob = new Blob([cleanTable.outerHTML], { type: "text/html" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = "ErikAI_Tabulka.html";
   link.click();
-  alert("✅ Tabuľka bola exportovaná!");
+  alert("✅ HTML tabuľka uložená!");
+}
+
+function exportCSV() {
+  const rows = document.querySelectorAll("table tr");
+  if (!rows.length) return alert("Najprv vytvor tabuľku!");
+
+  let csv = [];
+  rows.forEach((row, i) => {
+    let cells = Array.from(row.querySelectorAll(i === 0 ? "th:not(:first-child)" : "td"));
+    let values = cells.map(cell => `"${cell.textContent.trim()}"`);
+    csv.push(values.join(","));
+  });
+
+  const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "ErikAI_Tabulka.csv";
+  link.click();
+  alert("✅ CSV (Excel) súbor uložený!");
 }
 </script>
 
