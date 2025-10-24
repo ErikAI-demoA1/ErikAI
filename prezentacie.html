@@ -1,60 +1,83 @@
 <!DOCTYPE html><html lang="sk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📝 ErikAI Prezentácie Profesionálne</title>
+<title>ErikAI Prezentácie 2.0</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PptxGenJS/3.12.0/pptxgen.bundle.js"></script>
 <style>
-body { font-family: 'Arial', sans-serif; margin:0; padding:0; background:#f0f2f5; }
-header { background:#0077cc; color:white; padding:12px 20px; text-align:center; font-size:1.5rem; }
-.container { display:flex; flex-direction: column; align-items:center; padding:20px; }
-.slide-editor { width:90%; max-width:1000px; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); margin-bottom:20px; position:relative; }
-textarea { width:100%; min-height:150px; font-size:18px; padding:10px; border-radius:8px; border:1px solid #ccc; resize:vertical; }
-.controls { display:flex; flex-wrap: wrap; gap:10px; margin-top:10px; }
-.controls button { padding:10px 20px; border:none; border-radius:8px; cursor:pointer; background:#0077cc; color:white; font-size:16px; }
-#slideCanvas { border:1px solid #ccc; margin-top:10px; background:white; width:100%; height:400px; position:relative; overflow:hidden; }
-.slideImage { position:absolute; cursor:move; max-width:100%; max-height:100%; }
-input[type=file] { display:none; }
-.dark-mode { background:#121212; color:white; }
-.dark-mode .slide-editor { background:#1e1e1e; color:white; }
+  body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+  textarea { width: 100%; height: 150px; font-size: 18px; }
+  .slide-img { max-width: 200px; margin: 5px; cursor: move; border: 1px solid #ccc; border-radius: 4px; }
+  .controls { margin-top: 10px; }
 </style>
 </head>
-<body>
-<header>📝 ErikAI Prezentácie Profesionálne</header>
-<div class="container">
-<label>📁 Názov prezentácie: <input id="presentationName" value="Moja prezentácia"></label>
-<div class="slide-editor">
-<textarea id="slideText" placeholder="Tu píš text snímky..."></textarea>
-<div class="controls">
-<button onclick="prevSlide()">◄ Predchádzajúce</button>
-<button onclick="nextSlide()">► Ďalší</button>
-<button onclick="newSlide()">➕ Nový slide</button>
-<button onclick="deleteCurrentSlide()">🗑 Vymazať</button>
-<button onclick="addImage()">🖼️ Pridať obrázok</button>
-<button onclick="downloadPPTX()">⬇ Export PPTX</button>
-<button onclick="toggleTheme()">🌓 Režim</button>
+<body><h2>📄 ErikAI Prezentácie 2.0</h2>
+<label>📁 Názov prezentácie: <input id="presentationName" value="Moja prezentácia"></label><br><br>
+<textarea id="slideText" placeholder="Napíš text pre tento slide..."></textarea><br>
+<input type="file" id="slideImage" multiple accept="image/*"><br>
+<div id="imageContainer"></div><div class="controls">
+  <button onclick="prevSlide()">◄ Predchádzajúce</button>
+  <button onclick="nextSlide()">► Ďalší</button>
+  <button onclick="newSlide()">➕ Nový slide</button>
+  <button onclick="savePresentation()">✅ Uložiť</button>
+  <button onclick="downloadPPTX()">⬇ Stiahnuť PPTX</button>
 </div>
-<div id="slideCanvas"></div>
-</div>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.11.0/pptxgen.bundle.js"></script>
-<script>
-let slides = [{text:'', images:[], bg:null}], current=0;
-const slideText = document.getElementById('slideText');
-const slideCanvas = document.getElementById('slideCanvas');function toggleTheme(){document.body.classList.toggle('dark-mode');}
+<p id="slideCount">Slide: 1 / 1</p><script>
+let slides = [{text:'', images:[]}], current = 0;
+const imageContainer = document.getElementById('imageContainer');
 
-function saveCurrent(){ slides[current].text = slideText.value; }
+function updateSlide() {
+  document.getElementById('slideText').value = slides[current].text;
+  imageContainer.innerHTML = '';
+  slides[current].images.forEach((imgSrc, i) => {
+    const img = document.createElement('img');
+    img.src = imgSrc;
+    img.className = 'slide-img';
+    img.draggable = true;
+    img.ondragstart = e => e.dataTransfer.setData('text/plain', i);
+    imageContainer.appendChild(img);
+  });
+  document.getElementById('slideCount').innerText = `Slide: ${current+1} / ${slides.length}`;
+}
 
-function updateSlide(){ slideText.value = slides[current].text; slideCanvas.innerHTML = ''; slides[current].images.forEach(imgObj=>{ const imgEl = document.createElement('img'); imgEl.src = imgObj.src; imgEl.style.left = imgObj.x+'px'; imgEl.style.top = imgObj.y+'px'; imgEl.className = 'slideImage'; makeDraggable(imgEl, imgObj); slideCanvas.appendChild(imgEl); }); if(slides[current].bg){ slideCanvas.style.background = url(${slides[current].bg}) center/cover no-repeat; } else slideCanvas.style.background = 'white'; }
+function saveCurrent() {
+  slides[current].text = document.getElementById('slideText').value;
+}
 
-function prevSlide(){ saveCurrent(); if(current>0) current--; updateSlide(); } function nextSlide(){ saveCurrent(); if(current<slides.length-1) current++; updateSlide(); } function newSlide(){ saveCurrent(); slides.push({text:'', images:[], bg:null}); current=slides.length-1; updateSlide(); } function deleteCurrentSlide(){ if(slides.length<=1) return; slides.splice(current,1); if(current>=slides.length) current=slides.length-1; updateSlide(); }
+function nextSlide() { saveCurrent(); if(current < slides.length-1) current++; updateSlide(); }
+function prevSlide() { saveCurrent(); if(current > 0) current--; updateSlide(); }
+function newSlide() { saveCurrent(); slides.push({text:'', images:[]}); current = slides.length-1; updateSlide(); }
 
-function addImage(){ const input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.onchange = e=>{ const file = e.target.files[0]; const reader = new FileReader(); reader.onload = () => { const imgObj = {src:reader.result,x:50,y:50}; slides[current].images.push(imgObj); updateSlide(); }; reader.readAsDataURL(file); }; input.click(); }
+// Pridanie obrázkov
+document.getElementById('slideImage').addEventListener('change', e => {
+  Array.from(e.target.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = evt => {
+      slides[current].images.push(evt.target.result);
+      updateSlide();
+    };
+    reader.readAsDataURL(file);
+  });
+});
 
-function makeDraggable(el,obj){ el.onmousedown = function(e){ e.preventDefault(); let shiftX = e.clientX - el.getBoundingClientRect().left; let shiftY = e.clientY - el.getBoundingClientRect().top; function moveAt(pageX,pageY){ let newX = pageX - shiftX - slideCanvas.getBoundingClientRect().left; let newY = pageY - shiftY - slideCanvas.getBoundingClientRect().top; el.style.left = newX+'px'; el.style.top = newY+'px'; obj.x=newX; obj.y=newY; } function onMouseMove(event){ moveAt(event.pageX,event.pageY); } document.addEventListener('mousemove',onMouseMove); document.onmouseup = function(){ document.removeEventListener('mousemove',onMouseMove); document.onmouseup=null; } }; el.ondragstart = ()=>false; }
+function savePresentation() {
+  saveCurrent();
+  localStorage.setItem('presentation_'+document.getElementById('presentationName').value, JSON.stringify(slides));
+  alert('Prezentácia uložená!');
+}
 
-function downloadPPTX(){ saveCurrent(); let pptx = new PptxGenJS(); slides.forEach(s=>{ let slide = pptx.addSlide(); if(s.bg) slide.background = {path:s.bg}; if(s.text) slide.addText(s.text,{x:0.5,y:0.5,w:8,h:4,fontSize:18}); s.images.forEach(img=>{ slide.addImage({path:img.src,x:img.x/100,y:img.y/100,w:3}); }); }); const name = document.getElementById('presentationName').value||'MojaPrezentacia'; pptx.writeFile({fileName:name+'.pptx'}); }
+function downloadPPTX() {
+  saveCurrent();
+  const pptx = new PptxGenJS();
+  slides.forEach(slide => {
+    const s = pptx.addSlide();
+    s.addText(slide.text, { x:1, y:1, w:8, h:3, fontSize:18, color:'363636' });
+    slide.images.forEach((img, i) => {
+      s.addImage({ data: img, x:1+i*2, y:4, w:2, h:2 });
+    });
+  });
+  pptx.writeFile({ fileName: document.getElementById('presentationName').value + '.pptx' });
+}
 
-updateSlide(); </script>
-
-</body>
+updateSlide();
+</script></body>
 </html>
