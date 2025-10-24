@@ -3,147 +3,214 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📊 ErikAI Tabuľky 3.0</title>
+<title>ErikAI Tabuľky 3.0</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-  body {
-    font-family: "Segoe UI", Arial, sans-serif;
-    background: #f5f7fb;
-    text-align: center;
-    padding: 20px;
-    color: #222;
-  }
-  h1 {
-    color: #1a73e8;
-  }
-  .controls {
-    margin: 20px 0;
-  }
-  input {
-    width: 80px;
-    padding: 8px;
-    margin: 5px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    text-align: center;
-  }
-  button {
-    background: #1a73e8;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
-    cursor: pointer;
-    transition: 0.2s;
-  }
-  button:hover { background: #1558a5; }
-  table {
-    border-collapse: collapse;
-    margin: 0 auto;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
-  th, td {
-    border: 1px solid #ddd;
-    min-width: 80px;
-    height: 30px;
-    text-align: center;
-    padding: 4px;
-  }
-  th {
-    background: #e8f0fe;
-    color: #333;
-    font-weight: bold;
-  }
-  td:focus {
-    outline: 2px solid #1a73e8;
-    background-color: #e8f0fe;
-  }
-  .export-btns {
-    margin-top: 20px;
-  }
+  body { font-family: Arial, sans-serif; padding: 20px; background: #f0f4f8; }
+  h1 { color: #1e90ff; }
+  table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+  th, td { border: 1px solid #ccc; min-width: 50px; height: 30px; text-align: center; }
+  input[type="text"] { width: 100%; height: 100%; border: none; padding: 5px; box-sizing: border-box; text-align: center; }
+  input[type="number"] { width: 60px; }
+  .controls, .saved-list { margin-top: 20px; }
+  .controls button, .controls input[type="file"] { margin-right: 10px; padding: 10px; cursor:pointer; border:none; border-radius:5px; background:#1e90ff; color:white; }
+  .controls button:hover { background:#1558a5; }
+  .active-cell { background-color: #e6f7ff; }
+  body.dark-mode { background-color: #121212; color: white; }
 </style>
 </head>
 <body>
 
 <h1>📊 ErikAI Tabuľky 3.0</h1>
 
+<label>Počet riadkov: <input type="number" id="rowCount" value="10" min="1" max="100"></label>
+<label>Počet stĺpcov: <input type="number" id="colCount" value="10" min="1" max="100"></label>
+<button onclick="createTable()">🆕 Vytvoriť tabuľku</button>
+<br><br>
+<label>Vybrať CSV/Excel: <input type="file" id="fileInput" accept=".csv, .xlsx"></label>
+<br><br>
+<label>Názov tabuľky: <input type="text" id="tableName" placeholder="napr. moja_tabulka"></label>
+
+<table id="spreadsheet"></table>
+
 <div class="controls">
-  <label>Riadky:</label>
-  <input type="number" id="rows" value="5" min="1" max="100">
-  <label>Stĺpce:</label>
-  <input type="number" id="cols" value="5" min="1" max="26">
-  <button onclick="createTable()">Vytvoriť tabuľku</button>
+  <button onclick="saveTable()">💾 Uložiť projekt</button>
+  <button onclick="loadTable()">📂 Načítať projekt</button>
+  <button onclick="exportCSV()">📃 Export CSV</button>
+  <button onclick="exportHTML()">📄 Export HTML</button>
+  <button onclick="clearTable()" style="background-color:#f44336;">🔧 Vymazať tabuľku</button>
 </div>
 
-<div id="tableContainer"></div>
-
-<div class="export-btns">
-  <button onclick="exportHTML()">💾 Stiahnuť ako HTML</button>
-  <button onclick="exportCSV()">📈 Stiahnuť ako CSV (Excel)</button>
+<div class="saved-list">
+  <h3>📂 Uložené projekty:</h3>
+  <div id="savedTables"></div>
 </div>
 
 <script>
-function createTable() {
-  const rows = parseInt(document.getElementById("rows").value);
-  const cols = parseInt(document.getElementById("cols").value);
-  const container = document.getElementById("tableContainer");
+let rows = 10, cols = 10;
 
-  if (rows < 1 || cols < 1) {
-    alert("Zadaj platné čísla!");
-    return;
+function toColumnName(n) {
+  let name = "";
+  while (n >= 0) {
+    name = String.fromCharCode(n % 26 + 65) + name;
+    n = Math.floor(n / 26) - 1;
   }
-
-  let html = "<table contenteditable='true'><thead><tr><th></th>";
-  for (let c = 0; c < cols; c++) {
-    html += `<th>${String.fromCharCode(65 + c)}</th>`;
-  }
-  html += "</tr></thead><tbody>";
-
-  for (let r = 0; r < rows; r++) {
-    html += `<tr><th>${r + 1}</th>`;
-    for (let c = 0; c < cols; c++) {
-      html += "<td></td>";
-    }
-    html += "</tr>";
-  }
-
-  html += "</tbody></table>";
-  container.innerHTML = html;
+  return name;
 }
 
-function exportHTML() {
-  const table = document.querySelector("table");
-  if (!table) return alert("Najprv vytvor tabuľku!");
-  
-  const cleanTable = table.cloneNode(true);
-  cleanTable.querySelectorAll("th:first-child").forEach(th => th.remove());
-  cleanTable.querySelector("thead tr th:first-child").remove();
+function createTable() {
+  rows = parseInt(document.getElementById('rowCount').value);
+  cols = parseInt(document.getElementById('colCount').value);
+  const table = document.getElementById("spreadsheet");
+  table.innerHTML = "";
 
-  const blob = new Blob([cleanTable.outerHTML], { type: "text/html" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "ErikAI_Tabulka.html";
-  link.click();
-  alert("✅ HTML tabuľka uložená!");
+  const header = table.insertRow();
+  header.insertCell();
+  for (let c = 0; c < cols; c++) {
+    const cell = header.insertCell();
+    cell.textContent = toColumnName(c);
+    cell.style.fontWeight = "bold";
+  }
+
+  for (let r = 1; r <= rows; r++) {
+    const row = table.insertRow();
+    const rowHeader = row.insertCell();
+    rowHeader.textContent = r;
+    rowHeader.style.fontWeight = "bold";
+
+    for (let c = 0; c < cols; c++) {
+      const cell = row.insertCell();
+      const input = document.createElement("input");
+      input.type = "text";
+      input.dataset.cell = toColumnName(c) + r;
+      input.addEventListener("focus", e => e.target.classList.add("active-cell"));
+      input.addEventListener("blur", e => e.target.classList.remove("active-cell"));
+      cell.appendChild(input);
+    }
+  }
+}
+
+// CSV/Excel import
+document.getElementById("fileInput").addEventListener("change", function (e) {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const parsed = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+    createTable();
+    parsed.forEach((row, r) => {
+      row.forEach((val, c) => {
+        if (r < rows && c < cols) {
+          const cell = document.querySelector(`[data-cell='${toColumnName(c)}${r+1}']`);
+          cell.value = val;
+        }
+      });
+    });
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+// Save/load project
+function saveTable() {
+  const name = document.getElementById("tableName").value || "tabulka";
+  const data = [];
+  for (let r = 1; r <= rows; r++) {
+    const row = [];
+    for (let c = 0; c < cols; c++) {
+      const cell = document.querySelector(`[data-cell='${toColumnName(c)}${r}']`);
+      row.push(cell.value);
+    }
+    data.push(row);
+  }
+  localStorage.setItem("tabulka_" + name, JSON.stringify({rows, cols, data}));
+  refreshSavedList();
+  alert("✅ Projekt uložený");
+}
+
+function loadTable() {
+  const name = document.getElementById("tableName").value;
+  const project = JSON.parse(localStorage.getItem("tabulka_" + name));
+  if (!project) return alert("Tabuľka nebola nájdená.");
+  document.getElementById("rowCount").value = project.rows;
+  document.getElementById("colCount").value = project.cols;
+  createTable();
+  project.data.forEach((row, r) => {
+    row.forEach((val, c) => {
+      const cell = document.querySelector(`[data-cell='${toColumnName(c)}${r+1}']`);
+      cell.value = val;
+    });
+  });
+}
+
+function clearTable() {
+  document.querySelectorAll("input[type='text']").forEach(cell => cell.value = "");
 }
 
 function exportCSV() {
-  const rows = document.querySelectorAll("table tr");
-  if (!rows.length) return alert("Najprv vytvor tabuľku!");
-
-  let csv = [];
-  rows.forEach((row, i) => {
-    let cells = Array.from(row.querySelectorAll(i === 0 ? "th:not(:first-child)" : "td"));
-    let values = cells.map(cell => `"${cell.textContent.trim()}"`);
-    csv.push(values.join(","));
-  });
-
-  const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+  let csv = "";
+  for (let r = 1; r <= rows; r++) {
+    let row = [];
+    for (let c = 0; c < cols; c++) {
+      const cell = document.querySelector(`[data-cell='${toColumnName(c)}${r}']`).value;
+      row.push('"' + cell.replace(/"/g, '""') + '"');
+    }
+    csv += row.join(",") + "\n";
+  }
+  const blob = new Blob([csv], { type: "text/csv" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "ErikAI_Tabulka.csv";
+  link.download = (document.getElementById("tableName").value || "tabulka") + ".csv";
   link.click();
-  alert("✅ CSV (Excel) súbor uložený!");
 }
+
+function exportHTML() {
+  const table = document.getElementById("spreadsheet").cloneNode(true);
+  table.querySelectorAll("input").forEach(input => {
+    input.outerHTML = `<td>${input.value}</td>`;
+  });
+  const style = `
+    <style>
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #ccc; min-width: 50px; height: 30px; text-align: center; }
+      th { font-weight: bold; background:#e6f7ff; }
+      td { background:#ffffff; }
+    </style>
+  `;
+  const htmlContent = `<html><head><meta charset="UTF-8">${style}</head><body>${table.outerHTML}</body></html>`;
+  const blob = new Blob([htmlContent], { type: "text/html" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = (document.getElementById("tableName").value || "tabulka") + ".html";
+  link.click();
+}
+
+function refreshSavedList() {
+  const saved = Object.keys(localStorage).filter(k => k.startsWith("tabulka_"));
+  const list = document.getElementById("savedTables");
+  list.innerHTML = "";
+  saved.forEach(k => {
+    const name = k.replace("tabulka_", "");
+    const div = document.createElement("div");
+    div.innerHTML = `<button onclick='loadSaved("${name}")'>${name}</button> <button onclick='deleteSaved("${name}")' style='color:red'>❌</button>`;
+    list.appendChild(div);
+  });
+}
+
+function loadSaved(name) {
+  document.getElementById("tableName").value = name;
+  loadTable();
+}
+
+function deleteSaved(name) {
+  localStorage.removeItem("tabulka_" + name);
+  refreshSavedList();
+}
+
+createTable();
+refreshSavedList();
 </script>
 
 </body>
