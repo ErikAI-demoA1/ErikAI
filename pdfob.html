@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🖼️ ErikAI Obrázky na PDF</title>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f9f9f9;
+    text-align: center;
+    padding: 30px;
+  }
+  h1 {
+    color: #1a73e8;
+  }
+  input, button {
+    margin: 10px;
+    padding: 10px;
+    font-size: 16px;
+  }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    background: #1a73e8;
+    color: white;
+    transition: background 0.3s;
+  }
+  button:hover {
+    background: #1558a5;
+  }
+</style>
+</head>
+<body>
+
+<h1>🖼️ ErikAI Obrázky na PDF</h1>
+
+<p>Vyber obrázky (JPG alebo PNG), ktoré chceš premeniť na PDF:</p>
+<input type="file" id="imageFiles" accept="image/*" multiple>
+<br>
+<button onclick="imagesToPDF()">💾 Vytvoriť PDF</button>
+
+<script>
+async function imagesToPDF() {
+    const files = document.getElementById("imageFiles").files;
+    if (files.length === 0) return alert("Vyber aspoň jeden obrázok!");
+
+    const pdfDoc = await PDFLib.PDFDocument.create();
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const arrayBuffer = await file.arrayBuffer();
+        const imgBytes = new Uint8Array(arrayBuffer);
+        let img;
+        let imgDims;
+
+        if (file.type === "image/jpeg" || file.type === "image/jpg") {
+            img = await pdfDoc.embedJpg(imgBytes);
+            imgDims = img.scale(1);
+        } else if (file.type === "image/png") {
+            img = await pdfDoc.embedPng(imgBytes);
+            imgDims = img.scale(1);
+        } else {
+            alert(`Formát obrázka ${file.name} nie je podporovaný!`);
+            continue;
+        }
+
+        // vytvorí stránku vo veľkosti obrázka
+        const page = pdfDoc.addPage([imgDims.width, imgDims.height]);
+        page.drawImage(img, {
+            x: 0,
+            y: 0,
+            width: imgDims.width,
+            height: imgDims.height,
+        });
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "ErikAI_obrazky.pdf";
+    link.click();
+    alert("✅ Obrázky úspešne uložené ako PDF!");
+}
+</script>
+
+</body>
+</html>
