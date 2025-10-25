@@ -86,7 +86,29 @@ self.addEventListener('install', e => {
         'APP_Dowloand/erikai2025.jpg',
         'APP_Dowloand/erikai_icon_192.png',
         'APP_Dowloand/erikai_icon_512.png',
-        'APP_Dowloand/qr_erikai.png'
+        'APP_Dowloand/qr_erikai.png',
+
+        // TU DOPLNENÉ NOVÉ SÚBORY
+        '01zaklad.html',
+        '02nadpisy.html',
+        '03odkazy.html',
+        '04zoznamy.html',
+        '05cssstyll.html',
+        '06javascript.html',
+        '07formular.html',
+        '08obrazkyavidea.html',
+        '09tlacidlastyl.html',
+        '10dizajn.html',
+        '11efekty.html',
+        '12profil.html',
+        '13kalkulacka.html',
+        '14github.html',
+        'coc.html',
+        'erikai_kniha-html.html',
+        'eriktvv.html',
+        'erikvyh.html',
+        'minicoc.html',
+        'pdfob.html'
       ]);
     })
   );
