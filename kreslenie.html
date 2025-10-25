@@ -19,7 +19,6 @@
       color: #0b1220 !important;
     }
     
-    /* Mobile first responsive design */
     .container { 
       display: flex; 
       flex-direction: column;
@@ -65,7 +64,7 @@
     .light-mode .toolbtn:hover { background: rgba(0,0,0,0.1); }
     .toolbtn.active { background: #3b82f6; border-color: #3b82f6; }
     
-    /* Canvas container - RESPONSIVE */
+    /* CANVAS CONTAINER - OPRAVENÉ */
     .canvas-container { 
       position: relative; 
       background: white; 
@@ -75,7 +74,6 @@
       border: 1px solid rgba(255,255,255,0.2);
       width: 100%;
       height: 500px;
-      margin-bottom: 10px;
     }
     
     @media (max-width: 767px) {
@@ -90,12 +88,12 @@
       }
     }
     
+    /* CANVAS ELEMENTS - OPRAVENÉ */
     #raster, #main { 
       position: absolute; 
       top: 0; 
       left: 0; 
-      width: 100% !important;
-      height: 100% !important;
+      display: block;
       cursor: crosshair;
       touch-action: none;
     }
@@ -132,7 +130,6 @@
       justify-content: center;
     }
     
-    /* Mobile specific improvements */
     .mobile-warning {
       display: none;
       background: #f39c12;
@@ -267,17 +264,12 @@ let objects = [];
 let strokes = [];
 let pendingShape = null;
 
-// Initialize
+// Initialize - OPRAVENÉ
 function initCanvas() {
-  rCtx.lineCap = 'round';
-  rCtx.lineJoin = 'round';
-  rCtx.strokeStyle = color;
-  rCtx.lineWidth = sizeVal;
-  
-  // Set canvas sizes based on container
+  // Nastav pevné rozmery podľa containeru
   const container = document.querySelector('.canvas-container');
-  const width = container.clientWidth;
-  const height = container.clientHeight;
+  const width = 800; // fixed width
+  const height = 500; // fixed height
   
   raster.width = main.width = width;
   raster.height = main.height = height;
@@ -289,6 +281,12 @@ function initCanvas() {
   // Draw initial white background
   rCtx.fillStyle = '#ffffff';
   rCtx.fillRect(0, 0, width, height);
+  
+  // Nastav štýly pre kreslenie
+  rCtx.lineCap = 'round';
+  rCtx.lineJoin = 'round';
+  rCtx.strokeStyle = color;
+  rCtx.lineWidth = sizeVal;
   
   renderAll();
 }
@@ -313,14 +311,17 @@ function setTool(t){
 }
 
 // Color & size
-$('colorPicker').addEventListener('input', e => { color = e.target.value; rCtx.strokeStyle = color; });
+$('colorPicker').addEventListener('input', e => { 
+  color = e.target.value; 
+  rCtx.strokeStyle = color; 
+});
 $('sizeSlider').addEventListener('input', e => { 
   sizeVal = e.target.value; 
   $('sizeValue').textContent = sizeVal; 
   rCtx.lineWidth = sizeVal; 
 });
 
-// Drawing functions
+// Drawing functions - OPRAVENÉ PRE KLIKANIE
 function getCanvasPos(e){
   const rect = main.getBoundingClientRect();
   const scaleX = main.width / rect.width;
@@ -328,7 +329,6 @@ function getCanvasPos(e){
   
   let clientX, clientY;
   
-  // Handle both mouse and touch events
   if (e.type.includes('touch')) {
     clientX = e.touches[0].clientX;
     clientY = e.touches[0].clientY;
@@ -431,7 +431,7 @@ function distToSegment(px,py, x1,y1, x2,y2){
   return Math.sqrt(dx*dx + dy*dy);
 }
 
-// Rendering - OPRAVENÉ
+// Rendering
 function renderAll(){
   // Clear main canvas but keep the white background from raster
   ctx.clearRect(0, 0, main.width, main.height);
@@ -443,39 +443,60 @@ function renderAll(){
       ctx.strokeStyle = o.color || '#000';
       if(o.fill){ ctx.fillStyle=o.fill; ctx.fillRect(o.x,o.y,o.w,o.h); }
       ctx.strokeRect(o.x,o.y,o.w,o.h);
-      if(o.id===selectedId){ ctx.setLineDash([5,5]); ctx.strokeRect(o.x-3,o.y-3,o.w+6,o.h+6); ctx.setLineDash([]); }
+      if(o.id===selectedId){ 
+        ctx.setLineDash([5,5]); 
+        ctx.strokeStyle = '#3b82f6';
+        ctx.strokeRect(o.x-3,o.y-3,o.w+6,o.h+6); 
+        ctx.setLineDash([]); 
+      }
     } else if(o.type==='circle'){
       ctx.lineWidth = o.stroke || Math.max(2, sizeVal/1.5);
       ctx.strokeStyle = o.color || '#000';
-      ctx.beginPath(); ctx.arc(o.x+o.r,o.y+o.r,o.r,0,Math.PI*2);
+      ctx.beginPath(); 
+      ctx.arc(o.x+o.r,o.y+o.r,o.r,0,Math.PI*2);
       if(o.fill){ ctx.fillStyle=o.fill; ctx.fill(); }
       ctx.stroke();
-      if(o.id===selectedId){ ctx.setLineDash([5,5]); ctx.strokeRect(o.x-3,o.y-3,o.r*2+6,o.r*2+6); ctx.setLineDash([]); }
+      if(o.id===selectedId){ 
+        ctx.setLineDash([5,5]); 
+        ctx.strokeStyle = '#3b82f6';
+        ctx.strokeRect(o.x-3,o.y-3,o.r*2+6,o.r*2+6); 
+        ctx.setLineDash([]); 
+      }
     } else if(o.type==='line'){
       ctx.lineWidth = o.stroke || Math.max(2, sizeVal/1.5);
       ctx.strokeStyle = o.color || '#000';
-      ctx.beginPath(); ctx.moveTo(o.x,o.y); ctx.lineTo(o.x2,o.y2); ctx.stroke();
-      if(o.id===selectedId){ ctx.setLineDash([5,5]); ctx.strokeRect(Math.min(o.x,o.x2)-3,Math.min(o.y,o.y2)-3,Math.abs(o.x2-o.x)+6,Math.abs(o.y2-o.y)+6); ctx.setLineDash([]); }
+      ctx.beginPath(); 
+      ctx.moveTo(o.x,o.y); 
+      ctx.lineTo(o.x2,o.y2); 
+      ctx.stroke();
+      if(o.id===selectedId){ 
+        ctx.setLineDash([5,5]); 
+        ctx.strokeStyle = '#3b82f6';
+        ctx.strokeRect(Math.min(o.x,o.x2)-3,Math.min(o.y,o.y2)-3,Math.abs(o.x2-o.x)+6,Math.abs(o.y2-o.y)+6); 
+        ctx.setLineDash([]); 
+      }
     } else if(o.type==='text'){
       ctx.fillStyle = o.color || '#000'; 
       ctx.font = `${o.fontSize||20}px Inter, Arial`; 
       ctx.fillText(o.text,o.x,o.y);
       if(o.id===selectedId){ 
         const w = ctx.measureText(o.text).width;
-        ctx.setLineDash([5,5]); ctx.strokeRect(o.x-3,o.y-o.fontSize-3,w+6,o.fontSize+6); ctx.setLineDash([]); 
+        ctx.setLineDash([5,5]); 
+        ctx.strokeStyle = '#3b82f6';
+        ctx.strokeRect(o.x-3,o.y-o.fontSize-3,w+6,o.fontSize+6); 
+        ctx.setLineDash([]); 
       }
     }
   }
 }
 
-// Event handlers - VYLEPŠENÉ PRE MOBIL
+// Event handlers - ZJEDNODUŠENÉ
 function onDown(e){
-  e.preventDefault(); // Important for mobile
   const pos = getCanvasPos(e);
+  console.log('Mouse down at:', pos); // Debug
   
   if(tool==='draw'){
     startStroke(pos);
-    renderAll();
     return;
   }
   
@@ -485,12 +506,12 @@ function onDown(e){
     rCtx.globalCompositeOperation = 'destination-out';
     rCtx.beginPath();
     rCtx.moveTo(pos.x, pos.y);
-    renderAll();
     return;
   }
   
   if(tool==='select'){
     selectedId = hitTest(pos.x,pos.y);
+    console.log('Selected:', selectedId); // Debug
     if(selectedId){
       const o = objects.find(x=>x.id===selectedId);
       if(o && !o.locked){
@@ -510,8 +531,6 @@ function onDown(e){
 }
 
 function onMove(e){
-  e.preventDefault();
-  if(!e.buttons && !e.touches) return;
   const pos = getCanvasPos(e);
   
   if(tool==='draw' && drawing){
@@ -532,12 +551,12 @@ function onMove(e){
       o.x = pos.x - dragOffset.x;
       o.y = pos.y - dragOffset.y;
     }
-    renderAll(); updateSelInfo();
+    renderAll(); 
+    updateSelInfo();
   }
 }
 
 function onUp(e){
-  e.preventDefault();
   if(tool==='draw' && drawing) endStroke();
   if(tool==='eraser' && drawing){ 
     drawing=false; 
@@ -547,27 +566,20 @@ function onUp(e){
   if(dragging) dragging=false;
 }
 
-// Event listeners - VYLEPŠENÉ PRE MOBIL
-raster.addEventListener('pointerdown', onDown);
-raster.addEventListener('pointermove', onMove);
-window.addEventListener('pointerup', onUp);
+// SIMPLIFIED EVENT LISTENERS - OPRAVENÉ
+raster.addEventListener('mousedown', onDown);
+raster.addEventListener('mousemove', onMove);
+window.addEventListener('mouseup', onUp);
 
-// Touch events for mobile
+// Touch events
 raster.addEventListener('touchstart', onDown);
 raster.addEventListener('touchmove', onMove);
 window.addEventListener('touchend', onUp);
 
-main.addEventListener('pointerdown', onDown);
-main.addEventListener('pointermove', onMove);
+main.addEventListener('mousedown', onDown);
+main.addEventListener('mousemove', onMove);
 main.addEventListener('touchstart', onDown);
 main.addEventListener('touchmove', onMove);
-
-// Prevent scrolling when drawing on mobile
-document.addEventListener('touchmove', function(e) {
-  if(drawing || dragging) {
-    e.preventDefault();
-  }
-}, { passive: false });
 
 // Modal actions
 $('modalCancel').addEventListener('click', ()=>{ $('modalBg').style.display='none'; pendingShape=null; });
@@ -577,9 +589,18 @@ $('modalOk').addEventListener('click', ()=>{
   const h = parseFloat($('mHeight').value)||80;
   const r = parseFloat($('mRadius').value)||50;
   const pos = pendingShape;
-  if(pos.type==='rect'){ const o={id:genId(),type:'rect',x:pos.x,y:pos.y,w:w,h:h,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; objects.push(o); selectedId=o.id; }
-  else if(pos.type==='circle'){ const o={id:genId(),type:'circle',x:pos.x,y:pos.y,r:r,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; objects.push(o); selectedId=o.id; }
-  else if(pos.type==='line'){ const o={id:genId(),type:'line',x:pos.x,y:pos.y,x2:pos.x+w,y2:pos.y+h,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; objects.push(o); selectedId=o.id; }
+  if(pos.type==='rect'){ 
+    const o={id:genId(),type:'rect',x:pos.x,y:pos.y,w:w,h:h,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; 
+    objects.push(o); selectedId=o.id; 
+  }
+  else if(pos.type==='circle'){ 
+    const o={id:genId(),type:'circle',x:pos.x,y:pos.y,r:r,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; 
+    objects.push(o); selectedId=o.id; 
+  }
+  else if(pos.type==='line'){ 
+    const o={id:genId(),type:'line',x:pos.x,y:pos.y,x2:pos.x+w,y2:pos.y+h,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; 
+    objects.push(o); selectedId=o.id; 
+  }
   $('modalBg').style.display='none'; pendingShape=null; renderAll(); updateProjectsList(); updateSelInfo();
 });
 
@@ -589,7 +610,8 @@ function updateSelInfo(){
   if(!selectedId){ box.innerHTML = '<div class="small">Žiadny výber</div>'; return; }
   const o = objects.find(x=>x.id===selectedId);
   if(!o){ box.innerHTML = '<div class="small">Žiadny výber</div>'; return; }
-  const pre = document.createElement('pre'); pre.textContent = JSON.stringify(o, ['id','type','x','y','w','h','r','x2','y2','text','fontSize','locked','color','stroke'], 2);
+  const pre = document.createElement('pre'); 
+  pre.textContent = JSON.stringify(o, ['id','type','x','y','w','h','r','x2','y2','text','fontSize','locked','color','stroke'], 2);
   pre.className='small';
   box.appendChild(pre);
 }
@@ -611,13 +633,6 @@ $('editText').addEventListener('click', ()=>{
   if(!o || o.type!=='text') return alert('Vybratý objekt nie je text');
   const t = prompt('Uprav text', o.text);
   if(t!==null){ o.text = t; renderAll(); updateProjectsList(); updateSelInfo(); }
-});
-main.addEventListener('dblclick', e=>{
-  const pos = getCanvasPos(e);
-  const id=hitTest(pos.x,pos.y);
-  if(!id) return;
-  const o = objects.find(x=>x.id===id);
-  if(o && o.type==='text'){ const t = prompt('Uprav text', o.text); if(t!==null){ o.text=t; renderAll(); updateProjectsList(); updateSelInfo(); } }
 });
 
 // Bring front / send back
@@ -816,12 +831,25 @@ $('themeToggle').addEventListener('click', ()=>{
   }
 });
 
-// Handle window resize
-window.addEventListener('resize', initCanvas);
-
 // Initial render
 initCanvas();
 updateProjectsList();
+
+// Test: vytvor testovací objekt
+setTimeout(() => {
+  const testRect = {
+    id: genId(),
+    type: 'rect',
+    x: 50, y: 50,
+    w: 100, h: 80,
+    color: '#3b82f6',
+    stroke: 2,
+    locked: false
+  };
+  objects.push(testRect);
+  renderAll();
+  console.log('Testovací objekt pridaný');
+}, 1000);
 
 </script>
 </body>
