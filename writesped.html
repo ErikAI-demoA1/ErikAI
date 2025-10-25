@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✨ ErikAI Typing Speed Test</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #121212;
+    color: white;
+    text-align: center;
+    padding: 20px;
+  }
+  h2 {
+    color: #ff4444;
+  }
+  #testText {
+    margin: 20px auto;
+    padding: 15px;
+    border: 1px solid #555;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 700px;
+    background-color: #1e1e1e;
+    line-height: 1.5;
+  }
+  #inputArea {
+    width: 90%;
+    max-width: 700px;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #555;
+    background-color: #1e1e1e;
+    color: white;
+  }
+  #results {
+    margin-top: 20px;
+    font-size: 18px;
+  }
+  button {
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin-top: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 16px;
+  }
+  button:hover {
+    background-color: darkred;
+  }
+</style>
+</head>
+<body>
+
+<h2>⌨️ ErikAI Typing Speed Test</h2>
+
+<p id="testText">Skopírujte tento text a začnite písať do nižšieho poľa:</p>
+
+<textarea id="inputArea" rows="5" placeholder="Začni písať tu..."></textarea><br>
+<button onclick="resetTest()">🔄 Reset</button>
+
+<div id="results"></div>
+
+<script>
+const sampleText = "Toto je testovací text na meranie rýchlosti písania. Skúste písať presne tak, ako je napísané, a zistite svoju rýchlosť a presnosť.";
+
+const testTextEl = document.getElementById('testText');
+const inputEl = document.getElementById('inputArea');
+const resultsEl = document.getElementById('results');
+
+let startTime;
+let finished = false;
+
+testTextEl.textContent = sampleText;
+
+inputEl.addEventListener('input', () => {
+  if (!startTime) startTime = new Date();
+  if (inputEl.value === sampleText) {
+    finished = true;
+    const endTime = new Date();
+    const timeSec = (endTime - startTime) / 1000;
+    const wordsTyped = sampleText.split(' ').length;
+    const wpm = Math.round((wordsTyped / timeSec) * 60);
+    
+    let errors = 0;
+    for (let i = 0; i < sampleText.length; i++) {
+      if (inputEl.value[i] !== sampleText[i]) errors++;
+    }
+    const accuracy = Math.max(0, Math.round(((sampleText.length - errors) / sampleText.length) * 100));
+    
+    resultsEl.innerHTML = `🕒 Čas: ${timeSec.toFixed(2)} s<br>⚡ Rýchlosť: ${wpm} slov za minútu<br>✅ Presnosť: ${accuracy}%`;
+    inputEl.disabled = true;
+  }
+});
+
+function resetTest() {
+  inputEl.value = '';
+  inputEl.disabled = false;
+  startTime = null;
+  finished = false;
+  resultsEl.innerHTML = '';
+  inputEl.focus();
+}
+</script>
+
+</body>
+</html>
