@@ -3,153 +3,176 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎧 ErikAI DJ Mix</title>
+<title>🎧 ErikAI DJ Mixér 2.0</title>
 <style>
   body {
     font-family: Arial, sans-serif;
-    background-color: #121212;
-    color: white;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    color: #fff;
     text-align: center;
     margin: 0;
-    padding: 0;
+    padding: 20px;
   }
-  h1 { margin: 20px 0; color: #ff4444; }
-  #fileInput { margin: 20px 0; }
-  .track {
-    margin: 15px auto;
-    padding: 15px;
-    border: 1px solid #333;
-    border-radius: 10px;
-    width: 90%;
-    max-width: 600px;
-    background: #1e1e1e;
-  }
-  .track input[type="range"] {
-    width: 100%;
-  }
+  h1 { margin-bottom: 10px; }
+  input[type="file"] { margin: 15px 0; }
   .controls {
     display: flex;
-    justify-content: space-around;
-    margin-top: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
   }
+  .control {
+    background: #1c1c1c;
+    padding: 10px 15px;
+    border-radius: 10px;
+  }
+  label { display: block; margin-bottom: 5px; }
+  input[type="range"] { width: 100px; }
   button {
-    padding: 8px 15px;
-    background-color: #ff4444;
-    border: none;
+    background-color: #ff2e63;
     color: white;
+    border: none;
+    padding: 8px 15px;
+    margin-top: 10px;
     border-radius: 5px;
     cursor: pointer;
   }
-  button:hover { background-color: #cc0000; }
-  #visualizer {
-    width: 90%;
-    height: 100px;
-    background: #222;
-    margin: 20px auto;
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .bar {
-    height: 100%;
-    display: inline-block;
-    background: #ff4444;
-    width: 5px;
-    margin-right: 1px;
-  }
+  button:hover { background-color: #e02150; }
+  canvas { background: #111; border-radius: 10px; display: block; margin: 20px auto; }
 </style>
 </head>
 <body>
 
-<h1>🎧 ErikAI DJ Mix</h1>
+<h1>🎧 ErikAI DJ Mixér 2.0</h1>
+<p>Vyber viac skladieb a mixuj ich profesionálne</p>
+<input type="file" id="audioFiles" accept="audio/*" multiple>
 
-<input type="file" id="fileInput" accept="audio/*" multiple>
-<div id="tracks"></div>
+<div class="controls" id="trackControls"></div>
 
-<div id="visualizer"></div>
+<div class="controls">
+  <div class="control">
+    <label>Master hlasitosť</label>
+    <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.8">
+  </div>
+  <div class="control">
+    <label>Crossfade</label>
+    <input type="range" id="crossfade" min="0" max="1" step="0.01" value="0.5">
+  </div>
+</div>
+
+<button id="playAll">▶️ Spusti všetko</button>
+<button id="stopAll">⏹️ Zastav všetko</button>
+
+<canvas id="visualizer" width="800" height="200"></canvas>
 
 <script>
-const fileInput = document.getElementById('fileInput');
-const tracksDiv = document.getElementById('tracks');
-const visualizer = document.getElementById('visualizer');
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const masterGain = audioCtx.createGain();
+  masterGain.connect(audioCtx.destination);
 
-let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let analyser = audioCtx.createAnalyser();
-analyser.fftSize = 256;
-let dataArray = new Uint8Array(analyser.frequencyBinCount);
-analyser.connect(audioCtx.destination);
+  const filesInput = document.getElementById('audioFiles');
+  const trackControls = document.getElementById('trackControls');
+  const playBtn = document.getElementById('playAll');
+  const stopBtn = document.getElementById('stopAll');
+  const masterSlider = document.getElementById('masterVolume');
+  const crossfadeSlider = document.getElementById('crossfade');
+  const canvas = document.getElementById('visualizer');
+  const ctx = canvas.getContext('2d');
 
-function createVisualizer() {
-  visualizer.innerHTML = '';
-  for(let i = 0; i < analyser.frequencyBinCount; i++){
-    let bar = document.createElement('div');
-    bar.classList.add('bar');
-    visualizer.appendChild(bar);
-  }
-}
-createVisualizer();
+  let tracks = [];
 
-function updateVisualizer() {
-  analyser.getByteFrequencyData(dataArray);
-  let bars = visualizer.getElementsByClassName('bar');
-  for(let i = 0; i < bars.length; i++){
-    bars[i].style.height = dataArray[i] + 'px';
-  }
-  requestAnimationFrame(updateVisualizer);
-}
-updateVisualizer();
+  masterSlider.addEventListener('input', () => {
+    masterGain.gain.value = masterSlider.value;
+  });
 
-fileInput.addEventListener('change', () => {
-  const files = Array.from(fileInput.files);
-  files.forEach(file => {
-    const url = URL.createObjectURL(file);
-    const audio = new Audio(url);
-    audio.loop = true;
+  filesInput.addEventListener('change', async () => {
+    trackControls.innerHTML = '';
+    tracks = [];
+    const files = Array.from(filesInput.files);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const arrayBuffer = await file.arrayBuffer();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-    const trackDiv = document.createElement('div');
-    trackDiv.classList.add('track');
+      const track = {
+        buffer: audioBuffer,
+        gainNode: audioCtx.createGain(),
+        panNode: audioCtx.createStereoPanner(),
+        source: null
+      };
+      track.gainNode.gain.value = 0.8;
+      track.gainNode.connect(track.panNode);
+      track.panNode.connect(masterGain);
+      tracks.push(track);
 
-    const name = document.createElement('p');
-    name.textContent = file.name;
+      // UI pre každý track
+      const div = document.createElement('div');
+      div.className = 'control';
+      div.innerHTML = `
+        <label>${file.name}</label>
+        <input type="range" min="0" max="1" step="0.01" value="0.8" data-index="${i}" class="vol">
+        <input type="range" min="-1" max="1" step="0.01" value="0" data-index="${i}" class="pan">
+      `;
+      trackControls.appendChild(div);
+    }
 
-    const volumeSlider = document.createElement('input');
-    volumeSlider.type = 'range';
-    volumeSlider.min = 0;
-    volumeSlider.max = 1;
-    volumeSlider.step = 0.01;
-    volumeSlider.value = 0.7;
-
-    const playBtn = document.createElement('button');
-    playBtn.textContent = '▶️ Play';
-    playBtn.onclick = () => {
-      audioCtx.resume();
-      audio.play();
-    };
-
-    const stopBtn = document.createElement('button');
-    stopBtn.textContent = '⏹ Stop';
-    stopBtn.onclick = () => { audio.pause(); audio.currentTime = 0; };
-
-    // Create gain node for volume control
-    const gainNode = audioCtx.createGain();
-    gainNode.gain.value = volumeSlider.value;
-    const source = audioCtx.createMediaElementSource(audio);
-    source.connect(gainNode).connect(analyser);
-
-    volumeSlider.addEventListener('input', () => {
-      gainNode.gain.value = volumeSlider.value;
+    document.querySelectorAll('.vol').forEach(input => {
+      input.addEventListener('input', e => {
+        const idx = e.target.dataset.index;
+        tracks[idx].gainNode.gain.value = e.target.value;
+      });
     });
 
-    const controlsDiv = document.createElement('div');
-    controlsDiv.classList.add('controls');
-    controlsDiv.appendChild(playBtn);
-    controlsDiv.appendChild(stopBtn);
-
-    trackDiv.appendChild(name);
-    trackDiv.appendChild(volumeSlider);
-    trackDiv.appendChild(controlsDiv);
-    tracksDiv.appendChild(trackDiv);
+    document.querySelectorAll('.pan').forEach(input => {
+      input.addEventListener('input', e => {
+        const idx = e.target.dataset.index;
+        tracks[idx].panNode.pan.value = e.target.value;
+      });
+    });
   });
-});
+
+  function playTracks() {
+    tracks.forEach(track => {
+      const source = audioCtx.createBufferSource();
+      source.buffer = track.buffer;
+      source.connect(track.gainNode);
+      source.start(0);
+      track.source = source;
+    });
+  }
+
+  function stopTracks() {
+    tracks.forEach(track => {
+      if (track.source) track.source.stop();
+    });
+  }
+
+  playBtn.addEventListener('click', playTracks);
+  stopBtn.addEventListener('click', stopTracks);
+
+  // Visualizer
+  const analyser = audioCtx.createAnalyser();
+  masterGain.connect(analyser);
+  analyser.fftSize = 256;
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+
+  function draw() {
+    requestAnimationFrame(draw);
+    analyser.getByteFrequencyData(dataArray);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const barWidth = (canvas.width / bufferLength) * 2.5;
+    let x = 0;
+    for(let i = 0; i < bufferLength; i++) {
+      const barHeight = dataArray[i];
+      ctx.fillStyle = `rgb(${barHeight+100},50,${255-barHeight})`;
+      ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+      x += barWidth + 1;
+    }
+  }
+  draw();
 </script>
 
 </body>
