@@ -1,162 +1,367 @@
-<!DOCTYPE html><html lang="sk">
+<!doctype html>
+<html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>✨ ErikAI Galéria</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f2f2f2;
-      margin: 20px;
-      text-align: center;
-    }
-    h2 {
-      color: red;
-    }
-    input[type="file"] {
-      margin-bottom: 20px;
-    }
-    #gallery div {
-      margin: 10px;
-      display: inline-block;
-    }
-    img, video {
-      max-width: 150px;
-      border: 1px solid gray;
-      display: block;
-      margin: auto;
-    }
-    button {
-      background-color: red;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      margin-top: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: darkred;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>📸 ErikAI Galéria — Exkluzívne</title>
+<meta name="description" content="ErikAI Galéria — nahrávaj, prehliadaj a spravuj obrázky / videá lokálne.">
+<style>
+  /* ---------- Base & theme ---------- */
+  :root{
+    --bg-900:#0b0b0c;
+    --bg-800:#0f1113;
+    --panel: rgba(255,255,255,0.03);
+    --glass: rgba(255,255,255,0.04);
+    --muted:#9aa4af;
+    --accent:#e33a3a; /* ErikAI red */
+    --accent-2:#ff6969;
+    --card-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    --radius:12px;
+  }
+  /* light theme overrides */
+  body.light { --bg-900:#f6f7f9; --bg-800:#ffffff; --panel: rgba(11,17,28,0.03); --glass: rgba(0,0,0,0.03); --muted:#5b6166; --card-shadow: 0 8px 30px rgba(11,17,28,0.06); }
+
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:linear-gradient(180deg,var(--bg-900),#070809); color:#eaf0f6; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
+  body.light{ color:#0b1220; }
+
+  .wrap{max-width:1200px;margin:24px auto;padding:20px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:var(--card-shadow);}
+
+  header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#ff8b8b);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:20px;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+  h1{margin:0;font-size:18px}
+  .meta{color:var(--muted);font-size:13px}
+
+  .top-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .panel{background:var(--panel);padding:12px;border-radius:12px;display:flex;gap:10px;align-items:center;box-shadow:var(--card-shadow)}
+  .file-input{display:flex;gap:8px;align-items:center}
+  input[type="file"]{background:transparent;color:inherit;border:1px dashed rgba(255,255,255,0.06);padding:8px;border-radius:8px}
+  .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:10px;color:inherit;cursor:pointer;font-weight:600}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#140808}
+  .btn.warn{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+  .small{font-size:13px;color:var(--muted)}
+
+  /* layout */
+  .main{display:flex;gap:18px;margin-top:18px;align-items:flex-start}
+  .left{flex:1}
+  .right{width:320px;min-width:240px;display:flex;flex-direction:column;gap:12px}
+
+  /* gallery grid */
+  #gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;padding:14px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));}
+  .card{background:var(--glass);border-radius:12px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:stretch;transition:transform .18s, box-shadow .18s;box-shadow:0 6px 18px rgba(0,0,0,0.35)}
+  .card:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(0,0,0,0.5)}
+  .thumb{width:100%;height:130px;object-fit:cover;background:#111;display:block}
+  .card-body{padding:10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .meta-line{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+  .fname{font-size:13px;font-weight:700}
+  .ts{font-size:12px;color:var(--muted)}
+  .card-actions{display:flex;gap:8px}
+  .icon-btn{background:transparent;border:1px solid rgba(255,255,255,0.05);padding:6px;border-radius:8px;cursor:pointer;color:inherit}
+  .icon-btn.danger{border-color:rgba(227,58,58,0.9);color:var(--accent)}
+
+  /* lightbox */
+  .lb-bg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,6,7,0.75);z-index:9999}
+  .lb{max-width:90%;max-height:90%;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;align-items:center}
+  .lb-media{max-width:100%;max-height:70vh;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.7)}
+  .lb-row{display:flex;gap:8px;align-items:center}
+
+  /* right sidebar */
+  .right .panel{flex-direction:column;align-items:stretch}
+  .controls-list{display:flex;flex-direction:column;gap:8px}
+
+  /* footer */
+  footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+
+  /* responsive tweaks */
+  @media (max-width:900px){ .main{flex-direction:column} .right{width:100%} .thumb{height:120px} }
+</style>
 </head>
-<body> 
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<body>
+  <div class="wrap" role="application">
+    <header>
+      <div class="brand">
+        <div class="logo">EA</div>
+        <div>
+          <h1>📸 ErikAI Galéria</h1>
+          <div class="meta">Profesionálne zobrazenie tvojich obrázkov & videí — lokálne</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <div id="cas" class="small">🕓 …</div>
+        <button id="themeToggle" class="btn" title="Svetlý/Tmavý">🌓</button>
+      </div>
+    </header>
+
+    <div class="top-controls">
+      <div class="panel file-input" style="flex:1">
+        <label class="small" style="min-width:110px">Pridať media:</label>
+        <input id="fileInput" type="file" accept="image/*,video/*" multiple>
+        <button id="addBtn" class="btn primary">Pridať</button>
+      </div>
+
+      <div class="panel" style="gap:10px;align-items:center">
+        <div style="display:flex;flex-direction:column;align-items:flex-end">
+          <div class="small">Uložené lokálne</div>
+          <div id="count" style="font-weight:800">0</div>
+        </div>
+        <div style="width:1px;height:36px;background:rgba(255,255,255,0.03)"></div>
+        <button id="clearAllBtn" class="btn ghost">Vymazať všetko</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="left">
+        <div id="gallery" aria-live="polite" aria-label="Galéria médií"></div>
+      </div>
+
+      <aside class="right">
+        <div class="panel">
+          <div class="small" style="font-weight:700;margin-bottom:6px">Rýchle ovládanie</div>
+          <div class="controls-list">
+            <div class="small">Tip: klikni na náhľad pre zväčšenie</div>
+            <button id="downloadAllBtn" class="btn">Stiahnuť všetko (ZIP not included)</button>
+            <button id="sortNewBtn" class="btn">Zoradiť: nové hore</button>
+            <button id="sortOldBtn" class="btn">Zoradiť: staré hore</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="small" style="font-weight:700;margin-bottom:6px">Google Translate</div>
+          <div id="google_translate_element"></div>
+        </div>
+
+        <div class="panel">
+          <div class="small" style="font-weight:700;margin-bottom:6px">Info</div>
+          <div class="small">© 2025 Erik Mohylák</div>
+          <div class="small" style="color:var(--muted);margin-top:6px">Licencia: CC BY-NC-ND 4.0</div>
+        </div>
+      </aside>
+    </div>
+
+    <footer>ErikAI • Všetko lokálne • Nahraté súbory sa ukladajú v tvojom prehliadači</footer>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightboxBg" class="lb-bg" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="lb" role="document">
+      <div id="lbMediaWrap" style="width:100%;display:flex;justify-content:center">
+        <!-- media inserted here -->
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div id="lbName" class="small" style="font-weight:700"></div>
+        <div style="flex:1"></div>
+        <button id="lbDownload" class="btn">⬇ Stiahnuť</button>
+        <button id="lbDelete" class="btn danger" style="background:transparent;border:1px solid rgba(227,58,58,0.9);color:var(--accent)">Zmazať</button>
+        <button id="lbClose" class="btn">Zavrieť</button>
+      </div>
+    </div>
+  </div>
 
 <script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
+/* ================== Utility & state ================== */
+const LS_KEY = 'erikai_gallery';
+const fileInput = document.getElementById('fileInput');
+const addBtn = document.getElementById('addBtn');
+const gallery = document.getElementById('gallery');
+const countEl = document.getElementById('count');
+const clearAllBtn = document.getElementById('clearAllBtn');
+const themeToggle = document.getElementById('themeToggle');
+const lightboxBg = document.getElementById('lightboxBg');
+const lbMediaWrap = document.getElementById('lbMediaWrap');
+const lbName = document.getElementById('lbName');
+const lbDownload = document.getElementById('lbDownload');
+const lbDelete = document.getElementById('lbDelete');
+const lbClose = document.getElementById('lbClose');
+const sortNewBtn = document.getElementById('sortNewBtn');
+const sortOldBtn = document.getElementById('sortOldBtn');
+
+let items = []; // {id, dataUrl, type, name, ts}
+let currentLightboxId = null;
+
+/* ---------- Time display ---------- */
+function aktualizujCas(){
+  const teraz=new Date();
+  const moznosti={weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'};
+  document.getElementById('cas').innerText = `🕓 ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
+}
+setInterval(aktualizujCas,1000); aktualizujCas();
+
+/* ---------- Theme ---------- */
+function applyThemeFromStorage(){
+  const t = localStorage.getItem('erikai_theme') || 'dark';
+  if(t==='light') document.body.classList.add('light'); else document.body.classList.remove('light');
+}
+applyThemeFromStorage();
+themeToggle.addEventListener('click', ()=>{
+  document.body.classList.toggle('light');
+  localStorage.setItem('erikai_theme', document.body.classList.contains('light') ? 'light' : 'dark');
+});
+
+/* ---------- LocalStorage helpers ---------- */
+function saveItems(){
+  localStorage.setItem(LS_KEY, JSON.stringify(items));
+  updateCount();
+}
+function loadItems(){
+  try{
+    items = JSON.parse(localStorage.getItem(LS_KEY)) || [];
+  }catch(e){ items = []; }
+}
+function updateCount(){ countEl.textContent = items.length; }
+
+/* ---------- Rendering ---------- */
+function formatTS(ts){
+  const d = new Date(ts);
+  return d.toLocaleString('sk-SK',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function createCard(item){
+  const div = document.createElement('div'); div.className='card';
+  // thumb
+  if(item.type.startsWith('image')){
+    const img = document.createElement('img'); img.className='thumb'; img.src = item.dataUrl; img.alt = item.name || 'image';
+    img.loading = 'lazy';
+    img.onclick = ()=>openLightbox(item.id);
+    div.appendChild(img);
+  } else if(item.type.startsWith('video')){
+    const vid = document.createElement('video'); vid.className='thumb'; vid.src = item.dataUrl; vid.preload='metadata'; vid.muted=true; vid.loop=true; vid.onclick = ()=>openLightbox(item.id);
+    vid.onmouseenter = ()=>vid.play(); vid.onmouseleave = ()=>vid.pause();
+    div.appendChild(vid);
   }
+
+  // body
+  const body = document.createElement('div'); body.className='card-body';
+  const meta = document.createElement('div'); meta.className='meta-line';
+  const fname = document.createElement('div'); fname.className='fname'; fname.textContent = item.name || '–';
+  const ts = document.createElement('div'); ts.className='ts'; ts.textContent = formatTS(item.ts);
+  meta.appendChild(fname); meta.appendChild(ts);
+
+  const actions = document.createElement('div'); actions.className='card-actions';
+  const btnOpen = document.createElement('button'); btnOpen.className='icon-btn'; btnOpen.title='Otvoriť'; btnOpen.innerHTML='🔍'; btnOpen.onclick = ()=>openLightbox(item.id);
+  const btnDownload = document.createElement('button'); btnDownload.className='icon-btn'; btnDownload.title='Stiahnuť'; btnDownload.innerHTML='⬇'; btnDownload.onclick = ()=>downloadItem(item.id);
+  const btnDel = document.createElement('button'); btnDel.className='icon-btn danger'; btnDel.title='Zmazať'; btnDel.innerHTML='🗑'; btnDel.onclick = ()=>deleteItem(item.id);
+
+  actions.appendChild(btnOpen); actions.appendChild(btnDownload); actions.appendChild(btnDel);
+  body.appendChild(meta); body.appendChild(actions);
+  div.appendChild(body);
+  return div;
+}
+function renderGallery(){
+  gallery.innerHTML = '';
+  if(items.length===0){
+    gallery.innerHTML = `<div style="padding:40px;border-radius:12px;background:var(--glass);text-align:center;color:var(--muted)">Žiadne súbory. Pridaj pomocou tlačidla „Pridať“ alebo presuň súbory sem.</div>`;
+    updateCount();
+    return;
+  }
+  for(const it of items){
+    gallery.appendChild(createCard(it));
+  }
+  updateCount();
+}
+
+/* ---------- File handling ---------- */
+function fileToDataUrl(file){
+  return new Promise((res, rej)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>res(reader.result);
+    reader.onerror = ()=>rej(new Error('FileReader error'));
+    reader.readAsDataURL(file);
+  });
+}
+async function handleFilesList(list){
+  const arr = Array.from(list);
+  for(const f of arr){
+    try{
+      const url = await fileToDataUrl(f);
+      const itm = { id: genId(), dataUrl: url, type: f.type || (url.startsWith('data:video')?'video':'image'), name: f.name || 'file', ts: Date.now() };
+      items.unshift(itm); // newest first
+      saveItems();
+      renderGallery();
+    }catch(e){ console.error('file read err', e); }
+  }
+}
+
+/* ---------- Actions ---------- */
+addBtn.addEventListener('click', ()=> {
+  if(!fileInput.files || fileInput.files.length===0) return alert('Vyber súbory najprv.');
+  handleFilesList(fileInput.files).then(()=>{ fileInput.value=''; });
+});
+
+// support drag & drop on gallery area
+['dragenter','dragover'].forEach(ev=> {
+  gallery.addEventListener(ev, e=>{ e.preventDefault(); e.dataTransfer.dropEffect='copy'; gallery.style.outline='2px dashed rgba(227,58,58,0.6)'; });
+});
+['dragleave','drop'].forEach(ev=> {
+  gallery.addEventListener(ev, e=>{ gallery.style.outline='none'; });
+});
+gallery.addEventListener('drop', e=>{
+  e.preventDefault();
+  const files = e.dataTransfer.files;
+  if(files && files.length) handleFilesList(files);
+});
+
+function genId(){ return 'g_' + Math.random().toString(36).slice(2,10); }
+
+function deleteItem(id){
+  if(!confirm('Naozaj zmazať tento súbor?')) return;
+  items = items.filter(i=>i.id !== id);
+  saveItems();
+  renderGallery();
+  // if lightbox open for this id, close it
+  if(currentLightboxId === id) closeLightbox();
+}
+
+clearAllBtn.addEventListener('click', ()=>{
+  if(!items.length) return alert('Žiadne položky na vymazanie.');
+  if(!confirm('Vymazať VŠETKY položky v galérii?')) return;
+  items = []; saveItems(); renderGallery();
+});
+
+function downloadItem(id){
+  const it = items.find(x=>x.id===id);
+  if(!it) return;
+  const a = document.createElement('a');
+  a.href = it.dataUrl;
+  a.download = it.name || 'erikai_media';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------- Lightbox ---------- */
+function openLightbox(id){
+  const it = items.find(x=>x.id===id);
+  if(!it) return;
+  currentLightboxId = id;
+  lbMediaWrap.innerHTML = '';
+  lbName.textContent = it.name;
+  if(it.type.startsWith('image')){
+    const img = document.createElement('img'); img.src = it.dataUrl; img.className='lb-media'; img.alt = it.name;
+    lbMediaWrap.appendChild(img);
+  } else {
+    const video = document.createElement('video'); video.src = it.dataUrl; video.controls = true; video.className='lb-media'; video.autoplay = true; lbMediaWrap.appendChild(video);
+  }
+  lbDownload.onclick = ()=>downloadItem(id);
+  lbDelete.onclick = ()=>{ deleteItem(id); }
+  lightboxBg.style.display = 'flex'; lightboxBg.setAttribute('aria-hidden','false');
+}
+function closeLightbox(){
+  lightboxBg.style.display = 'none'; lightboxBg.setAttribute('aria-hidden','true'); lbMediaWrap.innerHTML=''; currentLightboxId = null;
+}
+lbClose.addEventListener('click', closeLightbox);
+lightboxBg.addEventListener('click', (e)=>{ if(e.target === lightboxBg) closeLightbox(); });
+
+/* ---------- Sorting ---------- */
+sortNewBtn.addEventListener('click', ()=>{ items.sort((a,b)=>b.ts - a.ts); saveItems(); renderGallery(); });
+sortOldBtn.addEventListener('click', ()=>{ items.sort((a,b)=>a.ts - b.ts); saveItems(); renderGallery(); });
+
+/* ---------- Init ---------- */
+loadItems();
+renderGallery();
+
+/* ---------- Google Translate ---------- */
+function googleTranslateElementInit(){ new google.translate.TranslateElement({pageLanguage:'sk', includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element'); }
+(function(){ var s=document.createElement('script'); s.src='//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit'; document.head.appendChild(s); })();
+
 </script>
-
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
-
-<p id="cas" style="font-size: 18px;"></p>
-
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
-
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
-  }
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  <h2>📸 ErikAI Galéria</h2>
-  <p>Vyber obrázky alebo videá zo zariadenia:</p>
-  <input type="file" id="fileInput" accept="image/*,video/*" multiple><br><br>
-  <div id="gallery"></div>  <script>
-    const input = document.getElementById('fileInput');
-    const gallery = document.getElementById('gallery');
-
-    // Načítaj z localStorage pri štarte
-    window.onload = () => {
-      const saved = JSON.parse(localStorage.getItem('erikai_gallery')) || [];
-      saved.forEach(data => addToGallery(data));
-    };
-
-    // Pri nahratí súborov
-    input.addEventListener('change', () => {
-      const files = Array.from(input.files);
-      for (const file of files) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result;
-          addToGallery(dataUrl);
-          saveToLocal(dataUrl);
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    function saveToLocal(data) {
-      const saved = JSON.parse(localStorage.getItem('erikai_gallery')) || [];
-      saved.push(data);
-      localStorage.setItem('erikai_gallery', JSON.stringify(saved));
-    }
-
-    function deleteFromLocal(data) {
-      const saved = JSON.parse(localStorage.getItem('erikai_gallery')) || [];
-      const updated = saved.filter(item => item !== data);
-      localStorage.setItem('erikai_gallery', JSON.stringify(updated));
-    }
-
-    function addToGallery(dataUrl) {
-      const container = document.createElement('div');
-
-      let media;
-      if (dataUrl.startsWith('data:video')) {
-        media = document.createElement('video');
-        media.src = dataUrl;
-        media.controls = true;
-      } else {
-        media = document.createElement('img');
-        media.src = dataUrl;
-      }
-
-      const delBtn = document.createElement('button');
-      delBtn.textContent = 'Zmazať';
-      delBtn.onclick = () => {
-        deleteFromLocal(dataUrl);
-        gallery.removeChild(container);
-      };
-
-      container.appendChild(media);
-      container.appendChild(delBtn);
-      gallery.appendChild(container);
-    }
-  </script>
-
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-  </p>
 </body>
-</html>
+                                                      </html>
