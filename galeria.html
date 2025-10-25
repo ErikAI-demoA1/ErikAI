@@ -3,234 +3,283 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>📸 ErikAI Galéria — Exkluzívne</title>
-<meta name="description" content="ErikAI Galéria — nahrávaj, prehliadaj a spravuj obrázky / videá lokálne.">
+<title>📸 ErikAI Galéria PRO — Unlimited</title>
+<meta name="description" content="ErikAI Galéria PRO - uloženie obrázkov a videí lokálne v IndexedDB, optimalizované pre veľké množstvá." />
 <style>
-  /* ---------- Base & theme ---------- */
   :root{
-    --bg-900:#0b0b0c;
-    --bg-800:#0f1113;
-    --panel: rgba(255,255,255,0.03);
-    --glass: rgba(255,255,255,0.04);
-    --muted:#9aa4af;
-    --accent:#e33a3a; /* ErikAI red */
-    --accent-2:#ff6969;
-    --card-shadow: 0 8px 30px rgba(0,0,0,0.6);
-    --radius:12px;
+    --bg:#0b0b0c; --panel:rgba(255,255,255,0.03); --muted:#9aa4af;
+    --accent:#e33a3a; --accent2:#ff6969; --glass:rgba(255,255,255,0.03);
+    --card-shadow:0 10px 30px rgba(0,0,0,0.6); --radius:12px;
   }
-  /* light theme overrides */
-  body.light { --bg-900:#f6f7f9; --bg-800:#ffffff; --panel: rgba(11,17,28,0.03); --glass: rgba(0,0,0,0.03); --muted:#5b6166; --card-shadow: 0 8px 30px rgba(11,17,28,0.06); }
-
-  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:linear-gradient(180deg,var(--bg-900),#070809); color:#eaf0f6; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
-  body.light{ color:#0b1220; }
-
-  .wrap{max-width:1200px;margin:24px auto;padding:20px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:var(--card-shadow);}
-
-  header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-  .brand{display:flex;gap:12px;align-items:center}
-  .logo{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#ff8b8b);display:flex;align-items:center;justify-content:center;font-weight:800;color:white;font-size:20px;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+  body.light{ --bg:#f6f7f9; --panel:rgba(0,0,0,0.03); --muted:#5b6166; color:#0b1220; --card-shadow:0 8px 24px rgba(11,17,28,0.06); }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:linear-gradient(180deg,var(--bg),#070809); color:#eaf0f6;}
+  .container{max-width:1200px;margin:22px auto;padding:18px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:var(--card-shadow);}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:800;color:white}
   h1{margin:0;font-size:18px}
   .meta{color:var(--muted);font-size:13px}
-
-  .top-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
-  .panel{background:var(--panel);padding:12px;border-radius:12px;display:flex;gap:10px;align-items:center;box-shadow:var(--card-shadow)}
+  .top{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  .panel{background:var(--panel);padding:12px;border-radius:12px;display:flex;align-items:center;gap:10px}
   .file-input{display:flex;gap:8px;align-items:center}
-  input[type="file"]{background:transparent;color:inherit;border:1px dashed rgba(255,255,255,0.06);padding:8px;border-radius:8px}
-  .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:10px;color:inherit;cursor:pointer;font-weight:600}
-  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#140808}
-  .btn.warn{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  input[type=file]{padding:8px;border-radius:8px;border:1px dashed rgba(255,255,255,0.06);background:transparent;color:inherit}
+  .btn{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;cursor:pointer;font-weight:700}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));border: none;color:#140808}
   .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+  .btn.danger{background:transparent;border:1px solid rgba(227,58,58,0.9);color:var(--accent)}
   .small{font-size:13px;color:var(--muted)}
-
-  /* layout */
   .main{display:flex;gap:18px;margin-top:18px;align-items:flex-start}
   .left{flex:1}
   .right{width:320px;min-width:240px;display:flex;flex-direction:column;gap:12px}
 
   /* gallery grid */
-  #gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;padding:14px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));}
-  .card{background:var(--glass);border-radius:12px;overflow:hidden;position:relative;display:flex;flex-direction:column;align-items:stretch;transition:transform .18s, box-shadow .18s;box-shadow:0 6px 18px rgba(0,0,0,0.35)}
-  .card:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(0,0,0,0.5)}
-  .thumb{width:100%;height:130px;object-fit:cover;background:#111;display:block}
+  #gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));min-height:150px}
+  .card{background:var(--glass);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s;box-shadow:0 8px 18px rgba(0,0,0,0.35)}
+  .card:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(0,0,0,0.45)}
+  .thumb{width:100%;height:120px;object-fit:cover;background:#111;display:block}
   .card-body{padding:10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .meta-line{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
   .fname{font-size:13px;font-weight:700}
   .ts{font-size:12px;color:var(--muted)}
   .card-actions{display:flex;gap:8px}
-  .icon-btn{background:transparent;border:1px solid rgba(255,255,255,0.05);padding:6px;border-radius:8px;cursor:pointer;color:inherit}
-  .icon-btn.danger{border-color:rgba(227,58,58,0.9);color:var(--accent)}
+
+  .icon{background:transparent;border:1px solid rgba(255,255,255,0.05);padding:6px;border-radius:8px;cursor:pointer;color:inherit}
+  .icon.danger{border-color:rgba(227,58,58,0.8);color:var(--accent)}
 
   /* lightbox */
   .lb-bg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,6,7,0.75);z-index:9999}
-  .lb{max-width:90%;max-height:90%;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;align-items:center}
-  .lb-media{max-width:100%;max-height:70vh;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.7)}
+  .lb{max-width:96%;max-height:96%;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;align-items:center}
+  .lb-media{max-width:100%;max-height:75vh;border-radius:8px}
   .lb-row{display:flex;gap:8px;align-items:center}
 
-  /* right sidebar */
+  /* right */
   .right .panel{flex-direction:column;align-items:stretch}
-  .controls-list{display:flex;flex-direction:column;gap:8px}
 
-  /* footer */
+  .drop-hint{padding:18px;border-radius:12px;border:2px dashed rgba(255,255,255,0.03);text-align:center;color:var(--muted)}
+
   footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
 
-  /* responsive tweaks */
-  @media (max-width:900px){ .main{flex-direction:column} .right{width:100%} .thumb{height:120px} }
+  @media (max-width:900px){ .main{flex-direction:column} .right{width:100%} .thumb{height:100px} }
 </style>
 </head>
 <body>
-  <div class="wrap" role="application">
-    <header>
-      <div class="brand">
-        <div class="logo">EA</div>
-        <div>
-          <h1>📸 ErikAI Galéria</h1>
-          <div class="meta">Profesionálne zobrazenie tvojich obrázkov & videí — lokálne</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:center">
-        <div id="cas" class="small">🕓 …</div>
-        <button id="themeToggle" class="btn" title="Svetlý/Tmavý">🌓</button>
-      </div>
-    </header>
-
-    <div class="top-controls">
-      <div class="panel file-input" style="flex:1">
-        <label class="small" style="min-width:110px">Pridať media:</label>
-        <input id="fileInput" type="file" accept="image/*,video/*" multiple>
-        <button id="addBtn" class="btn primary">Pridať</button>
-      </div>
-
-      <div class="panel" style="gap:10px;align-items:center">
-        <div style="display:flex;flex-direction:column;align-items:flex-end">
-          <div class="small">Uložené lokálne</div>
-          <div id="count" style="font-weight:800">0</div>
-        </div>
-        <div style="width:1px;height:36px;background:rgba(255,255,255,0.03)"></div>
-        <button id="clearAllBtn" class="btn ghost">Vymazať všetko</button>
+<div class="container" role="application">
+  <header>
+    <div class="brand">
+      <div class="logo">EA</div>
+      <div>
+        <h1>📸 ErikAI Galéria PRO</h1>
+        <div class="meta">Ukladaj stovky fotiek a videí lokálne (IndexedDB) — exkluzívny čierno-červený štýl</div>
       </div>
     </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div id="clock" class="small">🕓 …</div>
+      <button id="themeToggle" class="btn">🌓</button>
+    </div>
+  </header>
 
-    <div class="main">
-      <div class="left">
-        <div id="gallery" aria-live="polite" aria-label="Galéria médií"></div>
-      </div>
-
-      <aside class="right">
-        <div class="panel">
-          <div class="small" style="font-weight:700;margin-bottom:6px">Rýchle ovládanie</div>
-          <div class="controls-list">
-            <div class="small">Tip: klikni na náhľad pre zväčšenie</div>
-            <button id="downloadAllBtn" class="btn">Stiahnuť všetko (ZIP not included)</button>
-            <button id="sortNewBtn" class="btn">Zoradiť: nové hore</button>
-            <button id="sortOldBtn" class="btn">Zoradiť: staré hore</button>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="small" style="font-weight:700;margin-bottom:6px">Google Translate</div>
-          <div id="google_translate_element"></div>
-        </div>
-
-        <div class="panel">
-          <div class="small" style="font-weight:700;margin-bottom:6px">Info</div>
-          <div class="small">© 2025 Erik Mohylák</div>
-          <div class="small" style="color:var(--muted);margin-top:6px">Licencia: CC BY-NC-ND 4.0</div>
-        </div>
-      </aside>
+  <div class="top">
+    <div class="panel file-input" style="flex:1;align-items:center">
+      <label class="small" style="min-width:100px">Pridať médiá</label>
+      <input id="fileInput" type="file" accept="image/*,video/*" multiple>
+      <button id="addBtn" class="btn primary">Pridať</button>
+      <div style="flex:1"></div>
+      <div class="small">Položiek: <span id="count">0</span></div>
     </div>
 
-    <footer>ErikAI • Všetko lokálne • Nahraté súbory sa ukladajú v tvojom prehliadači</footer>
-  </div>
-
-  <!-- Lightbox -->
-  <div id="lightboxBg" class="lb-bg" role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="lb" role="document">
-      <div id="lbMediaWrap" style="width:100%;display:flex;justify-content:center">
-        <!-- media inserted here -->
-      </div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <div id="lbName" class="small" style="font-weight:700"></div>
-        <div style="flex:1"></div>
-        <button id="lbDownload" class="btn">⬇ Stiahnuť</button>
-        <button id="lbDelete" class="btn danger" style="background:transparent;border:1px solid rgba(227,58,58,0.9);color:var(--accent)">Zmazať</button>
-        <button id="lbClose" class="btn">Zavrieť</button>
-      </div>
+    <div class="panel" style="align-items:center">
+      <button id="clearAll" class="btn ghost">Vymazať všetko</button>
+      <button id="sortNew" class="btn">Nové hore</button>
+      <button id="sortOld" class="btn">Staré hore</button>
     </div>
   </div>
+
+  <div class="main">
+    <div class="left">
+      <div id="gallery" aria-live="polite" aria-label="Galéria médií">
+        <div class="drop-hint">Pretiahni sem súbory alebo použi tlačidlo „Pridať“</div>
+      </div>
+    </div>
+
+    <aside class="right">
+      <div class="panel">
+        <div class="small" style="font-weight:700;margin-bottom:8px">Rýchle ovládanie</div>
+        <div class="small">Klikni na náhľad pre zväčšenie. Funkcie: stiahnuť, zmazať.</div>
+      </div>
+
+      <div class="panel">
+        <div id="google_translate_element"></div>
+      </div>
+
+      <div class="panel">
+        <div class="small" style="font-weight:700">Info</div>
+        <div class="small">© 2025 Erik Mohylák • ErikAI</div>
+        <div class="small" style="color:var(--muted)">Ukladá sa lokálne v prehliadači (IndexedDB)</div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>ErikAI Galéria PRO — Ulož svoje spomienky lokálne</footer>
+</div>
+
+<!-- Lightbox -->
+<div id="lb" class="lb-bg" role="dialog" aria-hidden="true">
+  <div class="lb" role="document">
+    <div id="lbMediaWrap" style="width:100%;display:flex;justify-content:center"></div>
+    <div style="display:flex;gap:8px;align-items:center;width:100%">
+      <div id="lbName" class="small" style="font-weight:700"></div>
+      <div style="flex:1"></div>
+      <button id="lbDownload" class="btn">⬇ Stiahnuť</button>
+      <button id="lbDelete" class="btn danger">Zmazať</button>
+      <button id="lbClose" class="btn">Zavrieť</button>
+    </div>
+  </div>
+</div>
 
 <script>
-/* ================== Utility & state ================== */
-const LS_KEY = 'erikai_gallery';
+/* ================= IndexedDB helper ================= */
+const DB_NAME = 'ErikAI_Gallery_DB';
+const DB_STORE = 'media';
+const DB_VER = 1;
+let db = null;
+
+function openDB(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = (e)=>{
+      const idb = e.target.result;
+      if(!idb.objectStoreNames.contains(DB_STORE)){
+        const store = idb.createObjectStore(DB_STORE, { keyPath: 'id' });
+        store.createIndex('ts', 'ts', { unique:false });
+      }
+    };
+    req.onsuccess = (e)=>{ db = e.target.result; resolve(db); };
+    req.onerror = (e)=> reject(e.target.error);
+  });
+}
+function addItemToDB(item){ // item: {id, blob, type, name, ts}
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(DB_STORE,'readwrite');
+    const store = tx.objectStore(DB_STORE);
+    const r = store.add(item);
+    r.onsuccess = ()=>res(item.id);
+    r.onerror = (e)=>rej(e.target.error);
+  });
+}
+function getAllFromDB(order='desc'){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(DB_STORE,'readonly');
+    const store = tx.objectStore(DB_STORE);
+    const request = store.index('ts').openCursor(null, order==='desc' ? 'prev' : 'next');
+    const out = [];
+    request.onsuccess = (e)=>{
+      const cur = e.target.result;
+      if(cur){
+        out.push(cur.value);
+        cur.continue();
+      } else res(out);
+    };
+    request.onerror = (e)=>rej(e.target.error);
+  });
+}
+function deleteFromDB(id){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(DB_STORE,'readwrite');
+    const store = tx.objectStore(DB_STORE);
+    const r = store.delete(id);
+    r.onsuccess = ()=>res();
+    r.onerror = (e)=>rej(e.target.error);
+  });
+}
+function clearDB(){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(DB_STORE,'readwrite');
+    const store = tx.objectStore(DB_STORE);
+    const r = store.clear();
+    r.onsuccess = ()=>res();
+    r.onerror = (e)=>rej(e.target.error);
+  });
+}
+
+/* ================= State & DOM refs ================= */
 const fileInput = document.getElementById('fileInput');
 const addBtn = document.getElementById('addBtn');
 const gallery = document.getElementById('gallery');
 const countEl = document.getElementById('count');
-const clearAllBtn = document.getElementById('clearAllBtn');
+const clearAllBtn = document.getElementById('clearAll');
 const themeToggle = document.getElementById('themeToggle');
-const lightboxBg = document.getElementById('lightboxBg');
+const lbBg = document.getElementById('lb');
 const lbMediaWrap = document.getElementById('lbMediaWrap');
 const lbName = document.getElementById('lbName');
 const lbDownload = document.getElementById('lbDownload');
 const lbDelete = document.getElementById('lbDelete');
 const lbClose = document.getElementById('lbClose');
-const sortNewBtn = document.getElementById('sortNewBtn');
-const sortOldBtn = document.getElementById('sortOldBtn');
+const sortNew = document.getElementById('sortNew');
+const sortOld = document.getElementById('sortOld');
+const clockEl = document.getElementById('clock');
 
-let items = []; // {id, dataUrl, type, name, ts}
+let items = []; // local cache: {id, type, name, ts} (blob stored in DB)
 let currentLightboxId = null;
 
-/* ---------- Time display ---------- */
-function aktualizujCas(){
-  const teraz=new Date();
-  const moznosti={weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'};
-  document.getElementById('cas').innerText = `🕓 ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
-}
-setInterval(aktualizujCas,1000); aktualizujCas();
+/* ================ Utility ================ */
+function genId(){ return 'g_' + Math.random().toString(36).slice(2,10); }
+function formatTS(ts){ return new Date(ts).toLocaleString('sk-SK',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
 
-/* ---------- Theme ---------- */
-function applyThemeFromStorage(){
+/* ================ Clock ================ */
+function updateClock(){ clockEl.textContent = '🕓 ' + new Date().toLocaleString('sk-SK',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+setInterval(updateClock,1000); updateClock();
+
+/* ================ Theme ================ */
+function applyTheme(){
   const t = localStorage.getItem('erikai_theme') || 'dark';
   if(t==='light') document.body.classList.add('light'); else document.body.classList.remove('light');
 }
-applyThemeFromStorage();
+applyTheme();
 themeToggle.addEventListener('click', ()=>{
   document.body.classList.toggle('light');
   localStorage.setItem('erikai_theme', document.body.classList.contains('light') ? 'light' : 'dark');
 });
 
-/* ---------- LocalStorage helpers ---------- */
-function saveItems(){
-  localStorage.setItem(LS_KEY, JSON.stringify(items));
-  updateCount();
-}
-function loadItems(){
-  try{
-    items = JSON.parse(localStorage.getItem(LS_KEY)) || [];
-  }catch(e){ items = []; }
-}
-function updateCount(){ countEl.textContent = items.length; }
+/* ================ Rendering & lazy loading ================ */
+const observer = new IntersectionObserver((entries)=>{
+  for(const ent of entries){
+    if(ent.isIntersecting){
+      const el = ent.target;
+      const src = el.dataset.src;
+      if(src){
+        if(el.tagName === 'IMG' || el.tagName === 'VIDEO'){
+          el.src = src;
+          el.removeAttribute('data-src');
+        }
+        observer.unobserve(el);
+      }
+    }
+  }
+},{root:null,threshold:0.1});
 
-/* ---------- Rendering ---------- */
-function formatTS(ts){
-  const d = new Date(ts);
-  return d.toLocaleString('sk-SK',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+function updateCount(){
+  countEl.textContent = items.length;
 }
+
 function createCard(item){
-  const div = document.createElement('div'); div.className='card';
-  // thumb
+  const card = document.createElement('div'); card.className='card';
+  const mediaWrap = document.createElement('div');
+
+  // placeholder element; actual src via blob URL assigned when in view by observer
   if(item.type.startsWith('image')){
-    const img = document.createElement('img'); img.className='thumb'; img.src = item.dataUrl; img.alt = item.name || 'image';
+    const img = document.createElement('img'); img.className='thumb'; img.alt = item.name || 'image';
+    img.dataset.src = ''; // will be set later to objectURL
     img.loading = 'lazy';
     img.onclick = ()=>openLightbox(item.id);
-    div.appendChild(img);
-  } else if(item.type.startsWith('video')){
-    const vid = document.createElement('video'); vid.className='thumb'; vid.src = item.dataUrl; vid.preload='metadata'; vid.muted=true; vid.loop=true; vid.onclick = ()=>openLightbox(item.id);
+    mediaWrap.appendChild(img);
+  } else {
+    const vid = document.createElement('video'); vid.className='thumb'; vid.muted=true; vid.loop=true; vid.dataset.src = ''; vid.preload='metadata';
+    vid.onclick = ()=>openLightbox(item.id);
     vid.onmouseenter = ()=>vid.play(); vid.onmouseleave = ()=>vid.pause();
-    div.appendChild(vid);
+    mediaWrap.appendChild(vid);
   }
 
-  // body
+  card.appendChild(mediaWrap);
+
   const body = document.createElement('div'); body.className='card-body';
   const meta = document.createElement('div'); meta.className='meta-line';
   const fname = document.createElement('div'); fname.className='fname'; fname.textContent = item.name || '–';
@@ -238,130 +287,270 @@ function createCard(item){
   meta.appendChild(fname); meta.appendChild(ts);
 
   const actions = document.createElement('div'); actions.className='card-actions';
-  const btnOpen = document.createElement('button'); btnOpen.className='icon-btn'; btnOpen.title='Otvoriť'; btnOpen.innerHTML='🔍'; btnOpen.onclick = ()=>openLightbox(item.id);
-  const btnDownload = document.createElement('button'); btnDownload.className='icon-btn'; btnDownload.title='Stiahnuť'; btnDownload.innerHTML='⬇'; btnDownload.onclick = ()=>downloadItem(item.id);
-  const btnDel = document.createElement('button'); btnDel.className='icon-btn danger'; btnDel.title='Zmazať'; btnDel.innerHTML='🗑'; btnDel.onclick = ()=>deleteItem(item.id);
+  const btnOpen = document.createElement('button'); btnOpen.className='icon'; btnOpen.innerText='🔍'; btnOpen.title='Otvoriť'; btnOpen.onclick = ()=>openLightbox(item.id);
+  const btnDownload = document.createElement('button'); btnDownload.className='icon'; btnDownload.innerText='⬇'; btnDownload.title='Stiahnuť'; btnDownload.onclick = ()=>downloadItem(item.id);
+  const btnDel = document.createElement('button'); btnDel.className='icon danger'; btnDel.innerText='🗑'; btnDel.title='Zmazať'; btnDel.onclick = ()=>deleteItem(item.id);
 
   actions.appendChild(btnOpen); actions.appendChild(btnDownload); actions.appendChild(btnDel);
   body.appendChild(meta); body.appendChild(actions);
-  div.appendChild(body);
-  return div;
+  card.appendChild(body);
+
+  // attach dataset id to media element so we can set src later when retrieving blob
+  const mediaEl = mediaWrap.firstElementChild;
+  mediaEl.dataset.id = item.id;
+
+  return card;
 }
-function renderGallery(){
+
+async function renderGallery(){
   gallery.innerHTML = '';
-  if(items.length===0){
-    gallery.innerHTML = `<div style="padding:40px;border-radius:12px;background:var(--glass);text-align:center;color:var(--muted)">Žiadne súbory. Pridaj pomocou tlačidla „Pridať“ alebo presuň súbory sem.</div>`;
+  if(items.length === 0){
+    const empty = document.createElement('div'); empty.className='drop-hint';
+    empty.innerText = 'Žiadne súbory. Pretiahni sem súbory alebo klikni na Pridať.';
+    gallery.appendChild(empty);
     updateCount();
     return;
   }
+
+  // create cards first (fast)
+  const fragment = document.createDocumentFragment();
   for(const it of items){
-    gallery.appendChild(createCard(it));
+    const card = createCard(it);
+    fragment.appendChild(card);
   }
+  gallery.appendChild(fragment);
   updateCount();
+
+  // fetch blobs and assign object URLs lazily when elements come into view
+  const mediaEls = gallery.querySelectorAll('[data-id]');
+  mediaEls.forEach(async el=>{
+    observer.observe(el);
+    // store the function that will set src when needed by observer:
+    // we'll set data-src to objectURL when element is observed - but IntersectionObserver callback will only have access to dataset.src
+    // So we need to prepare the objectURL here and set as data-src (but avoid creating too many objectURLs at once)
+    // To be memory-conscious, we create objectURL when element enters viewport: modify observer callback to fetch blob then.
+  });
+
+  // To implement lazy blob fetching, override observer callback to fetch blob when element is intersecting.
+  // We'll re-create observer with proper behavior if not already done.
 }
 
-/* ---------- File handling ---------- */
-function fileToDataUrl(file){
-  return new Promise((res, rej)=>{
-    const reader = new FileReader();
-    reader.onload = ()=>res(reader.result);
-    reader.onerror = ()=>rej(new Error('FileReader error'));
-    reader.readAsDataURL(file);
+/* Create a separate IntersectionObserver that fetches blob when visible (memory-friendly) */
+const lazyObserver = new IntersectionObserver((entries)=>{
+  for(const ent of entries){
+    if(ent.isIntersecting){
+      const el = ent.target;
+      const id = el.dataset.id;
+      if(!id) { lazyObserver.unobserve(el); continue; }
+      // fetch blob from DB and create objectURL
+      (async ()=>{
+        try{
+          const blob = await getBlobById(id);
+          if(!blob) { lazyObserver.unobserve(el); return; }
+          const url = URL.createObjectURL(blob);
+          // set as src
+          if(el.tagName === 'VIDEO'){ el.src = url; el.load(); }
+          else el.src = url;
+          // revoke URL when element is removed/unloaded - add listener
+          el.dataset.objurl = url;
+          // optionally revoke when element unobserved after some time
+        }catch(err){ console.error('lazy load err', err); }
+      })();
+      lazyObserver.unobserve(el);
+    }
+  }
+},{root:null,threshold:0.1});
+
+/* Helper to get blob from DB by id */
+function getBlobById(id){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(DB_STORE,'readonly');
+    const store = tx.objectStore(DB_STORE);
+    const rq = store.get(id);
+    rq.onsuccess = e=> {
+      const rec = e.target.result;
+      if(rec) res(rec.blob);
+      else res(null);
+    };
+    rq.onerror = e=> rej(e.target.error);
   });
 }
-async function handleFilesList(list){
-  const arr = Array.from(list);
+
+/* ================ File handling ================ */
+function fileToBlob(file){
+  return file.arrayBuffer().then(buf=> new Blob([buf], { type: file.type || (file.type.startsWith('video') ? 'video/*' : 'image/*') }));
+}
+
+async function addFiles(files){
+  const arr = Array.from(files);
   for(const f of arr){
     try{
-      const url = await fileToDataUrl(f);
-      const itm = { id: genId(), dataUrl: url, type: f.type || (url.startsWith('data:video')?'video':'image'), name: f.name || 'file', ts: Date.now() };
-      items.unshift(itm); // newest first
-      saveItems();
+      const id = genId();
+      const blob = await fileToBlob(f);
+      const rec = { id, blob, type: f.type || (f.type.startsWith('video')?'video':'image'), name: f.name || 'file', ts: Date.now() };
+      await addItemToDB(rec);
+      // update local cache items list
+      items.unshift({ id: rec.id, type: rec.type, name: rec.name, ts: rec.ts });
+      // keep UI snappy - render a placeholder card and let lazyObserver load blob when visible
       renderGallery();
-    }catch(e){ console.error('file read err', e); }
+    }catch(err){
+      console.error('add file error', err);
+    }
   }
 }
 
-/* ---------- Actions ---------- */
-addBtn.addEventListener('click', ()=> {
+/* Attach to buttons */
+addBtn.addEventListener('click', ()=>{
   if(!fileInput.files || fileInput.files.length===0) return alert('Vyber súbory najprv.');
-  handleFilesList(fileInput.files).then(()=>{ fileInput.value=''; });
+  addFiles(fileInput.files).then(()=>{ fileInput.value=''; });
 });
 
-// support drag & drop on gallery area
-['dragenter','dragover'].forEach(ev=> {
-  gallery.addEventListener(ev, e=>{ e.preventDefault(); e.dataTransfer.dropEffect='copy'; gallery.style.outline='2px dashed rgba(227,58,58,0.6)'; });
+/* Drag & drop */
+['dragenter','dragover'].forEach(ev=>{
+  gallery.addEventListener(ev, e=>{ e.preventDefault(); gallery.style.outline='2px dashed rgba(227,58,58,0.6)'; });
 });
-['dragleave','drop'].forEach(ev=> {
+['dragleave','drop'].forEach(ev=>{
   gallery.addEventListener(ev, e=>{ gallery.style.outline='none'; });
 });
 gallery.addEventListener('drop', e=>{
   e.preventDefault();
   const files = e.dataTransfer.files;
-  if(files && files.length) handleFilesList(files);
+  if(files && files.length) addFiles(files);
 });
 
-function genId(){ return 'g_' + Math.random().toString(36).slice(2,10); }
-
-function deleteItem(id){
+/* ================ Delete / clear / download ================ */
+async function deleteItem(id){
   if(!confirm('Naozaj zmazať tento súbor?')) return;
+  await deleteFromDB(id);
   items = items.filter(i=>i.id !== id);
-  saveItems();
   renderGallery();
-  // if lightbox open for this id, close it
   if(currentLightboxId === id) closeLightbox();
 }
 
-clearAllBtn.addEventListener('click', ()=>{
-  if(!items.length) return alert('Žiadne položky na vymazanie.');
-  if(!confirm('Vymazať VŠETKY položky v galérii?')) return;
-  items = []; saveItems(); renderGallery();
+clearAllBtn.addEventListener('click', async ()=>{
+  if(items.length===0) return alert('Žiadne položky.');
+  if(!confirm('Vymazať VŠETKY položky?')) return;
+  await clearDB();
+  items = [];
+  renderGallery();
 });
 
-function downloadItem(id){
-  const it = items.find(x=>x.id===id);
-  if(!it) return;
-  const a = document.createElement('a');
-  a.href = it.dataUrl;
-  a.download = it.name || 'erikai_media';
+/* Download single item */
+async function downloadItem(id){
+  const rec = await getRecordById(id);
+  if(!rec) return alert('Súbor sa nenašiel.');
+  const url = URL.createObjectURL(rec.blob);
+  const a = document.createElement('a'); a.href = url; a.download = rec.name || 'erikai_media';
   document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 15000);
+}
+function getRecordById(id){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(DB_STORE,'readonly');
+    const store = tx.objectStore(DB_STORE);
+    const r = store.get(id);
+    r.onsuccess = e=>res(e.target.result);
+    r.onerror = e=>rej(e.target.error);
+  });
 }
 
-/* ---------- Lightbox ---------- */
-function openLightbox(id){
-  const it = items.find(x=>x.id===id);
-  if(!it) return;
+/* ================ Lightbox ================ */
+async function openLightbox(id){
+  const rec = await getRecordById(id);
+  if(!rec) return alert('Súbor chýba');
   currentLightboxId = id;
   lbMediaWrap.innerHTML = '';
-  lbName.textContent = it.name;
-  if(it.type.startsWith('image')){
-    const img = document.createElement('img'); img.src = it.dataUrl; img.className='lb-media'; img.alt = it.name;
+  lbName.textContent = rec.name || '';
+  if(rec.type.startsWith('image')){
+    const url = URL.createObjectURL(rec.blob);
+    const img = document.createElement('img'); img.src = url; img.className='lb-media';
     lbMediaWrap.appendChild(img);
+    lbDownload.onclick = ()=> downloadItem(id);
+    lbDelete.onclick = ()=> deleteItem(id);
+    lbBg.style.display = 'flex';
+    lbBg.setAttribute('aria-hidden','false');
+    // revoke when closed
+    lbBg.dataset.objurl = url;
   } else {
-    const video = document.createElement('video'); video.src = it.dataUrl; video.controls = true; video.className='lb-media'; video.autoplay = true; lbMediaWrap.appendChild(video);
+    const url = URL.createObjectURL(rec.blob);
+    const v = document.createElement('video'); v.src = url; v.controls=true; v.autoplay=true; v.className='lb-media';
+    lbMediaWrap.appendChild(v);
+    lbDownload.onclick = ()=> downloadItem(id);
+    lbDelete.onclick = ()=> deleteItem(id);
+    lbBg.style.display = 'flex';
+    lbBg.setAttribute('aria-hidden','false');
+    lbBg.dataset.objurl = url;
   }
-  lbDownload.onclick = ()=>downloadItem(id);
-  lbDelete.onclick = ()=>{ deleteItem(id); }
-  lightboxBg.style.display = 'flex'; lightboxBg.setAttribute('aria-hidden','false');
 }
 function closeLightbox(){
-  lightboxBg.style.display = 'none'; lightboxBg.setAttribute('aria-hidden','true'); lbMediaWrap.innerHTML=''; currentLightboxId = null;
+  // revoke objectURL
+  const url = lbBg.dataset.objurl;
+  if(url) URL.revokeObjectURL(url);
+  lbBg.dataset.objurl = '';
+  lbMediaWrap.innerHTML = '';
+  currentLightboxId = null;
+  lbBg.style.display = 'none';
+  lbBg.setAttribute('aria-hidden','true');
 }
 lbClose.addEventListener('click', closeLightbox);
-lightboxBg.addEventListener('click', (e)=>{ if(e.target === lightboxBg) closeLightbox(); });
+lbBg.addEventListener('click', (e)=>{ if(e.target === lbBg) closeLightbox(); });
 
-/* ---------- Sorting ---------- */
-sortNewBtn.addEventListener('click', ()=>{ items.sort((a,b)=>b.ts - a.ts); saveItems(); renderGallery(); });
-sortOldBtn.addEventListener('click', ()=>{ items.sort((a,b)=>a.ts - b.ts); saveItems(); renderGallery(); });
+/* ================ Sorting ================ */
+sortNew.addEventListener('click', async ()=>{
+  items.sort((a,b)=>b.ts - a.ts);
+  renderGallery();
+});
+sortOld.addEventListener('click', async ()=>{
+  items.sort((a,b)=>a.ts - b.ts);
+  renderGallery();
+});
 
-/* ---------- Init ---------- */
-loadItems();
-renderGallery();
+/* ================ Init DB and load items ================ */
+async function init(){
+  await openDB();
+  // load items metadata into local cache
+  const all = await getAllFromDB('desc');
+  items = all.map(r => ({ id: r.id, type: r.type, name: r.name, ts: r.ts }));
+  // render
+  renderGallery();
+  // set lazyObserver to observe new elements (we already set it in renderGallery by observing data-id)
+  // But we need to actually observe current DOM nodes (renderGallery creates them); do that:
+  document.querySelectorAll('[data-id]').forEach(el => lazyObserver.observe(el));
+}
+init();
 
-/* ---------- Google Translate ---------- */
+/* Re-implement renderGallery now that functions defined */
+async function renderGallery(){
+  // clear previous
+  // revoke any objectURLs created earlier to avoid leaks
+  document.querySelectorAll('[data-id]').forEach(el=>{
+    if(el.dataset.objurl){ try{ URL.revokeObjectURL(el.dataset.objurl); }catch(e){} el.dataset.objurl=''; }
+  });
+  gallery.innerHTML = '';
+  if(items.length === 0){
+    const empty = document.createElement('div'); empty.className='drop-hint';
+    empty.innerText = 'Žiadne súbory. Pretiahni sem súbory alebo klikni na Pridať.';
+    gallery.appendChild(empty);
+    updateCount();
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  for(const it of items){
+    const card = createCard(it);
+    frag.appendChild(card);
+  }
+  gallery.appendChild(frag);
+  updateCount();
+  // now attach lazyObserver to each media element
+  document.querySelectorAll('[data-id]').forEach(el=>{
+    lazyObserver.observe(el);
+  });
+}
+
+/* ================ Google Translate snippet ================ */
 function googleTranslateElementInit(){ new google.translate.TranslateElement({pageLanguage:'sk', includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element'); }
 (function(){ var s=document.createElement('script'); s.src='//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit'; document.head.appendChild(s); })();
 
 </script>
 </body>
-                                                      </html>
+</html>
