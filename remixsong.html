@@ -3,119 +3,163 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎧 ErikAI DJ Mixér</title>
+<title>🎵 ErikAI DJ Mixér</title>
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: linear-gradient(135deg, #1f1f1f, #3c3c3c);
-  color: white;
-  margin: 0;
-  padding: 20px;
-}
-h1 { text-align: center; color: #ff0044; }
-input[type=file] { display: block; margin: 20px auto; }
-.track {
-  background: #2b2b2b;
-  padding: 15px;
-  margin: 10px 0;
-  border-radius: 10px;
-}
-.track h2 { margin: 0 0 10px; color: #ff77aa; font-size: 16px; }
-.track button {
-  margin-right: 10px;
-  background: #ff0044;
-  border: none;
-  padding: 5px 10px;
-  color: white;
-  cursor: pointer;
-  border-radius: 5px;
-}
-.track button:hover { background: #ff3366; }
-input[type=range] { width: 100%; }
-#masterControls {
-  text-align: center;
-  margin: 20px 0;
-}
-.crossfader {
-  width: 100%;
-  margin-top: 10px;
-}
+  body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #1b1b1b, #2c2c2c);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h1 { color: #ff4b2b; text-align: center; }
+  #trackList {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+  }
+  .track {
+    background: #222;
+    padding: 15px;
+    border-radius: 10px;
+    width: 200px;
+    text-align: center;
+    box-shadow: 0 0 10px #ff4b2b;
+    transition: transform 0.2s;
+  }
+  .track:hover { transform: scale(1.05); }
+  input[type="file"] { margin-top: 10px; }
+  button { 
+    margin: 5px; padding: 5px 10px; 
+    border: none; border-radius: 5px; 
+    cursor: pointer; 
+    background-color: #ff4b2b; color: #fff;
+    transition: background 0.3s;
+  }
+  button:hover { background-color: #e03a1f; }
+  .slider { width: 80%; margin: 10px 0; }
+  #crossfader { width: 60%; }
+  canvas { background: #111; border-radius: 10px; margin-top: 20px; }
 </style>
 </head>
 <body>
-<h1>🎧 ErikAI DJ Mixér</h1>
-<input type="file" id="fileInput" accept="audio/*" multiple>
-<div id="controls"></div>
 
-<div id="masterControls">
-  <button onclick="playAll()">▶ Všetko Play</button>
-  <button onclick="pauseAll()">⏸ Všetko Pause</button>
-  <label>Master hlasitosť:</label>
-  <input type="range" id="masterVol" min="0" max="1" step="0.01" value="0.8">
-  <label>Crossfader:</label>
-  <input type="range" id="crossfader" min="0" max="1" step="0.01" class="crossfader">
-</div>
+<h1>🎧 ErikAI DJ Mixér</h1>
+
+<p>Vyberte viac songov:</p>
+<input type="file" id="fileInput" accept="audio/*" multiple>
+
+<div id="trackList"></div>
+
+<h3>Master hlasitosť</h3>
+<input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.8" class="slider">
+
+<h3>Crossfader</h3>
+<input type="range" id="crossfader" min="0" max="1" step="0.01" value="0.5" class="slider">
+
+<canvas id="visualizer" width="800" height="200"></canvas>
 
 <script>
 const fileInput = document.getElementById('fileInput');
-const controlsDiv = document.getElementById('controls');
-const masterVol = document.getElementById('masterVol');
+const trackList = document.getElementById('trackList');
+const masterVolume = document.getElementById('masterVolume');
 const crossfader = document.getElementById('crossfader');
+const canvas = document.getElementById('visualizer');
+const ctx = canvas.getContext('2d');
 
-let trackElements = [];
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let tracks = [];
+
+function createTrack(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    audioCtx.decodeAudioData(reader.result, buffer => {
+      const track = {
+        name: file.name,
+        buffer: buffer,
+        gainNode: audioCtx.createGain(),
+        source: null,
+        playing: false
+      };
+      track.gainNode.gain.value = 0.8;
+      tracks.push(track);
+      renderTrack(track);
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderTrack(track) {
+  const div = document.createElement('div');
+  div.className = 'track';
+  div.innerHTML = `<strong>${track.name}</strong><br>
+    <button class="playBtn">Play</button>
+    <button class="stopBtn">Stop</button><br>
+    Hlasitosť:<input type="range" min="0" max="1" step="0.01" value="${track.gainNode.gain.value}" class="slider">`;
+  trackList.appendChild(div);
+
+  const playBtn = div.querySelector('.playBtn');
+  const stopBtn = div.querySelector('.stopBtn');
+  const volumeSlider = div.querySelector('.slider');
+
+  playBtn.onclick = () => playTrack(track);
+  stopBtn.onclick = () => stopTrack(track);
+  volumeSlider.oninput = (e) => {
+    track.gainNode.gain.value = e.target.value;
+  };
+}
+
+function playTrack(track) {
+  if (track.playing) return;
+  const source = audioCtx.createBufferSource();
+  source.buffer = track.buffer;
+  source.connect(track.gainNode).connect(audioCtx.destination);
+  source.start(0);
+  track.source = source;
+  track.playing = true;
+  source.onended = () => { track.playing = false; track.source = null; };
+}
+
+function stopTrack(track) {
+  if (track.source) { track.source.stop(); track.playing = false; track.source = null; }
+}
+
+masterVolume.oninput = (e) => {
+  tracks.forEach(t => t.gainNode.gain.value = e.target.value);
+}
+
+// Simple crossfader
+crossfader.oninput = (e) => {
+  const value = e.target.value;
+  if (tracks.length >= 2) {
+    tracks[0].gainNode.gain.value = 1 - value;
+    tracks[1].gainNode.gain.value = value;
+  }
+}
+
+// Audio visualizer
+function visualize() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  tracks.forEach((track, i) => {
+    if (!track.source) return;
+    const freqData = new Uint8Array(64);
+    ctx.fillStyle = `hsl(${i*50}, 100%, 50%)`;
+    for (let j = 0; j < freqData.length; j++) {
+      const height = Math.random() * 50; // demo waveform
+      ctx.fillRect(j*12, canvas.height - height - i*60, 10, height);
+    }
+  });
+  requestAnimationFrame(visualize);
+}
+visualize();
 
 fileInput.addEventListener('change', (e) => {
-  const files = Array.from(fileInput.files);
-  files.forEach(file => {
-    const div = document.createElement('div');
-    div.className = 'track';
-    
-    const title = document.createElement('h2');
-    title.innerText = file.name;
-
-    const audio = document.createElement('audio');
-    audio.src = URL.createObjectURL(file);
-    audio.controls = true;
-    audio.volume = masterVol.value;
-
-    const volSlider = document.createElement('input');
-    volSlider.type = 'range';
-    volSlider.min = 0;
-    volSlider.max = 1;
-    volSlider.step = 0.01;
-    volSlider.value = audio.volume;
-    volSlider.oninput = () => audio.volume = volSlider.value;
-
-    const playBtn = document.createElement('button');
-    playBtn.innerText = "▶ Play/Pause";
-    playBtn.onclick = () => audio.paused ? audio.play() : audio.pause();
-
-    div.appendChild(title);
-    div.appendChild(audio);
-    div.appendChild(volSlider);
-    div.appendChild(playBtn);
-    controlsDiv.appendChild(div);
-
-    trackElements.push({audio, volSlider});
-  });
+  Array.from(e.target.files).forEach(file => createTrack(file));
 });
-
-masterVol.addEventListener('input', () => {
-  trackElements.forEach(t => t.audio.volume = t.volSlider.value * masterVol.value);
-});
-
-crossfader.addEventListener('input', () => {
-  const left = 1 - crossfader.value;
-  const right = crossfader.value;
-  trackElements.forEach((t, i) => {
-    // jednoduché rozdelenie na prvú polovicu = ľavý, druhá = pravý
-    if (i < trackElements.length/2) t.audio.volume = t.volSlider.value * left * masterVol.value;
-    else t.audio.volume = t.volSlider.value * right * masterVol.value;
-  });
-});
-
-function playAll() { trackElements.forEach(t => t.audio.play()); }
-function pauseAll() { trackElements.forEach(t => t.audio.pause()); }
 </script>
 </body>
 </html>
