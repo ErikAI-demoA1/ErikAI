@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎨 ErikAI Emoji Mixer</title>
+<style>
+  body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg,#1f1c2c,#928dab);
+    color: white;
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    background: rgba(0,0,0,0.6);
+    padding: 20px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  }
+  #container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 20px;
+    gap: 20px;
+  }
+  #editor, #controls {
+    background: rgba(0,0,0,0.5);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+  }
+  #editor {
+    flex: 1 1 400px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  canvas {
+    background: #fff;
+    border-radius: 20px;
+  }
+  #controls {
+    flex: 1 1 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  select, input[type=color], input[type=range], button {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+  }
+  button {
+    background: #ff4d6d;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button:hover {
+    background: #ff1a3c;
+  }
+  label {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+</style>
+</head>
+<body>
+
+<header>🎨 ErikAI Emoji Mixer</header>
+
+<div id="container">
+  <div id="editor">
+    <canvas id="canvas" width="400" height="400"></canvas>
+  </div>
+
+  <div id="controls">
+    <label for="face">Tvár:</label>
+    <select id="face">
+      <option value="yellow">Žltá</option>
+      <option value="pink">Ružová</option>
+      <option value="orange">Oranžová</option>
+    </select>
+
+    <label for="eyes">Oči:</label>
+    <select id="eyes">
+      <option value="normal">Bežné</option>
+      <option value="big">Veľké</option>
+      <option value="cool">S okuliare</option>
+    </select>
+
+    <label for="mouth">Ústa:</label>
+    <select id="mouth">
+      <option value="smile">Úsmev</option>
+      <option value="sad">Smutné</option>
+      <option value="tongue">Vyplazený jazyk</option>
+    </select>
+
+    <label for="accessory">Doplnky:</label>
+    <select id="accessory">
+      <option value="none">Žiadne</option>
+      <option value="hat">Klobúk</option>
+      <option value="glasses">Okuliare</option>
+    </select>
+
+    <label for="color">Farba doplnku:</label>
+    <input type="color" id="color" value="#ff4d6d">
+
+    <button id="download">⬇️ Stiahnuť PNG</button>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  const faceEl = document.getElementById('face');
+  const eyesEl = document.getElementById('eyes');
+  const mouthEl = document.getElementById('mouth');
+  const accessoryEl = document.getElementById('accessory');
+  const colorEl = document.getElementById('color');
+  const downloadBtn = document.getElementById('download');
+
+  function drawEmoji() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Tvár
+    ctx.fillStyle = faceEl.value;
+    ctx.beginPath();
+    ctx.arc(200,200,150,0,Math.PI*2);
+    ctx.fill();
+
+    // Oči
+    ctx.fillStyle = 'black';
+    if(eyesEl.value === 'normal') {
+      ctx.beginPath();
+      ctx.arc(140,160,20,0,Math.PI*2);
+      ctx.arc(260,160,20,0,Math.PI*2);
+      ctx.fill();
+    } else if(eyesEl.value === 'big') {
+      ctx.beginPath();
+      ctx.arc(140,160,30,0,Math.PI*2);
+      ctx.arc(260,160,30,0,Math.PI*2);
+      ctx.fill();
+    } else if(eyesEl.value === 'cool') {
+      ctx.fillRect(120,150,50,20);
+      ctx.fillRect(230,150,50,20);
+    }
+
+    // Ústa
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    if(mouthEl.value === 'smile') {
+      ctx.arc(200,250,70,0,Math.PI);
+    } else if(mouthEl.value === 'sad') {
+      ctx.arc(200,300,70,Math.PI,2*Math.PI);
+    } else if(mouthEl.value === 'tongue') {
+      ctx.arc(200,250,70,0,Math.PI);
+      ctx.fillStyle = 'red';
+      ctx.fillRect(175,250,50,30);
+    }
+    ctx.stroke();
+
+    // Doplnky
+    ctx.fillStyle = colorEl.value;
+    if(accessoryEl.value==='hat'){
+      ctx.fillRect(130,70,140,60);
+    } else if(accessoryEl.value==='glasses'){
+      ctx.fillRect(110,150,60,20);
+      ctx.fillRect(230,150,60,20);
+    }
+  }
+
+  [faceEl, eyesEl, mouthEl, accessoryEl, colorEl].forEach(el => el.addEventListener('change', drawEmoji));
+  drawEmoji();
+
+  downloadBtn.addEventListener('click',()=>{
+    const link = document.createElement('a');
+    link.download='emoji.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+  });
+</script>
+
+</body>
+</html>
