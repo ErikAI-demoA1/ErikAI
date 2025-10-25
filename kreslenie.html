@@ -3,115 +3,119 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Editor plátna</title>
+<title>🎨 ErikAI Kreslenie</title>
 <style>
-body{margin:0;font-family:sans-serif;background:#1a1a1a;color:#fff;display:flex;flex-direction:column;align-items:center;}
-header{display:flex;flex-wrap:wrap;gap:8px;padding:10px;}
-canvas{border:1px solid #555;background:#fff;cursor:crosshair;}
-button,input{margin:2px;padding:4px;border-radius:4px;}
-.panel{background:rgba(255,255,255,0.05);padding:6px;border-radius:6px;}
+body{margin:0;font-family:sans-serif;background:#071026;color:#e6eef6}
+header,footer{padding:10px;text-align:center;background:#0b1220}
+canvas{border:1px solid #333;display:block;margin:10px auto;background:white;touch-action:none}
+button,input[type=color],input[type=range],input[type=number]{margin:3px}
+#toolbar{display:flex;flex-wrap:wrap;justify-content:center;gap:5px}
 </style>
 </head>
 <body>
-<header>
-<div class="panel">
-  <button id="drawBtn">Kresliť</button>
-  <button id="eraserBtn">Guma</button>
-  <button id="rectBtn">Obdĺžnik</button>
-  <button id="circleBtn">Kruh</button>
-  <button id="textBtn">Text</button>
-  <button id="deleteBtn">Zmazať</button>
+<header>🎨 ErikAI Kreslenie</header>
+
+<div id="toolbar">
+<button id="selectBtn">Select</button>
+<button id="drawBtn">Draw</button>
+<button id="eraserBtn">Guma</button>
+<button id="rectBtn">Obdĺžnik</button>
+<button id="circleBtn">Kruh</button>
+<button id="textBtn">Text</button>
+<button id="delBtn">Vymazať</button>
+<label>Farba:<input type="color" id="color" value="#ff0000"></label>
+<label>Hrúbka:<input type="range" id="size" min="1" max="40" value="5"></label>
+<label>Text veľkosť:<input type="number" id="fontSize" min="8" max="72" value="20"></label>
+<label>Plátno W:<input type="number" id="canvasW" value="600" style="width:60px"> H:<input type="number" id="canvasH" value="400" style="width:60px"></label>
+<button id="setCanvasBtn">Nastaviť plátno</button>
+<button id="saveBtn">Uložiť JSON</button>
+<input type="file" id="loadFile" style="display:none">
+<button id="loadBtn">Načítať JSON</button>
+<button id="exportBtn">Export PNG</button>
 </div>
-<div class="panel">
-  Farba:<input type="color" id="color" value="#ff0000">
-  Hrúbka:<input type="number" id="size" value="4" min="1" max="50">
-  Text veľkosť:<input type="number" id="fontSize" value="20" min="8" max="72">
-</div>
-<div class="panel">
-  Plátno W:<input type="number" id="canvasW" value="600"> H:<input type="number" id="canvasH" value="400">
-  <button id="setCanvasBtn">Nastaviť</button>
-</div>
-<div class="panel">
-  <button id="saveBtn">Uložiť JSON</button>
-  <button id="loadBtn">Načítať JSON</button>
-  <button id="exportBtn">Export PNG</button>
-  <button id="clearBtn">Vyčistiť</button>
-</div>
-</header>
 
 <canvas id="canvas" width="600" height="400"></canvas>
+<footer>© 2025 ErikAI</footer>
 
 <script>
-const canvas=document.getElementById('canvas');
-const ctx=canvas.getContext('2d');
+const canvas=document.getElementById('canvas'), ctx=canvas.getContext('2d');
+let tool='select', color='#ff0000', size=5, fontSize=20;
+let objects=[], selected=null, drawing=false, currentStroke=null;
+let offsetX=0, offsetY=0;
 
-let tool='draw', color='#ff0000', size=4, fontSize=20;
-let objects=[], drawing=false, currentStroke=null, selected=null, startPos=null, offset={x:0,y:0};
+const selectBtn=document.getElementById('selectBtn');
+const drawBtn=document.getElementById('drawBtn');
+const eraserBtn=document.getElementById('eraserBtn');
+const rectBtn=document.getElementById('rectBtn');
+const circleBtn=document.getElementById('circleBtn');
+const textBtn=document.getElementById('textBtn');
+const delBtn=document.getElementById('delBtn');
 
-document.getElementById('drawBtn').onclick=()=>tool='draw';
-document.getElementById('eraserBtn').onclick=()=>tool='eraser';
-document.getElementById('rectBtn').onclick=()=>tool='rect';
-document.getElementById('circleBtn').onclick=()=>tool='circle';
-document.getElementById('textBtn').onclick=()=>tool='text';
-document.getElementById('color').oninput=e=>color=e.target.value;
-document.getElementById('size').oninput=e=>size=parseInt(e.target.value);
-document.getElementById('fontSize').oninput=e=>fontSize=parseInt(e.target.value);
-
-document.getElementById('setCanvasBtn').onclick=()=>{
+document.getElementById('color').addEventListener('input', e=>color=e.target.value);
+document.getElementById('size').addEventListener('input', e=>size=parseInt(e.target.value));
+document.getElementById('fontSize').addEventListener('input', e=>fontSize=parseInt(e.target.value));
+document.getElementById('setCanvasBtn').addEventListener('click', ()=>{
   canvas.width=parseInt(document.getElementById('canvasW').value)||600;
   canvas.height=parseInt(document.getElementById('canvasH').value)||400;
-  renderAll();
-};
+  render();
+});
 
-document.getElementById('clearBtn').onclick=()=>{ if(confirm('Vyčistiť plátno?')){ objects=[]; selected=null; renderAll(); } };
-document.getElementById('exportBtn').onclick=()=>{
-  const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='drawing.png'; a.click();
-};
-document.getElementById('saveBtn').onclick=()=>{
-  const blob=new Blob([JSON.stringify(objects)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='project.json'; a.click();
-};
-document.getElementById('loadBtn').onclick=()=>{
-  const input=document.createElement('input'); input.type='file'; input.accept='.json';
-  input.onchange=e=>{
-    const file=input.files[0]; if(!file) return;
-    const reader=new FileReader();
-    reader.onload=ev=>{ objects=JSON.parse(ev.target.result); renderAll(); };
-    reader.readAsText(file);
-  };
-  input.click();
-};
-document.getElementById('deleteBtn').onclick=()=>{ if(selected){ objects=objects.filter(o=>o!==selected); selected=null; renderAll(); } };
+function setTool(t){tool=t;}
+selectBtn.onclick=()=>setTool('select'); drawBtn.onclick=()=>setTool('draw'); eraserBtn.onclick=()=>setTool('eraser');
+rectBtn.onclick=()=>setTool('rect'); circleBtn.onclick=()=>setTool('circle'); textBtn.onclick=()=>setTool('text');
 
-canvas.onmousedown=e=>{
+canvas.onmousedown=canvas.ontouchstart=function(e){
   const rect=canvas.getBoundingClientRect();
-  const x=e.clientX-rect.left, y=e.clientY-rect.top;
-  if(tool==='draw'){ drawing=true; currentStroke={type:'stroke', color, size, points:[{x,y}]}; objects.push(currentStroke); }
-  else if(tool==='eraser'){ drawing=true; currentStroke={type:'eraser', size, points:[{x,y}]}; objects.push(currentStroke); }
-  else if(tool==='rect'||tool==='circle'){ startPos={x,y}; }
-  else if(tool==='text'){ const t=prompt('Text',''); if(t){ objects.push({type:'text', x, y, text:t, color, fontSize}); renderAll(); } }
-  else{ selectObject(x,y); if(selected){ offset.x=x-selected.x; offset.y=y-selected.y; } renderAll(); }
+  const x=((e.touches?e.touches[0].clientX:e.clientX)-rect.left)*(canvas.width/rect.width);
+  const y=((e.touches?e.touches[0].clientY:e.clientY)-rect.top)*(canvas.height/rect.height);
+  if(tool==='draw'){drawing=true; currentStroke={type:'stroke',color,size,points:[{x,y}]}; objects.push(currentStroke);}
+  else if(tool==='eraser'){drawing=true; currentStroke={type:'stroke',color:'#fff',size,points:[{x,y}]}; objects.push(currentStroke);}
+  else if(tool==='rect'){ const w=+prompt('Šírka','100'); const h=+prompt('Výška','80'); if(w&&h) objects.push({type:'rect',x,y,w,h,color,size}); render();}
+  else if(tool==='circle'){ const r=+prompt('Polomer','50'); if(r) objects.push({type:'circle',x,y,r,color,size}); render();}
+  else if(tool==='text'){ const t=prompt('Text',''); if(t) objects.push({type:'text',x,y,text:t,color,fontSize}); render();}
+  else if(tool==='select'){selected=hitTest(x,y); if(selected){offsetX=x-selected.x; offsetY=y-selected.y;}}
 };
 
-canvas.onmousemove=e=>{
+canvas.onmousemove=canvas.ontouchmove=function(e){
+  if(!drawing && tool!=='select') return;
   const rect=canvas.getBoundingClientRect();
-  const x=e.clientX-rect.left, y=e.clientY-rect.top;
-  if(drawing && currentStroke){ currentStroke.points.push({x,y}); renderAll(); drawStroke(currentStroke); }
-  else if(startPos){ renderAll(); drawPreviewShape(startPos.x,startPos.y,x,y); }
-  else if(selected && e.buttons===1){ selected.x=x-offset.x; selected.y=y-offset.y; renderAll(); }
+  const x=((e.touches?e.touches[0].clientX:e.clientX)-rect.left)*(canvas.width/rect.width);
+  const y=((e.touches?e.touches[0].clientY:e.clientY)-rect.top)*(canvas.height/rect.height);
+  if(drawing && (tool==='draw'||tool==='eraser')){currentStroke.points.push({x,y}); render();}
+  else if(tool==='select' && selected){selected.x=x-offsetX; selected.y=y-offsetY; render();}
 };
 
-canvas.onmouseup=e=>{ drawing=false; currentStroke=null; if(startPos){ const rect=canvas.getBoundingClientRect(); const x=e.clientX-rect.left, y=e.clientY-rect.top; addShape(startPos.x,startPos.y,x,y); startPos=null; renderAll(); } };
+canvas.onmouseup=canvas.ontouchend=function(){drawing=false; currentStroke=null; selected=null; render();};
 
-function drawStroke(st){ ctx.save(); ctx.lineJoin='round'; ctx.lineCap='round'; ctx.strokeStyle=st.color||'#000'; ctx.lineWidth=st.size; ctx.beginPath(); ctx.moveTo(st.points[0].x,st.points[0].y); for(let i=1;i<st.points.length;i++){ ctx.lineTo(st.points[i].x,st.points[i].y); } ctx.stroke(); ctx.restore(); }
+delBtn.onclick=()=>{if(selected){objects=objects.filter(o=>o!==selected); selected=null; render();}};
 
-function drawPreviewShape(x0,y0,x1,y1){ ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=size; ctx.setLineDash([5,5]); if(tool==='rect'){ ctx.strokeRect(Math.min(x0,x1),Math.min(y0,y1),Math.abs(x1-x0),Math.abs(y1-y0)); } else if(tool==='circle'){ const r=Math.hypot(x1-x0,y1-y0)/2; ctx.beginPath(); ctx.arc((x0+x1)/2,(y0+y1)/2,r,0,Math.PI*2); ctx.stroke(); } ctx.restore(); }
+function hitTest(x,y){for(let i=objects.length-1;i>=0;i--){const o=objects[i];
+if(o.type==='rect'&&x>=o.x&&x<=o.x+o.w&&y>=o.y&&y<=o.y+o.h)return o;
+if(o.type==='circle'){const dx=x-o.x,dy=y-o.y;if(dx*dx+dy*dy<=o.r*o.r)return o;}
+if(o.type==='text'){ctx.font=o.fontSize+'px Arial';const w=ctx.measureText(o.text).width,h=o.fontSize;if(x>=o.x&&x<=o.x+w&&y>=o.y&&y<=o.y+h)return o;}
+if(o.type==='stroke'){for(let p of o.points){if(Math.abs(p.x-x)<o.size && Math.abs(p.y-y)<o.size) return o;}}
+} return null;}
 
-function addShape(x0,y0,x1,y1){ if(tool==='rect'){ objects.push({type:'rect', x:Math.min(x0,x1), y:Math.min(y0,y1), w:Math.abs(x1-x0), h:Math.abs(y1-y0), color, size}); } else if(tool==='circle'){ const r=Math.hypot(x1-x0,y1-y0)/2; objects.push({type:'circle', x:(x0+x1)/2, y:(y0+y1)/2, r, color, size}); } }
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(const o of objects){
+    if(o.type==='stroke'){ctx.strokeStyle=o.color; ctx.lineWidth=o.size; ctx.beginPath(); ctx.moveTo(o.points[0].x,o.points[0].y); for(let p of o.points) ctx.lineTo(p.x,p.y); ctx.stroke();}
+    else if(o.type==='rect'){ctx.strokeStyle=o.color; ctx.lineWidth=o.size; ctx.strokeRect(o.x,o.y,o.w,o.h);}
+    else if(o.type==='circle'){ctx.strokeStyle=o.color; ctx.lineWidth=o.size; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,2*Math.PI); ctx.stroke();}
+    else if(o.type==='text'){ctx.fillStyle=o.color; ctx.font=o.fontSize+'px Arial'; ctx.fillText(o.text,o.x,o.y);}
+  }
+  if(selected){ctx.save(); ctx.strokeStyle='rgba(255,255,255,0.8)'; ctx.setLineDash([6,6]);
+    if(selected.type==='rect') ctx.strokeRect(selected.x-2,selected.y-2,selected.w+4,selected.h+4);
+    if(selected.type==='circle') {ctx.beginPath(); ctx.arc(selected.x,selected.y,selected.r+2,0,2*Math.PI); ctx.stroke();}
+    if(selected.type==='text'){const w=ctx.measureText(selected.text).width,h=selected.fontSize; ctx.strokeRect(selected.x-2,selected.y-2,w+4,h+4);}
+    if(selected.type==='stroke'){ctx.beginPath(); for(let p of selected.points) ctx.lineTo(p.x,p.y); ctx.stroke();}
+    ctx.restore();}
+}
 
-function selectObject(x,y){ selected=null; for(let i=objects.length-1;i>=0;i--){ const o=objects[i]; if(o.type==='rect'&&x>=o.x&&x<=o.x+o.w&&y>=o.y&&y<=o.y+o.h){ selected=o; break; } else if(o.type==='circle'&&Math.hypot(x-o.x,y-o.y)<=o.r){ selected=o; break; } else if(o.type==='text'){ ctx.font=o.fontSize+'px sans-serif'; const w=ctx.measureText(o.text).width; const h=o.fontSize; if(x>=o.x&&x<=o.x+w&&y>=o.y-h&&y<=o.y){ selected=o; break; } } } }
-
-function renderAll(){ ctx.clearRect(0,0,canvas.width,canvas.height); for(const o of objects){ if(o.type==='stroke'){ drawStroke(o); } else if(o.type==='eraser'){ ctx.save(); ctx.globalCompositeOperation='destination-out'; drawStroke(o); ctx.restore(); } else if(o.type==='rect'){ ctx.save(); ctx.strokeStyle=o.color; ctx.lineWidth=o.size; ctx.strokeRect(o.x,o.y,o.w,o.h); ctx.restore(); } else if(o.type==='circle'){ ctx.save(); ctx.strokeStyle=o.color; ctx.lineWidth=o.size; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.stroke(); ctx.restore(); } else if(o.type==='text'){ ctx.save(); ctx.fillStyle=o.color; ctx.font=o.fontSize+'px sans-serif'; ctx.fillText(o.text,o.x,o.y); ctx.restore(); } } if(selected){ ctx.save(); ctx.strokeStyle='#00f'; ctx.lineWidth=2; ctx.setLineDash([4,2]); if(selected.type==='rect'){ ctx.strokeRect(selected.x,selected.y,selected.w,selected.h); } else if(selected.type==='circle'){ ctx.beginPath(); ctx.arc(selected.x,selected.y,selected.r,0,Math.PI*2); ctx.stroke(); } else if(selected.type==='text'){ ctx.font=selected.fontSize+'px sans-serif'; const w=ctx.measureText(selected.text).width; const h=selected.fontSize; ctx.strokeRect(selected.x,selected.y-h,w,h); } ctx.restore(); } }
+document.getElementById('exportBtn').onclick=function(){const a=document.createElement('a'); a.href=canvas.toDataURL(); a.download='drawing.png'; a.click();}
+document.getElementById('saveBtn').onclick=function(){const data=JSON.stringify(objects); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([data],{type:'application/json'})); a.download='drawing.json'; a.click();}
+document.getElementById('loadBtn').onclick=function(){document.getElementById('loadFile').click();}
+document.getElementById('loadFile').onchange=function(e){const file=e.target.files[0]; const reader=new FileReader(); reader.onload=function(evt){objects=JSON.parse(evt.target.result); render();}; reader.readAsText(file);}
 </script>
 </body>
-</html>
+  </html>
