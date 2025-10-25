@@ -11,29 +11,61 @@
       background: linear-gradient(180deg, #071026, #071022);
       color: #e6eef6;
       min-height: 100vh;
-      padding: 20px;
+      padding: 10px;
+      overflow-x: hidden;
     }
     .light-mode {
       background: linear-gradient(180deg, #f6f9ff, #eef4ff) !important;
       color: #0b1220 !important;
     }
-    .container { display: flex; gap: 20px; max-width: 1400px; margin: 0 auto; }
-    .sidebar { width: 280px; flex-shrink: 0; }
-    .main-area { flex: 1; display: flex; flex-direction: column; }
     
-    .panel { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1); }
+    /* Mobile first responsive design */
+    .container { 
+      display: flex; 
+      flex-direction: column;
+      gap: 15px; 
+      max-width: 1200px; 
+      margin: 0 auto;
+    }
+    
+    @media (min-width: 768px) {
+      .container {
+        flex-direction: row;
+      }
+      .sidebar { 
+        width: 280px; 
+        flex-shrink: 0; 
+      }
+    }
+    
+    .panel { 
+      background: rgba(255,255,255,0.05); 
+      border-radius: 12px; 
+      padding: 12px; 
+      margin-bottom: 12px; 
+      border: 1px solid rgba(255,255,255,0.1); 
+    }
     .light-mode .panel { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.1); }
     
     .toolbtn { 
-      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); 
-      color: white; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin: 2px; 
-      transition: all 0.2s; font-size: 13px;
+      background: rgba(255,255,255,0.1); 
+      border: 1px solid rgba(255,255,255,0.2); 
+      color: white; 
+      padding: 8px 12px; 
+      border-radius: 6px; 
+      cursor: pointer; 
+      margin: 2px; 
+      transition: all 0.2s; 
+      font-size: 13px;
+      flex: 1;
+      min-width: 60px;
     }
     .light-mode .toolbtn { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.2); color: #333; }
     .toolbtn:hover { background: rgba(255,255,255,0.2); }
     .light-mode .toolbtn:hover { background: rgba(0,0,0,0.1); }
     .toolbtn.active { background: #3b82f6; border-color: #3b82f6; }
     
+    /* Canvas container - RESPONSIVE */
     .canvas-container { 
       position: relative; 
       background: white; 
@@ -41,12 +73,31 @@
       overflow: hidden;
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
       border: 1px solid rgba(255,255,255,0.2);
+      width: 100%;
+      height: 500px;
+      margin-bottom: 10px;
     }
+    
+    @media (max-width: 767px) {
+      .canvas-container {
+        height: 400px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .canvas-container {
+        height: 350px;
+      }
+    }
+    
     #raster, #main { 
       position: absolute; 
       top: 0; 
       left: 0; 
+      width: 100% !important;
+      height: 100% !important;
       cursor: crosshair;
+      touch-action: none;
     }
     #raster { z-index: 1; }
     #main { z-index: 2; background: transparent; }
@@ -55,28 +106,64 @@
     input[type="range"] { width: 100%; }
     
     .small { font-size: 12px; opacity: 0.8; }
-    pre { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; overflow: auto; max-height: 200px; font-size: 11px; }
+    pre { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; overflow: auto; max-height: 150px; font-size: 11px; }
     .light-mode pre { background: rgba(0,0,0,0.05); }
     
     #modalBg {
       display: none; position: fixed; top:0; left:0; width:100%; height:100%; 
       background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
+      padding: 20px;
     }
-    .modal { background: white; color: #333; padding: 20px; border-radius: 12px; min-width: 300px; }
+    .modal { 
+      background: white; 
+      color: #333; 
+      padding: 20px; 
+      border-radius: 12px; 
+      width: 100%;
+      max-width: 300px; 
+    }
     .modal input { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; }
     
-    .tools-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+    .tools-row { 
+      display: flex; 
+      flex-wrap: wrap; 
+      gap: 4px; 
+      margin-bottom: 8px;
+      justify-content: center;
+    }
+    
+    /* Mobile specific improvements */
+    .mobile-warning {
+      display: none;
+      background: #f39c12;
+      color: white;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 12px;
+    }
+    
+    @media (max-width: 767px) {
+      .mobile-warning {
+        display: block;
+      }
+    }
   </style>
 </head>
 <body>
+  <div class="mobile-warning">
+    💡 Pre lepšiu prácu otoč zariadenie na šírku
+  </div>
+  
   <div class="container">
     <div class="sidebar">
       <div class="panel">
         <h3>Nástroje</h3>
         <div class="tools-row">
-          <button class="toolbtn active" data-tool="select">Výber (V)</button>
-          <button class="toolbtn" data-tool="draw">Kresliť (D)</button>
-          <button class="toolbtn" data-tool="eraser">Guma (E)</button>
+          <button class="toolbtn active" data-tool="select">Výber</button>
+          <button class="toolbtn" data-tool="draw">Kresliť</button>
+          <button class="toolbtn" data-tool="eraser">Guma</button>
         </div>
         <div class="tools-row">
           <button class="toolbtn" data-tool="rect">Obdĺžnik</button>
@@ -88,7 +175,7 @@
       
       <div class="panel">
         <h3>Vlastnosti</h3>
-        <div style="margin-bottom:10px;">
+        <div style="margin-bottom:10px; display: flex; align-items: center; gap: 10px;">
           <label class="small">Farba:</label>
           <input type="color" id="colorPicker" value="#000000">
         </div>
@@ -128,8 +215,8 @@
           <button class="toolbtn" id="loadBtn" style="flex:1;">Načítať</button>
         </div>
         <div style="display:flex; gap:4px; margin-bottom:8px;">
-          <button class="toolbtn" id="downloadProject" style="flex:1;">Stiahnuť JSON</button>
-          <button class="toolbtn" id="uploadProjectBtn" style="flex:1;">Nahrať JSON</button>
+          <button class="toolbtn" id="downloadProject" style="flex:1;">Stiahnuť</button>
+          <button class="toolbtn" id="uploadProjectBtn" style="flex:1;">Nahrať</button>
           <input type="file" id="uploadProject" accept=".json" style="display:none;">
         </div>
         <button class="toolbtn" id="exportBtn" style="width:100%;">Exportovať PNG</button>
@@ -181,15 +268,29 @@ let strokes = [];
 let pendingShape = null;
 
 // Initialize
-rCtx.lineCap = 'round';
-rCtx.lineJoin = 'round';
-rCtx.strokeStyle = color;
-rCtx.lineWidth = sizeVal;
-alignCanvases();
-
-function alignCanvases(){
-  raster.style.width = main.style.width = '100%';
-  raster.style.height = main.style.height = '100%';
+function initCanvas() {
+  rCtx.lineCap = 'round';
+  rCtx.lineJoin = 'round';
+  rCtx.strokeStyle = color;
+  rCtx.lineWidth = sizeVal;
+  
+  // Set canvas sizes based on container
+  const container = document.querySelector('.canvas-container');
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  
+  raster.width = main.width = width;
+  raster.height = main.height = height;
+  
+  // Clear both canvases
+  rCtx.clearRect(0, 0, width, height);
+  ctx.clearRect(0, 0, width, height);
+  
+  // Draw initial white background
+  rCtx.fillStyle = '#ffffff';
+  rCtx.fillRect(0, 0, width, height);
+  
+  renderAll();
 }
 
 // Tool selection
@@ -224,9 +325,21 @@ function getCanvasPos(e){
   const rect = main.getBoundingClientRect();
   const scaleX = main.width / rect.width;
   const scaleY = main.height / rect.height;
+  
+  let clientX, clientY;
+  
+  // Handle both mouse and touch events
+  if (e.type.includes('touch')) {
+    clientX = e.touches[0].clientX;
+    clientY = e.touches[0].clientY;
+  } else {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
+  
   return {
-    x: (e.clientX - rect.left) * scaleX,
-    y: (e.clientY - rect.top) * scaleY
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY
   };
 }
 
@@ -242,7 +355,7 @@ function continueStroke(pos){
   strokes[strokes.length-1].push({...pos});
   rCtx.lineTo(pos.x, pos.y);
   rCtx.stroke();
-  renderAll(); // ← DÔLEŽITÁ OPRAVA: zobraz zmeny okamžite
+  renderAll();
 }
 
 function endStroke(){
@@ -293,12 +406,10 @@ function hitTest(x,y){
       if(dx*dx + dy*dy <= o.r*o.r) return o.id;
     }
     if(o.type==='line'){
-      // Simplified line hit test
       const d = distToSegment(x,y, o.x,o.y, o.x2,o.y2);
       if(d < 10) return o.id;
     }
     if(o.type==='text'){
-      // Approximate text hit test
       ctx.font = `${o.fontSize}px Arial`;
       const w = ctx.measureText(o.text).width;
       if(x>=o.x && x<=o.x+w && y<=o.y && y>=o.y-o.fontSize) return o.id;
@@ -320,9 +431,9 @@ function distToSegment(px,py, x1,y1, x2,y2){
   return Math.sqrt(dx*dx + dy*dy);
 }
 
-// Rendering
+// Rendering - OPRAVENÉ
 function renderAll(){
-  // Clear main canvas
+  // Clear main canvas but keep the white background from raster
   ctx.clearRect(0, 0, main.width, main.height);
   
   // Draw all objects
@@ -355,18 +466,16 @@ function renderAll(){
       }
     }
   }
-  
-  // Draw raster (drawing) on top of objects - DÔLEŽITÁ ZMENA
-  ctx.drawImage(raster, 0, 0);
 }
 
-// Event handlers
+// Event handlers - VYLEPŠENÉ PRE MOBIL
 function onDown(e){
+  e.preventDefault(); // Important for mobile
   const pos = getCanvasPos(e);
   
   if(tool==='draw'){
     startStroke(pos);
-    renderAll(); // ← ZOBRAZ ZMENY
+    renderAll();
     return;
   }
   
@@ -376,7 +485,7 @@ function onDown(e){
     rCtx.globalCompositeOperation = 'destination-out';
     rCtx.beginPath();
     rCtx.moveTo(pos.x, pos.y);
-    renderAll(); // ← ZOBRAZ ZMENY
+    renderAll();
     return;
   }
   
@@ -395,14 +504,14 @@ function onDown(e){
     return;
   }
   
-  // Shape tools
   if(['rect','circle','line','text'].includes(tool)){
     createShape(tool, pos);
   }
 }
 
 function onMove(e){
-  if(!e.buttons) return;
+  e.preventDefault();
+  if(!e.buttons && !e.touches) return;
   const pos = getCanvasPos(e);
   
   if(tool==='draw' && drawing){
@@ -413,7 +522,7 @@ function onMove(e){
   if(tool==='eraser' && drawing){
     rCtx.lineTo(pos.x, pos.y);
     rCtx.stroke();
-    renderAll(); // ← ZOBRAZ ZMENY OKAMŽITE
+    renderAll();
     return;
   }
   
@@ -428,6 +537,7 @@ function onMove(e){
 }
 
 function onUp(e){
+  e.preventDefault();
   if(tool==='draw' && drawing) endStroke();
   if(tool==='eraser' && drawing){ 
     drawing=false; 
@@ -437,16 +547,29 @@ function onUp(e){
   if(dragging) dragging=false;
 }
 
-/* attach pointer events to raster for drawing, and main for selection/move */
+// Event listeners - VYLEPŠENÉ PRE MOBIL
 raster.addEventListener('pointerdown', onDown);
 raster.addEventListener('pointermove', onMove);
 window.addEventListener('pointerup', onUp);
 
-// also main for selection (so clicks on shapes hit)
+// Touch events for mobile
+raster.addEventListener('touchstart', onDown);
+raster.addEventListener('touchmove', onMove);
+window.addEventListener('touchend', onUp);
+
 main.addEventListener('pointerdown', onDown);
 main.addEventListener('pointermove', onMove);
+main.addEventListener('touchstart', onDown);
+main.addEventListener('touchmove', onMove);
 
-/* modal actions */
+// Prevent scrolling when drawing on mobile
+document.addEventListener('touchmove', function(e) {
+  if(drawing || dragging) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+// Modal actions
 $('modalCancel').addEventListener('click', ()=>{ $('modalBg').style.display='none'; pendingShape=null; });
 $('modalOk').addEventListener('click', ()=>{
   if(!pendingShape){ $('modalBg').style.display='none'; return; }
@@ -460,7 +583,7 @@ $('modalOk').addEventListener('click', ()=>{
   $('modalBg').style.display='none'; pendingShape=null; renderAll(); updateProjectsList(); updateSelInfo();
 });
 
-/* selection info & controls */
+// Selection info & controls
 function updateSelInfo(){
   const box = $('selInfo'); box.innerHTML = '';
   if(!selectedId){ box.innerHTML = '<div class="small">Žiadny výber</div>'; return; }
@@ -471,7 +594,7 @@ function updateSelInfo(){
   box.appendChild(pre);
 }
 
-/* delete & lock & edit */
+// Delete & lock & edit
 $('deleteBtn').addEventListener('click', ()=>{
   if(!selectedId) return alert('Vyber objekt');
   const idx = objects.findIndex(o=>o.id===selectedId);
@@ -497,7 +620,7 @@ main.addEventListener('dblclick', e=>{
   if(o && o.type==='text'){ const t = prompt('Uprav text', o.text); if(t!==null){ o.text=t; renderAll(); updateProjectsList(); updateSelInfo(); } }
 });
 
-/* bring front / send back */
+// Bring front / send back
 $('bringFront').addEventListener('click', ()=>{
   if(!selectedId) return;
   const i=objects.findIndex(o=>o.id===selectedId);
@@ -509,28 +632,42 @@ $('sendBack').addEventListener('click', ()=>{
   if(i>=0){ const [o]=objects.splice(i,1); objects.unshift(o); renderAll(); updateProjectsList(); }
 });
 
-/* set canvas size */
+// Set canvas size
 $('setCanvasBtn').addEventListener('click', ()=>{
   const w = Math.max(50, parseInt($('canvasW').value)||800);
   const h = Math.max(50, parseInt($('canvasH').value)||500);
-  // save raster image
+  
   const data = raster.toDataURL();
-  raster.width = w; raster.height = h;
-  main.width = w; main.height = h;
+  raster.width = w; 
+  raster.height = h;
+  main.width = w; 
+  main.height = h;
+  
   const img = new Image();
-  img.onload = ()=>{ rCtx.clearRect(0,0,raster.width,raster.height); rCtx.drawImage(img,0,0); renderAll(); alignCanvases(); }
+  img.onload = ()=>{ 
+    rCtx.clearRect(0,0,raster.width,raster.height); 
+    rCtx.drawImage(img,0,0); 
+    renderAll(); 
+  }
   img.src = data;
 });
 
-/* clear canvas */
+// Clear canvas
 $('clearBtn').addEventListener('click', ()=>{
   if(!confirm('Vymazať celú plochu (tvary + kresba)?')) return;
-  objects=[]; strokes=[]; rCtx.clearRect(0,0,raster.width,raster.height); selectedId=null; updateSelInfo(); renderAll(); updateProjectsList();
+  objects=[]; 
+  strokes=[]; 
+  rCtx.fillStyle = '#ffffff';
+  rCtx.fillRect(0,0,raster.width,raster.height);
+  selectedId=null; 
+  updateSelInfo(); 
+  renderAll(); 
+  updateProjectsList();
 });
 
-/* save/load projects in localStorage */
+// Save/load projects
 function saveProject(){
-  const name = prompt('Názov projektu (uloží sa lokálne):','moj_projekt');
+  const name = prompt('Názov projektu:','moj_projekt');
   if(!name) return;
   const payload = { objects, rasterData: raster.toDataURL('image/png'), meta:{savedAt:Date.now(), w:raster.width, h:raster.height} };
   localStorage.setItem('erakai_proj_'+name, JSON.stringify(payload));
@@ -542,7 +679,7 @@ function loadProject(){
   const keys = Object.keys(localStorage).filter(k=>k.startsWith('erakai_proj_'));
   if(keys.length===0) return alert('Žiadne projekty uložené');
   const list = keys.map(k=>k.replace('erakai_proj_',''));
-  const name = prompt('Vyber projekt na načítanie:\n'+list.join('\n'), list[0]);
+  const name = prompt('Vyber projekt:\n'+list.join('\n'), list[0]);
   if(!name) return;
   const raw = localStorage.getItem('erakai_proj_'+name);
   if(!raw) return alert('Projekt nenájdený');
@@ -550,7 +687,13 @@ function loadProject(){
     const payload = JSON.parse(raw);
     objects = payload.objects || [];
     const img = new Image();
-    img.onload = ()=>{ rCtx.clearRect(0,0,raster.width,raster.height); rCtx.drawImage(img,0,0); renderAll(); updateSelInfo(); updateProjectsList(); };
+    img.onload = ()=>{ 
+      rCtx.clearRect(0,0,raster.width,raster.height); 
+      rCtx.drawImage(img,0,0); 
+      renderAll(); 
+      updateSelInfo(); 
+      updateProjectsList(); 
+    };
     img.src = payload.rasterData || '';
   }catch(err){ alert('Chyba pri načítaní projektu'); }
 }
@@ -562,24 +705,52 @@ function updateProjectsList(){
   if(keys.length===0){ cont.innerHTML='<div class="small">Žiadne</div>'; return; }
   keys.forEach(k=>{
     const name = k.replace('erakai_proj_','');
-    const row = document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.alignItems='center'; row.style.padding='6px';
+    const row = document.createElement('div'); 
+    row.style.display='flex'; 
+    row.style.justifyContent='space-between'; 
+    row.style.alignItems='center'; 
+    row.style.padding='6px';
     const left = document.createElement('div'); left.textContent = name; left.style.fontSize='13px';
     const right = document.createElement('div');
-    const btnLoad = document.createElement('button'); btnLoad.textContent='Načítať'; btnLoad.className='toolbtn'; btnLoad.onclick=()=>{ if(confirm('Načítať '+name+'?')){ const raw = localStorage.getItem('erakai_proj_'+name); const p = JSON.parse(raw); objects = p.objects||[]; const img = new Image(); img.onload=()=>{ rCtx.clearRect(0,0,raster.width,raster.height); rCtx.drawImage(img,0,0); renderAll(); }; img.src = p.rasterData||''; selectedId=null; updateSelInfo(); updateProjectsList(); } };
-    const btnDel = document.createElement('button'); btnDel.textContent='Zmazať'; btnDel.className='toolbtn'; btnDel.onclick=()=>{ if(confirm('Zmazať '+name+'?')){ localStorage.removeItem('erakai_proj_'+name); updateProjectsList(); } };
+    const btnLoad = document.createElement('button'); btnLoad.textContent='Načítať'; btnLoad.className='toolbtn'; 
+    btnLoad.onclick=()=>{ 
+      if(confirm('Načítať '+name+'?')){ 
+        const raw = localStorage.getItem('erakai_proj_'+name); 
+        const p = JSON.parse(raw); 
+        objects = p.objects||[]; 
+        const img = new Image(); 
+        img.onload=()=>{ 
+          rCtx.clearRect(0,0,raster.width,raster.height); 
+          rCtx.drawImage(img,0,0); 
+          renderAll(); 
+        }; 
+        img.src = p.rasterData||''; 
+        selectedId=null; 
+        updateSelInfo(); 
+        updateProjectsList(); 
+      } 
+    };
+    const btnDel = document.createElement('button'); btnDel.textContent='Zmazať'; btnDel.className='toolbtn'; 
+    btnDel.onclick=()=>{ if(confirm('Zmazať '+name+'?')){ localStorage.removeItem('erakai_proj_'+name); updateProjectsList(); } };
     right.appendChild(btnLoad); right.appendChild(btnDel);
     row.appendChild(left); row.appendChild(right); cont.appendChild(row);
   });
 }
-updateProjectsList();
 
-/* export PNG: composite raster + objects */
+// Export PNG
 $('exportBtn').addEventListener('click', ()=>{
   const tmp = document.createElement('canvas');
   tmp.width = raster.width; tmp.height = raster.height;
   const tctx = tmp.getContext('2d');
+  
+  // Draw white background
+  tctx.fillStyle = '#ffffff';
+  tctx.fillRect(0, 0, tmp.width, tmp.height);
+  
+  // Draw raster (drawing)
   tctx.drawImage(raster,0,0);
-  // draw objects to tctx
+  
+  // Draw objects
   for(const o of objects){
     if(o.type==='rect'){
       tctx.lineWidth = o.stroke||Math.max(2,sizeVal/1.5);
@@ -600,11 +771,12 @@ $('exportBtn').addEventListener('click', ()=>{
       tctx.fillStyle = o.color||'#000'; tctx.font = `${o.fontSize||20}px Inter, Arial`; tctx.fillText(o.text,o.x,o.y);
     }
   }
+  
   const url = tmp.toDataURL('image/png');
   const a = document.createElement('a'); a.href = url; a.download = 'erakai_canvas.png'; a.click();
 });
 
-/* download/upload project JSON */
+// Download/upload project JSON
 $('downloadProject').addEventListener('click', ()=>{
   const data = { objects, rasterData: raster.toDataURL('image/png'), meta:{w:raster.width,h:raster.height} };
   const blob = new Blob([JSON.stringify(data)],{type:'application/json'});
@@ -624,7 +796,7 @@ $('uploadProject').addEventListener('change', function(){
   reader.readAsText(file);
 });
 
-/* keyboard delete */
+// Keyboard shortcuts
 window.addEventListener('keydown', e=>{
   if(e.key==='Delete' || e.key==='Backspace'){ if(selectedId){ const idx = objects.findIndex(o=>o.id===selectedId); if(idx>=0){ objects.splice(idx,1); selectedId=null; updateSelInfo(); renderAll(); updateProjectsList(); } } }
   if(e.key==='d') setTool('draw');
@@ -632,7 +804,7 @@ window.addEventListener('keydown', e=>{
   if(e.key==='e') setTool('eraser');
 });
 
-/* theme toggle */
+// Theme toggle
 $('themeToggle').addEventListener('click', ()=>{
   document.body.classList.toggle('light-mode');
   if(document.body.classList.contains('light-mode')){
@@ -644,8 +816,12 @@ $('themeToggle').addEventListener('click', ()=>{
   }
 });
 
-/* initial render */
-renderAll();
+// Handle window resize
+window.addEventListener('resize', initCanvas);
+
+// Initial render
+initCanvas();
+updateProjectsList();
 
 </script>
 </body>
