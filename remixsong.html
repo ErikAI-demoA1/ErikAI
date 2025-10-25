@@ -3,24 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI DJ Mixér</title>
+<title>🎧 ErikAI DJ Mixér</title>
 <style>
   body {
-    font-family: 'Roboto', sans-serif;
-    background: linear-gradient(to right, #1e1e1e, #121212);
-    color: #fff;
     margin: 0;
-    padding: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #121212;
+    color: #fff;
   }
-  header {
+  h1 {
     text-align: center;
-    padding: 20px;
-    background-color: #ff0033;
-    font-size: 1.5em;
-    font-weight: bold;
-    letter-spacing: 1px;
+    margin: 20px 0;
+    color: #00ffcc;
+    text-shadow: 0 0 10px #00ffcc;
   }
-  #player-container {
+  #controls {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -28,139 +25,139 @@
     padding: 20px;
   }
   .track {
-    background-color: #222;
-    padding: 15px;
+    background: #1f1f1f;
     border-radius: 10px;
+    padding: 15px;
     width: 250px;
-    box-shadow: 0 0 10px rgba(255,0,51,0.5);
+    box-shadow: 0 0 15px #00ffcc33;
   }
-  .track input[type="file"] {
-    margin-bottom: 10px;
+  .track h2 {
+    font-size: 18px;
+    margin: 0 0 10px 0;
+    color: #00ffcc;
   }
-  .controls {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .controls label {
-    font-size: 0.9em;
-  }
-  input[type="range"] {
+  .slider, .volume, .crossfader {
     width: 100%;
   }
-  button {
-    background-color: #ff0033;
+  .track button {
+    background: #00ffcc;
+    color: #121212;
     border: none;
-    padding: 8px;
-    color: white;
-    font-weight: bold;
+    padding: 8px 12px;
+    margin: 5px 0;
     border-radius: 5px;
     cursor: pointer;
+    font-weight: bold;
   }
-  button:hover {
-    background-color: #cc0029;
+  .track button:hover {
+    background: #00cca6;
   }
-  #mix-controls {
-    text-align: center;
+  #master-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
     margin: 20px;
+  }
+  .fader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: #333;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #00ffcc;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 0 0 5px #00ffcc;
   }
 </style>
 </head>
 <body>
 
-<header>🎛️ ErikAI DJ Mixér</header>
+<h1>🎧 ErikAI DJ Mixér</h1>
 
-<div id="player-container"></div>
+<div id="controls"></div>
 
-<div id="mix-controls">
-  <button onclick="playAll()">▶️ Spusti všetko</button>
-  <button onclick="pauseAll()">⏸️ Pauza všetko</button>
+<div id="master-controls">
+  <div class="fader-container">
+    <label for="masterVolume">Master hlasitosť</label>
+    <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.8">
+  </div>
+  <button onclick="playAll()">▶ Spusti všetko</button>
+  <button onclick="pauseAll()">⏸ Zastav všetko</button>
 </div>
 
 <script>
-  const playerContainer = document.getElementById('player-container');
-  const tracks = [];
+  const tracksData = [
+    {name: "Track 1"},
+    {name: "Track 2"},
+    {name: "Track 3"},
+    {name: "Track 4"}
+  ];
 
-  function addTrack() {
-    const trackDiv = document.createElement('div');
-    trackDiv.classList.add('track');
+  const controlsDiv = document.getElementById('controls');
+  const trackElements = [];
 
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'audio/*';
-    trackDiv.appendChild(fileInput);
+  const masterVolume = document.getElementById('masterVolume');
 
+  tracksData.forEach((trackData, i) => {
+    const div = document.createElement('div');
+    div.className = 'track';
+    const title = document.createElement('h2');
+    title.innerText = trackData.name;
     const audio = document.createElement('audio');
+    audio.src = ""; // sem môžeš dať cestu k MP3
     audio.controls = true;
-    audio.preload = "auto";
-    trackDiv.appendChild(audio);
+    audio.volume = 0.8;
 
-    const controlsDiv = document.createElement('div');
-    controlsDiv.classList.add('controls');
-
-    // Hlasitosť
-    const volLabel = document.createElement('label');
-    volLabel.innerText = 'Hlasitosť:';
     const volSlider = document.createElement('input');
     volSlider.type = 'range';
     volSlider.min = 0;
     volSlider.max = 1;
     volSlider.step = 0.01;
-    volSlider.value = 0.8;
-    volSlider.oninput = () => audio.volume = volSlider.value;
-    controlsDiv.appendChild(volLabel);
-    controlsDiv.appendChild(volSlider);
+    volSlider.value = audio.volume;
+    volSlider.className = 'volume';
+    volSlider.oninput = () => audio.volume = volSlider.value * masterVolume.value;
 
-    // Pan (Stereo)
-    const panLabel = document.createElement('label');
-    panLabel.innerText = 'Stereo:';
-    const panSlider = document.createElement('input');
-    panSlider.type = 'range';
-    panSlider.min = -1;
-    panSlider.max = 1;
-    panSlider.step = 0.01;
-    panSlider.value = 0;
-    controlsDiv.appendChild(panLabel);
-    controlsDiv.appendChild(panSlider);
+    const playBtn = document.createElement('button');
+    playBtn.innerText = "▶ Play/Pause";
+    playBtn.onclick = () => audio.paused ? audio.play() : audio.pause();
 
-    trackDiv.appendChild(controlsDiv);
-    playerContainer.appendChild(trackDiv);
+    div.appendChild(title);
+    div.appendChild(audio);
+    div.appendChild(volSlider);
+    div.appendChild(playBtn);
 
-    let audioContext, source, panNode;
+    controlsDiv.appendChild(div);
 
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files[0];
-      if(file){
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          audio.src = e.target.result;
+    trackElements.push(audio);
+  });
 
-          // Web Audio API pre pan
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          source = audioContext.createMediaElementSource(audio);
-          panNode = audioContext.createStereoPanner();
-          source.connect(panNode).connect(audioContext.destination);
-
-          panSlider.oninput = () => {
-            panNode.pan.value = panSlider.value;
-          }
-        };
-        reader.readAsDataURL(file);
-      }
+  masterVolume.oninput = () => {
+    trackElements.forEach(audio => {
+      audio.volume = audio.volume * masterVolume.value;
     });
-
-    tracks.push(audio);
-  }
+  };
 
   function playAll() {
-    tracks.forEach(track => track.play());
-  }
-  function pauseAll() {
-    tracks.forEach(track => track.pause());
+    trackElements.forEach(audio => audio.play());
   }
 
-  // Inicialne pridáme 4 sloty
-  for(let i=0;i<4;i++) addTrack();
+  function pauseAll() {
+    trackElements.forEach(audio => audio.pause());
+  }
 </script>
 
 </body>
