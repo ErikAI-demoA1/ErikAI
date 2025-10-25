@@ -5,122 +5,78 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎧 ErikAI DJ Mixér</title>
 <style>
-  body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #121212;
-    color: #fff;
-  }
-  h1 {
-    text-align: center;
-    margin: 20px 0;
-    color: #00ffcc;
-    text-shadow: 0 0 10px #00ffcc;
-  }
-  #controls {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-    padding: 20px;
-  }
-  .track {
-    background: #1f1f1f;
-    border-radius: 10px;
-    padding: 15px;
-    width: 250px;
-    box-shadow: 0 0 15px #00ffcc33;
-  }
-  .track h2 {
-    font-size: 18px;
-    margin: 0 0 10px 0;
-    color: #00ffcc;
-  }
-  .slider, .volume, .crossfader {
-    width: 100%;
-  }
-  .track button {
-    background: #00ffcc;
-    color: #121212;
-    border: none;
-    padding: 8px 12px;
-    margin: 5px 0;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: bold;
-  }
-  .track button:hover {
-    background: #00cca6;
-  }
-  #master-controls {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    margin: 20px;
-  }
-  .fader-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  input[type=range] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 8px;
-    border-radius: 5px;
-    background: #333;
-    outline: none;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    background: #00ffcc;
-    cursor: pointer;
-    border-radius: 50%;
-    box-shadow: 0 0 5px #00ffcc;
-  }
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #1f1f1f, #3c3c3c);
+  color: white;
+  margin: 0;
+  padding: 20px;
+}
+h1 { text-align: center; color: #ff0044; }
+input[type=file] { display: block; margin: 20px auto; }
+.track {
+  background: #2b2b2b;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 10px;
+}
+.track h2 { margin: 0 0 10px; color: #ff77aa; font-size: 16px; }
+.track button {
+  margin-right: 10px;
+  background: #ff0044;
+  border: none;
+  padding: 5px 10px;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+}
+.track button:hover { background: #ff3366; }
+input[type=range] { width: 100%; }
+#masterControls {
+  text-align: center;
+  margin: 20px 0;
+}
+.crossfader {
+  width: 100%;
+  margin-top: 10px;
+}
 </style>
 </head>
 <body>
-
 <h1>🎧 ErikAI DJ Mixér</h1>
-
+<input type="file" id="fileInput" accept="audio/*" multiple>
 <div id="controls"></div>
 
-<div id="master-controls">
-  <div class="fader-container">
-    <label for="masterVolume">Master hlasitosť</label>
-    <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.8">
-  </div>
-  <button onclick="playAll()">▶ Spusti všetko</button>
-  <button onclick="pauseAll()">⏸ Zastav všetko</button>
+<div id="masterControls">
+  <button onclick="playAll()">▶ Všetko Play</button>
+  <button onclick="pauseAll()">⏸ Všetko Pause</button>
+  <label>Master hlasitosť:</label>
+  <input type="range" id="masterVol" min="0" max="1" step="0.01" value="0.8">
+  <label>Crossfader:</label>
+  <input type="range" id="crossfader" min="0" max="1" step="0.01" class="crossfader">
 </div>
 
 <script>
-  const tracksData = [
-    {name: "Track 1"},
-    {name: "Track 2"},
-    {name: "Track 3"},
-    {name: "Track 4"}
-  ];
+const fileInput = document.getElementById('fileInput');
+const controlsDiv = document.getElementById('controls');
+const masterVol = document.getElementById('masterVol');
+const crossfader = document.getElementById('crossfader');
 
-  const controlsDiv = document.getElementById('controls');
-  const trackElements = [];
+let trackElements = [];
 
-  const masterVolume = document.getElementById('masterVolume');
-
-  tracksData.forEach((trackData, i) => {
+fileInput.addEventListener('change', (e) => {
+  const files = Array.from(fileInput.files);
+  files.forEach(file => {
     const div = document.createElement('div');
     div.className = 'track';
+    
     const title = document.createElement('h2');
-    title.innerText = trackData.name;
+    title.innerText = file.name;
+
     const audio = document.createElement('audio');
-    audio.src = ""; // sem môžeš dať cestu k MP3
+    audio.src = URL.createObjectURL(file);
     audio.controls = true;
-    audio.volume = 0.8;
+    audio.volume = masterVol.value;
 
     const volSlider = document.createElement('input');
     volSlider.type = 'range';
@@ -128,8 +84,7 @@
     volSlider.max = 1;
     volSlider.step = 0.01;
     volSlider.value = audio.volume;
-    volSlider.className = 'volume';
-    volSlider.oninput = () => audio.volume = volSlider.value * masterVolume.value;
+    volSlider.oninput = () => audio.volume = volSlider.value;
 
     const playBtn = document.createElement('button');
     playBtn.innerText = "▶ Play/Pause";
@@ -139,26 +94,28 @@
     div.appendChild(audio);
     div.appendChild(volSlider);
     div.appendChild(playBtn);
-
     controlsDiv.appendChild(div);
 
-    trackElements.push(audio);
+    trackElements.push({audio, volSlider});
   });
+});
 
-  masterVolume.oninput = () => {
-    trackElements.forEach(audio => {
-      audio.volume = audio.volume * masterVolume.value;
-    });
-  };
+masterVol.addEventListener('input', () => {
+  trackElements.forEach(t => t.audio.volume = t.volSlider.value * masterVol.value);
+});
 
-  function playAll() {
-    trackElements.forEach(audio => audio.play());
-  }
+crossfader.addEventListener('input', () => {
+  const left = 1 - crossfader.value;
+  const right = crossfader.value;
+  trackElements.forEach((t, i) => {
+    // jednoduché rozdelenie na prvú polovicu = ľavý, druhá = pravý
+    if (i < trackElements.length/2) t.audio.volume = t.volSlider.value * left * masterVol.value;
+    else t.audio.volume = t.volSlider.value * right * masterVol.value;
+  });
+});
 
-  function pauseAll() {
-    trackElements.forEach(audio => audio.pause());
-  }
+function playAll() { trackElements.forEach(t => t.audio.play()); }
+function pauseAll() { trackElements.forEach(t => t.audio.pause()); }
 </script>
-
 </body>
 </html>
