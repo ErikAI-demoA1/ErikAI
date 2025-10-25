@@ -3,58 +3,91 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ErikAI Kreslenie</title>
+  <title>ErikAI Kreslenie Pro</title>
   <style>
     body {
-      background-color: #111;
-      color: white;
-      font-family: sans-serif;
+      background-color: #0f1116;
+      color: #e0e0e0;
+      font-family: "Segoe UI", sans-serif;
       text-align: center;
       padding: 10px;
+      margin: 0;
     }
+
+    header {
+      background: linear-gradient(90deg, #0078d7, #00bfa5);
+      color: white;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      margin-bottom: 15px;
+    }
+
     canvas {
-      border: 2px solid white;
-      background-color: white;
+      border: 2px solid #555;
+      background-color: #fff;
+      border-radius: 8px;
       touch-action: none;
+      box-shadow: 0 0 10px rgba(255,255,255,0.1);
     }
-    input[type=color], input[type=range], button {
-      margin: 5px;
+
+    .toolbar {
+      background-color: #1c1f26;
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px;
+      margin-bottom: 15px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
     }
-    body.dark-mode {
+
+    input, select, button {
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button {
+      background-color: #0078d7;
+      color: white;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background-color: #00bfa5;
+    }
+
+    input[type="color"] {
+      cursor: pointer;
+    }
+
+    .dark-mode {
       background-color: #121212;
       color: white;
+    }
+
+    footer {
+      font-size: 13px;
+      color: #aaa;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-  <script>
-    function toggleTheme() {
-      document.body.classList.toggle('dark-mode');
-    }
-  </script>
+  <header>
+    <h1>🎨 ErikAI Kreslenie Pro</h1>
+  </header>
 
-  <p id="cas" style="font-size: 18px;"></p>
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
+  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+  <p id="cas"></p>
 
   <div id="google_translate_element"></div>
-  <script type="text/javascript">
+  <script>
     function googleTranslateElementInit() {
       new google.translate.TranslateElement({
         pageLanguage: 'sk',
@@ -65,93 +98,96 @@
   </script>
   <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
-  <h1>🎨 ErikAI Kreslenie</h1>
-  Šírka: <input type="number" id="canvasWidth" value="300" min="50" max="1000">
-Výška: <input type="number" id="canvasHeight" value="400" min="50" max="1000">
-<button onclick="nastavCanvas()">Zmeniť rozmery</button>
-  <script>
-  function nastavCanvas() {
-  const sirka = parseInt(document.getElementById("canvasWidth").value);
-  const vyska = parseInt(document.getElementById("canvasHeight").value);
-  if (!isNaN(sirka) && !isNaN(vyska) && sirka > 0 && vyska > 0) {
-    const obraz = ctx.getImageData(0, 0, canvas.width, canvas.height); // zachovanie
-    canvas.width = sirka;
-    canvas.height = vyska;
-    ctx.putImageData(obraz, 0, 0); // vloží starý výtvor (ak sa zmestí)
-  }
-}
+  <div class="toolbar">
+    <label>Farba <input type="color" id="colorPicker" value="#ff0000"></label>
+    <label>Hrúbka <input type="range" id="brushSize" min="1" max="30" value="5"></label>
 
-    window.onload = () => {
-  canvas.width = Math.min(window.innerWidth * 0.8, 600);
-  canvas.height = Math.min(window.innerHeight * 0.6, 600);
-};
-  </script>
-  <p>Kresli si priamo v prehliadači. Upravuj farbu, hrúbku a ulož svoj výtvor ako obrázok.</p>
+    <select id="toolSelector">
+      <option value="draw">✏️ Kresliť</option>
+      <option value="erase">🩹 Guma</option>
+      <option value="line">📏 Čiara</option>
+      <option value="rect">⬛ Obdĺžnik</option>
+      <option value="circle">⚪ Kruh</option>
+      <option value="text">🔤 Text</option>
+    </select>
 
-  <label>Farba:
-    <input type="color" id="colorPicker" value="#ff0000" />
-  </label>
-  <label>Hrúbka:
-    <input type="range" id="brushSize" min="1" max="30" value="5" />
-  </label>
-  <br>
-  <label><input type="radio" name="tool" value="draw" checked> Kresliť</label>
-  <label><input type="radio" name="tool" value="erase"> Guma</label>
-  <br>
-  <button onclick="clearCanvas()">Vyčistiť</button>
-  <button onclick="saveCanvas()">Uložiť ako PNG a do súboru ErikAI kreslenie</button>
-  <p style="font-size: 13px; color: #ccc;">👉 Po kliknutí sa obrázok uloží ako fotka (PNG)</p>
+    <button onclick="clearCanvas()">🧹 Vyčistiť</button>
+    <button onclick="saveCanvas()">💾 Uložiť ako PNG</button>
 
-  <br><br>
-  <canvas id="drawingCanvas" width="300" height="400"></canvas>
+    <select id="drawingSelector" onchange="loadDrawing(this.value)">
+      <option value="">-- Vyber uložený výtvor --</option>
+    </select>
+  </div>
 
-  <br>
-  <select id="drawingSelector" onchange="loadDrawing(this.value)">
-    <option value="">-- Vyber uložený výtvor --</option>
-  </select>
+  <canvas id="drawingCanvas" width="800" height="500"></canvas>
 
   <script>
     const canvas = document.getElementById("drawingCanvas");
     const ctx = canvas.getContext("2d");
     const colorPicker = document.getElementById("colorPicker");
     const brushSize = document.getElementById("brushSize");
+    const toolSelector = document.getElementById("toolSelector");
     let tool = "draw";
     let drawing = false;
+    let startX, startY;
 
-    document.querySelectorAll('input[name="tool"]').forEach(el => {
-      el.addEventListener('change', () => {
-        tool = el.value;
-      });
-    });
+    toolSelector.addEventListener("change", () => tool = toolSelector.value);
 
-    function getPosition(e) {
-      if (e.touches) {
-        return {
-          x: e.touches[0].clientX - canvas.getBoundingClientRect().left,
-          y: e.touches[0].clientY - canvas.getBoundingClientRect().top
-        };
-      } else {
-        return {
-          x: e.clientX - canvas.getBoundingClientRect().left,
-          y: e.clientY - canvas.getBoundingClientRect().top
-        };
-      }
+    // kreslenie
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+      return { x, y };
     }
 
     function startDraw(e) {
       drawing = true;
-      draw(e);
+      const pos = getPos(e);
+      startX = pos.x;
+      startY = pos.y;
+
+      if (tool === "text") {
+        const text = prompt("Zadaj text:");
+        if (text) {
+          ctx.fillStyle = colorPicker.value;
+          ctx.font = `${brushSize.value * 3}px Arial`;
+          ctx.fillText(text, startX, startY);
+        }
+        drawing = false;
+      } else if (tool === "draw" || tool === "erase") {
+        draw(e);
+      }
     }
 
-    function endDraw() {
+    function endDraw(e) {
+      if (!drawing) return;
+      if (tool === "line" || tool === "rect" || tool === "circle") {
+        const pos = getPos(e);
+        ctx.lineWidth = brushSize.value;
+        ctx.strokeStyle = colorPicker.value;
+        ctx.fillStyle = colorPicker.value;
+        ctx.beginPath();
+
+        if (tool === "line") {
+          ctx.moveTo(startX, startY);
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        } else if (tool === "rect") {
+          ctx.strokeRect(startX, startY, pos.x - startX, pos.y - startY);
+        } else if (tool === "circle") {
+          const r = Math.sqrt(Math.pow(pos.x - startX, 2) + Math.pow(pos.y - startY, 2));
+          ctx.arc(startX, startY, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
       drawing = false;
       ctx.beginPath();
     }
 
     function draw(e) {
       if (!drawing) return;
-      e.preventDefault();
-      const pos = getPosition(e);
+      const pos = getPos(e);
       ctx.lineWidth = brushSize.value;
       ctx.lineCap = "round";
       ctx.strokeStyle = (tool === "erase") ? "#ffffff" : colorPicker.value;
@@ -198,26 +234,33 @@ Výška: <input type="number" id="canvasHeight" value="400" min="50" max="1000">
         select.appendChild(option);
       });
     }
-
     updateDrawingSelector();
 
-    // Mouse
+    // eventy
     canvas.addEventListener("mousedown", startDraw);
     canvas.addEventListener("mouseup", endDraw);
-    canvas.addEventListener("mouseout", endDraw);
     canvas.addEventListener("mousemove", draw);
-
-    // Touch
     canvas.addEventListener("touchstart", startDraw);
     canvas.addEventListener("touchend", endDraw);
-    canvas.addEventListener("touchcancel", endDraw);
     canvas.addEventListener("touchmove", draw);
+
+    // čas
+    function aktualizujCas() {
+      const teraz = new Date();
+      const moznosti = { hour:'2-digit', minute:'2-digit', second:'2-digit' };
+      document.getElementById('cas').innerText = `🕓 ${teraz.toLocaleTimeString('sk-SK', moznosti)}`;
+    }
+    setInterval(aktualizujCas, 1000);
+    aktualizujCas();
+
+    function toggleTheme() {
+      document.body.classList.toggle("dark-mode");
+    }
   </script>
 
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br/>
-    To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/" style="color:gray;" target="_blank">creativecommons.org</a><br/>
-    © 2025 Erik Mohylák – All rights reserved.
-  </p>
+  <footer>
+    © 2025 Erik Mohylák – All rights reserved.  
+    Licensed under CC BY-NC-ND 4.0
+  </footer>
 </body>
 </html>
