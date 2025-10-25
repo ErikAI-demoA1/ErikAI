@@ -3,49 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI Mixér</title>
+<title>🎵 ErikAI Mixér</title>
 <style>
-body { font-family: Arial; text-align:center; padding:20px; background:#121212; color:white; }
-input, button, label { margin:5px; }
-.track { border:1px solid #444; padding:10px; margin:10px; border-radius:10px; }
+body { font-family: Arial, sans-serif; background: #111; color: #eee; text-align:center; padding:20px;}
+h2 { color: #ff4444; }
+.track { background: #222; margin: 10px auto; padding:10px; border-radius:10px; width: 300px; }
+input[type=range] { width: 100%; }
+button { background: #ff4444; color: white; border: none; padding: 8px 15px; margin-top:5px; cursor:pointer; border-radius:5px;}
+button:hover { background: #cc0000; }
 </style>
 </head>
 <body>
-<h2>🎵 ErikAI Mixér Pesničiek</h2>
+
+<h2>🎧 ErikAI Mixér</h2>
+<p>Vyber súbory MP3 alebo WAV:</p>
 <input type="file" id="fileInput" accept="audio/*" multiple><br><br>
+<button onclick="playMix()">▶ Spusti mix</button>
+<button onclick="stopMix()">⏹ Zastav mix</button>
 
-<div id="tracks"></div>
-
-<button onclick="playMix()">▶ Prehrať mix</button>
-<button onclick="stopMix()">■ Stop</button>
+<div id="tracksContainer"></div>
 
 <script>
-let ctx = new (window.AudioContext || window.webkitAudioContext)();
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
 let tracks = [];
 
-const fileInput = document.getElementById('fileInput');
-const tracksDiv = document.getElementById('tracks');
+const input = document.getElementById('fileInput');
+const container = document.getElementById('tracksContainer');
 
-fileInput.addEventListener('change', () => {
-    tracksDiv.innerHTML = '';
+input.addEventListener('change', () => {
+    container.innerHTML = '';
     tracks = [];
+    Array.from(input.files).forEach((file, index) => {
+        const track = { file };
+        tracks.push(track);
 
-    Array.from(fileInput.files).forEach((file, index) => {
-        const trackDiv = document.createElement('div');
-        trackDiv.className = 'track';
-        trackDiv.innerHTML = `
-            <b>${file.name}</b><br>
-            Hlasitosť: <input type="range" min="0" max="1" step="0.01" value="0.7" id="vol${index}"><br>
-            Oneskorenie (ms): <input type="number" value="0" id="delay${index}">
+        const div = document.createElement('div');
+        div.className = 'track';
+        div.innerHTML = `
+            <strong>${file.name}</strong><br>
+            Hlasitosť: <input type="range" min="0" max="1" step="0.01" value="0.7" id="vol${index}" oninput="updateVolume(${index}, this.value)"><br>
+            Ones. (ms): <input type="number" value="0" id="delay${index}" style="width:60px;">
         `;
-        tracksDiv.appendChild(trackDiv);
-
-        tracks.push({file, vol: 0.7, delay: 0});
+        container.appendChild(div);
     });
 });
 
 function playMix() {
     stopMix(); // zruší predchádzajúce stopy
+
     tracks.forEach((track, i) => {
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -56,9 +61,11 @@ function playMix() {
                 const gainNode = ctx.createGain();
                 gainNode.gain.value = parseFloat(document.getElementById(`vol${i}`).value);
 
+                track.gainNode = gainNode;
                 source.connect(gainNode).connect(ctx.destination);
-                const delay = parseInt(document.getElementById(`delay${i}`).value);
-                source.start(ctx.currentTime + delay/1000);
+
+                const delay = parseInt(document.getElementById(`delay${i}`).value) / 1000;
+                source.start(ctx.currentTime + delay);
 
                 track.source = source;
             });
@@ -69,8 +76,17 @@ function playMix() {
 
 function stopMix() {
     tracks.forEach(track => {
-        if(track.source) track.source.stop();
+        if(track.source) {
+            try { track.source.stop(); } catch(e){}
+            track.source.disconnect();
+        }
     });
+}
+
+function updateVolume(index, value) {
+    if(tracks[index] && tracks[index].gainNode) {
+        tracks[index].gainNode.gain.value = value;
+    }
 }
 </script>
 </body>
