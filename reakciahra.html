@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ ErikAI ReactionTest</title>
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #111, #1a1a1a);
+    color: white;
+    text-align: center;
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  h1 {
+    color: #ff3333;
+    font-size: 2em;
+    margin-bottom: 10px;
+  }
+
+  #reactionBox {
+    width: 250px;
+    height: 250px;
+    background-color: #333;
+    border-radius: 20px;
+    margin: 20px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 25px rgba(255, 0, 0, 0.5);
+    transition: all 0.2s ease;
+  }
+
+  #reactionBox.ready {
+    background-color: #ff3333;
+    box-shadow: 0 0 30px #ff0000;
+  }
+
+  #reactionBox.success {
+    background-color: #00cc44;
+    box-shadow: 0 0 30px #00ff55;
+  }
+
+  #info {
+    font-size: 18px;
+    color: #ccc;
+  }
+
+  button {
+    background: #ff3333;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 15px;
+    box-shadow: 0 0 10px rgba(255,0,0,0.5);
+  }
+
+  button:hover {
+    background: #ff0000;
+  }
+
+  #bestTime {
+    margin-top: 10px;
+    font-size: 16px;
+    color: #ff6666;
+  }
+</style>
+</head>
+<body>
+
+<h1>⚡ ErikAI ReactionTest</h1>
+<p id="info">Klikni na box, keď sa zmení farba!</p>
+
+<div id="reactionBox">Čakaj...</div>
+
+<p id="result"></p>
+<p id="bestTime"></p>
+<button onclick="resetTest()">🔁 Reštart</button>
+
+<script>
+  let startTime, timer, waiting = false;
+  const box = document.getElementById('reactionBox');
+  const info = document.getElementById('info');
+  const result = document.getElementById('result');
+  const bestTime = document.getElementById('bestTime');
+
+  let best = localStorage.getItem('reaction_best');
+  if (best) bestTime.innerText = `🏆 Najlepší čas: ${best} ms`;
+
+  box.addEventListener('click', () => {
+    if (!waiting) {
+      info.innerText = '🕓 Priprav sa...';
+      box.classList.remove('success');
+      box.classList.remove('ready');
+      box.style.backgroundColor = '#333';
+      waiting = true;
+
+      let delay = Math.random() * 3000 + 1000; // 1–4 sekundy
+      timer = setTimeout(() => {
+        box.classList.add('ready');
+        info.innerText = 'Klikni TERAZ!';
+        startTime = new Date();
+      }, delay);
+
+    } else if (box.classList.contains('ready')) {
+      let reaction = new Date() - startTime;
+      box.classList.remove('ready');
+      box.classList.add('success');
+      info.innerText = '👏 Skvelé!';
+      result.innerText = `Tvoj čas: ${reaction} ms`;
+      waiting = false;
+
+      let best = localStorage.getItem('reaction_best');
+      if (!best || reaction < best) {
+        localStorage.setItem('reaction_best', reaction);
+        bestTime.innerText = `🏆 Najlepší čas: ${reaction} ms`;
+      }
+
+    } else {
+      clearTimeout(timer);
+      info.innerText = '⛔ Príliš skoro! Skús znova.';
+      box.classList.remove('ready');
+      waiting = false;
+    }
+  });
+
+  function resetTest() {
+    result.innerText = '';
+    info.innerText = 'Klikni na box, keď sa zmení farba!';
+    box.classList.remove('ready', 'success');
+    box.style.backgroundColor = '#333';
+    waiting = false;
+  }
+</script>
+
+<p style="font-size: 12px; color: gray; margin-top: 30px;">
+© 2025 ErikAI – ReactionTest. Všetky práva vyhradené.
+</p>
+
+</body>
+</html>
