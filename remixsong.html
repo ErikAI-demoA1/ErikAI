@@ -3,62 +3,74 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI Mixér Pesničiek</title>
+<title>ErikAI Mixér</title>
 <style>
 body { font-family: Arial; text-align:center; padding:20px; background:#121212; color:white; }
 input, button, label { margin:5px; }
+.track { border:1px solid #444; padding:10px; margin:10px; border-radius:10px; }
 </style>
 </head>
 <body>
 <h2>🎵 ErikAI Mixér Pesničiek</h2>
+<input type="file" id="fileInput" accept="audio/*" multiple><br><br>
 
-<input type="file" id="song1" accept="audio/*">
-<input type="file" id="song2" accept="audio/*"><br>
-
-<label>Hlasitosť 1:</label><input type="range" id="vol1" min="0" max="1" step="0.01" value="0.7"><br>
-<label>Hlasitosť 2:</label><input type="range" id="vol2" min="0" max="1" step="0.01" value="0.7"><br>
-
-<label>Oneskorenie 1 (ms):</label><input type="number" id="delay1" value="0"><br>
-<label>Oneskorenie 2 (ms):</label><input type="number" id="delay2" value="0"><br>
+<div id="tracks"></div>
 
 <button onclick="playMix()">▶ Prehrať mix</button>
 <button onclick="stopMix()">■ Stop</button>
 
 <script>
 let ctx = new (window.AudioContext || window.webkitAudioContext)();
-let sources = [];
+let tracks = [];
+
+const fileInput = document.getElementById('fileInput');
+const tracksDiv = document.getElementById('tracks');
+
+fileInput.addEventListener('change', () => {
+    tracksDiv.innerHTML = '';
+    tracks = [];
+
+    Array.from(fileInput.files).forEach((file, index) => {
+        const trackDiv = document.createElement('div');
+        trackDiv.className = 'track';
+        trackDiv.innerHTML = `
+            <b>${file.name}</b><br>
+            Hlasitosť: <input type="range" min="0" max="1" step="0.01" value="0.7" id="vol${index}"><br>
+            Oneskorenie (ms): <input type="number" value="0" id="delay${index}">
+        `;
+        tracksDiv.appendChild(trackDiv);
+
+        tracks.push({file, vol: 0.7, delay: 0});
+    });
+});
 
 function playMix() {
-    stopMix(); // vymaže predchádzajúce zdroje
-    const songFiles = [document.getElementById('song1').files[0], document.getElementById('song2').files[0]];
-    const volumes = [parseFloat(document.getElementById('vol1').value), parseFloat(document.getElementById('vol2').value)];
-    const delays = [parseInt(document.getElementById('delay1').value), parseInt(document.getElementById('delay2').value)];
+    stopMix(); // zruší predchádzajúce stopy
+    tracks.forEach((track, i) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            ctx.decodeAudioData(e.target.result, buffer => {
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
 
-    songFiles.forEach((file, i) => {
-        if(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                ctx.decodeAudioData(e.target.result, buffer => {
-                    const source = ctx.createBufferSource();
-                    source.buffer = buffer;
+                const gainNode = ctx.createGain();
+                gainNode.gain.value = parseFloat(document.getElementById(`vol${i}`).value);
 
-                    const gainNode = ctx.createGain();
-                    gainNode.gain.value = volumes[i];
+                source.connect(gainNode).connect(ctx.destination);
+                const delay = parseInt(document.getElementById(`delay${i}`).value);
+                source.start(ctx.currentTime + delay/1000);
 
-                    source.connect(gainNode).connect(ctx.destination);
-                    source.start(ctx.currentTime + delays[i]/1000);
-
-                    sources.push(source);
-                });
-            }
-            reader.readAsArrayBuffer(file);
+                track.source = source;
+            });
         }
+        reader.readAsArrayBuffer(track.file);
     });
 }
 
 function stopMix() {
-    sources.forEach(s => s.stop());
-    sources = [];
+    tracks.forEach(track => {
+        if(track.source) track.source.stop();
+    });
 }
 </script>
 </body>
