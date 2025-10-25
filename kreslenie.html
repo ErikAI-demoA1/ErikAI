@@ -1,292 +1,202 @@
 <!doctype html>
 <html lang="sk">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>🎨 ErikAI Kreslenie — Profi</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎨 ErikAI Kreslenie — Jedno plátno</title>
 <style>
-:root{
-  --bg:#071026; --panel:#0f1724; --muted:#94a3b8; --accent1:#34d399; --accent2:#60a5fa; --danger:#ef4444;
-  --card: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-}
-html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#071026,#071022);color:#e6eef6}
-.app{max-width:1200px;margin:18px auto;padding:18px;border-radius:12px;background:var(--card);box-shadow:0 8px 30px rgba(0,0,0,0.6)}
-header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.brand{display:flex;gap:12px;align-items:center}
-.logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#ef4444,#fb923c);display:flex;align-items:center;justify-content:center;font-weight:800;color:white}
-h1{margin:0;font-size:18px}
-.meta{color:var(--muted);font-size:13px}
-.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
-.toolbar{display:flex;gap:8px;align-items:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02)}
-.toolbtn{background:transparent;border:1px solid rgba(255,255,255,0.06);color:inherit;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600}
-.toolbtn.active{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#041014;border:1px solid rgba(255,255,255,0.06)}
-.right{display:flex;gap:8px;align-items:center}
-.canvas-wrap{display:flex;gap:18px;margin-top:18px;flex-wrap:wrap}
-.left-col{flex:1;min-width:320px;display:flex;flex-direction:column;gap:10px}
-.canvas-box{background:#071425;border-radius:10px;padding:12px;display:flex;flex-direction:column;align-items:center;box-shadow:0 6px 18px rgba(0,0,0,0.5);position:relative}
-canvas{background:white;border-radius:6px;display:block;touch-action:none}
-.props{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:8px}
-label{font-size:13px;color:var(--muted)}
-input[type=number],input[type=text],select{padding:6px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
-.small{font-size:13px;color:var(--muted)}
-.panel{background:rgba(255,255,255,0.02);padding:10px;border-radius:10px}
-.right-col{width:320px;min-width:260px;display:flex;flex-direction:column;gap:10px}
-.list{background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;min-height:120px}
-button.primary{background:linear-gradient(90deg,var(--accent1),var(--accent2));border:none;padding:8px 10px;border-radius:8px;color:#041014;font-weight:800;cursor:pointer}
-button.warn{background:var(--danger);border:none;padding:8px 10px;border-radius:8px;color:white;cursor:pointer}
-footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
-@media (max-width:900px){ .right-col{width:100%} .canvas-wrap{flex-direction:column} .canvas-box{padding:8px} }
+body{margin:0;font-family:Arial,sans-serif;background:#071026;color:#e6eef6;display:flex;flex-direction:column;align-items:center;padding:10px}
+canvas{background:white;border:1px solid #333;border-radius:6px;touch-action:none}
+.toolbar{margin:10px;display:flex;gap:8px;flex-wrap:wrap}
+.toolbtn{padding:6px 10px;border:none;border-radius:6px;cursor:pointer;background:#0f1724;color:white;font-weight:600}
+.toolbtn.active{background:#34d399;color:#041014}
+.props{margin:5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
-<div class="app" role="application">
-  <header>
-    <div class="brand">
-      <div class="logo">EA</div>
-      <div>
-        <h1>🎨 ErikAI Kreslenie — Profi</h1>
-        <div class="meta">Tvary, text, kreslenie, guma, uloženie, export PNG — všetko lokálne</div>
-      </div>
-    </div>
-    <div class="right">
-      <div class="meta" id="cas">🕓 …</div>
-    </div>
-  </header>
 
-  <div class="controls">
-    <div class="toolbar panel" role="toolbar" aria-label="Nástroje">
-      <button class="toolbtn" id="selectBtn">Select</button>
-      <button class="toolbtn" id="drawBtn">Draw</button>
-      <button class="toolbtn" id="eraserBtn">Guma</button>
-      <button class="toolbtn" id="rectBtn">Rect</button>
-      <button class="toolbtn" id="circleBtn">Circle</button>
-      <button class="toolbtn" id="lineBtn">Line</button>
-      <button class="toolbtn" id="textBtn">Text</button>
-      <button class="toolbtn" id="deleteBtn">Delete</button>
-    </div>
+<h1>🎨 ErikAI — Jedno plátno</h1>
 
-    <div class="panel props">
-      <label class="small">Farba: <input type="color" id="color" value="#ff0000"></label>
-      <label class="small">Hrúbka: <input type="range" id="size" min="1" max="40" value="5"></label>
-      <label class="small">Text veľkosť: <input type="number" id="fontSize" min="8" max="72" value="20" style="width:80px"></label>
-      <label class="small">Plátno — W: <input type="number" id="canvasW" value="800" style="width:90px"> H: <input type="number" id="canvasH" value="500" style="width:90px"></label>
-      <button class="primary" id="setCanvasBtn">Nastaviť plátno</button>
-    </div>
+<div class="toolbar">
+  <button class="toolbtn" id="drawBtn">Kresliť</button>
+  <button class="toolbtn" id="eraserBtn">Guma</button>
+  <button class="toolbtn" id="rectBtn">Obdĺžnik</button>
+  <button class="toolbtn" id="circleBtn">Kruh</button>
+  <button class="toolbtn" id="lineBtn">Čiara</button>
+  <button class="toolbtn" id="textBtn">Text</button>
+  <button class="toolbtn" id="selectBtn">Select</button>
+  <button class="toolbtn" id="deleteBtn">Zmazať</button>
+</div>
 
-    <div class="panel props" style="margin-left:auto">
-      <button id="saveBtn" class="primary">💾 Uložiť</button>
-      <button id="loadBtn" class="toolbtn">📂 Načítať</button>
-      <button id="exportBtn" class="primary">⬇ Export PNG</button>
-      <button id="clearBtn" class="warn">🧹 Vyčistiť</button>
-    </div>
-  </div>
+<div class="props">
+  <label>Farba: <input type="color" id="color" value="#ff0000"></label>
+  <label>Hrúbka: <input type="range" id="size" min="1" max="40" value="5"></label>
+  <label>Text veľkosť: <input type="number" id="fontSize" min="8" max="72" value="20"></label>
+</div>
 
-  <div class="canvas-wrap">
-    <div class="left-col">
-      <div class="canvas-box" id="canvasBox">
-        <canvas id="rasterCanvas" width="800" height="500"></canvas>
-        <canvas id="mainCanvas" width="800" height="500" style="position:absolute;left:12px;top:86px;"></canvas>
-        <div style="width:100%;display:flex;justify-content:center;margin-top:10px">
-          <div class="small" id="status">Nástroj: Select</div>
-        </div>
-      </div>
+<canvas id="canvas" width="800" height="500"></canvas>
 
-      <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
-        <div class="panel" style="flex:1">
-          <div class="small">Uložené projekty</div>
-          <div id="projects" class="list" style="height:140px;overflow:auto"></div>
-        </div>
-        <div style="width:220px" class="panel">
-          <div class="small">Vybratý objekt</div>
-          <div id="selInfo" class="selinfo" style="min-height:90px"></div>
-        </div>
-      </div>
-    </div>
-
-    <aside class="right-col">
-      <div class="panel">
-        <div class="small">Rýchly návod</div>
-        <ol style="font-size:13px;color:var(--muted)">
-          <li>Vyberi nástroj (Select/Draw/Eraser/Rect/Circle/Line/Text).</li>
-          <li>Pre tvary: klikni na plátno → zadaj rozmery → potvrď vloženie.</li>
-          <li>Presúvanie: select → klikni a ťahaj. Double-click na text pre editáciu.</li>
-          <li>Lock: uzamkni objekt aby sa nedal meniť.</li>
-          <li>Ukladanie / načítanie: uloží projekt lokálne.</li>
-          <li>Export: uloží plátno ako PNG.</li>
-        </ol>
-      </div>
-    </aside>
-  </div>
+<div class="props">
+  <button id="clearBtn">Vyčistiť</button>
+  <button id="exportBtn">Export PNG</button>
+  <button id="saveBtn">Uložiť</button>
+  <button id="loadBtn">Načítať</button>
 </div>
 
 <script>
-// --- KANVAS ---
-const rasterCanvas = document.getElementById('rasterCanvas');
-const mainCanvas = document.getElementById('mainCanvas');
-const rasterCtx = rasterCanvas.getContext('2d');
-const mainCtx = mainCanvas.getContext('2d');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
-let currentTool = 'select';
-const status = document.getElementById('status');
-const colorInput = document.getElementById('color');
-const sizeInput = document.getElementById('size');
-const fontSizeInput = document.getElementById('fontSize');
-const projectsDiv = document.getElementById('projects');
+let tool = 'draw';
+let color = '#ff0000';
+let size = 5;
+let fontSize = 20;
 
 let drawing = false;
-let startX=0,startY=0;
-let shapes=[]; // shapes + text na mainCanvas
-let selected=null;
+let startX=0, startY=0;
+let objects = []; // tvary a text
+let selectedId = null;
 
-// --- TOOL BUTTONS ---
-function setTool(tool){
-  currentTool=tool;
-  status.textContent='Nástroj: '+tool.charAt(0).toUpperCase()+tool.slice(1);
+function setTool(t){
+  tool=t;
   document.querySelectorAll('.toolbtn').forEach(b=>b.classList.remove('active'));
-  const btn=document.getElementById(tool+'Btn');
-  if(btn) btn.classList.add('active');
+  document.getElementById(t+'Btn')?.classList.add('active');
 }
-document.getElementById('selectBtn').onclick=()=>setTool('select');
-document.getElementById('drawBtn').onclick=()=>setTool('draw');
-document.getElementById('eraserBtn').onclick=()=>setTool('eraser');
-document.getElementById('rectBtn').onclick=()=>setTool('rect');
-document.getElementById('circleBtn').onclick=()=>setTool('circle');
-document.getElementById('lineBtn').onclick=()=>setTool('line');
-document.getElementById('textBtn').onclick=()=>setTool('text');
-document.getElementById('deleteBtn').onclick=()=>{
-  if(selected){
-    shapes = shapes.filter(s=>s!==selected);
-    selected=null; redrawMain();
-  }
+setTool('draw');
+
+document.getElementById('drawBtn').onclick = ()=>setTool('draw');
+document.getElementById('eraserBtn').onclick = ()=>setTool('eraser');
+document.getElementById('rectBtn').onclick = ()=>setTool('rect');
+document.getElementById('circleBtn').onclick = ()=>setTool('circle');
+document.getElementById('lineBtn').onclick = ()=>setTool('line');
+document.getElementById('textBtn').onclick = ()=>setTool('text');
+document.getElementById('selectBtn').onclick = ()=>setTool('select');
+document.getElementById('deleteBtn').onclick = ()=>{
+  if(selectedId!==null){ objects = objects.filter(o=>o.id!==selectedId); selectedId=null; renderAll(); }
 };
 
-// --- MOUSE EVENTS ---
-rasterCanvas.addEventListener('mousedown',e=>{
-  const rect=rasterCanvas.getBoundingClientRect();
-  const x=e.clientX-rect.left;
-  const y=e.clientY-rect.top;
-  startX=x; startY=y;
-  if(currentTool==='draw'||currentTool==='eraser'){
-    drawing=true;
-    rasterCtx.beginPath();
-    rasterCtx.moveTo(x,y);
-    rasterCtx.strokeStyle=currentTool==='eraser'?'white':colorInput.value;
-    rasterCtx.lineWidth=sizeInput.value;
-    rasterCtx.lineCap='round';
+document.getElementById('color').oninput = e=>color=e.target.value;
+document.getElementById('size').oninput = e=>size=parseInt(e.target.value);
+document.getElementById('fontSize').oninput = e=>fontSize=parseInt(e.target.value);
+
+function genId(){ return 'o_'+Math.random().toString(36).substr(2,9); }
+
+canvas.addEventListener('pointerdown', e=>{
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left);
+  const y = (e.clientY - rect.top);
+  startX = x; startY = y;
+
+  if(tool==='draw' || tool==='eraser'){ drawing=true; }
+  else if(tool==='text'){
+    const txt = prompt('Napíš text:','');
+    if(txt){ objects.push({id:genId(),type:'text',x,y,text:txt,color,fontSize}); renderAll(); }
+  } else if(tool==='select'){
+    selectedId = objects.findIndex(o=>{
+      if(o.type==='rect') return x>=o.x && x<=o.x+o.w && y>=o.y && y<=o.y+o.h;
+      if(o.type==='circle'){ const dx=x-(o.x+o.r); const dy=y-(o.y+o.r); return dx*dx+dy*dy<=o.r*o.r; }
+      if(o.type==='line'){ const d = pointToSegmentDistance({x,y},{x:o.x,y:o.y},{x:o.x2,y:o.y2}); return d<=Math.max(6,o.size||4); }
+      if(o.type==='text'){ ctx.font = o.fontSize+'px Arial'; const w=ctx.measureText(o.text).width; const h=o.fontSize*1.2; return x>=o.x && x<=o.x+w && y>=o.y-h && y<=o.y; }
+      return false;
+    });
+    if(selectedId!==-1) selectedId=objects[selectedId].id; else selectedId=null;
   }
 });
-rasterCanvas.addEventListener('mousemove',e=>{
+
+canvas.addEventListener('pointermove', e=>{
   if(!drawing) return;
-  const rect=rasterCanvas.getBoundingClientRect();
-  const x=e.clientX-rect.left;
-  const y=e.clientY-rect.top;
-  if(currentTool==='draw'||currentTool==='eraser'){
-    rasterCtx.lineTo(x,y);
-    rasterCtx.stroke();
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left);
+  const y = (e.clientY - rect.top);
+
+  if(tool==='draw'){
+    ctx.strokeStyle=color;
+    ctx.lineWidth=size;
+    ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(startX,startY);
+    ctx.lineTo(x,y);
+    ctx.stroke();
+    startX=x; startY=y;
+  } else if(tool==='eraser'){
+    ctx.clearRect(x-size,y-size,size*2,size*2);
   }
 });
-rasterCanvas.addEventListener('mouseup',e=>{
+
+canvas.addEventListener('pointerup', e=>{
   drawing=false;
-});
-
-// --- SHAPES ON MAIN CANVAS ---
-mainCanvas.addEventListener('mousedown',e=>{
-  const rect=mainCanvas.getBoundingClientRect();
-  const x=e.clientX-rect.left;
-  const y=e.clientY-rect.top;
-  startX=x; startY=y;
-
-  if(['rect','circle','line','text'].includes(currentTool)){
-    let obj={type:currentTool,x:x,y:y,color:colorInput.value,size:sizeInput.value,fontSize:fontSizeInput.value};
-    if(currentTool==='text'){ obj.text='Text'; }
-    shapes.push(obj);
-    redrawMain();
+  if(tool==='rect' || tool==='circle' || tool==='line'){
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left);
+    const y = (e.clientY - rect.top);
+    if(tool==='rect') objects.push({id:genId(),type:'rect',x:startX,y:startY,w:x-startX,h:y-startY,color,size});
+    if(tool==='circle'){ const r=Math.sqrt((x-startX)**2+(y-startY)**2); objects.push({id:genId(),type:'circle',x:startX,y:startY,r,color,size}); }
+    if(tool==='line') objects.push({id:genId(),type:'line',x:startX,y:startY,x2:x,y2:y,color,size});
+    renderAll();
   }
 });
 
-function redrawMain(){
-  mainCtx.clearRect(0,0,mainCanvas.width,mainCanvas.height);
-  shapes.forEach(s=>{
-    mainCtx.strokeStyle=s.color;
-    mainCtx.fillStyle=s.color;
-    mainCtx.lineWidth=s.size;
-    switch(s.type){
-      case 'rect': mainCtx.strokeRect(s.x,s.y,100,60); break;
-      case 'circle':
-        mainCtx.beginPath();
-        mainCtx.arc(s.x,s.y,50,0,2*Math.PI);
-        mainCtx.stroke(); break;
-      case 'line':
-        mainCtx.beginPath();
-        mainCtx.moveTo(s.x,s.y);
-        mainCtx.lineTo(s.x+100,s.y); mainCtx.stroke(); break;
-      case 'text':
-        mainCtx.font=s.fontSize+'px sans-serif';
-        mainCtx.fillText(s.text,s.x,s.y); break;
+function renderAll(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(const o of objects){
+    ctx.lineWidth=o.size||size;
+    ctx.strokeStyle=o.color||color;
+    ctx.fillStyle=o.color||color;
+    if(o.type==='rect'){ ctx.strokeRect(o.x,o.y,o.w,o.h); }
+    else if(o.type==='circle'){ ctx.beginPath(); ctx.arc(o.x+o.r,o.y+o.r,o.r,0,Math.PI*2); ctx.stroke(); }
+    else if(o.type==='line'){ ctx.beginPath(); ctx.moveTo(o.x,o.y); ctx.lineTo(o.x2,o.y2); ctx.stroke(); }
+    else if(o.type==='text'){ ctx.font=o.fontSize+'px Arial'; ctx.fillText(o.text,o.x,o.y); }
+    if(selectedId===o.id){ ctx.save(); ctx.strokeStyle='rgba(255,255,255,0.8)'; ctx.setLineDash([5,5]);
+      if(o.type==='rect') ctx.strokeRect(o.x-4,o.y-4,o.w+8,o.h+8);
+      else if(o.type==='circle') ctx.strokeRect(o.x- o.r -4, o.y- o.r -4, o.r*2+8, o.r*2+8);
+      else if(o.type==='line') ctx.strokeRect(Math.min(o.x,o.x2)-4, Math.min(o.y,o.y2)-4, Math.abs(o.x2-o.x)+8, Math.abs(o.y2-o.y)+8);
+      else if(o.type==='text'){ const w=ctx.measureText(o.text).width; const h=o.fontSize*1.2; ctx.strokeRect(o.x-4,o.y-h-4,w+8,h+8); }
+      ctx.restore();
     }
-  });
+  }
 }
 
-// --- EXPORT ---
-document.getElementById('exportBtn').onclick=()=>{
-  const exportCanvas = document.createElement('canvas');
-  exportCanvas.width=rasterCanvas.width;
-  exportCanvas.height=rasterCanvas.height;
-  const ctx=exportCanvas.getContext('2d');
-  ctx.drawImage(rasterCanvas,0,0);
-  ctx.drawImage(mainCanvas,0,0);
-  const url=exportCanvas.toDataURL();
-  const a=document.createElement('a');
-  a.href=url; a.download='kresba.png';
-  a.click();
+function pointToSegmentDistance(p,a,b){
+  const vx=b.x-a.x, vy=b.y-a.y;
+  const wx=p.x-a.x, wy=p.y-a.y;
+  const c=(vx*wx+vy*wy)/(vx*vx+vy*vy||1);
+  const t=Math.max(0,Math.min(1,c));
+  const proj={x:a.x+vx*t,y:a.y+vy*t};
+  const dx=p.x-proj.x, dy=p.y-proj.y;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+
+document.getElementById('clearBtn').onclick = ()=>{
+  if(confirm('Vymazať plátno?')){ ctx.clearRect(0,0,canvas.width,canvas.height); objects=[]; selectedId=null; }
 };
 
-// --- CLEAR ---
-document.getElementById('clearBtn').onclick=()=>{
-  if(confirm('Vyčistiť plátno?')){ rasterCtx.clearRect(0,0,rasterCanvas.width,rasterCanvas.height); shapes=[]; redrawMain();}
+document.getElementById('exportBtn').onclick = ()=>{
+  const link = document.createElement('a');
+  link.href = canvas.toDataURL('image/png');
+  link.download = 'erikai_canvas.png';
+  link.click();
 };
 
-// --- SAVE / LOAD ---
-function saveProject(){
-  const data={shapes, raster:rasterCanvas.toDataURL()};
-  const name=prompt('Názov projektu:');
+document.getElementById('saveBtn').onclick = ()=>{
+  const name = prompt('Názov projektu','projekt1'); if(!name) return;
+  const data = {objects, image: canvas.toDataURL()};
+  localStorage.setItem('erikai_'+name, JSON.stringify(data));
+  alert('Uložené: '+name);
+};
+
+document.getElementById('loadBtn').onclick = ()=>{
+  const keys = Object.keys(localStorage).filter(k=>k.startsWith('erikai_'));
+  if(keys.length===0){ alert('Žiadne uložené projekty'); return; }
+  const name = prompt('Názov projektu na načítanie:\n'+keys.join('\n'), keys[0]);
   if(!name) return;
-  localStorage.setItem('project_'+name,JSON.stringify(data));
-  renderProjects();
-}
-function loadProject(name){
-  const data=JSON.parse(localStorage.getItem('project_'+name));
-  if(!data) return;
-  shapes=data.shapes||[];
-  redrawMain();
-  const img=new Image();
-  img.onload=()=>{ rasterCtx.clearRect(0,0,rasterCanvas.width,rasterCanvas.height); rasterCtx.drawImage(img,0,0); }
-  img.src=data.raster;
-}
-function renderProjects(){
-  projectsDiv.innerHTML='';
-  Object.keys(localStorage).forEach(k=>{
-    if(k.startsWith('project_')){
-      const btn=document.createElement('button');
-      btn.textContent=k.replace('project_','');
-      btn.className='toolbtn';
-      btn.onclick=()=>loadProject(k.replace('project_',''));
-      projectsDiv.appendChild(btn);
-    }
-  });
-}
-document.getElementById('saveBtn').onclick=saveProject;
-document.getElementById('loadBtn').onclick=renderProjects;
-renderProjects();
-
-// --- CANVAS SIZE ---
-document.getElementById('setCanvasBtn').onclick=()=>{
-  const w=parseInt(document.getElementById('canvasW').value);
-  const h=parseInt(document.getElementById('canvasH').value);
-  rasterCanvas.width=w; rasterCanvas.height=h;
-  mainCanvas.width=w; mainCanvas.height=h;
-  redrawMain();
+  const raw = localStorage.getItem(name); 
+  if(!raw) return alert('Projekt nenájdený');
+  const data = JSON.parse(raw);
+  objects = data.objects||[];
+  const img = new Image();
+  img.onload = ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); renderAll(); };
+  img.src = data.image||'';
 };
 </script>
 </body>
-  </html>
+</html>
