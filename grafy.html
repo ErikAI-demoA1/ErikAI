@@ -1,562 +1,578 @@
 <!doctype html>
 <html lang="sk">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mini Excel Pro — lokálne</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mini Excel Pro — Advanced Charts (ErikAI)</title>
 
-<!-- Chart.js CDN -->
+<!-- Chart.js + zoom plugin -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
 <style>
-  :root{
-    --bg:#071026; --panel:#0b1220; --muted:#94a3b8; --accent:#60a5fa;
-    --card:#0f1724; --glass: rgba(255,255,255,0.03); --green:#34d399;
-  }
-  html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Arial;color:#e6eef6;background:linear-gradient(180deg,#071026,#04101a)}
-  .wrap{max-width:1200px;margin:18px auto;padding:18px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 8px 30px rgba(0,0,0,0.6)}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-  h1{margin:0;font-size:18px}
-  .meta{color:var(--muted);font-size:13px}
-  .tools{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
-  .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px;color:inherit;cursor:pointer;font-weight:700}
-  .primary{background:linear-gradient(90deg,var(--green),var(--accent));color:#041014;border:none}
-  .panel{background:var(--panel);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
-  .layout{display:grid;grid-template-columns:1fr 420px;gap:18px;margin-top:14px}
-  /* spreadsheet */
-  .sheet-wrap{overflow:auto;border-radius:8px;background:var(--glass);padding:10px}
-  table.sheet{border-collapse:collapse;min-width:700px}
-  table.sheet th, table.sheet td{border:1px solid rgba(255,255,255,0.04);padding:6px 8px;min-width:80px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  table.sheet th{background:rgba(255,255,255,0.02);color:var(--muted);font-weight:700;position:sticky;top:0;z-index:5}
-  table.sheet td{background:transparent}
-  td.cell{cursor:text}
-  td.cell[contenteditable="true"]:focus{outline:2px solid rgba(96,165,250,0.25);background:rgba(255,255,255,0.01)}
-  .controls-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .small{font-size:13px;color:var(--muted)}
-  /* chart panel */
-  .chart-panel{display:flex;flex-direction:column;gap:10px}
-  .field{display:flex;flex-direction:column;gap:6px}
-  input[type=text],select,input[type=number]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
-  .row{display:flex;gap:8px;align-items:center}
-  footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
-  @media (max-width:1000px){ .layout{grid-template-columns:1fr} .chart-panel{order:2} }
+:root{
+  --bg:#071026; --panel:#0b1220; --muted:#94a3b8; --accent:#60a5fa; --accent2:#34d399;
+  --card: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;color:#e6eef6;background:linear-gradient(180deg,#071026,#04101a)}
+.container{max-width:1360px;margin:18px auto;padding:18px;border-radius:12px;background:var(--card);box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+h1{margin:0;font-size:20px}
+.meta{color:var(--muted);font-size:13px}
+.toolbar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px;color:inherit;cursor:pointer;font-weight:700}
+.btn.primary{background:linear-gradient(90deg,var(--accent2),var(--accent));color:#041014;border:none}
+.panel{background:var(--panel);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+.layout{display:grid;grid-template-columns:1fr 460px;gap:18px;margin-top:14px;align-items:start}
+.sheet-wrap{overflow:auto;border-radius:8px;background:rgba(255,255,255,0.02);padding:10px}
+table.sheet{border-collapse:collapse;min-width:760px}
+table.sheet th, table.sheet td{border:1px solid rgba(255,255,255,0.04);padding:6px 8px;min-width:90px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e6eef6}
+table.sheet th{background:rgba(255,255,255,0.02);color:var(--muted);font-weight:700;position:sticky;top:0;z-index:5}
+td.cell{cursor:text;background:transparent}
+td.cell:focus{outline:2px solid rgba(96,165,250,0.18);background:rgba(255,255,255,0.01)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.small{font-size:13px;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+input,select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+.aside{display:flex;flex-direction:column;gap:10px}
+.footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+.legend-color{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:middle}
+.row{display:flex;gap:8px;align-items:center}
+.switch{display:inline-flex;align-items:center;gap:6px}
+@media (max-width:1100px){.layout{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="container">
   <header>
     <div>
-      <h1>Mini Excel Pro — lokálne</h1>
-      <div class="meta">Tabuľka + Grafy • Vzorce: =, SUM, AVERAGE, MIN, MAX, COUNT • Uložiť / Export</div>
+      <h1>Mini Excel Pro — Advanced Charts</h1>
+      <div class="meta">Profesionálne grafy pre vysokú školu • Tabuľka + Auto-derive vzťahy • Offline</div>
     </div>
-    <div class="meta">Beží lokálne — bez servera</div>
+    <div class="meta">© ErikAI • lokálne</div>
   </header>
 
-  <div class="tools">
-    <div class="panel controls-row">
-      <div class="row">
-        <button id="addRow" class="btn">➕ Riadok</button>
-        <button id="delRow" class="btn">➖ Riadok</button>
-        <button id="addCol" class="btn">➕ Stĺpec</button>
-        <button id="delCol" class="btn">➖ Stĺpec</button>
-        <label class="small" style="margin-left:8px">Auto graf:</label>
-        <input type="checkbox" id="autoChart" title="Automaticky aktualizovať graf">
-      </div>
-      <div class="row" style="margin-top:6px">
-        <button id="saveBtn" class="btn">💾 Uložiť (local)</button>
-        <button id="loadBtn" class="btn">📂 Načítať</button>
-        <button id="exportCsv" class="btn">⬇ Export CSV</button>
-        <button id="clearBtn" class="btn">🧹 Vyčistiť</button>
-      </div>
+  <div class="toolbar">
+    <div class="panel row" style="padding:8px">
+      <button id="addRow" class="btn">➕ Riadok</button>
+      <button id="delRow" class="btn">➖ Riadok</button>
+      <button id="addCol" class="btn">➕ Stĺpec</button>
+      <button id="delCol" class="btn">➖ Stĺpec</button>
+      <button id="autoDerive" class="btn">🔁 Auto-derive</button>
+      <div style="width:8px"></div>
+      <button id="saveBtn" class="btn">💾 Uložiť</button>
+      <button id="loadBtn" class="btn">📂 Načítať</button>
+      <button id="exportCsv" class="btn">⬇ CSV</button>
+      <button id="clearBtn" class="btn">🧹 Vyčistiť</button>
     </div>
 
-    <div class="panel" style="margin-left:auto">
-      <div class="small">Vyber rozsah buniek (napr. A1:B5) pre graf</div>
-      <div style="display:flex;gap:8px;margin-top:6px">
-        <input id="chartRange" type="text" placeholder="A1:A10" style="width:160px">
-        <select id="chartType">
-          <option value="bar">Stĺpcový</option>
-          <option value="line">Čiarový</option>
-          <option value="pie">Koláčový</option>
-          <option value="scatter">Bodový</option>
-          <option value="area">Plošný</option>
-        </select>
-        <button id="makeChart" class="primary btn">📈 Generovať</button>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button id="exportChartPng" class="btn">⬇ Export grafu PNG</button>
-        <button id="clearChart" class="btn">🗑 Vyčistiť graf</button>
-      </div>
+    <div class="panel row" style="margin-left:auto;padding:8px">
+      <label class="small">Auto update graf</label>
+      <input type="checkbox" id="autoChart"/>
+      <label class="small">Presnosť</label>
+      <select id="precision">
+        <option value="2">2 des.</option>
+        <option value="3" selected>3 des.</option>
+        <option value="4">4 des.</option>
+      </select>
     </div>
   </div>
 
-  <div class="layout" style="margin-top:12px">
-    <!-- Tabuľka -->
+  <div class="layout">
+    <!-- LEFT: table -->
     <div>
-      <div class="panel sheet-wrap" id="sheetWrap">
+      <div class="panel sheet-wrap">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div class="small">Tabuľka: klikni bunku pre edit | vzorce začínajú '=' (SUM, AVERAGE, MIN, MAX, COUNT)</div>
+          <div class="small">Riadky: <span id="rowsCount">0</span> • Stĺpce: <span id="colsCount">0</span></div>
+        </div>
         <table class="sheet" id="sheetTable" role="grid" aria-label="Spreadsheet"></table>
       </div>
     </div>
 
-    <!-- Grafy & info -->
-    <aside class="panel chart-panel">
+    <!-- RIGHT: chart settings -->
+    <aside class="aside panel">
       <div>
-        <div class="small">Graf</div>
-        <canvas id="chartCanvas" style="background:transparent;border-radius:8px"></canvas>
+        <div class="small">Graf • voľby</div>
+        <div class="field">
+          <label class="small">Názov grafu</label>
+          <input id="chartTitle" placeholder="Názov grafu...">
+        </div>
+
+        <div class="field">
+          <label class="small">X (os) — vyber stĺpec</label>
+          <select id="xColumn"></select>
+        </div>
+
+        <div class="field">
+          <label class="small">Y (dáta) — vyber stĺpce (viacnásobný výber so Ctrl)</label>
+          <select id="yColumns" multiple size="6" style="height:120px"></select>
+        </div>
+
+        <div class="row" style="margin-top:6px">
+          <select id="chartType">
+            <option value="line">Čiarový</option>
+            <option value="bar">Stĺpcový</option>
+            <option value="pie">Koláčový</option>
+            <option value="scatter">Bodový</option>
+            <option value="area">Plošný</option>
+            <option value="radar">Radar</option>
+          </select>
+          <button id="generateChart" class="primary btn">📈 Generovať</button>
+        </div>
+
+        <div class="field">
+          <label class="small">X popis</label>
+          <input id="xLabel" placeholder="Jednotky / popis">
+          <label class="small">Y popis</label>
+          <input id="yLabel" placeholder="Jednotky / popis">
+        </div>
+
+        <div class="row" style="margin-top:8px;gap:6px">
+          <button id="exportChart" class="btn">⬇ Export PNG</button>
+          <button id="clearChart" class="btn">🗑 Vyčistiť</button>
+          <button id="toggleGrid" class="btn">🔳 Toggle mriežka</button>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="small">Detaily</div>
+          <div id="chartInfo" class="small" style="color:var(--muted)"></div>
+        </div>
       </div>
-      <div class="small">Rýchle tipy:</div>
-      <ul class="small" style="color:var(--muted)">
-        <li>Vzorce: začínajú znakom <code>=</code>. Príklady: <code>=A1+B1</code>, <code>=SUM(A1:A5)</code></li>
-        <li>Funkcie: <code>SUM, AVERAGE, MIN, MAX, COUNT</code></li>
-        <li>Podpora textu & dátumov. Pri grafe vyber rozsah s číslami.</li>
-      </ul>
+
+      <div style="margin-top:8px">
+        <canvas id="chartCanvas" style="background:transparent;border-radius:8px;max-height:420px"></canvas>
+      </div>
+
     </aside>
   </div>
 
-  <footer>© 2025 Mini Excel Pro — lokálne</footer>
+  <div class="footer">Tip: do hlavičky stĺpca napíš názov + jednotku, napr. <code>U [V]</code>, <code>I [A]</code>. Auto-derive pridá bežné vypočty (R, P, atď.).</div>
 </div>
 
 <script>
-/* ========= Spreadsheet engine (client-only) =========
-   - dynamic grid
-   - formula parsing (supports cell refs, SUM, AVERAGE, MIN, MAX, COUNT)
-   - auto / manual chart update
-   - save/load to localStorage
-   - export CSV
-   - chart generation via Chart.js
-*/
+/* -----------------------
+   Spreadsheet core (improved)
+   - dynamic rows/cols
+   - headers with names
+   - formulas (basic)
+   - auto-derive simple physics relations
+   - charting via Chart.js (detailed options)
+   ----------------------- */
 
-// ---------- helpers ----------
-const COL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+/* ---------- helpers ---------- */
 function colName(idx){
-  // 0 -> A, 25->Z, 26->AA
-  let s = '';
-  let n = idx + 1;
-  while(n>0){
-    let rem = (n-1)%26;
-    s = String.fromCharCode(65+rem) + s;
-    n = Math.floor((n-1)/26);
-  }
+  let s='', n=idx+1;
+  while(n>0){ let r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); }
   return s;
 }
 function colIndex(name){
-  // 'A' -> 0, 'AA' -> 26
-  let n=0;
-  for(let i=0;i<name.length;i++){
-    n = n*26 + (name.charCodeAt(i)-64);
-  }
+  let n=0; name=name.toUpperCase();
+  for(let ch of name){ n=n*26 + (ch.charCodeAt(0)-64); }
   return n-1;
 }
 function parseCellRef(ref){
-  // A1 -> {c:0,r:0}
-  const m = ref.match(/^([A-Z]+)([0-9]+)$/i);
+  const m=String(ref).match(/^([A-Z]+)([0-9]+)$/i);
   if(!m) return null;
-  return { c: colIndex(m[1].toUpperCase()), r: parseInt(m[2],10)-1 };
+  return { c: colIndex(m[1]), r: parseInt(m[2],10)-1 };
 }
 function rangeToCoords(range){
-  // "A1:B3" or "A1" -> array of {r,c}
   if(!range) return [];
+  range=range.replace(/\s+/g,'').toUpperCase();
   if(range.indexOf(':')===-1) {
-    const p=parseCellRef(range.trim()); return p ? [{r:p.r,c:p.c}] : [];
+    const p=parseCellRef(range); return p?[{r:p.r,c:p.c}]:[];
   }
-  const [a,b] = range.split(':').map(s=>s.trim().toUpperCase());
-  const A=parseCellRef(a), B=parseCellRef(b);
-  if(!A || !B) return [];
+  const [a,b]=range.split(':'); const A=parseCellRef(a), B=parseCellRef(b);
+  if(!A||!B) return [];
   const coords=[];
-  const r1=Math.min(A.r,B.r), r2=Math.max(A.r,B.r);
-  const c1=Math.min(A.c,B.c), c2=Math.max(A.c,B.c);
-  for(let rr=r1; rr<=r2; rr++){
-    for(let cc=c1; cc<=c2; cc++){
+  for(let rr=Math.min(A.r,B.r); rr<=Math.max(A.r,B.r); rr++){
+    for(let cc=Math.min(A.c,B.c); cc<=Math.max(A.c,B.c); cc++){
       coords.push({r:rr,c:cc});
     }
   }
   return coords;
 }
+function formatNum(v,prec){ if(isNaN(v)||v===''||v===null) return v; return Number(v).toFixed(prec); }
+function isNumberLike(x){ return x!=='' && !isNaN(Number(x)); }
 
-// ---------- grid state ----------
-let rows=10, cols=10;
-let data = {}; // key "r,c" -> {raw: string, value: computed}
-const table = document.getElementById('sheetTable');
-const sheetWrap = document.getElementById('sheetWrap');
+/* ---------- state ---------- */
+let rows=12, cols=8;
+let headers = []; // array length cols of header names (string)
+let grid = {}; // key "r,c" -> raw string (includes =formula or text)
+const sheetTable = document.getElementById('sheetTable');
+const rowsCount = document.getElementById('rowsCount'), colsCount = document.getElementById('colsCount');
+const xColumnSel = document.getElementById('xColumn'), yColumnsSel = document.getElementById('yColumns');
+const chartInfo = document.getElementById('chartInfo');
+const precisionSelect = document.getElementById('precision');
 
-// ---------- init ----------
-function initGrid(r=10,c=10){
-  rows=r; cols=c;
-  data = {}; // clear
-  renderGrid();
-  recomputeAll();
-}
-function cellKey(r,c){ return r+','+c; }
-function getCellRaw(r,c){ const k=cellKey(r,c); return (data[k] && data[k].raw) ? data[k].raw : ''; }
-function setCellRaw(r,c,raw){ data[cellKey(r,c)] = data[cellKey(r,c)] || {}; data[cellKey(r,c)].raw = raw; }
+function key(r,c){ return r+','+c; }
+function getRaw(r,c){ return grid[key(r,c)] || ''; }
+function setRaw(r,c,v){ if(v===undefined||v===null||v==='') delete grid[key(r,c)]; else grid[key(r,c)] = String(v); }
 
-// ---------- render ----------
+/* ---------- render grid ---------- */
+function initHeaders(n){ headers = []; for(let i=0;i<n;i++) headers.push(colName(i)); }
 function renderGrid(){
-  // build header
-  table.innerHTML = '';
+  rowsCount.textContent = rows; colsCount.textContent = cols;
+  // build table
+  sheetTable.innerHTML = '';
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  headRow.appendChild(document.createElement('th')); // corner
+  const corner = document.createElement('th'); corner.textContent=''; headRow.appendChild(corner);
   for(let c=0;c<cols;c++){
-    const th = document.createElement('th'); th.textContent = colName(c);
+    const th = document.createElement('th');
+    // header editable input
+    const inpt = document.createElement('input'); inpt.value = headers[c] || colName(c);
+    inpt.style.width = '100%';
+    inpt.addEventListener('change', ()=>{ headers[c]=inpt.value; updateColumnSelectors(); });
+    th.appendChild(inpt);
     headRow.appendChild(th);
   }
-  thead.appendChild(headRow);
-  table.appendChild(thead);
+  thead.appendChild(headRow); sheetTable.appendChild(thead);
 
   const tbody = document.createElement('tbody');
   for(let r=0;r<rows;r++){
-    const tr = document.createElement('tr');
-    const th = document.createElement('th'); th.textContent = r+1; tr.appendChild(th);
+    const tr=document.createElement('tr');
+    const th=document.createElement('th'); th.textContent = r+1; tr.appendChild(th);
     for(let c=0;c<cols;c++){
-      const td = document.createElement('td');
+      const td=document.createElement('td');
       td.className='cell';
-      td.setAttribute('contenteditable','true');
-      td.setAttribute('data-r',r);
-      td.setAttribute('data-c',c);
-      td.setAttribute('spellcheck','false');
-      td.addEventListener('input', onCellEdit);
+      td.contentEditable='true';
+      td.setAttribute('data-r',r); td.setAttribute('data-c',c);
+      const raw = getRaw(r,c);
+      td.textContent = (raw && raw.startsWith('=')) ? raw : raw;
+      td.addEventListener('input', onCellInput);
       td.addEventListener('focus', onCellFocus);
       td.addEventListener('blur', onCellBlur);
-      // fill displayed value or raw
-      const raw = getCellRaw(r,c);
-      td.textContent = raw.startsWith('=') ? raw : raw;
       tr.appendChild(td);
     }
     tbody.appendChild(tr);
   }
-  table.appendChild(tbody);
+  sheetTable.appendChild(tbody);
+  recomputeAll();
+  updateColumnSelectors();
 }
 
-// ---------- formula evaluation ----------
-function getCellComputed(r,c){
-  const raw = getCellRaw(r,c);
+/* ---------- formula eval ---------- */
+function getComputed(r,c){
+  const raw = getRaw(r,c);
   if(!raw) return '';
-  if(raw[0] !== '=') return raw; // text or number as-is
-  // formula
+  if(!raw.startsWith('=')) return raw;
   const expr = raw.slice(1).trim();
   try{
-    const val = evalExpression(expr);
-    return (val===null || val===undefined) ? '' : val;
-  }catch(err){
+    return evaluateExpression(expr);
+  }catch(e){
     return '#ERR';
   }
 }
-function parseNumberOrZero(v){
-  if(v === undefined || v === null || v==='') return 0;
-  if(typeof v === 'number') return v;
-  // try convert
-  const n = Number(v);
-  return isNaN(n)?0:n;
-}
-function evalExpression(expr){
-  // Handle functions SUM, AVERAGE, MIN, MAX, COUNT
-  // Replace cell refs with values
-  let e = expr;
-
-  // handle functions pattern FUNC(arg)
-  e = e.replace(/([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*([^\)]+)\s*\)/g, (m, fname, arg)=>{
-    fname = fname.toUpperCase();
-    // arg may be range or comma list
+function evaluateExpression(expr){
+  // Support functions: SUM(range or list), AVERAGE, MIN, MAX, COUNT
+  // Replace functions first: FUNC(arg)
+  const expr2 = expr.replace(/([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*([^\)]+)\s*\)/g, (m,fname,arg)=>{
+    fname=fname.toUpperCase();
     const parts = arg.split(',').map(s=>s.trim());
-    let values = [];
+    let vals=[];
     parts.forEach(p=>{
       if(p.indexOf(':')!==-1){
-        const coords = rangeToCoords(p.toUpperCase());
-        coords.forEach(pt=>{
-          const v = getCellComputed(pt.r,pt.c);
-          values.push(parseNumberOrZero(v));
-        });
+        const coords = rangeToCoords(p);
+        coords.forEach(pt=>{ const v=getComputed(pt.r,pt.c); vals.push(Number(v)||0); });
       } else {
-        // could be single cell or literal
-        const cell = parseCellRef(p.toUpperCase());
-        if(cell){ values.push(parseNumberOrZero(getCellComputed(cell.r,cell.c))); }
-        else { // literal number
-          values.push(parseNumberOrZero(Number(p)));
-        }
+        const cell = parseCellRef(p);
+        if(cell){ vals.push(Number(getComputed(cell.r,cell.c))||0); }
+        else vals.push(Number(p)||0);
       }
     });
     switch(fname){
-      case 'SUM': return values.reduce((a,b)=>a+b,0);
-      case 'AVERAGE': return values.length?values.reduce((a,b)=>a+b,0)/values.length:0;
-      case 'MIN': return values.length?Math.min(...values):0;
-      case 'MAX': return values.length?Math.max(...values):0;
-      case 'COUNT': return values.filter(x=>x!==0 && x!=='').length;
-      default: return m; // unknown function - leave
+      case 'SUM': return vals.reduce((a,b)=>a+b,0);
+      case 'AVERAGE': return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+      case 'MIN': return vals.length?Math.min(...vals):0;
+      case 'MAX': return vals.length?Math.max(...vals):0;
+      case 'COUNT': return vals.filter(x=>x!==0 && x!=='').length;
+      default: return m;
     }
   });
-
-  // replace all cell refs (A1, B2) with their numeric value or quoted string if not numeric
-  e = e.replace(/([A-Za-z]+[0-9]+)/g, (m)=>{
+  // replace cell refs with numeric values or quoted strings
+  const withRefs = expr2.replace(/([A-Za-z]+[0-9]+)/g, (m)=>{
     const p = parseCellRef(m.toUpperCase());
     if(!p) return '0';
-    const val = getCellComputed(p.r,p.c);
-    // if numeric, keep number, else if date/text -> JSON.stringify to keep string in expression (but arithmetic will then error)
-    if(val === '') return '0';
+    const val = getComputed(p.r,p.c);
+    if(val===''||val===null) return '0';
     if(!isNaN(Number(val))) return String(Number(val));
-    // if not a number, wrap as string
     return JSON.stringify(String(val));
   });
-
-  // sanitize: allow only digits, operators, parentheses, dots, commas, quotes, Math functions maybe
-  // We'll evaluate via Function, but ensure no eval of identifiers left (basic)
-  // As precaution, disallow letters left (unrecognized identifiers)
-  if(/[A-Za-z]/.test(e)) {
-    // contains letters — risky (unknown func) -> throw
-    throw new Error('Unknown identifier in formula');
-  }
-  // Evaluate expression safely
-  // Allow exponentiation ^ not used; use ** maybe, we don't accept ^. Use Function
-  // Final attempt:
-  const fn = new Function(`return (${e});`);
+  // reject leftover letters to avoid arbitrary code (simple safeguard)
+  if(/[A-Za-z]/.test(withRefs)) throw new Error('Unknown identifier in formula');
+  // evaluate
+  const fn = new Function(`return (${withRefs});`);
   return fn();
 }
 
-// ---------- recompute & refresh ----------
+/* recompute & display */
 function recomputeAll(){
-  // compute all formulas; update cell displays
-  const tbody = table.querySelector('tbody');
+  const tbody = sheetTable.querySelector('tbody');
   if(!tbody) return;
+  const prec = Number(precisionSelect.value||3);
   for(let r=0;r<rows;r++){
     for(let c=0;c<cols;c++){
-      const td = tbody.rows[r].cells[c+1]; // +1 because header th in row
-      const raw = getCellRaw(r,c);
-      const computed = getCellComputed(r,c);
-      // keep raw in dataset to allow editing showing raw
-      td.dataset.raw = raw;
-      // show computed if formula else raw
-      if(raw && raw[0]==='='){
-        td.textContent = computed;
+      const td = tbody.rows[r].cells[c+1];
+      const raw = getRaw(r,c);
+      const computed = getComputed(r,c);
+      td.dataset.raw = raw||'';
+      // display: numbers formatted; formulas show computed; text as-is
+      if(raw && raw.startsWith('=')){
+        td.textContent = (typeof computed==='number') ? formatNum(computed,prec) : computed;
       } else {
-        td.textContent = raw;
+        td.textContent = raw || '';
       }
     }
   }
 }
 
-// ---------- cell events ----------
-function onCellEdit(e){
+/* events */
+function onCellInput(e){
   const td = e.currentTarget;
-  const r = Number(td.getAttribute('data-r'));
-  const c = Number(td.getAttribute('data-c'));
-  const text = td.textContent;
-  setCellRaw(r,c,text);
-  // recompute
+  const r = Number(td.dataset.r), c = Number(td.dataset.c);
+  const val = td.textContent;
+  setRaw(r,c,val);
   recomputeAll();
-  if(document.getElementById('autoChart').checked) {
-    // slight debounce
-    if(window._chartUpdateTimer) clearTimeout(window._chartUpdateTimer);
-    window._chartUpdateTimer = setTimeout(()=>{ generateChart(); }, 350);
-  }
+  if(document.getElementById('autoChart').checked) debounce(generateChart, 300)();
 }
 function onCellFocus(e){
   const td = e.currentTarget;
-  const raw = td.dataset.raw || getCellRaw(td.getAttribute('data-r'), td.getAttribute('data-c'));
-  // show raw for editing
+  const raw = td.dataset.raw || getRaw(td.dataset.r, td.dataset.c);
   if(raw && raw.startsWith('=')) td.textContent = raw;
 }
 function onCellBlur(e){
-  const td = e.currentTarget;
-  // when leaving, recompute display
   recomputeAll();
 }
 
-// ---------- add/remove rows/cols ----------
-document.getElementById('addRow').addEventListener('click', ()=>{
-  rows++;
+/* add/remove rows/cols */
+document.getElementById('addRow').addEventListener('click', ()=>{ rows++; renderGrid(); });
+document.getElementById('delRow').addEventListener('click', ()=>{ if(rows>1){ for(let c=0;c<cols;c++) delete grid[key(rows-1,c)]; rows--; renderGrid(); }});
+document.getElementById('addCol').addEventListener('click', ()=>{ cols++; headers.push(colName(cols-1)); renderGrid(); });
+document.getElementById('delCol').addEventListener('click', ()=>{ if(cols>1){ for(let r=0;r<rows;r++) delete grid[key(r,cols-1)]; cols--; headers.pop(); renderGrid(); }});
+
+/* init default headers */
+function setupInitial(){
+  initHeaders(cols);
   renderGrid();
-  recomputeAll();
-});
-document.getElementById('delRow').addEventListener('click', ()=>{
-  if(rows<=1) return;
-  // remove data keys of last row
-  for(let c=0;c<cols;c++) delete data[cellKey(rows-1,c)];
-  rows--;
-  renderGrid(); recomputeAll();
-});
-document.getElementById('addCol').addEventListener('click', ()=>{
-  cols++;
-  renderGrid(); recomputeAll();
-});
-document.getElementById('delCol').addEventListener('click', ()=>{
-  if(cols<=1) return;
-  for(let r=0;r<rows;r++) delete data[cellKey(r,cols-1)];
-  cols--;
-  renderGrid(); recomputeAll();
+}
+setupInitial();
+
+/* ---------- column selectors for chart ---------- */
+function updateColumnSelectors(){
+  xColumnSel.innerHTML=''; yColumnsSel.innerHTML='';
+  for(let c=0;c<cols;c++){
+    const label = headers[c] || colName(c);
+    const opt = document.createElement('option'); opt.value = c; opt.textContent = `${colName(c)} — ${label}`;
+    xColumnSel.appendChild(opt);
+    const opt2 = document.createElement('option'); opt2.value = c; opt2.textContent = `${colName(c)} — ${label}`;
+    yColumnsSel.appendChild(opt2);
+  }
+}
+
+/* ---------- Auto derive (create derived columns) ----------
+   Implement a few common physics formulas detection:
+   - if headers include U and I -> add R = U/I
+   - if include U and I -> add P = U*I
+   - if include m and g -> add Fg = m*g (g=9.81)
+   - if include f and lambda -> add v = f*lambda
+   - avoid duplicating existing header name
+*/
+document.getElementById('autoDerive').addEventListener('click', ()=>{
+  const hdrLower = headers.map(h => (h||'').toLowerCase());
+  function has(name){ return hdrLower.some(h=>h.includes(name)); }
+  const actions = [];
+
+  if(has('u') && has('i') && !hdrLower.some(h=>h.includes(' r ' )||h==='r'||h.includes(' r[')||h.includes(' r='))) {
+    actions.push({name:'R [Ω]', func: (r)=> { const U=Number(getComputed(r, hdrIndexByContains('u')))||0; const I=Number(getComputed(r, hdrIndexByContains('i')))||0; return I?U/I:'';}});
+  }
+  if(has('u') && has('i') && !hdrLower.some(h=>h.includes(' p ' )||h==='p'||h.includes(' p['))) {
+    actions.push({name:'P [W]', func:(r)=>{ const U=Number(getComputed(r, hdrIndexByContains('u')))||0; const I=Number(getComputed(r, hdrIndexByContains('i')))||0; return (U*I)||'';}});
+  }
+  if(has('m') && !hdrLower.some(h=>h.includes('fg')||h.includes(' f g')||h.includes(' f['))) {
+    actions.push({name:'Fg [N]', func:(r)=>{ const m=Number(getComputed(r, hdrIndexByContains('m')))||0; return m?m*9.81:'';}});
+  }
+  if(has('f') && has('λ') || has('lambda') || (has('f') && has('l'))) {
+    // f and lambda -> v = f * lambda
+    if(!hdrLower.some(h=>h.includes('v ')||h==='v'||h.includes(' v['))) {
+      actions.push({name:'v [m/s]', func:(r)=>{ const f=Number(getComputed(r, hdrIndexByContains('f')))||0; const lam=Number(getComputed(r, hdrIndexByContains('λ')||hdrIndexByContains('lambda')||hdrIndexByContains('l')))||0; return f*lam||'';}});
+    }
+  }
+
+  if(actions.length===0){ alert('Žiadne automatické vzťahy neboli rozpoznané podľa názvov stĺpcov. Skús hlavičky ako U, I, m, f, λ alebo lambda.'); return; }
+
+  // add columns for each action
+  actions.forEach(act=>{
+    headers.push(act.name);
+    const newC = headers.length-1;
+    // compute values for each row and set raw
+    for(let r=0;r<rows;r++){
+      const val = act.func(r);
+      if(val!=='' && val!==undefined) setRaw(r,newC, Number(val).toFixed(Number(precisionSelect.value||3)));
+    }
+  });
+  renderGrid();
 });
 
-// ---------- save / load / clear / export ----------
-const STORAGE_KEY = 'mini_excel_pro_v1';
+/* helper to find header index that contains string */
+function hdrIndexByContains(substr){
+  substr = substr.toLowerCase();
+  for(let i=0;i<headers.length;i++){
+    if((headers[i]||'').toLowerCase().includes(substr)) return i;
+  }
+  return -1;
+}
+
+/* ---------- save/load/clear/export ---------- */
+const STORAGE_KEY = 'mini_excel_pro_advanced_v1';
 document.getElementById('saveBtn').addEventListener('click', ()=>{
-  const payload = {rows,cols,data};
+  const payload = {rows,cols,headers,grid};
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   alert('Uložené lokálne.');
 });
 document.getElementById('loadBtn').addEventListener('click', ()=>{
   const raw = localStorage.getItem(STORAGE_KEY);
-  if(!raw) return alert('Žiadne uloženie.');
+  if(!raw) return alert('Žiadne uloženie v localStorage.');
   try{
     const obj = JSON.parse(raw);
-    rows = obj.rows||10; cols = obj.cols||10; data = obj.data||{};
-    renderGrid(); recomputeAll();
+    rows = obj.rows || rows; cols = obj.cols || cols; headers = obj.headers || headers; grid = obj.grid || {};
+    renderGrid();
     alert('Načítané.');
-  }catch(err){ alert('Chyba pri načítaní'); }
+  }catch(e){ alert('Chyba pri načítaní'); }
 });
 document.getElementById('clearBtn').addEventListener('click', ()=>{
   if(!confirm('Vymazať tabuľku?')) return;
-  data={}; rows=10; cols=10; renderGrid(); recomputeAll();
+  rows=12; cols=8; headers=[]; initHeaders(cols); grid={}; renderGrid();
 });
-
 document.getElementById('exportCsv').addEventListener('click', ()=>{
   const lines=[];
+  const head = headers.map(h=>`"${String(h||'').replace(/"/g,'""')}"`).join(',');
+  lines.push(head);
   for(let r=0;r<rows;r++){
-    const rowVals=[];
+    const row = [];
     for(let c=0;c<cols;c++){
-      const raw = getCellRaw(r,c) || '';
-      // escape quotes
-      rowVals.push('"' + String(raw).replace(/"/g,'""') + '"');
+      row.push('"' + String(getRaw(r,c)||'').replace(/"/g,'""') + '"');
     }
-    lines.push(rowVals.join(','));
+    lines.push(row.join(','));
   }
   const blob = new Blob([lines.join('\n')],{type:'text/csv'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sheet.csv'; a.click();
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sheet_export.csv'; a.click();
 });
 
-// ---------- chart generation ----------
-let chart=null;
+/* ---------- charting (detailed) ---------- */
+let chart = null;
 const ctx = document.getElementById('chartCanvas').getContext('2d');
+let showGrid = true;
 
-function extractRangeNumbers(range){
-  // returns flat array of numbers from range (row-major)
-  const coords = rangeToCoords(range.toUpperCase());
+function extractColumnData(c){
   const arr = [];
-  coords.forEach(pt=>{
-    const val = getCellComputed(pt.r,pt.c);
-    const num = Number(val);
-    if(!isNaN(num)) arr.push({r:pt.r,c:pt.c,v:num});
-  });
+  for(let r=0;r<rows;r++){
+    const v = getComputed(r,c);
+    if(isNumberLike(v)) arr.push(Number(v));
+    else arr.push(null);
+  }
   return arr;
 }
 
 function generateChart(){
-  const range = document.getElementById('chartRange').value.trim();
-  if(!range) return alert('Zadaj rozsah buniek pre graf, napr. A1:A10 alebo A1:B5');
-  const rawVals = extractRangeNumbers(range);
-  if(rawVals.length===0) return alert('Rozsah neobsahuje čísla.');
-  const chartType = document.getElementById('chartType').value;
+  const xIndex = Number(xColumnSel.value);
+  const selectedY = Array.from(yColumnsSel.selectedOptions).map(o=>Number(o.value));
+  if(isNaN(xIndex) || selectedY.length===0){ alert('Vyber X stĺpec a minimálne 1 Y stĺpec'); return; }
 
-  // If multi-column range, group by column for multiple series
-  const coords = rangeToCoords(range.toUpperCase());
-  // determine column set
-  const colsSet = [...new Set(coords.map(pt=>pt.c))];
-  const rowsSet = [...new Set(coords.map(pt=>pt.r))].sort((a,b)=>a-b);
-
-  const datasets=[];
-  if(colsSet.length===1){
-    // single column -> labels from row numbers (or neighboring column if available)
-    const labels = rowsSet.map(r=>String(r+1));
-    const dataSeries = rowsSet.map(r=>{
-      const v = getCellComputed(r, colsSet[0]); return Number(v) || 0;
-    });
-    datasets.push({label: colName(colsSet[0]), data: dataSeries});
-    createChart(labels, datasets, chartType);
-  } else {
-    // multiple columns -> for each column create series across rows
-    const labels = rowsSet.map(r=>String(r+1));
-    colsSet.forEach(cc=>{
-      const dataSeries = rowsSet.map(r=> Number(getCellComputed(r,cc)) || 0 );
-      datasets.push({label: colName(cc), data: dataSeries});
-    });
-    createChart(labels, datasets, chartType);
+  // labels from x column (if text -> string, if number -> string too)
+  const labels = [];
+  for(let r=0;r<rows;r++){
+    const v = getComputed(r, xIndex);
+    labels.push(v==='' || v===null ? String(r+1) : String(v));
   }
-}
 
-function createChart(labels, datasets, type){
-  // map to Chart.js datasets with colors
-  const palette = [
-    '#60a5fa','#34d399','#f97316','#f43f5e','#a78bfa','#f59e0b','#06b6d4','#10b981'
-  ];
-  const cjDatasets = datasets.map((d,i)=>{
+  const datasets = selectedY.map((yc,i)=>{
+    const raw = extractColumnData(yc);
     const color = palette[i % palette.length];
-    if(type==='pie'){
-      // pie expects single array values; if multiple series, sum per label
-      return {
-        label: d.label,
-        data: d.data,
-        backgroundColor: palette.slice(0, d.data.length),
-      };
-    }
     return {
-      label: d.label,
-      data: d.data,
+      label: (headers[yc]||colName(yc)),
+      data: raw,
       borderColor: color,
-      backgroundColor: type==='area' ? color + '33' : color + '11',
-      fill: type==='area',
-      tension: type==='line' || type==='area' ? 0.2 : 0,
+      backgroundColor: (document.getElementById('chartType').value==='area') ? color+'33' : color+'88',
+      tension: 0.2,
+      fill: document.getElementById('chartType').value==='area'
     };
   });
 
-  // if pie: compress to single dataset (sum over series)
-  if(type==='pie' && cjDatasets.length>1){
-    // sum per label across series
-    const sums = labels.map((_, idx)=>{
-      return cjDatasets.reduce((acc, ds)=>acc + (Number(ds.data[idx])||0), 0);
-    });
-    const cfg = {
-      type:'pie',
-      data:{labels, datasets:[{data:sums, backgroundColor: palette.slice(0,labels.length)}]},
-      options:{plugins:{legend:{display:true,labels:{color:'#e6eef6'}}}}
-    };
-    if(chart) chart.destroy();
-    chart = new Chart(ctx, cfg);
-    return;
-  }
+  const type = document.getElementById('chartType').value;
+  const cfgType = (type==='area') ? 'line' : type;
 
-// ordinary chart
-  const cfg = {
-    type: (type==='area' ? 'line' : (type==='scatter' ? 'scatter' : type)),
-    data: {
-      labels,
-      datasets: cjDatasets.map(ds=>{
-        if(type==='scatter') {
-          // convert data array to {x:label,y:value}
-          return { label: ds.label, data: ds.data.map((v,i)=>({x:labels[i],y:v})), borderColor: ds.borderColor, backgroundColor: ds.backgroundColor };
-        } else return ds;
-      })
-    },
+  const config = {
+    type: cfgType,
+    data: { labels, datasets },
     options: {
       responsive:true,
+      maintainAspectRatio:false,
       plugins:{
-        legend:{labels:{color:'#e6eef6'}},
-        tooltip:{mode:'index'}
+        title:{display:!!document.getElementById('chartTitle').value,text:document.getElementById('chartTitle').value,color:'#e6eef6',font:{size:16}},
+        legend:{display:true,labels:{color:'#e6eef6'}},
+        tooltip:{mode:'index',intersect:false,callbacks:{
+          label: (ctx)=> {
+            const val = ctx.parsed.y!==undefined ? ctx.parsed.y : ctx.parsed;
+            return `${ctx.dataset.label}: ${val}`;
+          }
+        }},
+        zoom:{
+          pan:{enabled:true,mode:'x',modifierKey:'ctrl'},
+          zoom:{wheel:{enabled:true},mode:'x',pinch:{enabled:true}}
+        }
       },
       scales:{
-        x:{ ticks:{color:'#e6eef6'}, grid:{color:'rgba(255,255,255,0.03)'} },
-        y:{ ticks:{color:'#e6eef6'}, grid:{color:'rgba(255,255,255,0.03)'} }
-      }
+        x:{ title:{display:!!document.getElementById('xLabel').value,text:document.getElementById('xLabel').value,color:'#e6eef6'}, ticks:{color:'#e6eef6'}, grid:{display:showGrid,color:'rgba(255,255,255,0.03)'} },
+        y:{ title:{display:!!document.getElementById('yLabel').value,text:document.getElementById('yLabel').value,color:'#e6eef6'}, ticks:{color:'#e6eef6'}, grid:{display:showGrid,color:'rgba(255,255,255,0.03)'} }
+      },
+      interaction:{mode:'nearest',axis:'x',intersect:false}
     }
   };
+
   if(chart) chart.destroy();
-  chart = new Chart(ctx, cfg);
+  chart = new Chart(ctx, config);
+  updateChartInfo(selectedY);
 }
 
-// buttons
-document.getElementById('makeChart').addEventListener('click', generateChart);
-document.getElementById('clearChart').addEventListener('click', ()=>{
-  if(chart) { chart.destroy(); chart = null; }
-});
-document.getElementById('exportChartPng').addEventListener('click', ()=>{
-  if(!chart) return alert('Žiadny graf na export.');
+document.getElementById('generateChart').addEventListener('click', generateChart);
+document.getElementById('clearChart').addEventListener('click', ()=>{ if(chart) { chart.destroy(); chart=null; } chartInfo.textContent=''; });
+document.getElementById('toggleGrid').addEventListener('click', ()=>{ showGrid = !showGrid; if(chart) chart.options.scales.x.grid.display = showGrid, chart.options.scales.y.grid.display = showGrid, chart.update(); });
+
+document.getElementById('exportChart').addEventListener('click', ()=>{
+  if(!chart) return alert('Žiadny graf.');
   const url = chart.toBase64Image();
   const a = document.createElement('a'); a.href = url; a.download = 'chart.png'; a.click();
 });
 
-// auto-update toggle default off
-document.getElementById('autoChart').checked = false;
+function updateChartInfo(selectedY){
+  const title = document.getElementById('chartTitle').value || '(bez názvu)';
+  const x = xColumnSel.options[xColumnSel.selectedIndex].text;
+  const ys = selectedY.map(i=> headers[i]||colName(i)).join(', ');
+  chartInfo.textContent = `Graf: ${title} • X: ${x} • Y: ${ys}`;
+}
 
-// ---------- init ----------
-initGrid(12,10); // default 12 rows x 10 cols
-recomputeAll();
+/* palette */
+const palette = ['#60a5fa','#34d399','#f97316','#f43f5e','#a78bfa','#f59e0b','#06b6d4','#10b981','#efdf5a','#9ca3af'];
+
+/* ---------- utilities ---------- */
+function debounce(fn, ms=250){ let t; return function(){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,arguments), ms); }; }
+
+/* init selectors and default grid */
+initHeaders(cols);
+renderGrid();
+
+/* make chart update when auto checked */
+document.getElementById('autoChart').addEventListener('change', ()=>{
+  if(document.getElementById('autoChart').checked) debounce(generateChart,400)();
+});
+
+/* precision change recompute */
+precisionSelect.addEventListener('change', recomputeAll);
+
+/* small helper: clicking header input changes selectors */
+sheetTable.addEventListener('input', debounce(()=>updateColumnSelectors(),200));
 
 </script>
 </body>
