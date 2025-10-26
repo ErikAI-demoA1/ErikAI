@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mini Excel Pro — lokálne</title>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+  :root{
+    --bg:#071026; --panel:#0b1220; --muted:#94a3b8; --accent:#60a5fa;
+    --card:#0f1724; --glass: rgba(255,255,255,0.03); --green:#34d399;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Arial;color:#e6eef6;background:linear-gradient(180deg,#071026,#04101a)}
+  .wrap{max-width:1200px;margin:18px auto;padding:18px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  h1{margin:0;font-size:18px}
+  .meta{color:var(--muted);font-size:13px}
+  .tools{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px;color:inherit;cursor:pointer;font-weight:700}
+  .primary{background:linear-gradient(90deg,var(--green),var(--accent));color:#041014;border:none}
+  .panel{background:var(--panel);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+  .layout{display:grid;grid-template-columns:1fr 420px;gap:18px;margin-top:14px}
+  /* spreadsheet */
+  .sheet-wrap{overflow:auto;border-radius:8px;background:var(--glass);padding:10px}
+  table.sheet{border-collapse:collapse;min-width:700px}
+  table.sheet th, table.sheet td{border:1px solid rgba(255,255,255,0.04);padding:6px 8px;min-width:80px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  table.sheet th{background:rgba(255,255,255,0.02);color:var(--muted);font-weight:700;position:sticky;top:0;z-index:5}
+  table.sheet td{background:transparent}
+  td.cell{cursor:text}
+  td.cell[contenteditable="true"]:focus{outline:2px solid rgba(96,165,250,0.25);background:rgba(255,255,255,0.01)}
+  .controls-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .small{font-size:13px;color:var(--muted)}
+  /* chart panel */
+  .chart-panel{display:flex;flex-direction:column;gap:10px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  input[type=text],select,input[type=number]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+  .row{display:flex;gap:8px;align-items:center}
+  footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+  @media (max-width:1000px){ .layout{grid-template-columns:1fr} .chart-panel{order:2} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Mini Excel Pro — lokálne</h1>
+      <div class="meta">Tabuľka + Grafy • Vzorce: =, SUM, AVERAGE, MIN, MAX, COUNT • Uložiť / Export</div>
+    </div>
+    <div class="meta">Beží lokálne — bez servera</div>
+  </header>
+
+  <div class="tools">
+    <div class="panel controls-row">
+      <div class="row">
+        <button id="addRow" class="btn">➕ Riadok</button>
+        <button id="delRow" class="btn">➖ Riadok</button>
+        <button id="addCol" class="btn">➕ Stĺpec</button>
+        <button id="delCol" class="btn">➖ Stĺpec</button>
+        <label class="small" style="margin-left:8px">Auto graf:</label>
+        <input type="checkbox" id="autoChart" title="Automaticky aktualizovať graf">
+      </div>
+      <div class="row" style="margin-top:6px">
+        <button id="saveBtn" class="btn">💾 Uložiť (local)</button>
+        <button id="loadBtn" class="btn">📂 Načítať</button>
+        <button id="exportCsv" class="btn">⬇ Export CSV</button>
+        <button id="clearBtn" class="btn">🧹 Vyčistiť</button>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-left:auto">
+      <div class="small">Vyber rozsah buniek (napr. A1:B5) pre graf</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <input id="chartRange" type="text" placeholder="A1:A10" style="width:160px">
+        <select id="chartType">
+          <option value="bar">Stĺpcový</option>
+          <option value="line">Čiarový</option>
+          <option value="pie">Koláčový</option>
+          <option value="scatter">Bodový</option>
+          <option value="area">Plošný</option>
+        </select>
+        <button id="makeChart" class="primary btn">📈 Generovať</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="exportChartPng" class="btn">⬇ Export grafu PNG</button>
+        <button id="clearChart" class="btn">🗑 Vyčistiť graf</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout" style="margin-top:12px">
+    <!-- Tabuľka -->
+    <div>
+      <div class="panel sheet-wrap" id="sheetWrap">
+        <table class="sheet" id="sheetTable" role="grid" aria-label="Spreadsheet"></table>
+      </div>
+    </div>
+
+    <!-- Grafy & info -->
+    <aside class="panel chart-panel">
+      <div>
+        <div class="small">Graf</div>
+        <canvas id="chartCanvas" style="background:transparent;border-radius:8px"></canvas>
+      </div>
+      <div class="small">Rýchle tipy:</div>
+      <ul class="small" style="color:var(--muted)">
+        <li>Vzorce: začínajú znakom <code>=</code>. Príklady: <code>=A1+B1</code>, <code>=SUM(A1:A5)</code></li>
+        <li>Funkcie: <code>SUM, AVERAGE, MIN, MAX, COUNT</code></li>
+        <li>Podpora textu & dátumov. Pri grafe vyber rozsah s číslami.</li>
+      </ul>
+    </aside>
+  </div>
+
+  <footer>© 2025 Mini Excel Pro — lokálne</footer>
+</div>
+
+<script>
+/* ========= Spreadsheet engine (client-only) =========
+   - dynamic grid
+   - formula parsing (supports cell refs, SUM, AVERAGE, MIN, MAX, COUNT)
+   - auto / manual chart update
+   - save/load to localStorage
+   - export CSV
+   - chart generation via Chart.js
+*/
+
+// ---------- helpers ----------
+const COL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+function colName(idx){
+  // 0 -> A, 25->Z, 26->AA
+  let s = '';
+  let n = idx + 1;
+  while(n>0){
+    let rem = (n-1)%26;
+    s = String.fromCharCode(65+rem) + s;
+    n = Math.floor((n-1)/26);
+  }
+  return s;
+}
+function colIndex(name){
+  // 'A' -> 0, 'AA' -> 26
+  let n=0;
+  for(let i=0;i<name.length;i++){
+    n = n*26 + (name.charCodeAt(i)-64);
+  }
+  return n-1;
+}
+function parseCellRef(ref){
+  // A1 -> {c:0,r:0}
+  const m = ref.match(/^([A-Z]+)([0-9]+)$/i);
+  if(!m) return null;
+  return { c: colIndex(m[1].toUpperCase()), r: parseInt(m[2],10)-1 };
+}
+function rangeToCoords(range){
+  // "A1:B3" or "A1" -> array of {r,c}
+  if(!range) return [];
+  if(range.indexOf(':')===-1) {
+    const p=parseCellRef(range.trim()); return p ? [{r:p.r,c:p.c}] : [];
+  }
+  const [a,b] = range.split(':').map(s=>s.trim().toUpperCase());
+  const A=parseCellRef(a), B=parseCellRef(b);
+  if(!A || !B) return [];
+  const coords=[];
+  const r1=Math.min(A.r,B.r), r2=Math.max(A.r,B.r);
+  const c1=Math.min(A.c,B.c), c2=Math.max(A.c,B.c);
+  for(let rr=r1; rr<=r2; rr++){
+    for(let cc=c1; cc<=c2; cc++){
+      coords.push({r:rr,c:cc});
+    }
+  }
+  return coords;
+}
+
+// ---------- grid state ----------
+let rows=10, cols=10;
+let data = {}; // key "r,c" -> {raw: string, value: computed}
+const table = document.getElementById('sheetTable');
+const sheetWrap = document.getElementById('sheetWrap');
+
+// ---------- init ----------
+function initGrid(r=10,c=10){
+  rows=r; cols=c;
+  data = {}; // clear
+  renderGrid();
+  recomputeAll();
+}
+function cellKey(r,c){ return r+','+c; }
+function getCellRaw(r,c){ const k=cellKey(r,c); return (data[k] && data[k].raw) ? data[k].raw : ''; }
+function setCellRaw(r,c,raw){ data[cellKey(r,c)] = data[cellKey(r,c)] || {}; data[cellKey(r,c)].raw = raw; }
+
+// ---------- render ----------
+function renderGrid(){
+  // build header
+  table.innerHTML = '';
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  headRow.appendChild(document.createElement('th')); // corner
+  for(let c=0;c<cols;c++){
+    const th = document.createElement('th'); th.textContent = colName(c);
+    headRow.appendChild(th);
+  }
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  for(let r=0;r<rows;r++){
+    const tr = document.createElement('tr');
+    const th = document.createElement('th'); th.textContent = r+1; tr.appendChild(th);
+    for(let c=0;c<cols;c++){
+      const td = document.createElement('td');
+      td.className='cell';
+      td.setAttribute('contenteditable','true');
+      td.setAttribute('data-r',r);
+      td.setAttribute('data-c',c);
+      td.setAttribute('spellcheck','false');
+      td.addEventListener('input', onCellEdit);
+      td.addEventListener('focus', onCellFocus);
+      td.addEventListener('blur', onCellBlur);
+      // fill displayed value or raw
+      const raw = getCellRaw(r,c);
+      td.textContent = raw.startsWith('=') ? raw : raw;
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+}
+
+// ---------- formula evaluation ----------
+function getCellComputed(r,c){
+  const raw = getCellRaw(r,c);
+  if(!raw) return '';
+  if(raw[0] !== '=') return raw; // text or number as-is
+  // formula
+  const expr = raw.slice(1).trim();
+  try{
+    const val = evalExpression(expr);
+    return (val===null || val===undefined) ? '' : val;
+  }catch(err){
+    return '#ERR';
+  }
+}
+function parseNumberOrZero(v){
+  if(v === undefined || v === null || v==='') return 0;
+  if(typeof v === 'number') return v;
+  // try convert
+  const n = Number(v);
+  return isNaN(n)?0:n;
+}
+function evalExpression(expr){
+  // Handle functions SUM, AVERAGE, MIN, MAX, COUNT
+  // Replace cell refs with values
+  let e = expr;
+
+  // handle functions pattern FUNC(arg)
+  e = e.replace(/([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*([^\)]+)\s*\)/g, (m, fname, arg)=>{
+    fname = fname.toUpperCase();
+    // arg may be range or comma list
+    const parts = arg.split(',').map(s=>s.trim());
+    let values = [];
+    parts.forEach(p=>{
+      if(p.indexOf(':')!==-1){
+        const coords = rangeToCoords(p.toUpperCase());
+        coords.forEach(pt=>{
+          const v = getCellComputed(pt.r,pt.c);
+          values.push(parseNumberOrZero(v));
+        });
+      } else {
+        // could be single cell or literal
+        const cell = parseCellRef(p.toUpperCase());
+        if(cell){ values.push(parseNumberOrZero(getCellComputed(cell.r,cell.c))); }
+        else { // literal number
+          values.push(parseNumberOrZero(Number(p)));
+        }
+      }
+    });
+    switch(fname){
+      case 'SUM': return values.reduce((a,b)=>a+b,0);
+      case 'AVERAGE': return values.length?values.reduce((a,b)=>a+b,0)/values.length:0;
+      case 'MIN': return values.length?Math.min(...values):0;
+      case 'MAX': return values.length?Math.max(...values):0;
+      case 'COUNT': return values.filter(x=>x!==0 && x!=='').length;
+      default: return m; // unknown function - leave
+    }
+  });
+
+  // replace all cell refs (A1, B2) with their numeric value or quoted string if not numeric
+  e = e.replace(/([A-Za-z]+[0-9]+)/g, (m)=>{
+    const p = parseCellRef(m.toUpperCase());
+    if(!p) return '0';
+    const val = getCellComputed(p.r,p.c);
+    // if numeric, keep number, else if date/text -> JSON.stringify to keep string in expression (but arithmetic will then error)
+    if(val === '') return '0';
+    if(!isNaN(Number(val))) return String(Number(val));
+    // if not a number, wrap as string
+    return JSON.stringify(String(val));
+  });
+
+  // sanitize: allow only digits, operators, parentheses, dots, commas, quotes, Math functions maybe
+  // We'll evaluate via Function, but ensure no eval of identifiers left (basic)
+  // As precaution, disallow letters left (unrecognized identifiers)
+  if(/[A-Za-z]/.test(e)) {
+    // contains letters — risky (unknown func) -> throw
+    throw new Error('Unknown identifier in formula');
+  }
+  // Evaluate expression safely
+  // Allow exponentiation ^ not used; use ** maybe, we don't accept ^. Use Function
+  // Final attempt:
+  const fn = new Function(`return (${e});`);
+  return fn();
+}
+
+// ---------- recompute & refresh ----------
+function recomputeAll(){
+  // compute all formulas; update cell displays
+  const tbody = table.querySelector('tbody');
+  if(!tbody) return;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const td = tbody.rows[r].cells[c+1]; // +1 because header th in row
+      const raw = getCellRaw(r,c);
+      const computed = getCellComputed(r,c);
+      // keep raw in dataset to allow editing showing raw
+      td.dataset.raw = raw;
+      // show computed if formula else raw
+      if(raw && raw[0]==='='){
+        td.textContent = computed;
+      } else {
+        td.textContent = raw;
+      }
+    }
+  }
+}
+
+// ---------- cell events ----------
+function onCellEdit(e){
+  const td = e.currentTarget;
+  const r = Number(td.getAttribute('data-r'));
+  const c = Number(td.getAttribute('data-c'));
+  const text = td.textContent;
+  setCellRaw(r,c,text);
+  // recompute
+  recomputeAll();
+  if(document.getElementById('autoChart').checked) {
+    // slight debounce
+    if(window._chartUpdateTimer) clearTimeout(window._chartUpdateTimer);
+    window._chartUpdateTimer = setTimeout(()=>{ generateChart(); }, 350);
+  }
+}
+function onCellFocus(e){
+  const td = e.currentTarget;
+  const raw = td.dataset.raw || getCellRaw(td.getAttribute('data-r'), td.getAttribute('data-c'));
+  // show raw for editing
+  if(raw && raw.startsWith('=')) td.textContent = raw;
+}
+function onCellBlur(e){
+  const td = e.currentTarget;
+  // when leaving, recompute display
+  recomputeAll();
+}
+
+// ---------- add/remove rows/cols ----------
+document.getElementById('addRow').addEventListener('click', ()=>{
+  rows++;
+  renderGrid();
+  recomputeAll();
+});
+document.getElementById('delRow').addEventListener('click', ()=>{
+  if(rows<=1) return;
+  // remove data keys of last row
+  for(let c=0;c<cols;c++) delete data[cellKey(rows-1,c)];
+  rows--;
+  renderGrid(); recomputeAll();
+});
+document.getElementById('addCol').addEventListener('click', ()=>{
+  cols++;
+  renderGrid(); recomputeAll();
+});
+document.getElementById('delCol').addEventListener('click', ()=>{
+  if(cols<=1) return;
+  for(let r=0;r<rows;r++) delete data[cellKey(r,cols-1)];
+  cols--;
+  renderGrid(); recomputeAll();
+});
+
+// ---------- save / load / clear / export ----------
+const STORAGE_KEY = 'mini_excel_pro_v1';
+document.getElementById('saveBtn').addEventListener('click', ()=>{
+  const payload = {rows,cols,data};
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  alert('Uložené lokálne.');
+});
+document.getElementById('loadBtn').addEventListener('click', ()=>{
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw) return alert('Žiadne uloženie.');
+  try{
+    const obj = JSON.parse(raw);
+    rows = obj.rows||10; cols = obj.cols||10; data = obj.data||{};
+    renderGrid(); recomputeAll();
+    alert('Načítané.');
+  }catch(err){ alert('Chyba pri načítaní'); }
+});
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(!confirm('Vymazať tabuľku?')) return;
+  data={}; rows=10; cols=10; renderGrid(); recomputeAll();
+});
+
+document.getElementById('exportCsv').addEventListener('click', ()=>{
+  const lines=[];
+  for(let r=0;r<rows;r++){
+    const rowVals=[];
+    for(let c=0;c<cols;c++){
+      const raw = getCellRaw(r,c) || '';
+      // escape quotes
+      rowVals.push('"' + String(raw).replace(/"/g,'""') + '"');
+    }
+    lines.push(rowVals.join(','));
+  }
+  const blob = new Blob([lines.join('\n')],{type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sheet.csv'; a.click();
+});
+
+// ---------- chart generation ----------
+let chart=null;
+const ctx = document.getElementById('chartCanvas').getContext('2d');
+
+function extractRangeNumbers(range){
+  // returns flat array of numbers from range (row-major)
+  const coords = rangeToCoords(range.toUpperCase());
+  const arr = [];
+  coords.forEach(pt=>{
+    const val = getCellComputed(pt.r,pt.c);
+    const num = Number(val);
+    if(!isNaN(num)) arr.push({r:pt.r,c:pt.c,v:num});
+  });
+  return arr;
+}
+
+function generateChart(){
+  const range = document.getElementById('chartRange').value.trim();
+  if(!range) return alert('Zadaj rozsah buniek pre graf, napr. A1:A10 alebo A1:B5');
+  const rawVals = extractRangeNumbers(range);
+  if(rawVals.length===0) return alert('Rozsah neobsahuje čísla.');
+  const chartType = document.getElementById('chartType').value;
+
+  // If multi-column range, group by column for multiple series
+  const coords = rangeToCoords(range.toUpperCase());
+  // determine column set
+  const colsSet = [...new Set(coords.map(pt=>pt.c))];
+  const rowsSet = [...new Set(coords.map(pt=>pt.r))].sort((a,b)=>a-b);
+
+  const datasets=[];
+  if(colsSet.length===1){
+    // single column -> labels from row numbers (or neighboring column if available)
+    const labels = rowsSet.map(r=>String(r+1));
+    const dataSeries = rowsSet.map(r=>{
+      const v = getCellComputed(r, colsSet[0]); return Number(v) || 0;
+    });
+    datasets.push({label: colName(colsSet[0]), data: dataSeries});
+    createChart(labels, datasets, chartType);
+  } else {
+    // multiple columns -> for each column create series across rows
+    const labels = rowsSet.map(r=>String(r+1));
+    colsSet.forEach(cc=>{
+      const dataSeries = rowsSet.map(r=> Number(getCellComputed(r,cc)) || 0 );
+      datasets.push({label: colName(cc), data: dataSeries});
+    });
+    createChart(labels, datasets, chartType);
+  }
+}
+
+function createChart(labels, datasets, type){
+  // map to Chart.js datasets with colors
+  const palette = [
+    '#60a5fa','#34d399','#f97316','#f43f5e','#a78bfa','#f59e0b','#06b6d4','#10b981'
+  ];
+  const cjDatasets = datasets.map((d,i)=>{
+    const color = palette[i % palette.length];
+    if(type==='pie'){
+      // pie expects single array values; if multiple series, sum per label
+      return {
+        label: d.label,
+        data: d.data,
+        backgroundColor: palette.slice(0, d.data.length),
+      };
+    }
+    return {
+      label: d.label,
+      data: d.data,
+      borderColor: color,
+      backgroundColor: type==='area' ? color + '33' : color + '11',
+      fill: type==='area',
+      tension: type==='line' || type==='area' ? 0.2 : 0,
+    };
+  });
+
+  // if pie: compress to single dataset (sum over series)
+  if(type==='pie' && cjDatasets.length>1){
+    // sum per label across series
+    const sums = labels.map((_, idx)=>{
+      return cjDatasets.reduce((acc, ds)=>acc + (Number(ds.data[idx])||0), 0);
+    });
+    const cfg = {
+      type:'pie',
+      data:{labels, datasets:[{data:sums, backgroundColor: palette.slice(0,labels.length)}]},
+      options:{plugins:{legend:{display:true,labels:{color:'#e6eef6'}}}}
+    };
+    if(chart) chart.destroy();
+    chart = new Chart(ctx, cfg);
+    return;
+  }
+
+// ordinary chart
+  const cfg = {
+    type: (type==='area' ? 'line' : (type==='scatter' ? 'scatter' : type)),
+    data: {
+      labels,
+      datasets: cjDatasets.map(ds=>{
+        if(type==='scatter') {
+          // convert data array to {x:label,y:value}
+          return { label: ds.label, data: ds.data.map((v,i)=>({x:labels[i],y:v})), borderColor: ds.borderColor, backgroundColor: ds.backgroundColor };
+        } else return ds;
+      })
+    },
+    options: {
+      responsive:true,
+      plugins:{
+        legend:{labels:{color:'#e6eef6'}},
+        tooltip:{mode:'index'}
+      },
+      scales:{
+        x:{ ticks:{color:'#e6eef6'}, grid:{color:'rgba(255,255,255,0.03)'} },
+        y:{ ticks:{color:'#e6eef6'}, grid:{color:'rgba(255,255,255,0.03)'} }
+      }
+    }
+  };
+  if(chart) chart.destroy();
+  chart = new Chart(ctx, cfg);
+}
+
+// buttons
+document.getElementById('makeChart').addEventListener('click', generateChart);
+document.getElementById('clearChart').addEventListener('click', ()=>{
+  if(chart) { chart.destroy(); chart = null; }
+});
+document.getElementById('exportChartPng').addEventListener('click', ()=>{
+  if(!chart) return alert('Žiadny graf na export.');
+  const url = chart.toBase64Image();
+  const a = document.createElement('a'); a.href = url; a.download = 'chart.png'; a.click();
+});
+
+// auto-update toggle default off
+document.getElementById('autoChart').checked = false;
+
+// ---------- init ----------
+initGrid(12,10); // default 12 rows x 10 cols
+recomputeAll();
+
+</script>
+</body>
+</html>
