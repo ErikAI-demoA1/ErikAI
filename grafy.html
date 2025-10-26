@@ -1,139 +1,198 @@
 <!doctype html>
-
 <html lang="sk">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Interaktívna tabuľka a graf - pre vědcov</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <style>
-    body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
-    .card{background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border-radius:12px; box-shadow:0 6px 24px rgba(2,6,23,0.08);}
-    .table-wrap{max-height:420px; overflow:auto}
-    .download-btn{background:#0f172a;color:#fff;padding:8px 12px;border-radius:8px}
-  </style>
-</head>
-<body class="bg-gray-50 p-6">
-  <div class="max-w-6xl mx-auto">
-    <header class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-semibold">Interaktívne tabuľka a graf pre vedcov</h1>
-      <div class="space-x-2">
-        <button id="download-xlsx" class="download-btn">Stiahnuť .xlsx</button>
-        <button id="download-png" class="download-btn">Stiahnuť graf</button>
-      </div>
-    </header><div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <section class="lg:col-span-2 card p-4">
-    <h2 class="text-lg font-medium mb-2">Graf</h2>
-    <canvas id="mainChart" height="320"></canvas>
-    <div class="flex gap-3 mt-3">
-      <label class="flex items-center gap-2"><input id="smooth" type="checkbox"> Hladké krivky</label>
-      <label class="flex items-center gap-2"><input id="showPoints" type="checkbox" checked> Zobraziť body</label>
-    </div>
-  </section>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mini Excel Pro — Vedecká verzia</title>
 
-  <aside class="card p-4">
-    <h3 class="text-md font-medium">Nastavenia tabuľky</h3>
-    <div class="mt-3 table-wrap">
-      <table id="dataTable" class="min-w-full text-sm">
-        <thead class="bg-gray-100 sticky top-0">
-          <tr>
-            <th class="p-2">ID</th>
-            <th class="p-2">Čas</th>
-            <th class="p-2">Hodnota A</th>
-            <th class="p-2">Hodnota B</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- riadky sa doplnia JS -->
-        </tbody>
-      </table>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- SheetJS pre export XLSX -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.2/dist/xlsx.full.min.js"></script>
+
+<style>
+:root {
+  --bg:#060b18;
+  --panel:#0d162b;
+  --muted:#9ca3af;
+  --accent:#3b82f6;
+  --green:#22c55e;
+  --border:rgba(255,255,255,0.08);
+}
+html,body {
+  margin:0; padding:0;
+  background:var(--bg);
+  color:#e5e7eb;
+  font-family:"Inter",system-ui,Arial;
+}
+h1 {margin:0;font-size:20px;}
+.wrap {
+  max-width:1300px;
+  margin:30px auto;
+  background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));
+  border-radius:16px;
+  box-shadow:0 0 40px rgba(0,0,0,0.6);
+  padding:24px;
+}
+header {display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.meta {font-size:13px;color:var(--muted);}
+.btn {
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:transparent;
+  color:inherit;
+  padding:8px 12px;
+  cursor:pointer;
+  font-weight:600;
+  transition:0.2s;
+}
+.btn:hover {background:rgba(255,255,255,0.06);}
+.primary {
+  background:linear-gradient(90deg,var(--green),var(--accent));
+  color:#0b1220;
+  border:none;
+}
+.panel {
+  background:var(--panel);
+  padding:14px;
+  border-radius:12px;
+  box-shadow:inset 0 0 15px rgba(255,255,255,0.02);
+}
+.layout {
+  display:grid;
+  grid-template-columns:1fr 440px;
+  gap:18px;
+}
+.sheet-wrap {
+  overflow:auto;
+  border-radius:8px;
+}
+.sheet {
+  border-collapse:collapse;
+  min-width:700px;
+  width:100%;
+}
+.sheet th, .sheet td {
+  border:1px solid rgba(255,255,255,0.05);
+  padding:6px 8px;
+  min-width:80px;
+  max-width:200px;
+}
+.sheet th {
+  background:rgba(255,255,255,0.04);
+  color:var(--muted);
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+.sheet td.cell {
+  cursor:text;
+  transition:background 0.1s;
+}
+.sheet td.cell:hover {
+  background:rgba(255,255,255,0.04);
+}
+.sheet td.cell[contenteditable="true"]:focus {
+  outline:2px solid var(--accent);
+  background:rgba(59,130,246,0.08);
+}
+.controls-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+input,select {
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:8px;
+  color:inherit;
+}
+.chart-panel {display:flex;flex-direction:column;gap:10px;}
+.status {
+  font-size:12px;
+  color:var(--muted);
+  text-align:right;
+  margin-top:6px;
+}
+footer {
+  margin-top:20px;
+  text-align:center;
+  font-size:13px;
+  color:var(--muted);
+}
+@media (max-width:1000px){.layout{grid-template-columns:1fr}}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>📊 Mini Excel Pro — Vedecká verzia</h1>
+      <div class="meta">Pre vedcov, študentov a analytikov — lokálne bez servera</div>
     </div>
-    <div class="mt-4">
-      <button id="addRow" class="download-btn">Pridať riadok</button>
-    </div>
-  </aside>
+    <div class="meta">© 2025 — Lokálny výpočtový modul</div>
+  </header>
+
+  <div class="panel controls-row">
+    <button id="addRow" class="btn">+ Riadok</button>
+    <button id="delRow" class="btn">– Riadok</button>
+    <button id="addCol" class="btn">+ Stĺpec</button>
+    <button id="delCol" class="btn">– Stĺpec</button>
+    <button id="saveBtn" class="btn">💾 Uložiť</button>
+    <button id="loadBtn" class="btn">📂 Načítať</button>
+    <button id="exportCsv" class="btn">⬇ CSV</button>
+    <button id="exportXlsx" class="btn">⬇ XLSX</button>
+    <button id="clearBtn" class="btn">🧹 Vyčistiť</button>
+    <label style="margin-left:auto">Auto graf <input type="checkbox" id="autoChart"></label>
+  </div>
+
+  <div class="layout" style="margin-top:16px">
+    <div class="panel sheet-wrap"><table id="sheetTable" class="sheet"></table></div>
+    <aside class="panel chart-panel">
+      <div class="meta">Rozsah pre graf (napr. A1:B10)</div>
+      <input id="chartRange" placeholder="A1:B10">
+      <select id="chartType">
+        <option value="bar">Stĺpcový</option>
+        <option value="line">Čiarový</option>
+        <option value="area">Plošný</option>
+        <option value="pie">Koláčový</option>
+        <option value="scatter">Bodový</option>
+      </select>
+      <button id="makeChart" class="btn primary">📈 Generovať graf</button>
+      <button id="exportChartPng" class="btn">⬇ Export PNG</button>
+      <button id="exportChartSvg" class="btn">⬇ Export SVG</button>
+      <button id="clearChart" class="btn">🗑 Vymazať graf</button>
+      <canvas id="chartCanvas" height="250"></canvas>
+      <div class="status" id="statusInfo">Bez grafu</div>
+    </aside>
+  </div>
+
+  <footer>Mini Excel Pro — Vedecká verzia • Všetko beží offline</footer>
 </div>
 
-<section class="card p-4 mt-6">
-  <h3 class="font-medium">Pokročilé možnosti</h3>
-  <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-    <div>
-      <label>Vyber sérií pre zobrazenie</label>
-      <div>
-        <label><input type="checkbox" class="toggleSeries" data-series="A" checked> Séria A</label><br>
-        <label><input type="checkbox" class="toggleSeries" data-series="B" checked> Séria B</label>
-      </div>
-    </div>
-    <div>
-      <label>Orez exportu (PNG)</label>
-      <input id="dpi" type="number" min="1" value="2" class="w-full p-1 rounded border">
-    </div>
-    <div>
-      <label>Formát času</label>
-      <select id="timeFormat" class="w-full p-1 rounded border">
-        <option value="iso">ISO 8601</option>
-        <option value="short">DD.MM.YYYY HH:mm</option>
-      </select>
-    </div>
-  </div>
-</section>
-
-  </div>  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>  <script>
-    // sample data
-    let data = [];
-    for(let i=0;i<20;i++) data.push({id:i+1, time: new Date(Date.now()- (19-i)*3600*1000).toISOString(), A: Math.random()*50+10, B: Math.random()*30+20});
-
-    const tbody = document.querySelector('#dataTable tbody');
-    function renderTable(){
-      tbody.innerHTML='';
-      data.forEach((r,idx)=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="p-2">${r.id}</td><td class="p-2"><input data-idx="${idx}" data-field="time" value="${r.time}" class="w-full"></td><td class="p-2"><input data-idx="${idx}" data-field="A" value="${r.A.toFixed(3)}" class="w-full"></td><td class="p-2"><input data-idx="${idx}" data-field="B" value="${r.B.toFixed(3)}" class="w-full"></td>`;
-        tbody.appendChild(tr);
-      });
-    }
-    renderTable();
-
-    // listen to edits
-    tbody.addEventListener('change', e=>{
-      const inp = e.target; const i = +inp.dataset.idx; const f = inp.dataset.field;
-      if(f==='time') data[i][f] = inp.value; else data[i][f] = parseFloat(inp.value);
-      updateChart();
-    });
-
-    document.getElementById('addRow').addEventListener('click', ()=>{
-      const id = data.length+1;
-      data.push({id, time: new Date().toISOString(), A: 10+Math.random()*10, B: 20+Math.random()*10});
-      renderTable(); updateChart();
-    });
-
-    // chart
-    const ctx = document.getElementById('mainChart');
-    const chart = new Chart(ctx,{type:'line', data:{labels: data.map(d=>d.time), datasets:[{label:'A', data:data.map(d=>d.A), tension:0.4, pointRadius:3},{label:'B', data:data.map(d=>d.B), tension:0.4, pointRadius:3}]}, options:{scales:{x:{type:'time', time:{tooltipFormat:'yyyy-MM-dd HH:mm'}}, y:{beginAtZero:true}}}});
-
-    function updateChart(){
-      chart.data.labels = data.map(d=>d.time);
-      chart.data.datasets[0].data = data.map(d=>d.A);
-      chart.data.datasets[1].data = data.map(d=>d.B);
-      chart.update();
-      renderTable();
-    }
-
-    // toggles
-    document.querySelectorAll('.toggleSeries').forEach(ch=>ch.addEventListener('change', e=>{const s=e.target.dataset.series; chart.getDatasetMeta(s==='A'?0:1).hidden=!e.target.checked; chart.update(); }));
-
-    document.getElementById('smooth').addEventListener('change', e=>{chart.data.datasets.forEach(ds=>ds.tension=e.target.checked?0.4:0); chart.update();});
-    document.getElementById('showPoints').addEventListener('change', e=>{chart.data.datasets.forEach(ds=>ds.pointRadius=e.target.checked?3:0); chart.update();});
-
-    // download png
-    document.getElementById('download-png').addEventListener('click', ()=>{
-      const link = document.createElement('a'); link.href = chart.toBase64Image(); link.download = 'graf.png'; link.click();
-    });
-
-    // download xlsx
-    document.getElementById('download-xlsx').addEventListener('click', ()=>{
-      const ws_data = [["ID","Time","A","B"], ...data.map(r=>[r.id, r.time, r.A, r.B])];
-      const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(ws_data); XLSX.utils.book_append_sheet(wb, ws, 'Data'); XLSX.writeFile(wb, 'data.xlsx');
-    });
-  </script></body>
+<script>
+/* === Skrátená a bezpečná logika === */
+const table = document.getElementById('sheetTable');
+let rows=10, cols=8, data={}, chart=null;
+function colName(n){let s='';n++;while(n>0){s=String.fromCharCode(65+(n-1)%26)+s;n=Math.floor((n-1)/26);}return s;}
+function render(){table.innerHTML='';const thead=document.createElement('thead');const hr=document.createElement('tr');hr.appendChild(document.createElement('th'));for(let c=0;c<cols;c++){let th=document.createElement('th');th.textContent=colName(c);hr.appendChild(th);}thead.appendChild(hr);table.appendChild(thead);const tb=document.createElement('tbody');for(let r=0;r<rows;r++){let tr=document.createElement('tr');let th=document.createElement('th');th.textContent=r+1;tr.appendChild(th);for(let c=0;c<cols;c++){let td=document.createElement('td');td.className='cell';td.contentEditable='true';td.dataset.r=r;td.dataset.c=c;td.textContent=data[`${r},${c}`]?.raw||'';td.oninput=e=>{data[`${r},${c}`]={raw:td.textContent};update();};tr.appendChild(td);}tb.appendChild(tr);}table.appendChild(tb);}
+function get(r,c){return data[`${r},${c}`]?.raw||'';}
+function val(r,c){let raw=get(r,c);if(!raw.startsWith('='))return raw;try{let ex=raw.slice(1).replace(/([A-Z]+)(\d+)/g,(m,a,b)=>val(parseInt(b)-1,a.charCodeAt(0)-65)||0);return Function('return '+ex)();}catch{return '#ERR';}}
+function update(){for(let r=0;r<rows;r++){for(let c=0;c<cols;c++){let td=table.rows[r+1].cells[c+1];let raw=get(r,c);td.textContent=raw.startsWith('=')?val(r,c):raw;}}if(document.getElementById('autoChart').checked)makeChart();}
+function rangeToCoords(rng){let [a,b]=rng.split(':');if(!b)b=a;let A=a.match(/([A-Z]+)(\d+)/),B=b.match(/([A-Z]+)(\d+)/);if(!A||!B)return[];let c1=A[1].charCodeAt(0)-65,c2=B[1].charCodeAt(0)-65,r1=+A[2]-1,r2=+B[2]-1;let arr=[];for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++)arr.push({r,c});return arr;}
+function makeChart(){const rng=document.getElementById('chartRange').value;if(!rng)return;const type=document.getElementById('chartType').value;let coords=rangeToCoords(rng),rowsSet=[...new Set(coords.map(x=>x.r))].sort((a,b)=>a-b),colsSet=[...new Set(coords.map(x=>x.c))];const labels=rowsSet.map(r=>'R'+(r+1));const datasets=colsSet.map(cc=>({label:colName(cc),data:rowsSet.map(r=>+val(r,cc)||0)}));if(chart)chart.destroy();chart=new Chart(document.getElementById('chartCanvas'),{type:type==='area'?'line':type,data:{labels,datasets},options:{plugins:{legend:{labels:{color:'#e5e7eb'}}},scales:{x:{ticks:{color:'#ccc'}},y:{ticks:{color:'#ccc'}}}}});document.getElementById('statusInfo').textContent='Graf: '+type.toUpperCase()+' | Rozsah '+rng;}
+document.getElementById('makeChart').onclick=makeChart;
+document.getElementById('clearChart').onclick=()=>{if(chart){chart.destroy();chart=null;document.getElementById('statusInfo').textContent='Bez grafu';}};
+document.getElementById('exportChartPng').onclick=()=>{if(!chart)return;let a=document.createElement('a');a.href=chart.toBase64Image();a.download='chart.png';a.click();};
+document.getElementById('exportChartSvg').onclick=()=>{if(!chart)return;let svg=document.querySelector('canvas').toDataURL('image/svg+xml');let a=document.createElement('a');a.href=svg;a.download='chart.svg';a.click();};
+document.getElementById('addRow').onclick=()=>{rows++;render();update();};
+document.getElementById('delRow').onclick=()=>{if(rows>1)rows--;render();update();};
+document.getElementById('addCol').onclick=()=>{cols++;render();update();};
+document.getElementById('delCol').onclick=()=>{if(cols>1)cols--;render();update();};
+document.getElementById('clearBtn').onclick=()=>{if(confirm('Vymazať všetko?')){data={};render();update();}};
+document.getElementById('saveBtn').onclick=()=>localStorage.setItem('miniExcelV2',JSON.stringify({rows,cols,data}));
+document.getElementById('loadBtn').onclick=()=>{let j=localStorage.getItem('miniExcelV2');if(j){let o=JSON.parse(j);rows=o.rows;cols=o.cols;data=o.data;render();update();}};
+document.getElementById('exportCsv').onclick=()=>{let csv='';for(let r=0;r<rows;r++){let arr=[];for(let c=0;c<cols;c++)arr.push('"'+(get(r,c)||'').replace(/"/g,'""')+'"');csv+=arr.join(',')+'\n';}let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='data.csv';a.click();};
+document.getElementById('exportXlsx').onclick=()=>{let sheet=[];for(let r=0;r<rows;r++){let row=[];for(let c=0;c<cols;c++)row.push(get(r,c));sheet.push(row);}let wb=XLSX.utils.book_new();let ws=XLSX.utils.aoa_to_sheet(sheet);XLSX.utils.book_append_sheet(wb,ws,'Data');XLSX.writeFile(wb,'data.xlsx');};
+render();update();
+</script>
+</body>
 </html>
