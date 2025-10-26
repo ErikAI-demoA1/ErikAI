@@ -1,195 +1,139 @@
-<!DOCTYPE html>
+<!doctype html>
+
 <html lang="sk">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Excel Pro — ErikAI</title>
-
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: linear-gradient(180deg, #071026, #04101a);
-  color: #ff0000;
-  margin: 0; padding: 0;
-}
-.container {
-  max-width: 1200px;
-  margin: 20px auto;
-  padding: 15px;
-  background: rgba(255,255,255,0.02);
-  border-radius: 10px;
-}
-header { display: flex; justify-content: space-between; align-items: center; }
-h1 { margin: 0; font-size: 22px; }
-.toolbar, .layout, .footer { margin-top: 15px; }
-button { padding: 6px 12px; border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,0,0,0.5); background: transparent; color: #ff0000; }
-button.primary { background: linear-gradient(90deg, #34d399, #60a5fa); border: none; }
-table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-table th, table td { border: 1px solid rgba(255,0,0,0.5); padding: 6px; text-align: center; color: #ff0000; }
-td.cell { min-width: 80px; }
-td.cell:focus { outline: 2px solid rgba(255,0,0,0.5); background: rgba(255,255,255,0.01); }
-aside { background: rgba(11,18,32,1); padding: 10px; border-radius: 8px; color: #ff0000; }
-select, input { padding: 6px; border-radius: 6px; border: 1px solid rgba(255,0,0,0.5); background: transparent; color: #ff0000; width: 100%; margin-top: 4px; }
-.row { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
-.footer { font-size: 13px; text-align: center; margin-top: 12px; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interaktívna tabuľka a graf - pre vědcov</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+    .card{background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border-radius:12px; box-shadow:0 6px 24px rgba(2,6,23,0.08);}
+    .table-wrap{max-height:420px; overflow:auto}
+    .download-btn{background:#0f172a;color:#fff;padding:8px 12px;border-radius:8px}
+  </style>
 </head>
-<body>
-
-<div class="container">
-  <header>
-    <h1>Mini Excel Pro — ErikAI</h1>
-    <div>© ErikAI</div>
-  </header>
-
-  <div class="toolbar">
-    <button id="addRow">➕ Riadok</button>
-    <button id="delRow">➖ Riadok</button>
-    <button id="addCol">➕ Stĺpec</button>
-    <button id="delCol">➖ Stĺpec</button>
-    <button id="autoDerive">🔁 Auto-derive</button>
-  </div>
-
-  <div class="layout" style="display: flex; gap: 20px; flex-wrap: wrap;">
-    <div style="flex: 1; min-width: 400px;">
-      <table id="sheetTable"></table>
+<body class="bg-gray-50 p-6">
+  <div class="max-w-6xl mx-auto">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-semibold">Interaktívne tabuľka a graf pre vedcov</h1>
+      <div class="space-x-2">
+        <button id="download-xlsx" class="download-btn">Stiahnuť .xlsx</button>
+        <button id="download-png" class="download-btn">Stiahnuť graf</button>
+      </div>
+    </header><div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <section class="lg:col-span-2 card p-4">
+    <h2 class="text-lg font-medium mb-2">Graf</h2>
+    <canvas id="mainChart" height="320"></canvas>
+    <div class="flex gap-3 mt-3">
+      <label class="flex items-center gap-2"><input id="smooth" type="checkbox"> Hladké krivky</label>
+      <label class="flex items-center gap-2"><input id="showPoints" type="checkbox" checked> Zobraziť body</label>
     </div>
+  </section>
 
-    <aside style="flex: 1; min-width: 300px;">
-      <div>
-        <label>Názov grafu</label>
-        <input id="chartTitle" placeholder="Názov grafu...">
-      </div>
-      <div>
-        <label>X os</label>
-        <select id="xColumn"></select>
-      </div>
-      <div>
-        <label>Y os (Ctrl pre viac)</label>
-        <select id="yColumns" multiple size="6"></select>
-      </div>
-      <div class="row">
-        <select id="chartType">
-          <option value="line">Čiarový</option>
-          <option value="bar">Stĺpcový</option>
-          <option value="pie">Koláčový</option>
-          <option value="scatter">Bodový</option>
-          <option value="area">Plošný</option>
-        </select>
-        <button id="generateChart" class="primary">📈 Generovať</button>
-      </div>
-      <canvas id="chartCanvas" style="margin-top:10px; max-height:400px;"></canvas>
-      <div id="chartInfo" style="margin-top:8px; font-size:13px;"></div>
-    </aside>
-  </div>
-
-  <div class="footer">Tip: hlavičky stĺpcov = názov + jednotka (U [V], I [A]).</div>
+  <aside class="card p-4">
+    <h3 class="text-md font-medium">Nastavenia tabuľky</h3>
+    <div class="mt-3 table-wrap">
+      <table id="dataTable" class="min-w-full text-sm">
+        <thead class="bg-gray-100 sticky top-0">
+          <tr>
+            <th class="p-2">ID</th>
+            <th class="p-2">Čas</th>
+            <th class="p-2">Hodnota A</th>
+            <th class="p-2">Hodnota B</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- riadky sa doplnia JS -->
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4">
+      <button id="addRow" class="download-btn">Pridať riadok</button>
+    </div>
+  </aside>
 </div>
 
-<script>
-/* ---------------- Grid & Spreadsheet ---------------- */
-let rows = 10, cols = 5;
-let headers = [], grid = {};
-const sheetTable = document.getElementById('sheetTable');
-const xColumnSel = document.getElementById('xColumn');
-const yColumnsSel = document.getElementById('yColumns');
+<section class="card p-4 mt-6">
+  <h3 class="font-medium">Pokročilé možnosti</h3>
+  <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div>
+      <label>Vyber sérií pre zobrazenie</label>
+      <div>
+        <label><input type="checkbox" class="toggleSeries" data-series="A" checked> Séria A</label><br>
+        <label><input type="checkbox" class="toggleSeries" data-series="B" checked> Séria B</label>
+      </div>
+    </div>
+    <div>
+      <label>Orez exportu (PNG)</label>
+      <input id="dpi" type="number" min="1" value="2" class="w-full p-1 rounded border">
+    </div>
+    <div>
+      <label>Formát času</label>
+      <select id="timeFormat" class="w-full p-1 rounded border">
+        <option value="iso">ISO 8601</option>
+        <option value="short">DD.MM.YYYY HH:mm</option>
+      </select>
+    </div>
+  </div>
+</section>
 
-function colName(i){ return String.fromCharCode(65+i); }
-function key(r,c){ return r+','+c; }
-function getRaw(r,c){ return grid[key(r,c)]||''; }
-function setRaw(r,c,v){ if(!v) delete grid[key(r,c)]; else grid[key(r,c)]=v; }
+  </div>  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>  <script>
+    // sample data
+    let data = [];
+    for(let i=0;i<20;i++) data.push({id:i+1, time: new Date(Date.now()- (19-i)*3600*1000).toISOString(), A: Math.random()*50+10, B: Math.random()*30+20});
 
-function initHeaders(){ headers=[]; for(let i=0;i<cols;i++) headers.push(colName(i)); }
-function renderGrid(){
-  sheetTable.innerHTML='';
-  const thead = document.createElement('thead');
-  const trh = document.createElement('tr');
-  trh.appendChild(document.createElement('th'));
-  headers.forEach(h=>{
-    const th = document.createElement('th');
-    th.contentEditable = true; th.textContent=h;
-    trh.appendChild(th);
-  });
-  thead.appendChild(trh);
-  sheetTable.appendChild(thead);
-
-  const tbody = document.createElement('tbody');
-  for(let r=0;r<rows;r++){
-    const tr = document.createElement('tr');
-    const th = document.createElement('th'); th.textContent=r+1; tr.appendChild(th);
-    for(let c=0;c<cols;c++){
-      const td = document.createElement('td'); td.className='cell';
-      td.contentEditable=true; td.dataset.r=r; td.dataset.c=c;
-      td.textContent = getRaw(r,c);
-      td.addEventListener('input', e=>{
-        setRaw(r,c,e.target.textContent); 
+    const tbody = document.querySelector('#dataTable tbody');
+    function renderTable(){
+      tbody.innerHTML='';
+      data.forEach((r,idx)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td class="p-2">${r.id}</td><td class="p-2"><input data-idx="${idx}" data-field="time" value="${r.time}" class="w-full"></td><td class="p-2"><input data-idx="${idx}" data-field="A" value="${r.A.toFixed(3)}" class="w-full"></td><td class="p-2"><input data-idx="${idx}" data-field="B" value="${r.B.toFixed(3)}" class="w-full"></td>`;
+        tbody.appendChild(tr);
       });
-      tr.appendChild(td);
     }
-    tbody.appendChild(tr);
-  }
-  sheetTable.appendChild(tbody);
-  updateColumnSelectors();
-}
+    renderTable();
 
-/* Add / Remove rows & columns */
-document.getElementById('addRow').onclick = ()=>{ rows++; renderGrid(); }
-document.getElementById('delRow').onclick = ()=>{ if(rows>1){ rows--; renderGrid(); } }
-document.getElementById('addCol').onclick = ()=>{ cols++; initHeaders(); renderGrid(); }
-document.getElementById('delCol').onclick = ()=>{ if(cols>1){ cols--; initHeaders(); renderGrid(); } }
+    // listen to edits
+    tbody.addEventListener('change', e=>{
+      const inp = e.target; const i = +inp.dataset.idx; const f = inp.dataset.field;
+      if(f==='time') data[i][f] = inp.value; else data[i][f] = parseFloat(inp.value);
+      updateChart();
+    });
 
-/* Column selectors for chart */
-function updateColumnSelectors(){
-  xColumnSel.innerHTML=''; yColumnsSel.innerHTML='';
-  headers.forEach((h,i)=>{
-    const optX = document.createElement('option'); optX.value=i; optX.textContent=h; xColumnSel.appendChild(optX);
-    const optY = document.createElement('option'); optY.value=i; optY.textContent=h; yColumnsSel.appendChild(optY);
-  });
-}
+    document.getElementById('addRow').addEventListener('click', ()=>{
+      const id = data.length+1;
+      data.push({id, time: new Date().toISOString(), A: 10+Math.random()*10, B: 20+Math.random()*10});
+      renderTable(); updateChart();
+    });
 
-/* ---------------- Auto-Derive simple physics ---------------- */
-document.getElementById('autoDerive').onclick = ()=>{
-  const uCol = headers.findIndex(h=>h.toLowerCase().includes('u'));
-  const iCol = headers.findIndex(h=>h.toLowerCase().includes('i'));
-  if(uCol>=0 && iCol>=0){
-    headers.push('R [Ω]'); cols++;
-    for(let r=0;r<rows;r++){
-      const U = Number(getRaw(r,uCol)||0);
-      const I = Number(getRaw(r,iCol)||0);
-      setRaw(r,cols-1, I? (U/I).toFixed(2): '');
+    // chart
+    const ctx = document.getElementById('mainChart');
+    const chart = new Chart(ctx,{type:'line', data:{labels: data.map(d=>d.time), datasets:[{label:'A', data:data.map(d=>d.A), tension:0.4, pointRadius:3},{label:'B', data:data.map(d=>d.B), tension:0.4, pointRadius:3}]}, options:{scales:{x:{type:'time', time:{tooltipFormat:'yyyy-MM-dd HH:mm'}}, y:{beginAtZero:true}}}});
+
+    function updateChart(){
+      chart.data.labels = data.map(d=>d.time);
+      chart.data.datasets[0].data = data.map(d=>d.A);
+      chart.data.datasets[1].data = data.map(d=>d.B);
+      chart.update();
+      renderTable();
     }
-    renderGrid();
-  }else alert('Hlavičky U a I neexistujú.');
-};
 
-/* ---------------- Chart.js ---------------- */
-let chart = null;
-const ctx = document.getElementById('chartCanvas').getContext('2d');
+    // toggles
+    document.querySelectorAll('.toggleSeries').forEach(ch=>ch.addEventListener('change', e=>{const s=e.target.dataset.series; chart.getDatasetMeta(s==='A'?0:1).hidden=!e.target.checked; chart.update(); }));
 
-document.getElementById('generateChart').onclick = ()=>{
-  const xIndex = Number(xColumnSel.value||0);
-  const yIndices = Array.from(yColumnsSel.selectedOptions).map(o=>Number(o.value));
-  if(yIndices.length===0) yIndices.push(0);
+    document.getElementById('smooth').addEventListener('change', e=>{chart.data.datasets.forEach(ds=>ds.tension=e.target.checked?0.4:0); chart.update();});
+    document.getElementById('showPoints').addEventListener('change', e=>{chart.data.datasets.forEach(ds=>ds.pointRadius=e.target.checked?3:0); chart.update();});
 
-  const labels = [];
-  for(let r=0;r<rows;r++){
-    const v=getRaw(r,xIndex); labels.push(v||String(r+1));
-  }
+    // download png
+    document.getElementById('download-png').addEventListener('click', ()=>{
+      const link = document.createElement('a'); link.href = chart.toBase64Image(); link.download = 'graf.png'; link.click();
+    });
 
-  const datasets = yIndices.map((y,i)=>{
-    const data = [];
-    for(let r=0;r<rows;r++) data.push(Number(getRaw(r,y))||0);
-    const colors = ['#60a5fa','#34d399','#f97316','#f43f5e'];
-    return {label: headers[y], data, borderColor:colors[i%colors.length], backgroundColor:colors[i%colors.length]+'33', fill:false};
-  });
-
-  if(chart) chart.destroy();
-  chart = new Chart(ctx, {type: document.getElementById('chartType').value==='area'?'line':document.getElementById('chartType').value, data:{labels,datasets}});
-};
-initHeaders(); renderGrid();
-</script>
-</body>
+    // download xlsx
+    document.getElementById('download-xlsx').addEventListener('click', ()=>{
+      const ws_data = [["ID","Time","A","B"], ...data.map(r=>[r.id, r.time, r.A, r.B])];
+      const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(ws_data); XLSX.utils.book_append_sheet(wb, ws, 'Data'); XLSX.writeFile(wb, 'data.xlsx');
+    });
+  </script></body>
 </html>
