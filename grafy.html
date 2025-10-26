@@ -562,25 +562,34 @@ document.getElementById('exportCsv').addEventListener('click', ()=>{
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sheet_export.csv'; a.click();
 });
 
+
 /* ---------- charting (detailed) ---------- */
 let chart = null;
 const ctx = document.getElementById('chartCanvas').getContext('2d');
 let showGrid = true;
 
+// Pre istotu – automatický fallback pre selecty
+function safeIndex(sel, defaultIndex = 0) {
+  if(!sel || sel.options.length === 0) return defaultIndex;
+  return Number(sel.value) || defaultIndex;
+}
+
 function extractColumnData(c){
   const arr = [];
   for(let r=0;r<rows;r++){
     const v = getComputed(r,c);
-    if(isNumberLike(v)) arr.push(Number(v));
+    if(!isNaN(v) && v !== null && v !== '') arr.push(Number(v));
     else arr.push(null);
   }
   return arr;
 }
 
-  function generateChart(){
-  const xIndex = Number(xColumnSel.value);
+function generateChart(){
+  const xIndex = safeIndex(xColumnSel, 0);
   const selectedY = Array.from(yColumnsSel.selectedOptions).map(o=>Number(o.value));
-  if(isNaN(xIndex) || selectedY.length===0){ alert('Vyber X stĺpec a minimálne 1 Y stĺpec'); return; }
+  
+  // fallback: ak nič nie je vybrané, vezme prvý stĺpec ako Y
+  if(selectedY.length === 0) selectedY.push(0);
 
   // labels from x column
   const labels = [];
@@ -612,7 +621,7 @@ function extractColumnData(c){
       responsive:true,
       maintainAspectRatio:false,
       plugins:{
-        title:{display:!!document.getElementById('chartTitle').value,text:document.getElementById('chartTitle').value,color:'#ff0000',font:{size:16}},
+        title:{display:true,text:document.getElementById('chartTitle').value || 'Graf',color:'#ff0000',font:{size:16}},
         legend:{display:true,labels:{color:'#ff0000'}},
         tooltip:{mode:'index',intersect:false,callbacks:{
           label: (ctx)=> {
@@ -626,14 +635,13 @@ function extractColumnData(c){
         }
       },
       scales:{
-        x:{ title:{display:!!document.getElementById('xLabel').value,text:document.getElementById('xLabel').value,color:'#ff0000'}, ticks:{color:'#ff0000'}, grid:{display:showGrid,color:'rgba(255,255,255,0.1)'} },
-        y:{ title:{display:!!document.getElementById('yLabel').value,text:document.getElementById('yLabel').value,color:'#ff0000'}, ticks:{color:'#ff0000'}, grid:{display:showGrid,color:'rgba(255,255,255,0.1)'} }
+        x:{ title:{display:true,text:document.getElementById('xLabel').value || 'X',color:'#ff0000'}, ticks:{color:'#ff0000'}, grid:{display:showGrid,color:'rgba(255,255,255,0.1)'} },
+        y:{ title:{display:true,text:document.getElementById('yLabel').value || 'Y',color:'#ff0000'}, ticks:{color:'#ff0000'}, grid:{display:showGrid,color:'rgba(255,255,255,0.1)'} }
       },
       interaction:{mode:'nearest',axis:'x',intersect:false},
       layout:{padding:20}
     },
     plugins: [{
-      // plugin na čierne pozadie plátna
       id: 'bgColor',
       beforeDraw: (chart)=> {
         const ctx = chart.ctx;
@@ -650,7 +658,7 @@ function extractColumnData(c){
   updateChartInfo(selectedY);
 }
 
-// Export zostáva rovnaký, farby sú už červené a pozadie čierne
+// Export – už stačí rovno PNG, farby a pozadie sú správne
 document.getElementById('exportChart').addEventListener('click', ()=>{
   if(!chart) return alert('Žiadny graf.');
   const url = chart.toBase64Image();
@@ -659,34 +667,16 @@ document.getElementById('exportChart').addEventListener('click', ()=>{
   a.download = 'chart.png'; 
   a.click();
 });
+
 function updateChartInfo(selectedY){
   const title = document.getElementById('chartTitle').value || '(bez názvu)';
-  const x = xColumnSel.options[xColumnSel.selectedIndex].text;
+  const x = xColumnSel.options[xColumnSel.selectedIndex]?.text || 'X';
   const ys = selectedY.map(i=> headers[i]||colName(i)).join(', ');
   chartInfo.textContent = `Graf: ${title} • X: ${x} • Y: ${ys}`;
 }
 
 /* palette */
 const palette = ['#60a5fa','#34d399','#f97316','#f43f5e','#a78bfa','#f59e0b','#06b6d4','#10b981','#efdf5a','#9ca3af'];
-
-/* ---------- utilities ---------- */
-function debounce(fn, ms=250){ let t; return function(){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,arguments), ms); }; }
-
-/* init selectors and default grid */
-initHeaders(cols);
-renderGrid();
-
-/* make chart update when auto checked */
-document.getElementById('autoChart').addEventListener('change', ()=>{
-  if(document.getElementById('autoChart').checked) debounce(generateChart,400)();
-});
-
-/* precision change recompute */
-precisionSelect.addEventListener('change', recomputeAll);
-
-/* small helper: clicking header input changes selectors */
-sheetTable.addEventListener('input', debounce(()=>updateColumnSelectors(),200));
-
 </script>
 </body>
 </html>
