@@ -479,6 +479,7 @@ function generateChart(){
   const selectedY = Array.from(yColumnsSel.selectedOptions).map(o=>Number(o.value));
   if(isNaN(xIndex) || selectedY.length===0){ alert('Vyber X stĺpec a minimálne 1 Y stĺpec'); return; }
 
+  // labels from x column (if text -> string, if number -> string too)
   const labels = [];
   for(let r=0;r<rows;r++){
     const v = getComputed(r, xIndex);
@@ -487,17 +488,13 @@ function generateChart(){
 
   const datasets = selectedY.map((yc,i)=>{
     const raw = extractColumnData(yc);
-    const color = '#000000'; // čierne čiary
-    const fillColor = 'rgba(255, 0, 0, 0.2)'; // červené podfarbenie
+    const color = palette[i % palette.length];
     return {
       label: (headers[yc]||colName(yc)),
       data: raw,
       borderColor: color,
-      backgroundColor: fillColor,
-      pointBackgroundColor: '#ff0000',
-      pointBorderColor: '#000',
-      borderWidth: 1.5,
-      tension: 0.1,
+      backgroundColor: (document.getElementById('chartType').value==='area') ? color+'33' : color+'88',
+      tension: 0.2,
       fill: document.getElementById('chartType').value==='area'
     };
   });
@@ -511,64 +508,44 @@ function generateChart(){
     options: {
       responsive:true,
       maintainAspectRatio:false,
-      devicePixelRatio: 2, // ostrejší export
       plugins:{
-        title:{
-          display:!!document.getElementById('chartTitle').value,
-          text:document.getElementById('chartTitle').value,
-          color:'#ff0000', // červený text
-          font:{size:18,weight:'bold'}
-        },
-        legend:{
-          display:true,
-          labels:{color:'#ff0000', font:{size:13}}
-        },
-        tooltip:{
-          mode:'index',intersect:false,
-          titleColor:'#ff0000',
-          bodyColor:'#ff0000',
-          backgroundColor:'rgba(0,0,0,0.8)'
-        },
+        title:{display:!!document.getElementById('chartTitle').value,text:document.getElementById('chartTitle').value,color:'#e6eef6',font:{size:16}},
+        legend:{display:true,labels:{color:'#e6eef6'}},
+        tooltip:{mode:'index',intersect:false,callbacks:{
+          label: (ctx)=> {
+            const val = ctx.parsed.y!==undefined ? ctx.parsed.y : ctx.parsed;
+            return `${ctx.dataset.label}: ${val}`;
+          }
+        }},
         zoom:{
           pan:{enabled:true,mode:'x',modifierKey:'ctrl'},
           zoom:{wheel:{enabled:true},mode:'x',pinch:{enabled:true}}
         }
       },
       scales:{
-        x:{
-          title:{display:!!document.getElementById('xLabel').value,
-                 text:document.getElementById('xLabel').value,color:'#ff0000'},
-          ticks:{color:'#ff0000'},
-          grid:{display:showGrid,color:'#00000022'}
-        },
-        y:{
-          title:{display:!!document.getElementById('yLabel').value,
-                 text:document.getElementById('yLabel').value,color:'#ff0000'},
-          ticks:{color:'#ff0000'},
-          grid:{display:showGrid,color:'#00000022'}
-        }
+        x:{ title:{display:!!document.getElementById('xLabel').value,text:document.getElementById('xLabel').value,color:'#e6eef6'}, ticks:{color:'#e6eef6'}, grid:{display:showGrid,color:'rgba(255,255,255,0.03)'} },
+        y:{ title:{display:!!document.getElementById('yLabel').value,text:document.getElementById('yLabel').value,color:'#e6eef6'}, ticks:{color:'#e6eef6'}, grid:{display:showGrid,color:'rgba(255,255,255,0.03)'} }
       },
       interaction:{mode:'nearest',axis:'x',intersect:false}
-    },
-    plugins: [{
-      // vlastné prekreslenie pozadia pred exportom
-      id: 'customBackground',
-      beforeDraw: (chart) => {
-        const ctx = chart.canvas.getContext('2d');
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-over';
-        ctx.fillStyle = '#ffffff'; // biele pozadie aby bolo vidno v exporte
-        ctx.fillRect(0,0,chart.width,chart.height);
-        ctx.restore();
-      }
-    }]
+    }
   };
 
   if(chart) chart.destroy();
   chart = new Chart(ctx, config);
   updateChartInfo(selectedY);
-  }
-  function updateChartInfo(selectedY){
+}
+
+document.getElementById('generateChart').addEventListener('click', generateChart);
+document.getElementById('clearChart').addEventListener('click', ()=>{ if(chart) { chart.destroy(); chart=null; } chartInfo.textContent=''; });
+document.getElementById('toggleGrid').addEventListener('click', ()=>{ showGrid = !showGrid; if(chart) chart.options.scales.x.grid.display = showGrid, chart.options.scales.y.grid.display = showGrid, chart.update(); });
+
+document.getElementById('exportChart').addEventListener('click', ()=>{
+  if(!chart) return alert('Žiadny graf.');
+  const url = chart.toBase64Image();
+  const a = document.createElement('a'); a.href = url; a.download = 'chart.png'; a.click();
+});
+
+function updateChartInfo(selectedY){
   const title = document.getElementById('chartTitle').value || '(bez názvu)';
   const x = xColumnSel.options[xColumnSel.selectedIndex].text;
   const ys = selectedY.map(i=> headers[i]||colName(i)).join(', ');
