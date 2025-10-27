@@ -3,37 +3,58 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Offline Mini Nástroje</title>
+<title>Offline Nástroje PRO</title>
 <style>
-body {font-family:sans-serif; margin:0; padding:0; background:#f4f4f4;}
-header {background:#34d399; padding:12px; color:#041014; text-align:center;}
-nav {display:flex; justify-content:center; background:#071026;}
-nav button {margin:4px; padding:8px 12px; background:#34d399; color:#041014; border:none; border-radius:6px; cursor:pointer;}
-section {display:none; padding:16px;}
+body {
+    font-family:sans-serif;
+    margin:0; padding:0;
+    background:#f0f2f5; color:#041014;
+}
+header {
+    background:#34d399; padding:16px; text-align:center; color:#041014;
+}
+nav {
+    display:flex; flex-wrap:wrap; justify-content:center;
+    background:#071026; padding:4px;
+}
+nav button {
+    margin:4px; padding:10px 16px;
+    background:#34d399; color:#041014; border:none; border-radius:6px;
+    cursor:pointer; transition:0.2s;
+}
+nav button:hover {background:#2bb07d;}
+section {
+    display:none; padding:20px; max-width:900px; margin:10px auto;
+    background:#ffffff; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
 section.active {display:block;}
-input, button, select, textarea {padding:6px; margin:4px 0; border-radius:4px; border:1px solid #ccc;}
-h2 {margin-top:0;}
+h2 {margin-top:0; color:#071026;}
+input, button, select, textarea {
+    padding:6px; margin:4px 0; border-radius:4px; border:1px solid #ccc; width:100%;
+}
+button {width:auto;}
 ul {padding-left:20px;}
+.task-done {text-decoration:line-through; color:#888;}
 </style>
 </head>
 <body>
 <header>
-  <h1>Offline Mini Nástroje</h1>
+    <h1>Offline Mini Nástroje PRO</h1>
 </header>
 
 <nav>
-  <button onclick="showSection('todo')">To-do List</button>
-  <button onclick="showSection('tax')">Kalkulačka daní</button>
-  <button onclick="showSection('budget')">Rozpočet</button>
-  <button onclick="showSection('agenda')">Agenda</button>
-  <button onclick="showSection('invoice')">Faktúra</button>
+    <button onclick="showSection('todo')">To-do List</button>
+    <button onclick="showSection('tax')">Kalkulačka daní</button>
+    <button onclick="showSection('budget')">Rozpočet</button>
+    <button onclick="showSection('agenda')">Agenda</button>
+    <button onclick="showSection('invoice')">Faktúra</button>
 </nav>
 
 <!-- To-do List -->
 <section id="todo">
 <h2>To-do List / Úlohovník</h2>
 <input type="text" id="newTask" placeholder="Napíš úlohu">
-<button onclick="addTask()">Pridať</button>
+<button onclick="addTask()">Pridať úlohu</button>
 <ul id="tasks"></ul>
 </section>
 
@@ -46,7 +67,7 @@ ul {padding-left:20px;}
   <option value="0.25">Príjmová 25%</option>
 </select>
 <button onclick="calcTax()">Vypočítať</button>
-<p id="result"></p>
+<p id="taxResult"></p>
 </section>
 
 <!-- Rozpočet -->
@@ -78,85 +99,88 @@ ul {padding-left:20px;}
 </section>
 
 <script>
-// Navigácia
+// --- Navigácia ---
 function showSection(id){
-  document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
 }
 
 // --- To-do list ---
 let tasks = JSON.parse(localStorage.getItem('tasks')||'[]');
 function renderTasks(){
-  document.getElementById('tasks').innerHTML = tasks.map((t,i)=>`<li>
-    <input type="checkbox" ${t.done?'checked':''} onclick="toggle(${i})">${t.text}
-    <button onclick="remove(${i})">X</button>
-  </li>`).join('');
-  localStorage.setItem('tasks', JSON.stringify(tasks));
+    document.getElementById('tasks').innerHTML = tasks.map((t,i)=>
+        `<li>
+        <input type="checkbox" ${t.done?'checked':''} onclick="toggleTask(${i})">
+        <span class="${t.done?'task-done':''}">${t.text}</span>
+        <button onclick="removeTask(${i})">X</button>
+        </li>`).join('');
+    localStorage.setItem('tasks', JSON.stringify(tasks));
 }
-function addTask(){ 
-  const t = document.getElementById('newTask').value.trim(); 
-  if(!t) return;
-  tasks.push({text:t, done:false});
-  document.getElementById('newTask').value=''; renderTasks();
+function addTask(){
+    const t = document.getElementById('newTask').value.trim();
+    if(!t) return;
+    tasks.push({text:t, done:false});
+    document.getElementById('newTask').value='';
+    renderTasks();
 }
-function toggle(i){ tasks[i].done = !tasks[i].done; renderTasks(); }
-function remove(i){ tasks.splice(i,1); renderTasks(); }
+function toggleTask(i){ tasks[i].done=!tasks[i].done; renderTasks(); }
+function removeTask(i){ tasks.splice(i,1); renderTasks(); }
 renderTasks();
 
 // --- Kalkulačka daní ---
 function calcTax(){
-  const income = parseFloat(document.getElementById('income').value);
-  const rate = parseFloat(document.getElementById('taxType').value);
-  if(isNaN(income)) { alert('Zadaj číslo'); return; }
-  const tax = income*rate;
-  document.getElementById('result').innerText = `Daň: ${tax.toFixed(2)}, Čistý príjem: ${(income-tax).toFixed(2)}`;
+    const income = parseFloat(document.getElementById('income').value);
+    const rate = parseFloat(document.getElementById('taxType').value);
+    if(isNaN(income)){ alert('Zadaj číslo'); return; }
+    const tax = income*rate;
+    document.getElementById('taxResult').innerText = `Daň: ${tax.toFixed(2)} | Čistý príjem: ${(income-tax).toFixed(2)}`;
 }
 
 // --- Rozpočet ---
 let expenses = JSON.parse(localStorage.getItem('expenses')||'[]');
 function renderExpenses(){
-  document.getElementById('expenses').innerHTML = expenses.map((e,i)=>`<li>${e.desc}: ${e.amount.toFixed(2)} <button onclick="removeExp(${i})">X</button></li>`).join('');
-  const total = expenses.reduce((s,e)=>s+e.amount,0);
-  document.getElementById('totalExp').innerText = total.toFixed(2);
-  localStorage.setItem('expenses', JSON.stringify(expenses));
+    document.getElementById('expenses').innerHTML = expenses.map((e,i)=>`<li>${e.desc}: ${e.amount.toFixed(2)} <button onclick="removeExpense(${i})">X</button></li>`).join('');
+    const total = expenses.reduce((s,e)=>s+e.amount,0);
+    document.getElementById('totalExp').innerText = total.toFixed(2);
+    localStorage.setItem('expenses', JSON.stringify(expenses));
 }
 function addExpense(){
-  const desc = document.getElementById('expDesc').value;
-  const amount = parseFloat(document.getElementById('expAmount').value);
-  if(!desc || isNaN(amount)) return;
-  expenses.push({desc, amount});
-  document.getElementById('expDesc').value='';
-  document.getElementById('expAmount').value='';
-  renderExpenses();
+    const desc = document.getElementById('expDesc').value;
+    const amount = parseFloat(document.getElementById('expAmount').value);
+    if(!desc||isNaN(amount)) return;
+    expenses.push({desc, amount});
+    document.getElementById('expDesc').value='';
+    document.getElementById('expAmount').value='';
+    renderExpenses();
 }
-function removeExp(i){ expenses.splice(i,1); renderExpenses(); }
+function removeExpense(i){ expenses.splice(i,1); renderExpenses(); }
 renderExpenses();
 
 // --- Agenda ---
 let events = JSON.parse(localStorage.getItem('events')||'[]');
 function renderEvents(){
-  document.getElementById('events').innerHTML = events.map((e,i)=>`<li>${e.date}: ${e.text} <button onclick="removeEvent(${i})">X</button></li>`).join('');
-  localStorage.setItem('events', JSON.stringify(events));
+    document.getElementById('events').innerHTML = events.map((e,i)=>`<li>${e.date}: ${e.text} <button onclick="removeEvent(${i})">X</button></li>`).join('');
+    localStorage.setItem('events', JSON.stringify(events));
 }
 function addEvent(){
-  const text = document.getElementById('eventText').value;
-  const date = document.getElementById('eventDate').value;
-  if(!text || !date) return;
-  events.push({text,date});
-  document.getElementById('eventText').value='';
-  document.getElementById('eventDate').value='';
-  renderEvents();
+    const text = document.getElementById('eventText').value;
+    const date = document.getElementById('eventDate').value;
+    if(!text||!date) return;
+    events.push({text,date});
+    document.getElementById('eventText').value='';
+    document.getElementById('eventDate').value='';
+    renderEvents();
 }
 function removeEvent(i){ events.splice(i,1); renderEvents(); }
 
 // --- Faktúra ---
 function generateInvoice(){
-  const client = document.getElementById('client').value;
-  const amount = parseFloat(document.getElementById('amount').value);
-  if(!client || isNaN(amount)) return alert('Zadaj údaje');
-  document.getElementById('invoiceOutput').innerHTML =
-  `<h3>Faktúra</h3><p>Klient: ${client}</p><p>Suma: ${amount.toFixed(2)}</p>`;
+    const client = document.getElementById('client').value;
+    const amount = parseFloat(document.getElementById('amount').value);
+    if(!client||isNaN(amount)) return alert('Zadaj údaje');
+    document.getElementById('invoiceOutput').innerHTML =
+    `<h3>Faktúra</h3><p>Klient: ${client}</p><p>Suma: ${amount.toFixed(2)}</p>`;
 }
 </script>
 </body>
-</html>
+  </html>
