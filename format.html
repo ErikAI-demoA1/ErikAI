@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Erikai Export Demo</title>
+<style>
+  body{ font-family:sans-serif; padding:10px; }
+  #textSection, #fileSection, #canvasSection{ margin-bottom:10px; }
+  #drawCanvas{ border:1px solid #888; }
+  #previewText{ white-space:pre-wrap; border:1px solid #ccc; padding:5px; max-height:150px; overflow:auto; }
+</style>
+</head>
+<body>
+
+<h2>Erikai Universal System</h2>
+
+<label>Input Mode:
+<select id="inputMode">
+  <option value="text">Text</option>
+  <option value="file">File</option>
+  <option value="canvas">Canvas</option>
+</select>
+</label>
+
+<div id="textSection">
+  <textarea id="mainText" rows="6" cols="50"></textarea>
+</div>
+
+<div id="fileSection" style="display:none;">
+  <input type="file" id="fileInput">
+</div>
+
+<div id="canvasSection" style="display:none;">
+  <canvas id="drawCanvas" width="400" height="200"></canvas><br>
+  <button id="clearCanvas">Clear Canvas</button>
+</div>
+
+<h3>Preview</h3>
+<div id="previewMedia"></div>
+<pre id="previewText"></pre>
+
+<h3>Export / Load</h3>
+<label>File Name: <input type="text" id="outputName" value="tabulka"></label><br><br>
+<button id="doPreview">Preview</button>
+<button id="doExport">Export Selected Format</button>
+<button id="doExportErikai">Export .erikai</button>
+<input type="file" id="loadErikai" accept=".erikai">
+<br><br>
+<select id="exportFormat">
+  <option value="txt">TXT</option>
+  <option value="png">PNG</option>
+  <option value="jpeg">JPEG</option>
+  <option value="webp">WEBP</option>
+</select>
+
+<pre id="log" style="border:1px solid #aaa; padding:5px; max-height:150px; overflow:auto;"></pre>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const inputMode = document.getElementById('inputMode');
+const textSection = document.getElementById('textSection');
+const fileSection = document.getElementById('fileSection');
+const canvasSection = document.getElementById('canvasSection');
+const mainText = document.getElementById('mainText');
+const fileInput = document.getElementById('fileInput');
+const previewText = document.getElementById('previewText');
+const previewMedia = document.getElementById('previewMedia');
+const logEl = document.getElementById('log');
+const canvas = document.getElementById('drawCanvas');
+const ctx = canvas.getContext('2d');
+
+function log(msg){ logEl.textContent = new Date().toLocaleTimeString() + ' — ' + msg + '\\n' + logEl.textContent; }
+
+inputMode.addEventListener('change', ()=>{
+  const v = inputMode.value;
+  textSection.style.display = v==='text'?'block':'none';
+  fileSection.style.display = v==='file'?'block':'none';
+  canvasSection.style.display = v==='canvas'?'block':'none';
+});
+
+fileInput.addEventListener('change', async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const name = f.name.toLowerCase();
+  if(name.endsWith('.png')||name.endsWith('.jpg')||name.endsWith('.jpeg')||name.endsWith('.webp')){
+    const url = URL.createObjectURL(f);
+    previewMedia.innerHTML = '<img src="'+url+'" style="max-width:100%;">';
+    mainText.value = '';
+    log('Loaded image: '+f.name);
+  } else {
+    const txt = await f.text();
+    mainText.value = txt;
+    previewText.textContent = txt.slice(0,2000)+(txt.length>2000?'\\n... (truncated)':'');
+    log('Loaded file: '+f.name);
+  }
+});
+
+// canvas drawing
+let drawing=false,lastX=0,lastY=0;
+ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+canvas.addEventListener('pointerdown', e=>{ drawing=true; lastX=e.offsetX; lastY=e.offsetY; });
+canvas.addEventListener('pointermove', e=>{ if(!drawing) return; ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(e.offsetX,e.offsetY); ctx.strokeStyle='#041014'; ctx.lineWidth=2; ctx.lineCap='round'; ctx.stroke(); lastX=e.offsetX; lastY=e.offsetY; });
+canvas.addEventListener('pointerup', ()=>drawing=false);
+canvas.addEventListener('pointerleave', ()=>drawing=false);
+document.getElementById('clearCanvas').addEventListener('click', ()=>{ ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); });
+
+// safe download
+function safeDownload(contentOrBlob, fileName, type='application/octet-stream'){
+  const blob = contentOrBlob instanceof Blob ? contentOrBlob : new Blob([contentOrBlob], {type});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ try{ document.body.removeChild(a);}catch(e){} URL.revokeObjectURL(a.href); }, 150);
+}
+
+// get content
+function getContentForExport(){
+  const mode = inputMode.value;
+  if(mode==='text' || mode==='file') return mainText.value;
+  if(mode==='canvas') return canvas;
+  return '';
+}
+
+// Preview
+document.getElementById('doPreview').addEventListener('click', ()=>{
+  previewText.textContent=''; previewMedia.innerHTML='';
+  const fmt = document.getElementById('exportFormat').value;
+  const content = getContentForExport();
+  if(['png','jpeg','webp'].includes(fmt)){
+    const c = content instanceof HTMLCanvasElement ? content : canvas;
+    const mime = fmt==='png'?'image/png':(fmt==='jpeg'?'image/jpeg':'image/webp');
+    c.toBlob(blob=>{
+      const url = URL.createObjectURL(blob);
+      previewMedia.innerHTML='<img src="'+url+'" style="max-width:100%">';
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+      log('Preview generated as '+mime);
+    }, mime);
+    return;
+  }
+  previewText.textContent = content instanceof HTMLCanvasElement ? '[canvas]' : String(content).slice(0,2000);
+  log('Preview shown for '+fmt);
+});
+
+// Simple export TXT/PNG
+document.getElementById('doExport').addEventListener('click', ()=>{
+  const fmt = document.getElementById('exportFormat').value;
+  const name = document.getElementById('outputName').value||'tabulka';
+  const content = getContentForExport();
+  if(['txt'].includes(fmt)){
+    safeDownload(String(content), name+'.txt','text/plain;charset=utf-8');
+    log('TXT exported');
+    return;
+  }
+  if(['png','jpeg','webp'].includes(fmt)){
+    const c = content instanceof HTMLCanvasElement ? content : canvas;
+    const mime = fmt==='png'?'image/png':(fmt==='jpeg'?'image/jpeg':'image/webp');
+    c.toBlob(blob=>{ safeDownload(blob, name+'.'+(fmt==='jpeg'?'jpg':fmt), mime); log('Image exported '+mime); }, mime);
+    return;
+  }
+  alert('Format not implemented yet.');
+});
+
+// Export .erikai
+document.getElementById('doExportErikai').addEventListener('click', async ()=>{
+  if(typeof JSZip==='undefined'){ alert('JSZip missing'); return; }
+  const zip = new JSZip();
+  const name = document.getElementById('outputName').value||'tabulka';
+  zip.file('data.txt', mainText.value||'');
+  await new Promise(resolve => canvas.toBlob(blob=>{ zip.file('canvas.png', blob); resolve(); }, 'image/png'));
+  zip.file('meta.json', JSON.stringify({created:new Date().toISOString(), format:'erikai'}));
+  const blob = await zip.generateAsync({type:'blob'});
+  safeDownload(blob, name+'.erikai','application/octet-stream');
+  log('.erikai exported');
+});
+
+// Load .erikai
+document.getElementById('loadErikai').addEventListener('change', async e=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const zip = await JSZip.loadAsync(f);
+  const txt = await zip.file('data.txt')?.async('text') || '';
+  mainText.value = txt;
+  const canvasBlob = await zip.file('canvas.png')?.async('blob');
+  if(canvasBlob){
+    const img = new Image();
+    img.onload = ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width,canvas.height); };
+    img.src = URL.createObjectURL(canvasBlob);
+  }
+  log('.erikai loaded: ' + f.name);
+});
+</script>
+
+</body>
+</html>
