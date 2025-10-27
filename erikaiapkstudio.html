@@ -26,6 +26,7 @@ const fileInput = document.getElementById('fileInput');
 const preview = document.getElementById('preview');
 let loadedHTML = '';
 
+// načítanie HTML súboru a preview
 fileInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if(!file) return;
@@ -33,7 +34,7 @@ fileInput.addEventListener('change', async (e) => {
   preview.innerHTML = loadedHTML;
 });
 
-// export single-file HTML pre APK
+// export HTML pripravené pre APK
 document.getElementById('downloadBtn').addEventListener('click', () => {
   if(!loadedHTML) { alert('Najprv vyber HTML súbor'); return; }
 
@@ -53,12 +54,16 @@ ${loadedHTML}
 </body>
 </html>`;
 
+  // FIX: pridanie <a> do DOM, klik a odstránenie
   const blob = new Blob([wrapperHTML], {type:'text/html'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'prepared_for_apk.html';
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
 });
 </script>
 </body>
-</html>
+  </html>
