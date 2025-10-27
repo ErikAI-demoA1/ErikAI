@@ -21,14 +21,23 @@
 <script>
 let loadedHTML = '';
 
+// Načítanie HTML súboru
 document.getElementById('fileInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if(!file) return;
   loadedHTML = await file.text();
+
+  // Odstrániť existujúce <html>, <head>, <body> tagy
+  loadedHTML = loadedHTML.replace(/<!doctype html>.*<body[^>]*>/is, '')
+                         .replace(/<\/body>.*<\/html>/is, '');
 });
 
+// Stiahnutie pripraveného súboru
 document.getElementById('downloadBtn').addEventListener('click', () => {
-  if(!loadedHTML) { alert('Najprv vyber HTML súbor'); return; }
+  if(!loadedHTML) { 
+    alert('Najprv vyber HTML súbor'); 
+    return; 
+  }
 
   const wrapperHTML = `<!doctype html>
 <html lang="sk">
@@ -46,7 +55,7 @@ ${loadedHTML}
 </body>
 </html>`;
 
-  // stiahni súbor ako prepared_for_apk.html
+  // Stiahni súbor ako prepared_for_apk.html
   const blob = new Blob([wrapperHTML], {type:'text/html'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
