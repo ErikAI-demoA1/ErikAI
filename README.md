@@ -1,7 +1,7 @@
 🧠 ErikAI OS – Vývojový ekosystém umelej inteligencie (2025)
 
 Autor: Erik Mohylak
-Doba vývoja: 3 mesiace (z toho 1 mesiac čistá práca)
+Doba vývoja: 3+1 mesiace (z toho 2 mesiac čistá práca)
 Rok vzniku: 2025
 
 ErikAI OS je aj PWA Aplikácia (je úplne offline aplikácia)
@@ -11,7 +11,7 @@ ErikAI OS je aj PWA Aplikácia (je úplne offline aplikácia)
 
 🔷 Stručná charakteristika
 
-> ErikAI OS je kompletný operačný AI systém pre web a Android, vytvorený z 51 navzájom prepojených stránok, ktoré fungujú ako inteligentné príkazy, aplikácie, nástroje a platformy. Nevyžaduje programovanie zo strany používateľa – všetko funguje cez jednoduché značky alebo kliknutia.
+> ErikAI OS je kompletný operačný AI systém pre web a Android, vytvorený z minimálne 65 navzájom prepojených stránok, ktoré fungujú ako inteligentné príkazy, aplikácie, nástroje a platformy. Nevyžaduje programovanie zo strany používateľa – všetko funguje cez jednoduché značky alebo kliknutia.
 
 
 
@@ -20,18 +20,7 @@ ErikAI OS je aj PWA Aplikácia (je úplne offline aplikácia)
 
 🧩 Štruktúra ErikAI OS
 
-📄 51 stránok (modulov)
-
-33 nástrojov (originálnych, multifunkčných)
-
-12 základné statické stránky
-
-3 platformové stránky (viac nižšie)
-
-3 Hry
-
-
-💡 3 platformy
+📄 minimálne 65 stránok (modulov)
 
 ErikAI OS – hlavná AI platforma
 
@@ -83,7 +72,7 @@ Jednoduché použitie bez učenia – prehľadné, okamžité spustenie
 
 2410 riadkov kódu (jadro jazyka)
 
-Celkovo cca 19000 riadkov na celý OS
+Celkovo cca minimálne 23000 riadkov na celý OS
 
 Spustiteľný na akomkoľvek zariadení s prehliadačom (aj offline PWA)
 
