@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Erik Studio — Scientific App Builder (single HTML)</title>
+
+<!-- Chart.js CDN (pre preview a export) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+  :root{
+    --bg:#071026; --panel:#0b1220; --muted:#94a3b8; --accent:#60a5fa; --accent2:#34d399;
+    --card: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    --surface:#0f1724;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;color:#e6eef6;background:linear-gradient(180deg,#071026,#04101a)}
+  .app{max-width:1400px;margin:16px auto;padding:12px;border-radius:12px;background:var(--card);box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  h1{margin:0;font-size:18px}
+  .meta{color:var(--muted);font-size:13px}
+  .topbar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px;color:inherit;cursor:pointer;font-weight:700}
+  .btn.primary{background:linear-gradient(90deg,var(--accent2),var(--accent));color:#041014;border:none}
+  .layout{display:grid;grid-template-columns:260px 1fr 420px;gap:12px;margin-top:12px}
+  .panel{background:var(--panel);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+  .tools{display:flex;flex-direction:column;gap:8px}
+  .canvas-wrap{background:#0b1220;border-radius:8px;padding:10px;min-height:520px;overflow:auto;position:relative}
+  .device{
+    width:320px;height:640px;border-radius:14px;background:#0d1117;border:1px solid rgba(255,255,255,0.04);
+    margin:10px auto;overflow:hidden;position:relative;box-shadow:0 6px 24px rgba(0,0,0,0.6);
+  }
+  .screen{position:absolute;inset:12px;border-radius:10px;background:linear-gradient(180deg,#0c1722,#071026);overflow:auto;padding:12px;color:#e6eef6}
+  .element{border:1px dashed transparent;padding:6px;border-radius:6px;display:inline-block}
+  .element.selected{outline:2px solid rgba(96,165,250,0.25);border-style:solid;border-color:rgba(96,165,250,0.12)}
+  .prop-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  input,select,textarea{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px;border-radius:8px;color:inherit;width:100%}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+  .right-area{display:flex;flex-direction:column;gap:8px}
+  pre{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,0.25);padding:10px;border-radius:8px;color:#e6eef6;max-height:260px;overflow:auto}
+  .small{font-size:13px;color:var(--muted)}
+  .row{display:flex;gap:8px}
+  .toolbar-btn{display:flex;gap:6px;align-items:center}
+  .table.sheet{border-collapse:collapse;width:100%}
+  .table.sheet th, .table.sheet td{border:1px solid rgba(255,255,255,0.06);padding:6px}
+  footer{margin-top:12px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Erik Studio — Scientific App Builder</h1>
+      <div class="meta">Skladanie appky: text, button, tabuľka, graf → Export single-file HTML (pripravené pre Android)</div>
+    </div>
+    <div>
+      <button id="exportHtmlBtn" class="btn primary">⬇ Exportovať .html</button>
+      <button id="previewNewWindow" class="btn">🔗 Otvoriť extrakt</button>
+    </div>
+  </header>
+
+  <div class="topbar">
+    <div class="small">Vyber nástroj a klikni na preview (device) miesto, kam vložiť prvok</div>
+  </div>
+
+  <div class="layout">
+    <!-- LEFT: tools -->
+    <div class="panel tools">
+      <div style="font-weight:700;margin-bottom:6px">Nástroje</div>
+      <button class="btn" id="toolText">✎ Pridať Text</button>
+      <button class="btn" id="toolButton">▶ Pridať Tlačidlo</button>
+      <button class="btn" id="toolTable">▦ Pridať Tabuľku</button>
+      <button class="btn" id="toolChart">📈 Pridať Graf</button>
+      <button class="btn" id="toolDivider">— Pridať Oddeľovač</button>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.04);margin:8px 0"/>
+
+      <div style="font-weight:700">Vybraná položka</div>
+      <div id="noSelection" class="small">Žiadny výber</div>
+      <div id="props" style="display:none">
+        <div class="prop-row"><label>Element id</label><input id="propId" placeholder="unikátny id (napr. title1)"></div>
+        <div class="prop-row"><label>Text</label><input id="propText"></div>
+        <div class="prop-row"><label>Farba textu</label><input id="propColor" placeholder="#ff0000"></div>
+        <div class="prop-row"><label>Veľkosť písma (px)</label><input id="propSize" type="number" min="8"></div>
+        <div class="prop-row"><label>Štýl (class)</label><input id="propClass"></div>
+        <div class="prop-row"><button id="applyProps" class="btn">Uložiť</button><button id="deleteEl" class="btn">Vymazať</button></div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.04);margin:8px 0"/>
+
+      <div style="font-weight:700">Export / Project</div>
+      <div class="small" style="margin-bottom:6px">Exportuje single-file HTML (inline CSS/JS) pripravené pre Capacitor/Android Studio.</div>
+      <div style="display:flex;gap:8px">
+        <button id="exportHtmlBtn2" class="btn primary">Export .html</button>
+        <button id="downloadPreview" class="btn">Stiahnuť náhľad (PNG)</button>
+      </div>
+      <div style="margin-top:8px" class="small">Tip: Exportovaný HTML súbor vlož do Capacitor projektu (www folder) a potom `npx cap copy && npx cap open android`.</div>
+    </div>
+
+    <!-- MIDDLE: device preview -->
+    <div class="panel canvas-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div class="small">Preview (device) — klik na miesto, kde chceš vložiť prvok</div>
+        <div class="small">Tap element to select • Double-click to edit inline</div>
+      </div>
+
+      <div class="device" id="device">
+        <div class="screen" id="screen">
+          <!-- initial content -->
+          <div id="rootContent">
+            <h2 id="title0" class="element">Moja vedecká appka</h2>
+            <p id="desc0" class="element small">Vitaj — pridaj graf, tabuľku alebo ovládacie prvky.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: code / chart props -->
+    <div class="panel right-area">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:700">Generovaný kód</div>
+          <div class="small">Copy & paste do Capacitor</div>
+        </div>
+        <pre id="generatedCode">// klikni "Generovať" (automaticky sa generuje pri zmene)</pre>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="generateBtn" class="btn primary">Generovať HTML</button>
+          <button id="copyBtn" class="btn">Kopírovať</button>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.04);margin:8px 0"/>
+
+      <div>
+        <div style="font-weight:700">Chart binding</div>
+        <div class="small">Vyber id tabuľky pre prebratie dát do grafu</div>
+        <div class="prop-row">
+          <label>Chart id</label><input id="chartId" placeholder="chart1"></div>
+        <div class="prop-row">
+          <label>Bind table id (napr. table1)</label><input id="bindTableId" placeholder="table1"></div>
+        <div style="display:flex;gap:8px">
+          <button id="bindChartBtn" class="btn">Bind & Render</button>
+          <button id="unbindChartBtn" class="btn">Unbind</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>Erik Studio — single-file HTML builder • Export: single .html for Capacitor/Android Studio</footer>
+</div>
+
+<script>
+/* ========= Erik Studio — builder logic ========= */
+
+const screen = document.getElementById('screen');
+const root = document.getElementById('rootContent');
+
+let selectedEl = null;
+
+// utility to create unique ids
+function uid(prefix){
+  return prefix + Math.random().toString(36).slice(2,9);
+}
+
+/* ---------- tool handlers ---------- */
+document.getElementById('toolText').addEventListener('click', ()=>beginPlace('text'));
+document.getElementById('toolButton').addEventListener('click', ()=>beginPlace('button'));
+document.getElementById('toolTable').addEventListener('click', ()=>beginPlace('table'));
+document.getElementById('toolChart').addEventListener('click', ()=>beginPlace('chart'));
+document.getElementById('toolDivider').addEventListener('click', ()=>beginPlace('divider'));
+
+let placingTool = null;
+function beginPlace(tool){
+  placingTool = tool;
+  document.querySelector('.small').textContent = 'Klikni na preview, kde vložiť: ' + tool;
+}
+
+/* place on click in screen */
+screen.addEventListener('click', (ev)=>{
+  if(!placingTool) return;
+  // create element based on tool
+  const t = placingTool; placingTool = null;
+  document.querySelector('.small').textContent = 'Tap element to select • Double-click to edit inline';
+  if(t==='text'){
+    const id = uid('text');
+    const el = document.createElement('div');
+    el.className='element';
+    el.id = id;
+    el.textContent = 'Nový text';
+    el.style.display='block';
+    attachElementEvents(el);
+    root.appendChild(el);
+    selectElement(el);
+  } else if(t==='button'){
+    const id = uid('btn');
+    const el = document.createElement('button');
+    el.className='element';
+    el.id=id;
+    el.textContent='Stlač ma';
+    el.style.padding='8px 12px';
+    attachElementEvents(el);
+    root.appendChild(el);
+    selectElement(el);
+  } else if(t==='divider'){
+    const id = uid('div');
+    const el = document.createElement('hr');
+    el.className='element';
+    el.id=id;
+    el.style.borderColor='rgba(255,255,255,0.06)';
+    el.style.width='90%';
+    attachElementEvents(el);
+    root.appendChild(el);
+    selectElement(el);
+  } else if(t==='table'){
+    const tableId = uid('table');
+    const tbl = buildEditableTable(tableId, 4, 3);
+    attachElementEvents(tbl);
+    root.appendChild(tbl);
+    selectElement(tbl);
+  } else if(t==='chart'){
+    const chartId = uid('chart');
+    const wrapper = document.createElement('div');
+    wrapper.className='element';
+    wrapper.id = chartId + '_wrap';
+    wrapper.style.width='100%';
+    wrapper.style.maxWidth='300px';
+    wrapper.style.background='transparent';
+    // create canvas
+    const canvas = document.createElement('canvas');
+    canvas.id = chartId;
+    canvas.style.width='100%';
+    canvas.style.height='220px';
+    wrapper.appendChild(canvas);
+    attachElementEvents(wrapper);
+    root.appendChild(wrapper);
+    selectElement(wrapper);
+    // create an empty chart (will bind later)
+    try { new Chart(canvas.getContext('2d'), {type:'line', data:{labels:[],datasets:[]}}); } catch(e){}
+  }
+});
+
+/* ---------- element events ---------- */
+function attachElementEvents(el){
+  el.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    selectElement(el);
+  });
+  el.addEventListener('dblclick', (ev)=>{
+    ev.stopPropagation();
+    // allow inline editing for text-like elements
+    if(el.tagName.toLowerCase()==='div' || el.tagName.toLowerCase()==='p' || el.tagName.toLowerCase()==='h2' || el.tagName.toLowerCase()==='h3' || el.tagName.toLowerCase()==='button'){
+      const old = el.textContent;
+      const inp = document.createElement('input');
+      inp.value = old;
+      inp.style.minWidth='120px';
+      el.innerHTML='';
+      el.appendChild(inp);
+      inp.focus();
+      inp.addEventListener('blur', ()=>{ el.textContent = inp.value; if(selectedEl===el) refreshProps(); });
+      inp.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ inp.blur(); }});
+    }
+    // allow table cell editing native
+  });
+}
+
+/* select element */
+function selectElement(el){
+  if(selectedEl) selectedEl.classList.remove('selected');
+  selectedEl = el;
+  el.classList.add('selected');
+  document.getElementById('noSelection').style.display='none';
+  document.getElementById('props').style.display='block';
+  refreshProps();
+}
+
+/* refresh properties panel */
+function refreshProps(){
+  if(!selectedEl) return;
+  document.getElementById('propId').value = selectedEl.id || '';
+  document.getElementById('propText').value = selectedEl.textContent || '';
+  // color parsing
+  const c = (selectedEl.style.color) ? selectedEl.style.color : '';
+  document.getElementById('propColor').value = c;
+  document.getElementById('propSize').value = parseInt((selectedEl.style.fontSize||'').replace('px','')) || '';
+  document.getElementById('propClass').value = selectedEl.className || '';
+}
+
+/* apply properties */
+document.getElementById('applyProps').addEventListener('click', ()=>{
+  if(!selectedEl) return;
+  const id = document.getElementById('propId').value.trim();
+  const txt = document.getElementById('propText').value;
+  const color = document.getElementById('propColor').value.trim();
+  const size = document.getElementById('propSize').value;
+  const cls = document.getElementById('propClass').value.trim();
+
+  if(id) selectedEl.id = id;
+  if(txt !== undefined) selectedEl.textContent = txt;
+  if(color) selectedEl.style.color = color; else selectedEl.style.color = '';
+  if(size) selectedEl.style.fontSize = (Number(size) + 'px'); else selectedEl.style.fontSize='';
+  selectedEl.className = cls || selectedEl.className;
+  refreshProps();
+});
+
+/* delete element */
+document.getElementById('deleteEl').addEventListener('click', ()=>{
+  if(!selectedEl) return;
+  if(confirm('Zmazať vybraný prvok?')){ selectedEl.remove(); selectedEl=null; document.getElementById('props').style.display='none'; document.getElementById('noSelection').style.display='block'; generateHTML(); }
+});
+
+/* build editable table */
+function buildEditableTable(id, rowsCount=4, colsCount=3){
+  const container = document.createElement('div');
+  container.id = id;
+  container.className='element';
+  container.style.overflow='auto';
+  container.style.background='rgba(255,255,255,0.02)';
+  container.style.padding='6px';
+  const table = document.createElement('table'); table.className='table sheet'; table.id = id + '_table';
+  const thead = document.createElement('thead'); const thr = document.createElement('tr');
+  for(let c=0;c<colsCount;c++){ const th = document.createElement('th'); th.textContent = 'C'+(c+1); thr.appendChild(th); }
+  thead.appendChild(thr); table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  for(let r=0;r<rowsCount;r++){
+    const tr = document.createElement('tr');
+    for(let c=0;c<colsCount;c++){
+      const td = document.createElement('td'); td.contentEditable='true'; td.textContent = (Math.random()*50).toFixed(2);
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  container.appendChild(table);
+  return container;
+}
+
+/* ---------- generate export HTML ---------- */
+function gatherScreenHTML(){
+  // clone rootContent
+  const clone = root.cloneNode(true);
+
+  // convert any element that had inline event handlers or complex charts into exported form:
+  // For charts: replace wrapper with canvas id and marker to init chart in exported JS.
+  const charts = [];
+  clone.querySelectorAll('canvas').forEach((cv, idx)=>{
+    const cid = cv.id || uid('export_chart');
+    cv.id = cid;
+    // note binding (if table present nearby)
+    charts.push(cid);
+  });
+
+  // serialize inner HTML of the "app body" that will be inside exported HTML
+  return { body: clone.innerHTML, chartIds: charts };
+}
+
+function generateExportHTML(){
+  const title = document.getElementById('title0') ? (document.getElementById('title0').textContent || 'Moja appka') : 'Moja appka';
+  const gathered = gatherScreenHTML();
+
+  // exported HTML: inline CSS + Chart.js CDN + small script to initialize charts and table-to-chart binding
+  const exported = `<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${escapeHtml(title)}</title>
+<style>
+  body{margin:0;font-family:Inter,system-ui,Arial;background:#071026;color:#e6eef6}
+  .app-wrap{max-width:480px;margin:18px auto;padding:12px;background:linear-gradient(180deg,#0c1722,#071026);border-radius:10px}
+  h1{font-size:20px;color:#ff4444}
+  .small{color:#cbd5e1;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin-top:8px}
+  table th, table td{border:1px solid rgba(255,255,255,0.06);padding:6px}
+  canvas{width:100%;height:260px;display:block}
+  button{padding:8px 12px;border-radius:6px;background:#34d399;color:#041014;border:none;font-weight:700;margin-top:8px}
+</style>
+</head>
+<body>
+  <div class="app-wrap">
+    ${gathered.body}
+  </div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    // Utility: read table by id and return arrays (first column labels, next columns numeric)
+    function tableToData(tblId){
+      const tbl = document.getElementById(tblId);
+      if(!tbl) return null;
+      const rows = Array.from(tbl.querySelectorAll('tbody tr'));
+      const columns = [];
+      // number of cols
+      const colCount = rows[0] ? rows[0].children.length : 0;
+      for(let c=0;c<colCount;c++){
+        columns.push([]);
+      }
+      rows.forEach(r=>{
+        for(let c=0;c<colCount;c++){
+          const txt = r.children[c].textContent.trim();
+          columns[c].push(txt);
+        }
+      });
+      return columns; // array of columns
+    }
+
+    // auto-init charts: find all canvases and try to bind to nearest table with id 'table...' by searching parent
+    document.addEventListener('DOMContentLoaded', ()=>{
+      document.querySelectorAll('canvas').forEach(cv=>{
+        try{
+          const ctx = cv.getContext('2d');
+          // try find a table sibling or parent with id
+          let table = cv.parentElement.querySelector('table') || document.querySelector('table');
+          if(table){
+            const cols = tableToData(table.id);
+            if(cols && cols.length>1){
+              const labels = cols[0];
+              const datasets = [];
+              for(let i=1;i<cols.length;i++){
+                const data = cols[i].map(v=>Number(v)||0);
+                datasets.push({label: table.querySelector('thead th:nth-child('+(i+1)+')')?table.querySelector('thead th:nth-child('+(i+1)+')').textContent:'Y'+i, data});
+              }
+              new Chart(ctx, {type:'line', data:{labels,datasets}, options:{responsive:true,plugins:{legend:{labels:{color:'#ff4444'}},tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#ff4444',bodyColor:'#ff4444'}},scales:{x:{ticks:{color:'#ff4444'},grid:{color:'#444'}},y:{ticks:{color:'#ff4444'},grid:{color:'#444'}}}} );
+            } else {
+              // fallback: empty chart
+              new Chart(ctx, {type:'line', data:{labels:[],datasets:[]}, options:{responsive:true}});
+            }
+          } else {
+            new Chart(ctx, {type:'line', data:{labels:[],datasets:[]}, options:{responsive:true}});
+          }
+        }catch(e){ console.warn('chart init failed', e); }
+      });
+    });
+  </script>
+</body>
+</html>`;
+
+  return exported;
+}
+
+/* helper escape */
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* generate and show code */
+function generateHTML(){
+  const h = generateExportHTML();
+  document.getElementById('generatedCode').textContent = h;
+  return h;
+}
+
+document.getElementById('generateBtn').addEventListener('click', generateHTML);
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  const code = generateHTML();
+  navigator.clipboard.writeText(code).then(()=>alert('Kód skopírovaný do clipboardu'), ()=>alert('Kopírovanie zlyhalo'));
+});
+
+/* export .html file */
+function download(content, filename){
+  const blob = new Blob([content], {type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+document.getElementById('exportHtmlBtn').addEventListener('click', ()=>{
+  const out = generateHTML();
+  download(out, 'erik_app_export.html');
+});
+document.getElementById('exportHtmlBtn2').addEventListener('click', ()=>{
+  const out = generateHTML();
+  download(out, 'erik_app_export.html');
+});
+
+/* preview new window */
+document.getElementById('previewNewWindow').addEventListener('click', ()=>{
+  const out = generateHTML();
+  const w = window.open();
+  w.document.open();
+  w.document.write(out);
+  w.document.close();
+});
+
+/* download PNG preview (screenshot of device) */
+document.getElementById('downloadPreview').addEventListener('click', async ()=>{
+  // use HTML2Canvas if available, but we will fall back to simple toDataURL of chart(s)
+  // attempt to render using canvas drawImage (limited). For robust screenshot include html2canvas library.
+  alert('Pre kvalitný screenshot odporúčam nainštalovať rozšírenie alebo použiť Print->Save as PDF. Tento export je jednoduchý náhľad.');
+});
+
+/* ---------- chart binding UI (right) ---------- */
+document.getElementById('bindChartBtn').addEventListener('click', ()=>{
+  const chartId = document.getElementById('chartId').value.trim();
+  const tableId = document.getElementById('bindTableId').value.trim();
+  if(!chartId || !tableId){ alert('Zadaj chart id a table id (napr. tablexxx_table)'); return; }
+  const cv = document.getElementById(chartId);
+  const tbl = document.getElementById(tableId);
+  if(!cv || !tbl){ alert('Neplatné id. Skontroluj, či existujú'); return; }
+  try{
+    // build dataset from table
+    const rows = Array.from(tbl.querySelectorAll('tbody tr'));
+    const cols = [];
+    for(let r of rows){
+      for(let c=0;c<r.children.length;c++){
+        cols[c] = cols[c]||[];
+        cols[c].push(r.children[c].textContent.trim());
+      }
+    }
+    const labels = cols[0] || rows.map((_,i)=>String(i+1));
+    const datasets = [];
+    for(let c=1;c<cols.length;c++){
+      datasets.push({label: tbl.querySelector('thead th:nth-child('+(c+1)+')') ? tbl.querySelector('thead th:nth-child('+(c+1)+')').textContent : 'Y'+c, data: cols[c].map(v=>Number(v)||0), borderColor: '#000', backgroundColor: 'rgba(255,0,0,0.12)', pointBackgroundColor:'#ff0000'});
+    }
+    if(window._boundCharts && window._boundCharts[chartId]) window._boundCharts[chartId].destroy();
+    const ctx = cv.getContext('2d');
+    const myChart = new Chart(ctx, {type:'line', data:{labels,datasets}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#ff4444'}},tooltip:{titleColor:'#ff4444',bodyColor:'#ff4444'}},scales:{x:{ticks:{color:'#ff4444'},grid:{color:'#444'}},y:{ticks:{color:'#ff4444'},grid:{color:'#444'}}}}});
+    window._boundCharts = window._boundCharts||{};
+    window._boundCharts[chartId] = myChart;
+    alert('Graf naviazaný na tabuľku.');
+  } catch(e){ console.error(e); alert('Chyba pri bindovaní grafu'); }
+});
+document.getElementById('unbindChartBtn').addEventListener('click', ()=>{
+  const chartId = document.getElementById('chartId').value.trim();
+  if(window._boundCharts && window._boundCharts[chartId]){ window._boundCharts[chartId].destroy(); delete window._boundCharts[chartId]; alert('Unbound'); } else alert('Nie je viazaný'); 
+});
+
+/* initialize generated code once */
+generateHTML();
+
+/* deselect on clicking outside */
+document.body.addEventListener('click', (e)=>{ if(!e.target.closest('.element') && !e.target.closest('#props')){ if(selectedEl) selectedEl.classList.remove('selected'); selectedEl=null; document.getElementById('props').style.display='none'; document.getElementById('noSelection').style.display='block'; } });
+
+</script>
+</body>
+</html>
