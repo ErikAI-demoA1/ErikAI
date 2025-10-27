@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mini Quantum Circuit Simulator (offline)</title>
+<style>
+  :root{--bg:#0b1220;--card:#0f1724;--accent:#60a5fa;--muted:#94a3b8}
+  body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#071026,#04101a);color:#e6eef6;margin:0;padding:16px}
+  .app{max-width:1100px;margin:0 auto}
+  header{display:flex;justify-content:space-between;align-items:center}
+  h1{margin:0;font-size:20px}
+  .controls{display:flex;gap:8px;align-items:center}
+  .panel{background:rgba(255,255,255,0.03);padding:12px;border-radius:10px;margin-top:12px}
+  .grid{display:grid;gap:6px}
+  table{border-collapse:collapse}
+  td,th{padding:6px;border:1px dashed rgba(255,255,255,0.03);min-width:90px;text-align:center}
+  select,input,button{padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+  button.primary{background:linear-gradient(90deg,var(--accent),#34d399);color:#041014;border:none}
+  .small{font-size:13px;color:var(--muted)}
+  .toolbar{display:flex;gap:6px;flex-wrap:wrap}
+  .gate{padding:6px 8px;border-radius:6px;background:rgba(255,255,255,0.02);cursor:pointer}
+  .cell{height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .cell[data-gate]{background:rgba(96,165,250,0.08)}
+  .output{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+  .box{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;min-width:260px}
+  canvas{background:#fff;border-radius:6px;padding:6px}
+  .footer{margin-top:12px;color:var(--muted);font-size:13px}
+  input[type="number"]{width:80px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div><h1>Mini Quantum Circuit Simulator — offline</h1><div class="small">Statevector simulator (max 4 qubits)</div></div>
+    <div class="controls">
+      <label class="small">Qubity: <select id="nQubits"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
+      <label class="small">Stĺpce: <input id="nCols" type="number" min="1" max="12" value="6" style="width:70px"></label>
+      <button id="buildBtn" class="primary">Vytvoriť mriežku</button>
+    </div>
+  </header>
+
+  <div class="panel">
+    <div class="toolbar">
+      <div class="gate" data-gate="H">H</div>
+      <div class="gate" data-gate="X">X</div>
+      <div class="gate" data-gate="Y">Y</div>
+      <div class="gate" data-gate="Z">Z</div>
+      <div class="gate" data-gate="S">S</div>
+      <div class="gate" data-gate="T">T</div>
+      <div class="gate" data-gate="RX">RX(θ)</div>
+      <div class="gate" data-gate="RZ">RZ(θ)</div>
+      <div class="gate" data-gate="CNOT">CNOT</div>
+      <div class="gate" data-gate="CZ">CZ</div>
+      <div class="gate" data-gate="SWAP">SWAP</div>
+      <div class="gate" data-gate="MEASURE">MEAS</div>
+    </div>
+
+    <div style="margin-top:8px" class="small">Klik na bunku, potom vybrať bránu (alebo dvojklik pre odstránenie). Pre gate RX/RZ zadaj parameter pod gridom.</div>
+
+    <div id="gridWrap" style="overflow:auto;margin-top:12px"></div>
+
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+      <label class="small">θ (rad): <input id="paramTheta" type="number" step="0.01" value="1.5708"></label>
+      <button id="applyGateBtn">Aplikovať vybranú bránu</button>
+      <button id="stepBtn">Spustiť krok</button>
+      <button id="runBtn" class="primary">Spustiť všetko</button>
+      <button id="resetBtn">Reset stav</button>
+      <button id="exportJson">Export circuit (JSON)</button>
+      <button id="exportState">Export state</button>
+    </div>
+
+    <div class="output">
+      <div class="box" style="flex:1">
+        <h3 style="margin:0">Stavový vektor (amplitúdy)</h3>
+        <pre id="stateView" style="white-space:pre-wrap;max-height:220px;overflow:auto;margin-top:8px;color:#dbeafe"></pre>
+      </div>
+
+      <div class="box" style="width:320px">
+        <h3 style="margin:0">Pravdepodobnosti</h3>
+        <canvas id="probChart" width="300" height="180"></canvas>
+        <div class="small" style="margin-top:6px">Klikni "Measure" v mriežke aby si vložil meranie. Stlač "Spusti všetko" pre simuláciu.</div>
+        <div style="margin-top:8px"><button id="measureBtn">Vykonať meranie (sample)</button><span id="measureResult" style="margin-left:8px"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Tip: tento simulátor je vzdelávací — podporuje základné brány a statevector emuláciu (offline).</div>
+</div>
+
+<script>
+/* ====== Simple complex / linear algebra helpers ====== */
+function C(re, im){ return {re:re,im:im}; }
+function cAdd(a,b){ return {re:a.re+b.re, im:a.im+b.im}; }
+function cSub(a,b){ return {re:a.re-b.re, im:a.im-b.im}; }
+function cMul(a,b){ return {re:a.re*b.re - a.im*b.im, im:a.re*b.im + a.im*b.re}; }
+function cScale(a,s){ return {re:a.re*s, im:a.im*s}; }
+function cConj(a){ return {re:a.re, im:-a.im}; }
+function cAbs2(a){ return a.re*a.re + a.im*a.im; }
+function cToStr(a){ let re=a.re.toFixed(4), im=Math.abs(a.im).toFixed(4); return (a.im>=0?re+' + '+im+'i':re+' - '+im+'i'); }
+
+/* Kríženie (tensor) stavu */
+function tensor(a,b){
+  const out = [];
+  for(let i=0;i<a.length;i++) for(let j=0;j<b.length;j++) out.push(cMul(a[i], b[j]));
+  return out;
+}
+
+/* identity state |0> */
+const zero = [C(1,0), C(0,0)];
+const one = [C(0,0), C(1,0)];
+
+function tensorN(states){ // states = array of single-qubit state arrays
+  return states.reduce((acc,s)=>tensor(acc,s));
+}
+
+/* build identity matrix of size n */
+function eye(n){ const I = Array(n).fill(0).map(()=>Array(n).fill(C(0,0))); for(let i=0;i<n;i++) I[i][i]=C(1,0); return I; }
+
+/* multiply matrix (n x n) by state vector length n */
+function matVec(mat, vec){
+  const n = vec.length; const out = Array(n).fill(C(0,0));
+  for(let i=0;i<n;i++){
+    let acc = C(0,0);
+    for(let j=0;j<n;j++) acc = cAdd(acc, cMul(mat[i][j], vec[j]));
+    out[i]=acc;
+  }
+  return out;
+}
+
+/* matrix multiply */
+function matMul(A,B){
+  const n = A.length; const Cmat = Array(n).fill(0).map(()=>Array(n).fill(C(0,0)));
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+    let acc=C(0,0);
+    for(let k=0;k<n;k++) acc = cAdd(acc, cMul(A[i][k], B[k][j]));
+    Cmat[i][j]=acc;
+  }
+  return Cmat;
+}
+
+/* single-qubit matrices */
+const SQ = {
+  H: [[C(1/Math.sqrt(2),0),C(1/Math.sqrt(2),0)],[C(1/Math.sqrt(2),0),C(-1/Math.sqrt(2),0)]],
+  X: [[C(0,0),C(1,0)],[C(1,0),C(0,0)]],
+  Y: [[C(0,0),C(0,-1)],[C(0,1),C(0,0)]],
+  Z: [[C(1,0),C(0,0)],[C(0,0),C(-1,0)]],
+  S: [[C(1,0),C(0,0)],[C(0,0),C(0,1)]],
+  T: [[C(1,0),C(0,0)],[C(0,0),C(Math.cos(Math.PI/4),Math.sin(Math.PI/4))]]
+};
+
+/* rotation gates */
+function RX(theta){
+  const c = Math.cos(theta/2), s = Math.sin(theta/2);
+  return [[C(c,0), C(0,-s)],[C(0,-s), C(c,0)]];
+}
+function RZ(theta){
+  return [[C(Math.cos(theta/2), -Math.sin(theta/2)), C(0,0)],[C(0,0), C(Math.cos(theta/2), Math.sin(theta/2))]];
+}
+
+/* build full operator for single-qubit gate on qubit q (0 = top) */
+function buildFullOpSingle(nQ, qubitIndex, singleMat){
+  let op = [[C(1,0)]];
+  for(let i=0;i<nQ;i++){
+    if(i===qubitIndex) op = matKronecker(op, singleMat);
+    else op = matKronecker(op, [[C(1,0),C(0,0)],[C(0,0),C(1,0)]]); // I
+  }
+  return op;
+}
+
+/* Kronecker product of matrices A (a x a) and B (b x b) -> (ab x ab) */
+function matKronecker(A,B){
+  const a = A.length, b = B.length;
+  const out = Array(a*b).fill(0).map(()=>Array(a*b).fill(C(0,0)));
+  for(let i=0;i<a;i++) for(let j=0;j<a;j++){
+    for(let p=0;p<b;p++) for(let q=0;q<b;q++){
+      out[i*b+p][j*b+q] = cMul(A[i][j], B[p][q]);
+    }
+  }
+  return out;
+}
+
+/* build CNOT on control c and target t for nQ qubits */
+function buildCNOT(nQ, control, target){
+  const dim = 1<<nQ;
+  const M = Array(dim).fill(0).map(()=>Array(dim).fill(C(0,0)));
+  for(let s=0;s<dim;s++){
+    const bitC = (s >> (nQ-1-control)) & 1;
+    if(bitC===0){
+      M[s][s]=C(1,0);
+    } else {
+      // flip target bit
+      const tmask = 1 << (nQ-1-target);
+      const s2 = s ^ tmask;
+      M[s2][s]=C(1,0);
+    }
+  }
+  return M;
+}
+
+/* build CZ (phase flip on target if control=1) */
+function buildCZ(nQ, control, target){
+  const dim = 1<<nQ;
+  const M = Array(dim).fill(0).map(()=>Array(dim).fill(C(0,0)));
+  for(let s=0;s<dim;s++){
+    const bitC = (s >> (nQ-1-control)) & 1;
+    const bitT = (s >> (nQ-1-target)) & 1;
+    if(bitC===1 && bitT===1) M[s][s]=C(-1,0);
+    else M[s][s]=C(1,0);
+  }
+  return M;
+}
+
+/* build SWAP */
+function buildSWAP(nQ, a,b){
+  const dim=1<<nQ;
+  const M = Array(dim).fill(0).map(()=>Array(dim).fill(C(0,0)));
+  for(let s=0;s<dim;s++){
+    const ba = (s >> (nQ-1-a)) & 1;
+    const bb = (s >> (nQ-1-b)) & 1;
+    let s2 = s;
+    if(ba!==bb){
+      const maskA = 1 << (nQ-1-a);
+      const maskB = 1 << (nQ-1-b);
+      s2 = s ^ maskA ^ maskB;
+    }
+    M[s2][s]=C(1,0);
+  }
+  return M;
+}
+
+/* apply full matrix to state vector */
+function applyFullOp(state, mat){ return matVec(mat, state); }
+
+/* ===== UI logic: grid, gates etc. ===== */
+let nQ=2, nCols=6;
+const maxQ=4;
+let circuit = []; // 2D array: [qubit][col] = {gate, param, meta}
+const gridWrap = document.getElementById('gridWrap');
+const stateView = document.getElementById('stateView');
+const probCanvas = document.getElementById('probChart');
+const ctx = probCanvas.getContext('2d');
+
+function buildGrid(){
+  nQ = parseInt(document.getElementById('nQubits').value);
+  nCols = parseInt(document.getElementById('nCols').value);
+  circuit = Array.from({length:nQ},()=>Array.from({length:nCols},()=>null));
+  renderGrid();
+  resetState();
+}
+document.getElementById('buildBtn').addEventListener('click', buildGrid);
+buildGrid();
+
+let selectedGate = null;
+document.querySelectorAll('.gate').forEach(g=>{
+  g.addEventListener('click', ()=>{ selectedGate = g.dataset.gate; Array.from(document.querySelectorAll('.gate')).forEach(x=>x.style.outline=''); g.style.outline='2px solid rgba(96,165,250,0.6)'; });
+});
+
+function renderGrid(){
+  gridWrap.innerHTML='';
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const thr = document.createElement('tr');
+  thr.appendChild(document.createElement('th')); for(let c=0;c<nCols;c++){ const th=document.createElement('th'); th.textContent='t'+(c+1); thr.appendChild(th); }
+  thead.appendChild(thr); table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  for(let q=0;q<nQ;q++){
+    const tr=document.createElement('tr');
+    const th=document.createElement('th'); th.textContent='q'+q; tr.appendChild(th);
+    for(let c=0;c<nCols;c++){
+      const td=document.createElement('td'); td.className='cell';
+      const val = circuit[q][c];
+      if(val) { td.textContent = val.gate + (val.param?('('+val.param+')'):''); td.setAttribute('data-gate','1'); }
+      td.addEventListener('click', ()=>{ onCellClick(q,c,td); });
+      td.addEventListener('dblclick', ()=>{ circuit[q][c]=null; renderGrid(); });
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  gridWrap.appendChild(table);
+}
+
+function onCellClick(q,c,td){
+  if(!selectedGate) return alert('Vyber bránu z toolbaru');
+  // if gate is 2-qubit controlled (CNOT/CZ/SWAP) - need to choose target via secondary prompt
+  if(selectedGate==='CNOT' || selectedGate==='CZ' || selectedGate==='SWAP'){
+    const target = prompt('Zadaj target qubit index (0..'+(nQ-1)+')');
+    if(target===null) return;
+    const t = parseInt(target);
+    if(isNaN(t)||t<0||t>=nQ) return alert('Neplatný target');
+    circuit[q][c] = {gate:selectedGate, control:q, target:t};
+  } else if(selectedGate==='RX' || selectedGate==='RZ'){
+    const theta = parseFloat(document.getElementById('paramTheta').value) || 0;
+    circuit[q][c] = {gate:selectedGate, param:theta};
+  } else {
+    circuit[q][c] = {gate:selectedGate};
+  }
+  renderGrid();
+}
+
+/* statevector */
+let state = [];
+function resetState(){
+  const dim = 1<<nQ;
+  state = Array(dim).fill(C(0,0));
+  state[0]=C(1,0); // |00..0>
+  updateView();
+}
+
+/* step-by-step apply column c */
+function applyColumn(c){
+  // For each column, construct full operator as product of matrices in that column.
+  // Start with identity
+  let fullOp = eye(1<<nQ);
+  // For single qubit gates need to combine with identities in correct order
+  for(let q=0;q<nQ;q++){
+    const cell = circuit[q][c];
+    if(!cell) continue;
+    if(cell.gate==='CNOT' || cell.gate==='CZ' || cell.gate==='SWAP'){
+      // for multi-qubit gates, build full op and multiply directly
+      let M;
+      if(cell.gate==='CNOT') M = buildCNOT(nQ, cell.control, cell.target);
+      if(cell.gate==='CZ') M = buildCZ(nQ, cell.control, cell.target);
+      if(cell.gate==='SWAP') M = buildSWAP(nQ, cell.control, cell.target);
+      fullOp = matMul(M, fullOp);
+    } else {
+      // single-qubit gate: build full operator for that qubit and multiply
+      let mat;
+      if(cell.gate in SQ) mat = SQ[cell.gate];
+      else if(cell.gate==='RX') mat = RX(cell.param);
+      else if(cell.gate==='RZ') mat = RZ(cell.param);
+      else if(cell.gate==='MEASURE') { /* measure is not unitary; skip here */ continue; }
+      const singleFull = buildFullOpSingle(nQ, q, mat);
+      fullOp = matMul(singleFull, fullOp);
+    }
+  }
+  state = applyFullOp(state, fullOp);
+  // If any measurement gates in column -> perform measurement (collapse)
+  const measIndices = [];
+  for(let q=0;q<nQ;q++){ const cell = circuit[q][c]; if(cell && cell.gate==='MEASURE') measIndices.push(q); }
+  if(measIndices.length>0){
+    performMeasurement(measIndices);
+  }
+  updateView();
+}
+
+/* run all */
+function runAll(){
+  for(let c=0;c<nCols;c++) applyColumn(c);
+}
+
+/* measure: collapse state on given qubit indices - does sample and collapse */
+function performMeasurement(qubits){
+  // measure each listed qubit simultaneously: compute probabilities of bitstrings marginalized?
+  const dim = 1<<nQ;
+  // compute probabilities for all basis states
+  const probs = Array(dim).fill(0);
+  for(let i=0;i<dim;i++) probs[i] = cAbs2(state[i]);
+  // sample an outcome according to probs
+  let r = Math.random(), acc=0, sampled=-1;
+  for(let i=0;i<dim;i++){ acc += probs[i]; if(r < acc){ sampled = i; break; } }
+  if(sampled<0) sampled = dim-1;
+  // collapse state to those basis states consistent with measurement? For simplicity, collapse fully to sampled basis state
+  const newState = Array(dim).fill(C(0,0));
+  newState[sampled] = C(1,0);
+  state = newState;
+  document.getElementById('measureResult').textContent = 'Result: |' + sampled.toString(2).padStart(nQ,'0') + '>';
+  updateView();
+}
+
+/* measurement button -> sample from current probabilities (no collapse) */
+document.getElementById('measureBtn').addEventListener('click', ()=>{
+  const dim = 1<<nQ; const probs = Array(dim).fill(0);
+  for(let i=0;i<dim;i++) probs[i]=cAbs2(state[i]);
+  let r=Math.random(), acc=0, sampled=-1;
+  for(let i=0;i<dim;i++){ acc+=probs[i]; if(r<acc){ sampled=i; break; } } if(sampled<0) sampled=dim-1;
+  alert('Measurement sample: |' + sampled.toString(2).padStart(nQ,'0') + '>');
+});
+
+/* Step/run/reset */
+document.getElementById('stepBtn').addEventListener('click', ()=>{
+  const col = prompt('Zadaj index stĺpca (0..'+(nCols-1)+') pre krok');
+  if(col===null) return;
+  const c = parseInt(col);
+  if(isNaN(c)||c<0||c>=nCols) return alert('Neplatný column');
+  applyColumn(c);
+});
+document.getElementById('runBtn').addEventListener('click', runAll);
+document.getElementById('resetBtn').addEventListener('click', resetState);
+
+/* Export circuit */
+document.getElementById('exportJson').addEventListener('click', ()=>{
+  const payload = {nQ, nCols, circuit};
+  safeDownload(JSON.stringify(payload, null, 2), 'qcircuit.json', 'application/json');
+});
+document.getElementById('exportState').addEventListener('click', ()=>{
+  let txt = 'Statevector:\\n';
+  for(let i=0;i<state.length;i++) txt += '|'+i.toString(2).padStart(nQ,'0')+'> : ' + cToStr(state[i]) + ' (p=' + cAbs2(state[i]).toFixed(6)+')\\n';
+  safeDownload(txt, 'state.txt', 'text/plain');
+});
+
+/* update view */
+function updateView(){
+  // show amplitudes
+  let out='';
+  for(let i=0;i<state.length;i++){
+    out += '|'+i.toString(2).padStart(nQ,'0')+'> : ' + cToStr(state[i]) + '   p=' + cAbs2(state[i]).toFixed(6) + '\\n';
+  }
+  stateView.textContent = out;
+  drawProbabilities();
+}
+
+/* draw bar chart */
+function drawProbabilities(){
+  const dim = 1<<nQ; const probs = Array(dim).fill(0);
+  for(let i=0;i<dim;i++) probs[i]=cAbs2(state[i]);
+  // clear
+  ctx.clearRect(0,0,probCanvas.width,probCanvas.height);
+  const w = probCanvas.width, h = probCanvas.height;
+  const barW = Math.floor(w / dim) - 6;
+  for(let i=0;i<dim;i++){
+    const bw = barW;
+    const x = 6 + i*(bw+6);
+    const ph = probs[i]* (h-30);
+    ctx.fillStyle = '#60a5fa';
+    ctx.fillRect(x, h-20-ph, bw, ph);
+    ctx.fillStyle = '#041014';
+    ctx.fillText('|' + i.toString(2).padStart(nQ,'0') + '>', x, h-4);
+  }
+}
+
+/* initial state */
+resetState();
+
+/* small helper: on load, select H gate by default */
+selectedGate='H';
+document.querySelector('.gate[data-gate="H"]').style.outline='2px solid rgba(96,165,250,0.6)';
+</script>
+</body>
+</html>
