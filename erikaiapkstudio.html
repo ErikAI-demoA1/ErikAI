@@ -4,18 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HTML → APK Export</title>
-<style>
-  body {font-family:sans-serif; margin:16px; background:#071026; color:#e6eef6;}
-  h1 {font-size:20px; margin-bottom:12px;}
-  input, button {padding:8px 12px; border-radius:6px; border:none; margin:4px 0;}
-  button {background:#34d399; color:#041014; cursor:pointer;}
-</style>
 </head>
 <body>
-<h1>HTML → APK Export</h1>
 
-<label>Vyber svoj HTML súbor:</label><br>
-<input type="file" id="fileInput" accept=".html"><br>
+<input type="file" id="fileInput" accept=".html">
 <button id="downloadBtn">Stiahnuť pripravené pre APK</button>
 
 <script>
@@ -24,39 +16,18 @@ let loadedHTML = '';
 // Načítanie HTML súboru
 document.getElementById('fileInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
-  if(!file) return;
-  loadedHTML = await file.text();
-
-  // Odstrániť existujúce <html>, <head>, <body> tagy
-  loadedHTML = loadedHTML.replace(/<!doctype html>.*<body[^>]*>/is, '')
-                         .replace(/<\/body>.*<\/html>/is, '');
+  if (!file) return;
+  loadedHTML = await file.text(); // necháme celý obsah HTML
 });
 
 // Stiahnutie pripraveného súboru
 document.getElementById('downloadBtn').addEventListener('click', () => {
-  if(!loadedHTML) { 
-    alert('Najprv vyber HTML súbor'); 
-    return; 
+  if (!loadedHTML) {
+    alert('Najprv vyber HTML súbor');
+    return;
   }
 
-  const wrapperHTML = `<!doctype html>
-<html lang="sk">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Export pre APK</title>
-<style>
-body{margin:0;font-family:sans-serif;background:#071026;color:#e6eef6}
-</style>
-</head>
-<body>
-${loadedHTML}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-</body>
-</html>`;
-
-  // Stiahni súbor ako prepared_for_apk.html
-  const blob = new Blob([wrapperHTML], {type:'text/html'});
+  const blob = new Blob([loadedHTML], {type:'text/html'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'prepared_for_apk.html';
@@ -66,5 +37,6 @@ ${loadedHTML}
   URL.revokeObjectURL(a.href);
 });
 </script>
+
 </body>
 </html>
