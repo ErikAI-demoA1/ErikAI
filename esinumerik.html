@@ -203,7 +203,7 @@ N040 M30"></textarea>
 </div>
 
 <script>
-/* ========= EUS CNC — core JS (upravené) ========= */
+/* ========= EUS CNC — core JS (upravené live + center 0) ========= */
 
 /* helpers */
 function safeDownload(contentOrBlob, filename, type='application/octet-stream'){
@@ -243,8 +243,7 @@ const openFile = document.getElementById('openFile');
 const speedSelect = document.getElementById('speed');
 const zoomIn = document.getElementById('zoomIn'), zoomOut = document.getElementById('zoomOut'), fitBtn = document.getElementById('fit');
 const resetView = document.getElementById('resetView');
-
-openFile.addEventListener('click', ()=>fileInput.click());
+  openFile.addEventListener('click', ()=>fileInput.click());
 fileInput.addEventListener('change', async (e)=>{
   const f = e.target.files[0];
   if(!f) return;
@@ -264,8 +263,9 @@ N060 M30`;
   parseProgram();
 });
 
-/* parser */
+/* parser + build segments */
 let program = [];
+let segments = [];
 function parseProgram(){
   program = [];
   report.textContent = '';
@@ -300,12 +300,11 @@ function parseProgram(){
   if(unknowns.length) rpt += 'Nepodporované tokeny (len upozornenie):\n' + unknowns.join('\n') + '\n\n';
   rpt += 'Podporované príkazy: G00/G01, X Y Z F, M30\n';
   report.textContent = rpt;
+
   resetSimulator();
   buildSegments();
 }
 
-/* build segments */
-let segments = [];
 function buildSegments(){
   segments = [];
   let cur = {x:0,y:0,z:0, feed:300};
@@ -441,27 +440,21 @@ zoomOut.addEventListener('click',()=>{ simState.zoom/=1.2; drawAll(); });
 fitBtn.addEventListener('click',()=>fitToContent());
 resetView.addEventListener('click',()=>{ simState.zoom=1; simState.offsetX=0; simState.offsetY=0; drawAll(); });
 
-/* fit to segments */
+/* fit to segments — center 0,0 */
 function fitToContent(){
-  if(segments.length===0) return;
-  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-  segments.forEach(s=>{
-    minx=Math.min(minx,s.from.x,s.to.x); miny=Math.min(miny,s.from.y,s.to.y);
-    maxx=Math.max(maxx,s.from.x,s.to.x); maxy=Math.max(maxy,s.from.y,s.to.y);
-  });
   const w=simCanvas.width,h=simCanvas.height;
-  const scaleX=(w*0.8)/(maxx-minx||1);
-  const scaleY=(h*0.8)/(maxy-miny||1);
-  simState.zoom=Math.min(scaleX,scaleY);
-  const midx=(minx+maxx)/2, midy=(miny+maxy)/2;
-  simState.offsetX=-midx*simState.zoom;
-  simState.offsetY=midy*simState.zoom;
+  simState.zoom = 1;
+  simState.offsetX=0;
+  simState.offsetY=0;
   drawAll();
 }
 
 /* export */
 exportTxt.addEventListener('click',()=>{ safeDownload(editor.value, (prompt('Názov súboru','program')||'program')+'.txt','text/plain;charset=utf-8'); });
 exportMpf.addEventListener('click',()=>{ const header=`(EUS MPF)\n; exported ${new Date().toISOString()}\n`; safeDownload(header+editor.value,(prompt('Názov súboru','program')||'program')+'.mpf','text/plain;charset=utf-8'); });
+
+/* live editor update */
+editor.addEventListener('input',()=>parseProgram());
 
 /* initial draw */
 parseProgram();
@@ -489,4 +482,4 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopSimul
 
 </script>
 </body>
-  </html>
+</html>
