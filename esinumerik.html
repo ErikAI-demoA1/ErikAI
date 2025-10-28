@@ -203,7 +203,7 @@ N040 M30"></textarea>
 </div>
 
 <script>
-/* ========= EUS CNC — core JS (upravené live + center 0 + trail) ========= */
+  /* ========= EUS CNC — core JS (upravené) ========= */
 
 /* helpers */
 function safeDownload(contentOrBlob, filename, type='application/octet-stream'){
@@ -264,9 +264,8 @@ N060 M30`;
   parseProgram();
 });
 
-/* parser + build segments */
+/* parser */
 let program = [];
-let segments = [];
 function parseProgram(){
   program = [];
   report.textContent = '';
@@ -301,11 +300,12 @@ function parseProgram(){
   if(unknowns.length) rpt += 'Nepodporované tokeny (len upozornenie):\n' + unknowns.join('\n') + '\n\n';
   rpt += 'Podporované príkazy: G00/G01, X Y Z F, M30\n';
   report.textContent = rpt;
-
   resetSimulator();
   buildSegments();
 }
 
+/* build segments */
+let segments = [];
 function buildSegments(){
   segments = [];
   let cur = {x:0,y:0,z:0, feed:300};
@@ -352,21 +352,6 @@ function drawAll(){
   for(let x=0;x<simCanvas.width;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,simCanvas.height); ctx.stroke(); }
   for(let y=0;y<simCanvas.height;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(simCanvas.width,y); ctx.stroke(); }
 
-  // trail / prejdená dráha
-  ctx.beginPath();
-  ctx.strokeStyle='rgba(52,211,153,0.4)';
-  ctx.lineWidth=2;
-  let trailStarted=false;
-  for(let i=0;i<=simState.ix;i++){
-    const s = segments[i];
-    const p1=worldToScreen(s.from.x,s.from.y);
-    const p2=worldToScreen((i===simState.ix)?getCurrentPosition().x:s.to.x,
-                            (i===simState.ix)?getCurrentPosition().y:s.to.y);
-    if(!trailStarted){ ctx.moveTo(p1.sx,p1.sy); trailStarted=true; }
-    ctx.lineTo(p2.sx,p2.sy);
-  }
-  ctx.stroke();
-
   // segments
   segments.forEach((s,i)=>{
     const p1=worldToScreen(s.from.x,s.from.y);
@@ -374,8 +359,7 @@ function drawAll(){
     ctx.beginPath();
     ctx.moveTo(p1.sx,p1.sy);
     ctx.lineTo(p2.sx,p2.sy);
-    if(i===simState.ix) ctx.strokeStyle = '#60a5fa'; // aktívny segment modrá
-    else ctx.strokeStyle = (s.type==='G00') ? '#ffa500' : '#34d399';
+    ctx.strokeStyle = (s.type==='G00') ? '#ffa500' : '#34d399';
     ctx.lineWidth = (i===simState.ix ? 3 : 2);
     ctx.stroke();
   });
@@ -411,7 +395,6 @@ function updateInfo(){
   posEl.textContent=`X${cur.x.toFixed(3)} Y${cur.y.toFixed(3)} Z${cur.z.toFixed(3)}`;
   const seg=segments[simState.ix];
   curLineEl.textContent = seg ? `Line ${seg.line} (${seg.type})` : '—';
-  distanceEl.textContent = simState.totalDistance.toFixed(3);
 }
 
 /* step */
@@ -428,17 +411,6 @@ function stepOnce(){
   const delta = segLen>0 ? advance/segLen : 1;
   simState.t += delta;
   simState.totalDistance += Math.min(advance, segLen*(1-simState.t+delta));
-
-  // update ETA
-  let remaining=0;
-  if(simState.t<1) remaining += segLen*(1-simState.t);
-  for(let i=simState.ix+1;i<segments.length;i++){
-    const s = segments[i];
-    const dx2=s.to.x-s.from.x, dy2=s.to.y-s.from.y, dz2=s.to.z-s.from.z;
-    remaining += Math.sqrt(dx2*dx2+dy2*dy2+dz2*dz2);
-  }
-  etaEl.textContent = `${(remaining/(feed/60*speedFactor)).toFixed(1)}s`;
-
   if(simState.t>=1-1e-9){
     simState.ix++;
     simState.t=0;
@@ -469,21 +441,27 @@ zoomOut.addEventListener('click',()=>{ simState.zoom/=1.2; drawAll(); });
 fitBtn.addEventListener('click',()=>fitToContent());
 resetView.addEventListener('click',()=>{ simState.zoom=1; simState.offsetX=0; simState.offsetY=0; drawAll(); });
 
-/* fit to segments — center 0,0 */
+/* fit to segments */
 function fitToContent(){
+  if(segments.length===0) return;
+  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+  segments.forEach(s=>{
+    minx=Math.min(minx,s.from.x,s.to.x); miny=Math.min(miny,s.from.y,s.to.y);
+    maxx=Math.max(maxx,s.from.x,s.to.x); maxy=Math.max(maxy,s.from.y,s.to.y);
+  });
   const w=simCanvas.width,h=simCanvas.height;
-  simState.zoom = 1;
-  simState.offsetX=0;
-  simState.offsetY=0;
+  const scaleX=(w*0.8)/(maxx-minx||1);
+  const scaleY=(h*0.8)/(maxy-miny||1);
+  simState.zoom=Math.min(scaleX,scaleY);
+  const midx=(minx+maxx)/2, midy=(miny+maxy)/2;
+  simState.offsetX=-midx*simState.zoom;
+  simState.offsetY=midy*simState.zoom;
   drawAll();
 }
 
 /* export */
 exportTxt.addEventListener('click',()=>{ safeDownload(editor.value, (prompt('Názov súboru','program')||'program')+'.txt','text/plain;charset=utf-8'); });
 exportMpf.addEventListener('click',()=>{ const header=`(EUS MPF)\n; exported ${new Date().toISOString()}\n`; safeDownload(header+editor.value,(prompt('Názov súboru','program')||'program')+'.mpf','text/plain;charset=utf-8'); });
-
-/* live editor update */
-editor.addEventListener('input',()=>parseProgram());
 
 /* initial draw */
 parseProgram();
@@ -508,6 +486,7 @@ window.addEventListener('keydown',(e)=>{
 
 /* stop animation when hidden */
 document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopSimulation(); });
+  
 </script>
 </body>
 </html>
