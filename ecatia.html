@@ -13,10 +13,7 @@ button.ghost{background:#222;border:1px solid #555;color:#eee;}
 .panel{padding:8px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
 .info{padding:4px;color:#ccc;}
 input[type=number]{width:60px;}
-#dimensionsPanel{
-  position:fixed;top:10px;right:10px;background:#222;padding:10px;border-radius:5px;
-  max-height:90vh;overflow:auto;display:none;
-}
+#dimensionsPanel{position:fixed;top:10px;right:10px;background:#222;padding:10px;border-radius:5px;max-height:90vh;overflow:auto;display:none;}
 #dimensionsPanel h3{margin:0 0 5px 0;color:#34d399;}
 #dimensionsPanel div{margin-bottom:5px;}
 </style>
@@ -34,7 +31,6 @@ input[type=number]{width:60px;}
     <button id="editDimsBtn" class="ghost">Upraviť kóty</button>
   </div>
 </header>
-
 <canvas id="cadCanvas" width="1200" height="800"></canvas>
 <div class="info" id="info">Vybratý nástroj: Čiara | Nulový bod: (0,0)</div>
 
@@ -44,166 +40,173 @@ input[type=number]{width:60px;}
 </div>
 
 <script>
-const canvas = document.getElementById('cadCanvas');
-const ctx = canvas.getContext('2d');
+const canvas=document.getElementById('cadCanvas');
+const ctx=canvas.getContext('2d');
+let shapes=[],undoStack=[],redoStack=[];
+let tool='line';
+let startPt=null;
+let origin={x:100,y:100};
+let editMode=false;
 
-let shapes = [], undoStack = [], redoStack = [];
-let tool = 'line';
-let startPt = null;
-let origin = {x: 100, y: 100};
-let editMode = false;
+// DOM
+const info=document.getElementById('info');
+const dimsPanel=document.getElementById('dimensionsPanel');
+const dimsContent=document.getElementById('dimsContent');
+const editDimsBtn=document.getElementById('editDimsBtn');
 
-const info = document.getElementById('info');
-const dimsPanel = document.getElementById('dimensionsPanel');
-const dimsContent = document.getElementById('dimsContent');
-const editDimsBtn = document.getElementById('editDimsBtn');
+// Nástroje
+document.getElementById('lineBtn').onclick=()=>tool='line';
+document.getElementById('circleBtn').onclick=()=>tool='circle';
+document.getElementById('rectBtn').onclick=()=>tool='rect';
 
-document.getElementById('lineBtn').onclick = () => tool = 'line';
-document.getElementById('circleBtn').onclick = () => tool = 'circle';
-document.getElementById('rectBtn').onclick = () => tool = 'rect';
-
-editDimsBtn.onclick = () => {
-  editMode = !editMode;
-  dimsPanel.style.display = editMode ? 'block' : 'none';
-  updateDimensionsPanel();
+// Toggle edit mode
+editDimsBtn.onclick=()=>{
+  editMode=!editMode;
+  dimsPanel.style.display=editMode?'block':'none';
   drawAll();
 };
 
-document.getElementById('undoBtn').onclick = () => {
-  if (undoStack.length) {redoStack.push(JSON.parse(JSON.stringify(shapes))); shapes = undoStack.pop(); drawAll();}
+// Undo/Redo
+document.getElementById('undoBtn').onclick=()=>{
+  if(undoStack.length){redoStack.push(JSON.parse(JSON.stringify(shapes))); shapes=undoStack.pop(); drawAll();}
 };
-document.getElementById('redoBtn').onclick = () => {
-  if (redoStack.length) {undoStack.push(JSON.parse(JSON.stringify(shapes))); shapes = redoStack.pop(); drawAll();}
+document.getElementById('redoBtn').onclick=()=>{
+  if(redoStack.length){undoStack.push(JSON.parse(JSON.stringify(shapes))); shapes=redoStack.pop(); drawAll();}
 };
 
-document.getElementById('exportImg').onclick = () => {
-  const link = document.createElement('a');
-  link.download = 'drawing.png';
-  link.href = canvas.toDataURL();
+// Export obrázka
+document.getElementById('exportImg').onclick=()=>{
+  const link=document.createElement('a');
+  link.download='drawing.png';
+  link.href=canvas.toDataURL();
   link.click();
 };
 
-document.getElementById('exportJSON').onclick = () => {
-  const link = document.createElement('a');
-  link.download = 'drawing.json';
-  link.href = 'data:text/json,' + encodeURIComponent(JSON.stringify({origin, shapes}));
+// Export JSON
+document.getElementById('exportJSON').onclick=()=>{
+  const link=document.createElement('a');
+  link.download='drawing.json';
+  link.href='data:text/json,'+encodeURIComponent(JSON.stringify({origin,shapes}));
   link.click();
 };
 
-function drawGrid() {
-  const step = 20;
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-  ctx.lineWidth = 1;
-  for (let x = 0; x < canvas.width; x += step) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();}
-  for (let y = 0; y < canvas.height; y += step) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();}
+// Grid
+function drawGrid(){
+  const step=20;
+  ctx.strokeStyle='rgba(255,255,255,0.05)';
+  ctx.lineWidth=1;
+  for(let x=0;x<canvas.width;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
+  for(let y=0;y<canvas.height;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
 }
 
-function drawAll() {
+// Draw shapes + dimensions
+function drawAll(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawGrid();
-  ctx.fillStyle = 'red';
+  // nulový bod
+  ctx.fillStyle='red';
   ctx.beginPath(); ctx.arc(origin.x,origin.y,5,0,Math.PI*2); ctx.fill();
 
-  shapes.forEach(s => {
-    ctx.strokeStyle = 'lime';
-    ctx.lineWidth = 2;
+  // tvary
+  shapes.forEach((s,i)=>{
+    ctx.strokeStyle='lime'; ctx.lineWidth=2;
     ctx.beginPath();
-    if (s.type === 'line') ctx.moveTo(s.x1,s.y1), ctx.lineTo(s.x2,s.y2);
-    else if (s.type === 'circle') ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2);
-    else if (s.type === 'rect') ctx.rect(s.x,s.y,s.w,s.h);
+    if(s.type==='line'){ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2);}
+    else if(s.type==='circle'){ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2);}
+    else if(s.type==='rect'){ctx.rect(s.x,s.y,s.w,s.h);}
     ctx.stroke();
-    drawTechnicalDimension(s);
+    if(!editMode) drawDimension(s);
   });
+  if(editMode) updateDimensionsPanel();
 }
 
-function drawTechnicalDimension(s) {
-  ctx.strokeStyle = 'yellow';
-  ctx.fillStyle = 'yellow';
-  ctx.lineWidth = 1;
-  ctx.font = '12px monospace';
-
-  if (s.type === 'line') {
-    const midX = (s.x1+s.x2)/2, midY = (s.y1+s.y2)/2;
-    const len = Math.hypot(s.x2-s.x1, s.y2-s.y1).toFixed(2);
+// Draw dimension text
+function drawDimension(s){
+  ctx.fillStyle='yellow'; ctx.font='12px monospace';
+  if(s.type==='line'){
+    const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
+    const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
     ctx.fillText(len, midX+5, midY-5);
-  } else if (s.type === 'rect') {
-    ctx.fillText(`W:${Math.abs(s.w)}`, s.x+s.w/2, s.y-5);
-    ctx.fillText(`H:${Math.abs(s.h)}`, s.x+s.w+5, s.y+s.h/2);
-  } else if (s.type === 'circle') {
+  }else if(s.type==='rect'){
+    ctx.fillText(`W:${Math.abs(s.w)} H:${Math.abs(s.h)}`, s.x+s.w/2, s.y+s.h/2-5);
+  }else if(s.type==='circle'){
     ctx.fillText(`R:${s.r.toFixed(2)}`, s.cx, s.cy - s.r - 5);
   }
 }
 
-canvas.onmousedown = (e) => {
-  if (editMode) return; // v edit režime netvoríme nové tvary
+// Snap to grid & points
+function snap(x,y){
+  const step=20;
+  let sx=Math.round(x/step)*step;
+  let sy=Math.round(y/step)*step;
+  shapes.forEach(s=>{
+    if(s.type==='line'){
+      if(Math.hypot(x-s.x1,y-s.y1)<10){sx=s.x1;sy=s.y1;}
+      if(Math.hypot(x-s.x2,y-s.y2)<10){sx=s.x2;sy=s.y2;}
+    }else if(s.type==='circle'){
+      if(Math.hypot(x-s.cx,y-s.cy)<10){sx=s.cx;sy=s.cy;}
+    }else if(s.type==='rect'){
+      [[s.x,s.y],[s.x+s.w,s.y],[s.x+s.w,s.y+s.h],[s.x,s.y+s.h]].forEach(([px,py])=>{
+        if(Math.hypot(x-px,y-py)<10){sx=px;sy=py;}
+      });
+    }
+  });
+  return {x:sx,y:sy};
+}
 
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  const p = {x, y};
-
-  if (!startPt) {startPt=p; return;}
-  let shape = null;
-  if (tool==='line') shape={type:'line',x1:startPt.x,y1:startPt.y,x2:p.x,y2:p.y};
-  else if (tool==='circle') shape={type:'circle',cx:startPt.x,cy:startPt.y,r:Math.hypot(p.x-startPt.x,p.y-startPt.y)};
-  else if (tool==='rect') shape={type:'rect',x:startPt.x,y:startPt.y,w:p.x-startPt.x,h:p.y-startPt.y};
+// Canvas clicks
+canvas.onmousedown=(e)=>{
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  const y=e.clientY-rect.top;
+  const p=snap(x,y);
+  if(!startPt){startPt=p; return;}
+  let shape=null;
+  if(tool==='line'){shape={type:'line',x1:startPt.x,y1:startPt.y,x2:p.x,y2:p.y};}
+  if(tool==='circle'){shape={type:'circle',cx:startPt.x,cy:startPt.y,r:Math.hypot(p.x-startPt.x,p.y-startPt.y)};}
+  if(tool==='rect'){shape={type:'rect',x:startPt.x,y:startPt.y,w:p.x-startPt.x,h:p.y-startPt.y};}
   shapes.push(shape);
   undoStack.push(JSON.parse(JSON.stringify(shapes)));
-  startPt = null;
+  startPt=null;
   drawAll();
 };
 
-function updateDimensionsPanel() {
-  dimsContent.innerHTML = '';
-  if (!editMode) return;
+// Origin move
+canvas.oncontextmenu=(e)=>{
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  origin={x:e.clientX-rect.left, y:e.clientY-rect.top};
+  drawAll();
+};
 
+// Dimensions panel edit
+function updateDimensionsPanel(){
+  dimsContent.innerHTML='';
   shapes.forEach((s,i)=>{
     const div=document.createElement('div');
     div.style.display='flex'; div.style.gap='5px'; div.style.alignItems='center';
     div.innerHTML=`<strong>${s.type} ${i+1}</strong> `;
-
-    // --- pozícia ---
     if(s.type==='line'){
-      const inpX = document.createElement('input'); inpX.type='number'; inpX.value = s.x1;
-      inpX.onchange = e => { let dx = e.target.value - s.x1; s.x1+=dx; s.x2+=dx; drawAll(); };
-      const inpY = document.createElement('input'); inpY.type='number'; inpY.value = s.y1;
-      inpY.onchange = e => { let dy = e.target.value - s.y1; s.y1+=dy; s.y2+=dy; drawAll(); };
-      div.appendChild(document.createTextNode('X1:')); div.appendChild(inpX);
-      div.appendChild(document.createTextNode('Y1:')); div.appendChild(inpY);
-      // dĺžka
-      const inpLen = document.createElement('input'); inpLen.type='number'; inpLen.value=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
-      inpLen.onchange = e => { const len = parseFloat(e.target.value); const angle = Math.atan2(s.y2-s.y1,s.x2-s.x1); s.x2=s.x1+len*Math.cos(angle); s.y2=s.y1+len*Math.sin(angle); drawAll(); };
-      div.appendChild(document.createTextNode(' Dĺžka:')); 
-      div.appendChild(inpLen);
-    } else if(s.type==='rect'){
-      // pozícia
-      const inpX = document.createElement('input'); inpX.type='number'; inpX.value = s.x;
-      inpX.onchange = e => { s.x = parseFloat(e.target.value); drawAll(); };
-      const inpY = document.createElement('input'); inpY.type='number'; inpY.value = s.y;
-      inpY.onchange = e => { s.y = parseFloat(e.target.value); drawAll(); };
-      div.appendChild(document.createTextNode('X:')); div.appendChild(inpX);
-      div.appendChild(document.createTextNode('Y:')); div.appendChild(inpY);
-      // rozmery
-      const inpW = document.createElement('input'); inpW.type='number'; inpW.value = Math.abs(s.w);
-      inpW.onchange = e => { s.w = parseFloat(e.target.value)*(s.w<0?-1:1); drawAll(); };
-      const inpH = document.createElement('input'); inpH.type='number'; inpH.value = Math.abs(s.h);
-      inpH.onchange = e => { s.h = parseFloat(e.target.value)*(s.h<0?-1:1); drawAll(); };
-      div.appendChild(document.createTextNode(' Šírka:')); div.appendChild(inpW);
-      div.appendChild(document.createTextNode(' Výška:')); div.appendChild(inpH);
-    } else if(s.type==='circle'){
-      // pozícia
-      const inpX = document.createElement('input'); inpX.type='number'; inpX.value = s.cx;
-      inpX.onchange = e => { s.cx = parseFloat(e.target.value); drawAll(); };
-      const inpY = document.createElement('input'); inpY.type='number'; inpY.value = s.cy;
-      inpY.onchange = e => { s.cy = parseFloat(e.target.value); drawAll(); };
-      div.appendChild(document.createTextNode('CX:')); div.appendChild(inpX);
-      div.appendChild(document.createTextNode(' CY:')); div.appendChild(inpY);
-      // polomer
-      const inpR = document.createElement('input'); inpR.type='number'; inpR.value = s.r.toFixed(2);
-      inpR.onchange = e => { s.r = parseFloat(e.target.value); drawAll(); };
-      div.appendChild(document.createTextNode(' R:')); div.appendChild(inpR);
+      const inp=document.createElement('input'); inp.type='number'; inp.value=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
+      inp.onchange=(e)=>{
+        const len=parseFloat(e.target.value);
+        const angle=Math.atan2(s.y2-s.y1,s.x2-s.x1);
+        s.x2=s.x1+len*Math.cos(angle);
+        s.y2=s.y1+len*Math.sin(angle);
+        drawAll();
+      };
+      div.appendChild(inp);
+    }else if(s.type==='rect'){
+      const inpW=document.createElement('input'); inpW.type='number'; inpW.value=Math.abs(s.w);
+      inpW.onchange=(e)=>{s.w=parseFloat(e.target.value)*(s.w<0?-1:1); drawAll();};
+      const inpH=document.createElement('input'); inpH.type='number'; inpH.value=Math.abs(s.h);
+      inpH.onchange=(e)=>{s.h=parseFloat(e.target.value)*(s.h<0?-1:1); drawAll();};
+      div.appendChild(inpW); div.appendChild(inpH);
+    }else if(s.type==='circle'){
+      const inpR=document.createElement('input'); inpR.type='number'; inpR.value=s.r.toFixed(2);
+      inpR.onchange=(e)=>{s.r=parseFloat(e.target.value); drawAll();};
+      div.appendChild(inpR);
     }
-
     dimsContent.appendChild(div);
   });
 }
