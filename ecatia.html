@@ -46,10 +46,10 @@ document.getElementById('rectBtn').onclick=()=>tool='rect';
 
 // Undo/Redo
 document.getElementById('undoBtn').onclick=()=>{
-  if(shapes.length){redoStack.push(shapes.pop()); drawAll();}
+  if(undoStack.length){redoStack.push(shapes); shapes=undoStack.pop(); drawAll();}
 };
 document.getElementById('redoBtn').onclick=()=>{
-  if(redoStack.length){shapes.push(redoStack.pop()); drawAll();}
+  if(redoStack.length){undoStack.push(shapes); shapes=redoStack.pop(); drawAll();}
 };
 
 // Export obrázka
@@ -77,35 +77,50 @@ function drawGrid(){
   for(let y=0;y<canvas.height;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
 }
 
-// Kreslenie všetkého
+// Draw shapes + dimensions
 function drawAll(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawGrid();
   // nulový bod
   ctx.fillStyle='red';
   ctx.beginPath(); ctx.arc(origin.x,origin.y,5,0,Math.PI*2); ctx.fill();
+
   // tvary
   shapes.forEach(s=>{
-    ctx.strokeStyle='lime';
-    ctx.lineWidth=2;
+    ctx.strokeStyle='lime'; ctx.lineWidth=2;
     ctx.beginPath();
     if(s.type==='line'){
-      ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2);
+      ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
+      drawDimension(s);
     }else if(s.type==='circle'){
-      ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2);
+      ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2); ctx.stroke();
+      drawDimension(s);
     }else if(s.type==='rect'){
-      ctx.rect(s.x,s.y,s.w,s.h);
+      ctx.rect(s.x,s.y,s.w,s.h); ctx.stroke();
+      drawDimension(s);
     }
-    ctx.stroke();
   });
 }
 
-// Snap na grid a body
+// Draw dimension text
+function drawDimension(s){
+  ctx.fillStyle='yellow'; ctx.font='12px monospace';
+  if(s.type==='line'){
+    const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
+    const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
+    ctx.fillText(len, midX+5, midY-5);
+  }else if(s.type==='rect'){
+    ctx.fillText(`W:${Math.abs(s.w)} H:${Math.abs(s.h)}`, s.x+s.w/2, s.y+s.h/2-5);
+  }else if(s.type==='circle'){
+    ctx.fillText(`R:${s.r.toFixed(2)}`, s.cx, s.cy - s.r - 5);
+  }
+}
+
+// Snap to grid & points
 function snap(x,y){
   const step=20;
   let sx=Math.round(x/step)*step;
   let sy=Math.round(y/step)*step;
-  // snap na konce tvarov
   shapes.forEach(s=>{
     if(s.type==='line'){
       if(Math.hypot(x-s.x1,y-s.y1)<10){sx=s.x1;sy=s.y1;}
@@ -121,7 +136,7 @@ function snap(x,y){
   return {x:sx,y:sy};
 }
 
-// Kliky
+// Canvas clicks
 canvas.onmousedown=(e)=>{
   const rect=canvas.getBoundingClientRect();
   const x=e.clientX-rect.left;
@@ -135,6 +150,14 @@ canvas.onmousedown=(e)=>{
   shapes.push(shape);
   undoStack.push(JSON.parse(JSON.stringify(shapes)));
   startPt=null;
+  drawAll();
+};
+
+// Origin move
+canvas.oncontextmenu=(e)=>{
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  origin={x:e.clientX-rect.left, y:e.clientY-rect.top};
   drawAll();
 };
 
