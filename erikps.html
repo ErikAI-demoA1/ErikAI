@@ -3,25 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Web Joystick / Ovládanie</title>
+<title>ErikAI Joystick</title>
 <style>
-  body { background: #111; color: #fff; font-family: Arial, sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; margin:0; padding:0; height:100vh; }
+  body { background:#111; color:#fff; font-family:Arial; margin:0; display:flex; flex-direction:column; align-items:center; height:100vh; }
   #urlInput { margin:10px; width:80%; padding:8px; font-size:16px; }
-  #playArea { position:relative; width:90%; height:400px; background:#222; margin-bottom:10px; border:2px solid #ff4500; }
+  #playArea { position:relative; width:90%; height:400px; background:#222; border:2px solid #ff4500; overflow:hidden; }
   #cursor { position:absolute; width:20px; height:20px; background:#ff4500; border-radius:50%; pointer-events:none; }
-  #buttons { display:flex; gap:10px; margin-bottom:10px; }
-  .btn { padding:10px 20px; font-size:16px; background:#ff4500; border:none; border-radius:8px; cursor:pointer; color:#fff; }
-  iframe { width:90%; height:400px; border:none; }
+  #joystickArea { width:140px; height:140px; background:#333; border-radius:50%; margin-top:10px; position:relative; }
+  #joystick { position:absolute; width:50px; height:50px; background:#ff4500; border-radius:50%; top:45px; left:45px; transition:0.05s; }
+  #buttons { display:flex; gap:10px; margin-top:10px; }
+  .btn { padding:10px 20px; background:#ff4500; border:none; border-radius:8px; color:#fff; cursor:pointer; font-size:16px; }
+  iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:none; z-index:0; }
 </style>
 </head>
 <body>
 
-<input id="urlInput" type="text" placeholder="Vlož odkaz, napr. YouTube URL" />
+<input id="urlInput" type="text" placeholder="Vlož odkaz (napr. https://youtube.com)" />
 <div id="playArea">
+  <iframe id="iframeContent"></iframe>
   <div id="cursor"></div>
 </div>
+
+<div id="joystickArea">
+  <div id="joystick"></div>
+</div>
+
 <div id="buttons">
-  <button class="btn" data-action="L1">L1</button>
   <button class="btn" data-action="Up">↑</button>
   <button class="btn" data-action="Down">↓</button>
   <button class="btn" data-action="Left">←</button>
@@ -30,35 +37,70 @@
   <button class="btn" data-action="O">O</button>
 </div>
 
-<iframe id="iframeContent" src=""></iframe>
-
 <script>
 const cursor = document.getElementById('cursor');
 const playArea = document.getElementById('playArea');
 const iframe = document.getElementById('iframeContent');
-const urlInput = document.getElementById('urlInput');
+const joystick = document.getElementById('joystick');
+const joystickArea = document.getElementById('joystickArea');
 const buttons = document.querySelectorAll('.btn');
+const urlInput = document.getElementById('urlInput');
 
-let cursorPos = {x:100, y:100};
-
-playArea.addEventListener('mousemove', (e)=>{
-    const rect = playArea.getBoundingClientRect();
-    cursorPos.x = e.clientX - rect.left;
-    cursorPos.y = e.clientY - rect.top;
-    cursor.style.left = cursorPos.x - 10 + 'px';
-    cursor.style.top = cursorPos.y - 10 + 'px';
-});
+let cursorPos = {x:200, y:200};
+let velocity = {x:0, y:0};
 
 urlInput.addEventListener('change', ()=>{
     iframe.src = urlInput.value;
 });
 
-// Tlačidlá - pre demo iba logovanie akcie
+function updateCursor() {
+    cursorPos.x += velocity.x;
+    cursorPos.y += velocity.y;
+
+    // Limity pohybu kurzora
+    cursorPos.x = Math.max(0, Math.min(playArea.clientWidth - 20, cursorPos.x));
+    cursorPos.y = Math.max(0, Math.min(playArea.clientHeight - 20, cursorPos.y));
+
+    cursor.style.left = cursorPos.x + 'px';
+    cursor.style.top = cursorPos.y + 'px';
+
+    requestAnimationFrame(updateCursor);
+}
+updateCursor();
+
+// Ovládanie joystickom
+joystickArea.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    const rect = joystickArea.getBoundingClientRect();
+    const touch = e.touches[0];
+    const dx = touch.clientX - rect.left - rect.width/2;
+    const dy = touch.clientY - rect.top - rect.height/2;
+    const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 45);
+    const angle = Math.atan2(dy, dx);
+    joystick.style.left = 45 + dist*Math.cos(angle) + 'px';
+    joystick.style.top = 45 + dist*Math.sin(angle) + 'px';
+
+    velocity.x = Math.cos(angle) * (dist/15);
+    velocity.y = Math.sin(angle) * (dist/15);
+}, false);
+
+joystickArea.addEventListener('touchend', ()=>{
+    joystick.style.left = '45px';
+    joystick.style.top = '45px';
+    velocity.x = 0;
+    velocity.y = 0;
+});
+
+// Šípky – jemný posun
 buttons.forEach(btn=>{
     btn.addEventListener('click', ()=>{
-        const action = btn.getAttribute('data-action');
-        console.log("Tlačidlo stlačené:", action);
-        // Tu môžeme posielať signály do iframe alebo na server
+        const act = btn.dataset.action;
+        if (act === "Up") cursorPos.y -= 10;
+        if (act === "Down") cursorPos.y += 10;
+        if (act === "Left") cursorPos.x -= 10;
+        if (act === "Right") cursorPos.x += 10;
+        if (act === "X") alert("Potvrdenie akcie (X)");
+        if (act === "O") alert("Späť (O)");
     });
 });
 </script>
