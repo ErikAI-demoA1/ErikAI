@@ -13,7 +13,10 @@ button.ghost{background:#222;border:1px solid #555;color:#eee;}
 .panel{padding:8px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
 .info{padding:4px;color:#ccc;}
 input[type=number]{width:60px;}
-#dimensionsPanel{position:fixed;top:10px;right:10px;background:#222;padding:10px;border-radius:5px;max-height:90vh;overflow:auto;display:none;}
+#dimensionsPanel{
+  position:fixed;top:10px;right:10px;background:#222;padding:10px;border-radius:5px;
+  max-height:90vh;overflow:auto;display:none;
+}
 #dimensionsPanel h3{margin:0 0 5px 0;color:#34d399;}
 #dimensionsPanel div{margin-bottom:5px;}
 </style>
@@ -49,18 +52,15 @@ let origin={x:100,y:100};
 let editMode=false;
 let selectedShape=null;
 
-// DOM
 const info=document.getElementById('info');
 const dimsPanel=document.getElementById('dimensionsPanel');
 const dimsContent=document.getElementById('dimsContent');
 const editDimsBtn=document.getElementById('editDimsBtn');
 
-// Nástroje
 document.getElementById('lineBtn').onclick=()=>tool='line';
 document.getElementById('circleBtn').onclick=()=>tool='circle';
 document.getElementById('rectBtn').onclick=()=>tool='rect';
 
-// Toggle edit mode
 editDimsBtn.onclick=()=>{
   editMode=!editMode;
   dimsPanel.style.display=editMode?'block':'none';
@@ -68,7 +68,6 @@ editDimsBtn.onclick=()=>{
   drawAll();
 };
 
-// Undo/Redo
 document.getElementById('undoBtn').onclick=()=>{
   if(undoStack.length){redoStack.push(JSON.parse(JSON.stringify(shapes))); shapes=undoStack.pop(); drawAll();}
 };
@@ -76,7 +75,6 @@ document.getElementById('redoBtn').onclick=()=>{
   if(redoStack.length){undoStack.push(JSON.parse(JSON.stringify(shapes))); shapes=redoStack.pop(); drawAll();}
 };
 
-// Export obrázka
 document.getElementById('exportImg').onclick=()=>{
   const link=document.createElement('a');
   link.download='drawing.png';
@@ -84,7 +82,6 @@ document.getElementById('exportImg').onclick=()=>{
   link.click();
 };
 
-// Export JSON
 document.getElementById('exportJSON').onclick=()=>{
   const link=document.createElement('a');
   link.download='drawing.json';
@@ -92,7 +89,6 @@ document.getElementById('exportJSON').onclick=()=>{
   link.click();
 };
 
-// Grid
 function drawGrid(){
   const step=20;
   ctx.strokeStyle='rgba(255,255,255,0.05)';
@@ -101,17 +97,15 @@ function drawGrid(){
   for(let y=0;y<canvas.height;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
 }
 
-// Draw shapes + dimensions
 function drawAll(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawGrid();
-  // nulový bod
   ctx.fillStyle='red';
   ctx.beginPath(); ctx.arc(origin.x,origin.y,5,0,Math.PI*2); ctx.fill();
 
-  // shapes
-  shapes.forEach((s,i)=>{
-    ctx.strokeStyle=(selectedShape===s)?'cyan':'lime'; ctx.lineWidth=2;
+  shapes.forEach(s=>{
+    ctx.strokeStyle=(selectedShape===s)?'cyan':'lime';
+    ctx.lineWidth=2;
     ctx.beginPath();
     if(s.type==='line'){ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2);}
     else if(s.type==='circle'){ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2);}
@@ -122,15 +116,12 @@ function drawAll(){
   if(editMode) updateDimensionsPanel();
 }
 
-// Technical dimensions
 function drawTechnicalDimension(s){
   ctx.strokeStyle='yellow';
   ctx.fillStyle='yellow';
   ctx.lineWidth=1;
   ctx.font='12px monospace';
-
   if(s.type==='line'){
-    // šípky na koncoch
     drawArrow(s.x1,s.y1,s.x2,s.y2);
     const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
     const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
@@ -146,14 +137,11 @@ function drawTechnicalDimension(s){
   }
 }
 
-// Draw arrow line
 function drawArrow(x1,y1,x2,y2){
   const headlen=5;
   const angle=Math.atan2(y2-y1,x2-x1);
   ctx.beginPath();
-  ctx.moveTo(x1,y1);
-  ctx.lineTo(x2,y2);
-  ctx.stroke();
+  ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(x2,y2);
   ctx.lineTo(x2-headlen*Math.cos(angle-Math.PI/6), y2-headlen*Math.sin(angle-Math.PI/6));
@@ -162,7 +150,6 @@ function drawArrow(x1,y1,x2,y2){
   ctx.fill();
 }
 
-// Snap
 function snap(x,y){
   const step=20;
   let sx=Math.round(x/step)*step;
@@ -182,7 +169,6 @@ function snap(x,y){
   return {x:sx,y:sy};
 }
 
-// Canvas clicks
 canvas.onmousedown=(e)=>{
   const rect=canvas.getBoundingClientRect();
   const x=e.clientX-rect.left;
@@ -190,7 +176,6 @@ canvas.onmousedown=(e)=>{
   const p=snap(x,y);
 
   if(editMode){
-    // klik pre vybranie tvaru
     selectedShape=null;
     shapes.forEach(s=>{
       if(isMouseOnShape(s,x,y)) selectedShape=s;
@@ -209,7 +194,7 @@ canvas.onmousedown=(e)=>{
   startPt=null;
   drawAll();
 };
-// check if mouse is on shape (approx)
+
 function isMouseOnShape(s,x,y){
   const margin=10;
   if(s.type==='line'){
@@ -225,36 +210,35 @@ function isMouseOnShape(s,x,y){
   return false;
 }
 
-// Dimensions panel edit
 function updateDimensionsPanel(){
   dimsContent.innerHTML='';
-  shapes.forEach((s,i)=>{
-    const div=document.createElement('div');
-    div.style.display='flex'; div.style.gap='5px'; div.style.alignItems='center';
-    div.innerHTML=`<strong>${s.type} ${i+1}</strong> `;
-    if(s.type==='line'){
-      const inp=document.createElement('input'); inp.type='number'; inp.value=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
-      inp.onchange=(e)=>{
-        const len=parseFloat(e.target.value);
-        const angle=Math.atan2(s.y2-s.y1,s.x2-s.x1);
-        s.x2=s.x1+len*Math.cos(angle);
-        s.y2=s.y1+len*Math.sin(angle);
-        drawAll();
-      };
-      div.appendChild(inp);
-    }else if(s.type==='rect'){
-      const inpW=document.createElement('input'); inpW.type='number'; inpW.value=Math.abs(s.w);
-      inpW.onchange=(e)=>{s.w=parseFloat(e.target.value)*(s.w<0?-1:1); drawAll();};
-      const inpH=document.createElement('input'); inpH.type='number'; inpH.value=Math.abs(s.h);
-      inpH.onchange=(e)=>{s.h=parseFloat(e.target.value)*(s.h<0?-1:1); drawAll();};
-      div.appendChild(inpW); div.appendChild(inpH);
-    }else if(s.type==='circle'){
-      const inpR=document.createElement('input'); inpR.type='number'; inpR.value=s.r.toFixed(2);
-      inpR.onchange=(e)=>{s.r=parseFloat(e.target.value); drawAll();};
-      div.appendChild(inpR);
-    }
-    dimsContent.appendChild(div);
-  });
+  if(!selectedShape) return;
+  const s=selectedShape;
+  const div=document.createElement('div');
+  div.style.display='flex'; div.style.gap='5px'; div.style.alignItems='center';
+  div.innerHTML=`<strong>${s.type}</strong> `;
+  if(s.type==='line'){
+    const inp=document.createElement('input'); inp.type='number'; inp.value=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
+    inp.onchange=(e)=>{
+      const len=parseFloat(e.target.value);
+      const angle=Math.atan2(s.y2-s.y1,s.x2-s.x1);
+      s.x2=s.x1+len*Math.cos(angle);
+      s.y2=s.y1+len*Math.sin(angle);
+      drawAll();
+    };
+    div.appendChild(inp);
+  }else if(s.type==='rect'){
+    const inpW=document.createElement('input'); inpW.type='number'; inpW.value=Math.abs(s.w);
+    inpW.onchange=(e)=>{s.w=parseFloat(e.target.value)*(s.w<0?-1:1); drawAll();};
+    const inpH=document.createElement('input'); inpH.type='number'; inpH.value=Math.abs(s.h);
+    inpH.onchange=(e)=>{s.h=parseFloat(e.target.value)*(s.h<0?-1:1); drawAll();};
+    div.appendChild(inpW); div.appendChild(inpH);
+  }else if(s.type==='circle'){
+    const inpR=document.createElement('input'); inpR.type='number'; inpR.value=s.r.toFixed(2);
+    inpR.onchange=(e)=>{s.r=parseFloat(e.target.value); drawAll();};
+    div.appendChild(inpR);
+  }
+  dimsContent.appendChild(div);
 }
 
 drawAll();
