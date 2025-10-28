@@ -3,100 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Joystick Myška Pre iframe</title>
+<title>ErikAI Mobil Ovládanie</title>
 <style>
-  body { margin:0; overflow:hidden; background:#111; }
-  #gameArea {
-    position: relative;
-    width: 100vw; height: 100vh;
-    background:#222;
-    overflow: hidden;
-  }
-  #cursor {
-    position: absolute;
-    width: 20px; height: 20px;
-    background: #ff4500;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10;
-  }
-  #iframeContainer {
-    position: absolute;
-    top:0; left:0;
-    width:100%; height:100%;
-    pointer-events: none; /* aby sa dalo kliknúť cez JS */
-  }
-  #iframeContainer iframe {
-    width:100%; height:100%;
+  body { margin:0; font-family:sans-serif; overflow:hidden; background:#111; }
+  #gameArea { position: relative; width:100%; height:100vh; background:#222; overflow:hidden; }
+
+  /* iframe hracia plocha */
+  #playFrame {
+    position:absolute; top:0; left:0; width:100%; height:100%;
     border:none;
+    transform-origin: top left;
   }
+
+  /* dotykový ukazovák */
+  #pointer {
+    position:absolute; width:30px; height:30px; background:red; border-radius:50%;
+    pointer-events:none; z-index:10;
+  }
+
+  /* joystick L1 */
+  #joystick {
+    position:absolute; bottom:100px; left:50px; width:80px; height:80px;
+    background:rgba(255,255,255,0.2); border-radius:50%;
+    touch-action:none;
+  }
+  #joystickInner {
+    width:40px; height:40px; background:rgba(255,255,255,0.6); border-radius:50%;
+    position:absolute; top:20px; left:20px;
+  }
+
+  /* tlačidlá */
+  .btn { position:absolute; width:60px; height:60px; border-radius:50%; background:orange; color:#fff; font-size:24px; text-align:center; line-height:60px; user-select:none; }
+  #btnX { bottom:100px; right:50px; }
+  #btnO { bottom:180px; right:50px; }
+
 </style>
 </head>
 <body>
 
 <div id="gameArea">
-  <div id="cursor"></div>
-  <div id="iframeContainer">
-    <iframe id="contentFrame" src="https://www.youtube.com/"></iframe>
+  <iframe id="playFrame" src="https://www.youtube.com/embed/dQw4w9WgXcQ"></iframe>
+  <div id="pointer"></div>
+
+  <!-- joystick -->
+  <div id="joystick">
+    <div id="joystickInner"></div>
   </div>
+
+  <!-- tlačidlá -->
+  <div id="btnX" class="btn">X</div>
+  <div id="btnO" class="btn">O</div>
 </div>
 
 <script>
-const cursor = document.getElementById('cursor');
-const iframe = document.getElementById('contentFrame');
-const gameArea = document.getElementById('gameArea');
+const pointer = document.getElementById('pointer');
+const iframe = document.getElementById('playFrame');
 
-let pos = {x: window.innerWidth/2, y: window.innerHeight/2};
-let speed = 10; // rýchlosť pohybu
-let keys = {ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false};
+let pointerX = window.innerWidth/2;
+let pointerY = window.innerHeight/2;
+pointer.style.left = pointerX+'px';
+pointer.style.top = pointerY+'px';
 
-// ovládanie šípkami
-document.addEventListener('keydown', e => {
-  if(keys.hasOwnProperty(e.key)) keys[e.key] = true;
-  if(e.key === 'x' || e.key === 'X') clickAtCursor();
+function movePointer(dx, dy){
+  pointerX += dx;
+  pointerY += dy;
+  pointerX = Math.max(0, Math.min(window.innerWidth-30, pointerX));
+  pointerY = Math.max(0, Math.min(window.innerHeight-30, pointerY));
+  pointer.style.left = pointerX+'px';
+  pointer.style.top = pointerY+'px';
+
+  // automatický scroll iframe ak pointer ide hore/dole
+  iframe.scrollIntoView({behavior:'smooth'});
+}
+
+/* joystick touch */
+const joystick = document.getElementById('joystick');
+const joystickInner = document.getElementById('joystickInner');
+let active = false;
+let startX, startY;
+
+joystick.addEventListener('touchstart', e=>{
+  active = true;
+  const touch = e.touches[0];
+  startX = touch.clientX;
+  startY = touch.clientY;
 });
-document.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
 
-// hlavný update loop
-function update() {
-  if(keys.ArrowUp) pos.y -= speed;
-  if(keys.ArrowDown) pos.y += speed;
-  if(keys.ArrowLeft) pos.x -= speed;
-  if(keys.ArrowRight) pos.x += speed;
+joystick.addEventListener('touchmove', e=>{
+  if(!active) return;
+  const touch = e.touches[0];
+  let dx = touch.clientX - startX;
+  let dy = touch.clientY - startY;
 
-  // udržať kurzor v hraniciach
-  pos.x = Math.max(0, Math.min(window.innerWidth, pos.x));
-  pos.y = Math.max(0, Math.min(window.innerHeight, pos.y));
-  
-  cursor.style.left = pos.x+'px';
-  cursor.style.top = pos.y+'px';
+  // obmedzenie vnútri joystick
+  const maxDist = 30;
+  const dist = Math.min(maxDist, Math.sqrt(dx*dx+dy*dy));
+  const angle = Math.atan2(dy, dx);
+  joystickInner.style.left = 20 + dist*Math.cos(angle) + 'px';
+  joystickInner.style.top = 20 + dist*Math.sin(angle) + 'px';
 
-  // posúvanie iframe ak kurzor blízko okraja
-  const scrollMargin = 50;
-  const iframeDoc = iframe.contentWindow.document;
-  try {
-    if(pos.y < scrollMargin) iframe.contentWindow.scrollBy(0, -speed);
-    if(pos.y > window.innerHeight - scrollMargin) iframe.contentWindow.scrollBy(0, speed);
-    if(pos.x < scrollMargin) iframe.contentWindow.scrollBy(-speed, 0);
-    if(pos.x > window.innerWidth - scrollMargin) iframe.contentWindow.scrollBy(speed, 0);
-  } catch(e){ /* CORS iframe, funguje iba na vlastné HTML */ }
+  movePointer(dx/5, dy/5); // rýchlosť pohybu
+});
 
-  requestAnimationFrame(update);
-}
-update();
+joystick.addEventListener('touchend', e=>{
+  active = false;
+  joystickInner.style.left = '20px';
+  joystickInner.style.top = '20px';
+});
 
-// simulovanie kliknutia
-function clickAtCursor(){
-  try {
-    const rect = iframe.getBoundingClientRect();
-    const x = pos.x - rect.left;
-    const y = pos.y - rect.top;
-    const el = iframe.contentWindow.document.elementFromPoint(x, y);
-    if(el) el.click();
-  } catch(e){
-    console.log("Nie je možné kliknúť do externého iframe (CORS)");
-  }
-}
+/* tlačidlá X/O */
+document.getElementById('btnX').addEventListener('touchstart', ()=>{
+  pointer.click(); // klik na ukazovák
+});
+document.getElementById('btnO').addEventListener('touchstart', ()=>{
+  alert('Späť alebo iná akcia'); // sem môžeš vložiť funkciu späť
+});
 </script>
 
 </body>
