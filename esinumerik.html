@@ -203,7 +203,7 @@ N040 M30"></textarea>
 </div>
 
 <script>
-/* ========= EUS CNC — core JS ========= */
+/* ========= EUS CNC — core JS (upravené) ========= */
 
 /* helpers */
 function safeDownload(contentOrBlob, filename, type='application/octet-stream'){
@@ -261,18 +261,17 @@ N030 G01 X80 Y60
 N040 G01 X0 Y60
 N050 G01 X0 Y0
 N060 M30`;
+  parseProgram();
 });
 
 /* parser */
-let program = []; // array of {raw, n, g, params:{X:,Y:,Z:,F:,M:...}}
+let program = [];
 function parseProgram(){
   program = [];
   report.textContent = '';
   const lines = editor.value.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
-  let errors = [];
   for(let i=0;i<lines.length;i++){
     const raw = lines[i];
-    // remove comments in parentheses
     const noComment = raw.replace(/\(.*?\)/g,'').trim();
     const toks = noComment.split(/\s+/);
     const obj = {raw, line:i+1, n:null, g:null, params:{}, rawClean:noComment};
@@ -289,18 +288,13 @@ function parseProgram(){
         const val = up.slice(1);
         obj.params[key] = Number(val);
       } else {
-        // unknown token -> record but not fatal
         if(up.length>0) obj.params['_unknown'] = obj.params['_unknown'] || [];
         if(up.length>0) obj.params['_unknown'].push(up);
       }
     });
-    // basic validation
-    if(!obj.g && !obj.params.M && !obj.n && obj.rawClean.length>0 && !/^\s*$/.test(obj.rawClean)){
-      // could be comment-only or blank; allow but warn
-    }
     program.push(obj);
   }
-  // simple report
+
   let rpt = `Načítaných riadkov: ${program.length}\n\n`;
   const unknowns = program.flatMap(p => p.params._unknown ? p.params._unknown.map(u=>`Riadok ${p.line}: ${u}`) : []);
   if(unknowns.length) rpt += 'Nepodporované tokeny (len upozornenie):\n' + unknowns.join('\n') + '\n\n';
@@ -310,165 +304,119 @@ function parseProgram(){
   buildSegments();
 }
 
-/* build segments from program */
-let segments = []; // [{from:{x,y,z}, to:{x,y,z}, feed, type:'G00'|'G01', line}]
+/* build segments */
+let segments = [];
 function buildSegments(){
   segments = [];
-  let cur = {x:0,y:0,z:0, feed:300}; // starting at 0
+  let cur = {x:0,y:0,z:0, feed:300};
   for(let p of program){
-    if(p.params.M === 'M30'){ segments.push({from:{...cur}, to:{...cur}, feed:cur.feed, type:'M30', line:p.line}); break; }
-    if(p.g === 'G00' || p.g === 'G01'){
-      const tgt = {x: cur.x, y: cur.y, z: cur.z};
-      if(typeof p.params.X !== 'undefined') tgt.x = p.params.X;
-      if(typeof p.params.Y !== 'undefined') tgt.y = p.params.Y;
-      if(typeof p.params.Z !== 'undefined') tgt.z = p.params.Z;
-      if(typeof p.params.F !== 'undefined') cur.feed = p.params.F;
+    if(p.params.M==='M30'){ segments.push({from:{...cur}, to:{...cur}, feed:cur.feed, type:'M30', line:p.line}); break; }
+    if(p.g==='G00'||p.g==='G01'){
+      const tgt = {x:cur.x, y:cur.y, z:cur.z};
+      if(typeof p.params.X!=='undefined') tgt.x = p.params.X;
+      if(typeof p.params.Y!=='undefined') tgt.y = p.params.Y;
+      if(typeof p.params.Z!=='undefined') tgt.z = p.params.Z;
+      if(typeof p.params.F!=='undefined') cur.feed = p.params.F;
       segments.push({from:{...cur}, to:tgt, feed:cur.feed, type:p.g, line:p.line});
       cur = {...tgt, feed:cur.feed};
-    } else if(p.params.M === 'M30'){
-      segments.push({from:{...cur}, to:{...cur}, feed:cur.feed, type:'M30', line:p.line});
     }
   }
   drawAll();
 }
 
 /* simulation state */
-let simState = {
-  ix: 0, // index in segments
-  t: 0, // progress 0..1 within current segment
-  running: false,
-  totalDistance: 0,
-  zoom: 1,
-  offsetX: 0, offsetY:0
-};
+let simState = { ix:0, t:0, running:false, totalDistance:0, zoom:1, offsetX:0, offsetY:0 };
 
-/* drawing utilities */
+/* drawing */
 function clearCanvas(){
   ctx.clearRect(0,0,simCanvas.width,simCanvas.height);
-  ctx.fillStyle = '#071026';
+  ctx.fillStyle='#071026';
   ctx.fillRect(0,0,simCanvas.width,simCanvas.height);
 }
 
 function worldToScreen(x,y){
-  // world coordinates in mm; center on canvas
-  const w = simCanvas.width, h = simCanvas.height;
-  const scale = simState.zoom;
-  // center world mid point -> implement simple pan offset
-  const cx = w/2 + simState.offsetX;
-  const cy = h/2 + simState.offsetY;
+  const w=simCanvas.width,h=simCanvas.height;
+  const scale=simState.zoom;
+  const cx=w/2 + simState.offsetX;
+  const cy=h/2 + simState.offsetY;
   return {sx: cx + x*scale, sy: cy - y*scale};
 }
 
 function drawAll(){
   clearCanvas();
-  // axes grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-  ctx.lineWidth = 1;
-  const step = 10 * simState.zoom;
+
+  // grid
+  ctx.strokeStyle='rgba(255,255,255,0.03)';
+  ctx.lineWidth=1;
+  const step = 10*simState.zoom;
   for(let x=0;x<simCanvas.width;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,simCanvas.height); ctx.stroke(); }
   for(let y=0;y<simCanvas.height;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(simCanvas.width,y); ctx.stroke(); }
 
-  // draw segments
-  for(let i=0;i<segments.length;i++){
-    const s = segments[i];
-    const p1 = worldToScreen(s.from.x,s.from.y);
-    const p2 = worldToScreen(s.to.x,s.to.y);
+  // segments
+  segments.forEach((s,i)=>{
+    const p1=worldToScreen(s.from.x,s.from.y);
+    const p2=worldToScreen(s.to.x,s.to.y);
     ctx.beginPath();
     ctx.moveTo(p1.sx,p1.sy);
     ctx.lineTo(p2.sx,p2.sy);
     ctx.strokeStyle = (s.type==='G00') ? '#ffa500' : '#34d399';
     ctx.lineWidth = (i===simState.ix ? 3 : 2);
     ctx.stroke();
-  }
+  });
 
-  // draw tool position (current)
-  const curPos = getCurrentPosition();
-  const screen = worldToScreen(curPos.x,curPos.y);
+  // tool
+  const cur = getCurrentPosition();
+  const scr = worldToScreen(cur.x,cur.y);
   ctx.beginPath();
-  ctx.arc(screen.sx, screen.sy, 6, 0, Math.PI*2);
-  ctx.fillStyle = '#ff4d4d';
+  ctx.arc(scr.sx,scr.sy,6,0,Math.PI*2);
+  ctx.fillStyle='#ff4d4d';
   ctx.fill();
 
-  // show coordinate text
-  ctx.fillStyle = '#dbeafe';
-  ctx.font = '13px monospace';
-  ctx.fillText(`X:${curPos.x.toFixed(3)} Y:${curPos.y.toFixed(3)} Z:${curPos.z.toFixed(3)}`, 12, 18);
+  // coordinates
+  ctx.fillStyle='#dbeafe';
+  ctx.font='13px monospace';
+  ctx.fillText(`X:${cur.x.toFixed(3)} Y:${cur.y.toFixed(3)} Z:${cur.z.toFixed(3)}`,12,18);
 }
 
-/* current position based on simState */
+/* current pos */
 function getCurrentPosition(){
   if(segments.length===0) return {x:0,y:0,z:0};
-  const idx = Math.min(simState.ix, segments.length-1);
-  const seg = segments[idx];
-  const fx = seg.from.x + (seg.to.x - seg.from.x) * simState.t;
-  const fy = seg.from.y + (seg.to.y - seg.from.y) * simState.t;
-  const fz = seg.from.z + (seg.to.z - seg.from.z) * simState.t;
+  const idx=Math.min(simState.ix,segments.length-1);
+  const seg=segments[idx];
+  const fx=seg.from.x + (seg.to.x-seg.from.x)*simState.t;
+  const fy=seg.from.y + (seg.to.y-seg.from.y)*simState.t;
+  const fz=seg.from.z + (seg.to.z-seg.from.z)*simState.t;
   return {x:fx,y:fy,z:fz};
 }
 
-/* draw helpers */
+/* update info */
 function updateInfo(){
-  const cur = getCurrentPosition();
-  posEl.textContent = `X${cur.x.toFixed(3)} Y${cur.y.toFixed(3)} Z${cur.z.toFixed(3)}`;
-  const seg = segments[simState.ix];
+  const cur=getCurrentPosition();
+  posEl.textContent=`X${cur.x.toFixed(3)} Y${cur.y.toFixed(3)} Z${cur.z.toFixed(3)}`;
+  const seg=segments[simState.ix];
   curLineEl.textContent = seg ? `Line ${seg.line} (${seg.type})` : '—';
-  distanceEl.textContent = simState.totalDistance.toFixed(3);
-  // ETA calculation: remaining distance / feed (converted)
-  let remaining = 0;
-  // progress within current
-  if(segments.length){
-    const s = segments[simState.ix];
-    function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y, dz=a.z-b.z; return Math.sqrt(dx*dx+dy*dy+dz*dz); }
-    remaining += dist({x:s.to.x,y:s.to.y,z:s.to.z}, {x:cur.x,y:cur.y,z:cur.z});
-    for(let i=simState.ix+1;i<segments.length;i++){
-      const ss = segments[i];
-      remaining += dist(ss.from, ss.to);
-    }
-  }
-  // feed in mm/min -> convert to mm/s
-  const feed = (segments[simState.ix] && segments[simState.ix].feed) ? segments[simState.ix].feed : 300;
-  const mmPerSec = feed/60;
-  const secs = mmPerSec>0 ? remaining/mmPerSec : 0;
-  etaEl.textContent = secs>0 ? formatTime(secs) : '0s';
 }
 
-function formatTime(s){
-  s = Math.round(s);
-  const h = Math.floor(s/3600); s%=3600;
-  const m = Math.floor(s/60); s%=60;
-  const sec = s;
-  if(h>0) return `${h}h ${m}m ${sec}s`;
-  if(m>0) return `${m}m ${sec}s`;
-  return `${sec}s`;
-}
-
-/* simulation stepping */
+/* step */
 function stepOnce(){
   if(segments.length===0) return;
-  const seg = segments[simState.ix];
-  // compute segment length
-  const dx = seg.to.x - seg.from.x;
-  const dy = seg.to.y - seg.from.y;
-  const dz = seg.to.z - seg.from.z;
-  const segLen = Math.sqrt(dx*dx + dy*dy + dz*dz);
-  // advance progress by a fixed small step proportional to speed
-  const speedFactor = Number(speedSelect.value) || 1;
-  // we convert based on feed (mm/min) to step per frame (simulate)
-  const feed = seg.feed || 300; // mm/min
-  const mmPerSec = feed/60 * speedFactor;
-  // time per tick ~ 0.05s
-  const dt = 0.05 * speedFactor;
-  const advance = mmPerSec * dt; // mm per tick
+  const seg=segments[simState.ix];
+  const dx=seg.to.x-seg.from.x, dy=seg.to.y-seg.from.y, dz=seg.to.z-seg.from.z;
+  const segLen=Math.sqrt(dx*dx+dy*dy+dz*dz);
+  const speedFactor=Number(speedSelect.value)||1;
+  const feed=seg.feed||300;
+  const mmPerSec=feed/60*speedFactor;
+  const dt=0.05*speedFactor;
+  const advance=mmPerSec*dt;
   const delta = segLen>0 ? advance/segLen : 1;
   simState.t += delta;
-  simState.totalDistance += Math.min(advance, segLen*(1-simState.t+delta)); // approximate
-  if(simState.t >= 1 - 1e-9){
-    // move to next segment
+  simState.totalDistance += Math.min(advance, segLen*(1-simState.t+delta));
+  if(simState.t>=1-1e-9){
     simState.ix++;
-    simState.t = 0;
-    if(simState.ix >= segments.length){
-      simState.ix = segments.length-1;
-      simState.t = 1;
+    simState.t=0;
+    if(simState.ix>=segments.length){
+      simState.ix=segments.length-1;
+      simState.t=1;
       stopSimulation();
     }
   }
@@ -476,107 +424,68 @@ function stepOnce(){
   updateInfo();
 }
 
-/* playback control */
-let animHandle = null;
-function playSimulation(){
-  if(simState.running) return;
-  simState.running = true;
-  modeBadge.textContent = 'Playing';
-  animHandle = setInterval(()=>{ stepOnce(); }, 50);
-}
-function stopSimulation(){
-  if(!simState.running) return;
-  simState.running = false;
-  modeBadge.textContent = 'Stopped';
-  clearInterval(animHandle);
-  animHandle = null;
-}
-function resetSimulator(){
-  simState.ix = 0; simState.t = 0; simState.totalDistance = 0;
-  simState.zoom = 1; simState.offsetX = 0; simState.offsetY = 0;
-  drawAll();
-  updateInfo();
-}
+/* play/stop */
+let animHandle=null;
+function playSimulation(){ if(simState.running) return; simState.running=true; modeBadge.textContent='Playing'; animHandle=setInterval(stepOnce,50);}
+function stopSimulation(){ if(!simState.running) return; simState.running=false; modeBadge.textContent='Stopped'; clearInterval(animHandle); animHandle=null;}
+function resetSimulator(){ simState.ix=0; simState.t=0; simState.totalDistance=0; simState.zoom=1; simState.offsetX=0; simState.offsetY=0; drawAll(); updateInfo();}
 
-/* event hooks */
-parseBtn.addEventListener('click', ()=>{ parseProgram(); });
-stepBtn.addEventListener('click', ()=>{
-  if(!program.length) parseProgram();
-  stepOnce();
-});
-playBtn.addEventListener('click', ()=>{
-  if(!program.length) parseProgram();
-  playSimulation();
-});
-stopBtn.addEventListener('click', ()=>{ stopSimulation(); });
+/* events */
+parseBtn.addEventListener('click',()=>parseProgram());
+stepBtn.addEventListener('click',()=>{ if(!program.length) parseProgram(); stepOnce(); });
+playBtn.addEventListener('click',()=>{ if(!program.length) parseProgram(); playSimulation(); });
+stopBtn.addEventListener('click',()=>stopSimulation());
 
-speedSelect.addEventListener('change', ()=>{ /* speed affects stepOnce */ });
+zoomIn.addEventListener('click',()=>{ simState.zoom*=1.2; drawAll(); });
+zoomOut.addEventListener('click',()=>{ simState.zoom/=1.2; drawAll(); });
+fitBtn.addEventListener('click',()=>fitToContent());
+resetView.addEventListener('click',()=>{ simState.zoom=1; simState.offsetX=0; simState.offsetY=0; drawAll(); });
 
-zoomIn.addEventListener('click', ()=>{ simState.zoom *= 1.2; drawAll(); });
-zoomOut.addEventListener('click', ()=>{ simState.zoom /= 1.2; drawAll(); });
-fitBtn.addEventListener('click', fitToContent);
-resetView.addEventListener('click', ()=>{ simState.zoom=1; simState.offsetX=0; simState.offsetY=0; drawAll(); });
-
-/* fit the view to the extents of the geometry */
+/* fit to segments */
 function fitToContent(){
   if(segments.length===0) return;
   let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-  for(let s of segments){
-    minx = Math.min(minx, s.from.x, s.to.x);
-    miny = Math.min(miny, s.from.y, s.to.y);
-    maxx = Math.max(maxx, s.from.x, s.to.x);
-    maxy = Math.max(maxy, s.from.y, s.to.y);
-  }
-  const w = simCanvas.width, h = simCanvas.height;
-  const worldW = Math.max(1, (maxx-minx));
-  const worldH = Math.max(1, (maxy-miny));
-  const scaleX = (w*0.8)/worldW;
-  const scaleY = (h*0.8)/worldH;
-  simState.zoom = Math.min(scaleX, scaleY);
-  // center on midpoint
-  const midx = (minx+maxx)/2, midy = (miny+maxy)/2;
-  simState.offsetX = -midx*simState.zoom;
-  simState.offsetY = midy*simState.zoom;
+  segments.forEach(s=>{
+    minx=Math.min(minx,s.from.x,s.to.x); miny=Math.min(miny,s.from.y,s.to.y);
+    maxx=Math.max(maxx,s.from.x,s.to.x); maxy=Math.max(maxy,s.from.y,s.to.y);
+  });
+  const w=simCanvas.width,h=simCanvas.height;
+  const scaleX=(w*0.8)/(maxx-minx||1);
+  const scaleY=(h*0.8)/(maxy-miny||1);
+  simState.zoom=Math.min(scaleX,scaleY);
+  const midx=(minx+maxx)/2, midy=(miny+maxy)/2;
+  simState.offsetX=-midx*simState.zoom;
+  simState.offsetY=midy*simState.zoom;
   drawAll();
 }
 
 /* export */
-exportTxt.addEventListener('click', ()=>{
-  const name = prompt('Názov súboru (bez prípony)', 'program') || 'program';
-  safeDownload(editor.value, name + '.txt', 'text/plain;charset=utf-8');
-});
-exportMpf.addEventListener('click', ()=>{
-  // create a simple mpf: same content, maybe add header
-  const header = `(Erik EUS MPF export)\n; exported: ${new Date().toISOString()}\n`;
-  const out = header + editor.value + '\n';
-  const name = prompt('Názov súboru (bez prípony)', 'program') || 'program';
-  safeDownload(out, name + '.mpf', 'text/plain;charset=utf-8');
-});
+exportTxt.addEventListener('click',()=>{ safeDownload(editor.value, (prompt('Názov súboru','program')||'program')+'.txt','text/plain;charset=utf-8'); });
+exportMpf.addEventListener('click',()=>{ const header=`(EUS MPF)\n; exported ${new Date().toISOString()}\n`; safeDownload(header+editor.value,(prompt('Názov súboru','program')||'program')+'.mpf','text/plain;charset=utf-8'); });
 
 /* initial draw */
 parseProgram();
 
-/* resize canvas to device pixel ratio */
+/* canvas adjust */
 function adjustCanvas(){
-  const dpr = window.devicePixelRatio || 1;
-  simCanvas.width = Math.floor(simCanvas.clientWidth * dpr);
-  simCanvas.height = Math.floor(simCanvas.clientHeight * dpr);
+  const dpr=window.devicePixelRatio||1;
+  simCanvas.width=Math.floor(simCanvas.clientWidth*dpr);
+  simCanvas.height=Math.floor(simCanvas.clientHeight*dpr);
   ctx.setTransform(dpr,0,0,dpr,0,0);
   drawAll();
+  buildSegments();
 }
-window.addEventListener('resize', ()=>{
-  adjustCanvas();
-});
+window.addEventListener('resize',adjustCanvas);
 adjustCanvas();
 
-/* keyboard shortcuts: Space play/pause, ArrowRight step */
+/* keyboard shortcuts */
 window.addEventListener('keydown',(e)=>{
-  if(e.code==='Space'){ e.preventDefault(); if(simState.running) stopSimulation(); else playSimulation(); }
+  if(e.code==='Space'){ e.preventDefault(); simState.running?stopSimulation():playSimulation(); }
   if(e.code==='ArrowRight'){ stepOnce(); }
 });
 
-/* stop animation when window hidden */
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stopSimulation(); });
+/* stop animation when hidden */
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopSimulation(); });
 
 </script>
 </body>
