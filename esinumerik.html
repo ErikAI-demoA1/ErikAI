@@ -243,7 +243,7 @@ document.getElementById('playBtn').addEventListener('click', ()=>{simState.playi
 document.getElementById('stopBtn').addEventListener('click', ()=>{simState.playing=false; simState.ix=0; simState.progress=0; drawAll();});
 document.getElementById('stepBtn').addEventListener('click', ()=>stepOnce());
 
-// Zoom
+// Zoom / Fit
 document.getElementById('zoomIn').addEventListener('click', ()=>{simState.zoom*=1.2; drawAll();});
 document.getElementById('zoomOut').addEventListener('click', ()=>{simState.zoom/=1.2; drawAll();});
 document.getElementById('fit').addEventListener('click', ()=>fitToView());
@@ -420,99 +420,66 @@ function stepOnce(){
   updateInfo();
 }
 
-function fitToView() {
-/* === Zoom a posúvanie pre myš aj dotyk === */
-let isPanning = false;
-let startPan = { x: 0, y: 0 };
-let startOffset = { x: 0, y: 0 };
-let pinchStartDist = null;
-let pinchStartZoom = 1;
-let lastTouchCenter = null;
+// Fit na obrazovku
+function fitToView(){
+  if(segments.length===0) return;
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  for(const s of segments){
+    minX=Math.min(minX,s.from.x,s.to.x);
+    maxX=Math.max(maxX,s.from.x,s.to.x);
+    minY=Math.min(minY,s.from.y,s.to.y);
+    maxY=Math.max(maxY,s.from.y,s.to.y);
+  }
+  const dx=maxX-minX;
+  const dy=maxY-minY;
+  const scale=Math.min(simCanvas.width/(dx+20),simCanvas.height/(dy+20));
+  simState.zoom=scale;
+  simState.offsetX=-(minX+dx/2)*scale;
+  simState.offsetY=-(minY+dy/2)*scale;
+  drawAll();
+}
 
-// 🖱️ Zoom kolieskom
-simCanvas.addEventListener('wheel', (e) => {
+// Zoom / pan pre myš a dotyk
+let isPanning=false,startPan={x:0,y:0},startOffset={x:0,y:0};
+let pinchStartDist=null,pinchStartZoom=1;
+
+// Myš koliesko
+simCanvas.addEventListener('wheel', (e)=>{
   e.preventDefault();
-  const { offsetX, offsetY, deltaY } = e;
-  const zoomFactor = 1.1;
-
-  const worldBefore = {
-    x: (offsetX - simState.offsetX - simCanvas.width / 2) / simState.zoom,
-    y: (simCanvas.height / 2 - offsetY + simState.offsetY) / simState.zoom,
-  };
-
-  if (deltaY < 0) simState.zoom *= zoomFactor;
-  else simState.zoom /= zoomFactor;
-
-  const worldAfter = {
-    x: (offsetX - simState.offsetX - simCanvas.width / 2) / simState.zoom,
-    y: (simCanvas.height / 2 - offsetY + simState.offsetY) / simState.zoom,
-  };
-
-  simState.offsetX += (worldAfter.x - worldBefore.x) * simState.zoom;
-  simState.offsetY -= (worldAfter.y - worldBefore.y) * simState.zoom;
+  const zoomFactor=1.1;
+  const {offsetX,offsetY,deltaY}=e;
+  const worldBefore = {x:(offsetX-simState.offsetX-simCanvas.width/2)/simState.zoom,
+                       y:(simCanvas.height/2-offsetY+simState.offsetY)/simState.zoom};
+  if(deltaY<0) simState.zoom*=zoomFactor; else simState.zoom/=zoomFactor;
+  const worldAfter = {x:(offsetX-simState.offsetX-simCanvas.width/2)/simState.zoom,
+                      y:(simCanvas.height/2-offsetY+simState.offsetY)/simState.zoom};
+  simState.offsetX += (worldAfter.x-worldBefore.x)*simState.zoom;
+  simState.offsetY -= (worldAfter.y-worldBefore.y)*simState.zoom;
   drawAll();
 });
 
-// ✋ Myš – posúvanie
-simCanvas.addEventListener('mousedown', (e) => {
-  isPanning = true;
-  startPan = { x: e.clientX, y: e.clientY };
-  startOffset = { x: simState.offsetX, y: simState.offsetY };
-});
+// Myš – posúvanie
+simCanvas.addEventListener('mousedown', (e)=>{isPanning=true; startPan={x:e.clientX,y:e.clientY}; startOffset={...simState};});
+window.addEventListener('mousemove',(e)=>{if(!isPanning) return; simState.offsetX=startOffset.offsetX+(e.clientX-startPan.x); simState.offsetY=startOffset.offsetY+(e.clientY-startPan.y); drawAll();});
+window.addEventListener('mouseup',()=>{isPanning=false;});
 
-window.addEventListener('mousemove', (e) => {
-  if (!isPanning) return;
-  const dx = e.clientX - startPan.x;
-  const dy = e.clientY - startPan.y;
-  simState.offsetX = startOffset.x + dx;
-  simState.offsetY = startOffset.y + dy;
-  drawAll();
-});
-
-window.addEventListener('mouseup', () => { isPanning = false; });
-
-// 📱 Dotyk – posúvanie 1 prstom, zoom 2 prstami
-simCanvas.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 1) {
-    isPanning = true;
-    startPan = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    startOffset = { x: simState.offsetX, y: simState.offsetY };
-  } else if (e.touches.length === 2) {
-    isPanning = false;
-    const dx = e.touches[1].clientX - e.touches[0].clientX;
-    const dy = e.touches[1].clientY - e.touches[0].clientY;
-    pinchStartDist = Math.sqrt(dx * dx + dy * dy);
-    pinchStartZoom = simState.zoom;
-
-    lastTouchCenter = {
-      x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
-      y: (e.touches[0].clientY + e.touches[1].clientY) / 2
-    };
+// Dotyk
+simCanvas.addEventListener('touchstart',(e)=>{
+  if(e.touches.length===1){isPanning=true; startPan={x:e.touches[0].clientX,y:e.touches[0].clientY}; startOffset={...simState};}
+  else if(e.touches.length===2){
+    isPanning=false;
+    const dx=e.touches[1].clientX-e.touches[0].clientX;
+    const dy=e.touches[1].clientY-e.touches[0].clientY;
+    pinchStartDist=Math.sqrt(dx*dx+dy*dy);
+    pinchStartZoom=simState.zoom;
   }
 });
-
-simCanvas.addEventListener('touchmove', (e) => {
+simCanvas.addEventListener('touchmove',(e)=>{
   e.preventDefault();
-  if (isPanning && e.touches.length === 1) {
-    const dx = e.touches[0].clientX - startPan.x;
-    const dy = e.touches[0].clientY - startPan.y;
-    simState.offsetX = startOffset.x + dx;
-    simState.offsetY = startOffset.y + dy;
-    drawAll();
-  } else if (e.touches.length === 2 && pinchStartDist) {
-    const dx = e.touches[1].clientX - e.touches[0].clientX;
-    const dy = e.touches[1].clientY - e.touches[0].clientY;
-    const newDist = Math.sqrt(dx * dx + dy * dy);
-    const zoomChange = newDist / pinchStartDist;
-    simState.zoom = pinchStartZoom * zoomChange;
-    drawAll();
-  }
+  if(isPanning && e.touches.length===1){simState.offsetX=startOffset.offsetX+(e.touches[0].clientX-startPan.x); simState.offsetY=startOffset.offsetY+(e.touches[0].clientY-startPan.y); drawAll();}
+  else if(e.touches.length===2 && pinchStartDist){const dx=e.touches[1].clientX-e.touches[0].clientX; const dy=e.touches[1].clientY-e.touches[0].clientY; simState.zoom=pinchStartZoom*(Math.sqrt(dx*dx+dy*dy)/pinchStartDist); drawAll();}
 });
-
-simCanvas.addEventListener('touchend', () => {
-  isPanning = false;
-  pinchStartDist = null;
-});
+simCanvas.addEventListener('touchend',()=>{isPanning=false; pinchStartDist=null;});
 
 // Info panel
 function updateInfo(){
@@ -536,7 +503,6 @@ function adjustCanvas(){
 window.addEventListener('resize', adjustCanvas);
 adjustCanvas();
 parseProgram();
-
 </script>
 </body>
 </html>
