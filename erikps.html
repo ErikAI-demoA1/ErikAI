@@ -3,106 +3,100 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI Joystick</title>
+<title>Joystick Myška Pre iframe</title>
 <style>
-  body { background:#111; color:#fff; font-family:Arial; margin:0; display:flex; flex-direction:column; align-items:center; height:100vh; }
-  #urlInput { margin:10px; width:80%; padding:8px; font-size:16px; }
-  #playArea { position:relative; width:90%; height:400px; background:#222; border:2px solid #ff4500; overflow:hidden; }
-  #cursor { position:absolute; width:20px; height:20px; background:#ff4500; border-radius:50%; pointer-events:none; }
-  #joystickArea { width:140px; height:140px; background:#333; border-radius:50%; margin-top:10px; position:relative; }
-  #joystick { position:absolute; width:50px; height:50px; background:#ff4500; border-radius:50%; top:45px; left:45px; transition:0.05s; }
-  #buttons { display:flex; gap:10px; margin-top:10px; }
-  .btn { padding:10px 20px; background:#ff4500; border:none; border-radius:8px; color:#fff; cursor:pointer; font-size:16px; }
-  iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:none; z-index:0; }
+  body { margin:0; overflow:hidden; background:#111; }
+  #gameArea {
+    position: relative;
+    width: 100vw; height: 100vh;
+    background:#222;
+    overflow: hidden;
+  }
+  #cursor {
+    position: absolute;
+    width: 20px; height: 20px;
+    background: #ff4500;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+  }
+  #iframeContainer {
+    position: absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    pointer-events: none; /* aby sa dalo kliknúť cez JS */
+  }
+  #iframeContainer iframe {
+    width:100%; height:100%;
+    border:none;
+  }
 </style>
 </head>
 <body>
 
-<input id="urlInput" type="text" placeholder="Vlož odkaz (napr. https://youtube.com)" />
-<div id="playArea">
-  <iframe id="iframeContent"></iframe>
+<div id="gameArea">
   <div id="cursor"></div>
-</div>
-
-<div id="joystickArea">
-  <div id="joystick"></div>
-</div>
-
-<div id="buttons">
-  <button class="btn" data-action="Up">↑</button>
-  <button class="btn" data-action="Down">↓</button>
-  <button class="btn" data-action="Left">←</button>
-  <button class="btn" data-action="Right">→</button>
-  <button class="btn" data-action="X">X</button>
-  <button class="btn" data-action="O">O</button>
+  <div id="iframeContainer">
+    <iframe id="contentFrame" src="https://www.youtube.com/"></iframe>
+  </div>
 </div>
 
 <script>
 const cursor = document.getElementById('cursor');
-const playArea = document.getElementById('playArea');
-const iframe = document.getElementById('iframeContent');
-const joystick = document.getElementById('joystick');
-const joystickArea = document.getElementById('joystickArea');
-const buttons = document.querySelectorAll('.btn');
-const urlInput = document.getElementById('urlInput');
+const iframe = document.getElementById('contentFrame');
+const gameArea = document.getElementById('gameArea');
 
-let cursorPos = {x:200, y:200};
-let velocity = {x:0, y:0};
+let pos = {x: window.innerWidth/2, y: window.innerHeight/2};
+let speed = 10; // rýchlosť pohybu
+let keys = {ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false};
 
-urlInput.addEventListener('change', ()=>{
-    iframe.src = urlInput.value;
+// ovládanie šípkami
+document.addEventListener('keydown', e => {
+  if(keys.hasOwnProperty(e.key)) keys[e.key] = true;
+  if(e.key === 'x' || e.key === 'X') clickAtCursor();
 });
+document.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
 
-function updateCursor() {
-    cursorPos.x += velocity.x;
-    cursorPos.y += velocity.y;
+// hlavný update loop
+function update() {
+  if(keys.ArrowUp) pos.y -= speed;
+  if(keys.ArrowDown) pos.y += speed;
+  if(keys.ArrowLeft) pos.x -= speed;
+  if(keys.ArrowRight) pos.x += speed;
 
-    // Limity pohybu kurzora
-    cursorPos.x = Math.max(0, Math.min(playArea.clientWidth - 20, cursorPos.x));
-    cursorPos.y = Math.max(0, Math.min(playArea.clientHeight - 20, cursorPos.y));
+  // udržať kurzor v hraniciach
+  pos.x = Math.max(0, Math.min(window.innerWidth, pos.x));
+  pos.y = Math.max(0, Math.min(window.innerHeight, pos.y));
+  
+  cursor.style.left = pos.x+'px';
+  cursor.style.top = pos.y+'px';
 
-    cursor.style.left = cursorPos.x + 'px';
-    cursor.style.top = cursorPos.y + 'px';
+  // posúvanie iframe ak kurzor blízko okraja
+  const scrollMargin = 50;
+  const iframeDoc = iframe.contentWindow.document;
+  try {
+    if(pos.y < scrollMargin) iframe.contentWindow.scrollBy(0, -speed);
+    if(pos.y > window.innerHeight - scrollMargin) iframe.contentWindow.scrollBy(0, speed);
+    if(pos.x < scrollMargin) iframe.contentWindow.scrollBy(-speed, 0);
+    if(pos.x > window.innerWidth - scrollMargin) iframe.contentWindow.scrollBy(speed, 0);
+  } catch(e){ /* CORS iframe, funguje iba na vlastné HTML */ }
 
-    requestAnimationFrame(updateCursor);
+  requestAnimationFrame(update);
 }
-updateCursor();
+update();
 
-// Ovládanie joystickom
-joystickArea.addEventListener('touchmove', e=>{
-    e.preventDefault();
-    const rect = joystickArea.getBoundingClientRect();
-    const touch = e.touches[0];
-    const dx = touch.clientX - rect.left - rect.width/2;
-    const dy = touch.clientY - rect.top - rect.height/2;
-    const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 45);
-    const angle = Math.atan2(dy, dx);
-    joystick.style.left = 45 + dist*Math.cos(angle) + 'px';
-    joystick.style.top = 45 + dist*Math.sin(angle) + 'px';
-
-    velocity.x = Math.cos(angle) * (dist/15);
-    velocity.y = Math.sin(angle) * (dist/15);
-}, false);
-
-joystickArea.addEventListener('touchend', ()=>{
-    joystick.style.left = '45px';
-    joystick.style.top = '45px';
-    velocity.x = 0;
-    velocity.y = 0;
-});
-
-// Šípky – jemný posun
-buttons.forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-        const act = btn.dataset.action;
-        if (act === "Up") cursorPos.y -= 10;
-        if (act === "Down") cursorPos.y += 10;
-        if (act === "Left") cursorPos.x -= 10;
-        if (act === "Right") cursorPos.x += 10;
-        if (act === "X") alert("Potvrdenie akcie (X)");
-        if (act === "O") alert("Späť (O)");
-    });
-});
+// simulovanie kliknutia
+function clickAtCursor(){
+  try {
+    const rect = iframe.getBoundingClientRect();
+    const x = pos.x - rect.left;
+    const y = pos.y - rect.top;
+    const el = iframe.contentWindow.document.elementFromPoint(x, y);
+    if(el) el.click();
+  } catch(e){
+    console.log("Nie je možné kliknúť do externého iframe (CORS)");
+  }
+}
 </script>
 
 </body>
