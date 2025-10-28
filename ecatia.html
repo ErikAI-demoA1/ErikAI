@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2D Kreslenie Demo</title>
+<style>
+  body { margin:0; font-family: sans-serif; background:#071026; color:#dbeafe; display:flex; flex-direction:column; align-items:center;}
+  canvas { background:#0d1624; border:1px solid #34d399; margin-top:10px; }
+  button { margin:5px; padding:6px 12px; border:none; border-radius:6px; background:#34d399; color:#041014; cursor:pointer;}
+</style>
+</head>
+<body>
+<h2>2D Kreslenie – Čiary a Kruhy</h2>
+<div>
+  <button id="lineBtn">Kresli čiaru</button>
+  <button id="circleBtn">Kresli kruh</button>
+  <button id="exportBtn">Export JSON</button>
+</div>
+<canvas id="canvas" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let mode = null; // 'line' alebo 'circle'
+let tempPoints = []; // uchováva kliky
+let shapes = []; // uložené objekty
+
+document.getElementById('lineBtn').addEventListener('click', ()=>{mode='line'; tempPoints=[];});
+document.getElementById('circleBtn').addEventListener('click', ()=>{mode='circle'; tempPoints=[];});
+document.getElementById('exportBtn').addEventListener('click', ()=>exportShapes());
+
+canvas.addEventListener('click', (e)=>{
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  tempPoints.push({x,y});
+
+  if(mode==='line' && tempPoints.length===2){
+    shapes.push({type:'line', from: tempPoints[0], to: tempPoints[1]});
+    tempPoints = [];
+  } else if(mode==='circle' && tempPoints.length===2){
+    const cx = tempPoints[0].x;
+    const cy = tempPoints[0].y;
+    const px = tempPoints[1].x;
+    const py = tempPoints[1].y;
+    const r = Math.hypot(px-cx, py-cy);
+    shapes.push({type:'circle', center:{x:cx,y:cy}, radius:r});
+    tempPoints = [];
+  }
+
+  draw();
+});
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // nakresli všetky tvary
+  shapes.forEach(s=>{
+    if(s.type==='line'){
+      ctx.strokeStyle='#34d399';
+      ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(s.from.x,s.from.y);
+      ctx.lineTo(s.to.x,s.to.y);
+      ctx.stroke();
+      // dĺžka
+      const len = Math.hypot(s.to.x-s.from.x,s.to.y-s.from.y).toFixed(1);
+      ctx.fillStyle='#dbeafe';
+      ctx.fillText(len, (s.from.x+s.to.x)/2, (s.from.y+s.to.y)/2 -5);
+    } else if(s.type==='circle'){
+      ctx.strokeStyle='#60a5fa';
+      ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.arc(s.center.x,s.center.y,s.radius,0,Math.PI*2);
+      ctx.stroke();
+      // polomer
+      ctx.fillStyle='#dbeafe';
+      ctx.fillText(s.radius.toFixed(1), s.center.x + s.radius + 5, s.center.y);
+    }
+  });
+
+  // dočasný náhľad
+  if(tempPoints.length===1 && mode==='line'){
+    ctx.strokeStyle='rgba(52,211,153,0.5)';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(tempPoints[0].x,tempPoints[0].y);
+    ctx.lineTo(tempPoints[0].x,tempPoints[0].y);
+    ctx.stroke();
+  } else if(tempPoints.length===1 && mode==='circle'){
+    ctx.strokeStyle='rgba(96,165,250,0.5)';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.arc(tempPoints[0].x,tempPoints[0].y,0,0,Math.PI*2);
+    ctx.stroke();
+  }
+}
+
+function exportShapes(){
+  const data = JSON.stringify(shapes, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='shapes.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
