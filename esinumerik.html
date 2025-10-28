@@ -343,6 +343,7 @@ function worldToScreen(x,y){
 }
 
 function drawAll(){
+function drawAll(){
   clearCanvas();
 
   // grid
@@ -352,19 +353,35 @@ function drawAll(){
   for(let x=0;x<simCanvas.width;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,simCanvas.height); ctx.stroke(); }
   for(let y=0;y<simCanvas.height;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(simCanvas.width,y); ctx.stroke(); }
 
-  // segments
+  // trail (prejdená dráha)
+  ctx.beginPath();
+  ctx.strokeStyle='rgba(52,211,153,0.5)';
+  ctx.lineWidth=2;
+  let trailStarted=false;
+  for(let i=0;i<=simState.ix;i++){
+    const s = segments[i];
+    const p1=worldToScreen(s.from.x,s.from.y);
+    const p2=worldToScreen((i===simState.ix)?getCurrentPosition().x:s.to.x,
+                            (i===simState.ix)?getCurrentPosition().y:s.to.y);
+    if(!trailStarted){ ctx.moveTo(p1.sx,p1.sy); trailStarted=true; }
+    ctx.lineTo(p2.sx,p2.sy);
+  }
+  ctx.stroke();
+
+  // všetky segmenty
   segments.forEach((s,i)=>{
     const p1=worldToScreen(s.from.x,s.from.y);
     const p2=worldToScreen(s.to.x,s.to.y);
     ctx.beginPath();
     ctx.moveTo(p1.sx,p1.sy);
     ctx.lineTo(p2.sx,p2.sy);
-    ctx.strokeStyle = (s.type==='G00') ? '#ffa500' : '#34d399';
+    if(i===simState.ix) ctx.strokeStyle = '#60a5fa'; // aktívny segment modrá
+    else ctx.strokeStyle = (s.type==='G00') ? '#ffa500' : '#34d399';
     ctx.lineWidth = (i===simState.ix ? 3 : 2);
     ctx.stroke();
   });
 
-  // tool
+  // nástroj
   const cur = getCurrentPosition();
   const scr = worldToScreen(cur.x,cur.y);
   ctx.beginPath();
@@ -376,8 +393,7 @@ function drawAll(){
   ctx.fillStyle='#dbeafe';
   ctx.font='13px monospace';
   ctx.fillText(`X:${cur.x.toFixed(3)} Y:${cur.y.toFixed(3)} Z:${cur.z.toFixed(3)}`,12,18);
-}
-
+      }
 /* current pos */
 function getCurrentPosition(){
   if(segments.length===0) return {x:0,y:0,z:0};
