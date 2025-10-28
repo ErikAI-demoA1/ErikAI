@@ -3,71 +3,81 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mobilný joystick + X tlačidlo</title>
+<title>ErikAI Mobile Controller</title>
 <style>
-  body { margin:0; background:#111; color:#fff; font-family:sans-serif; }
-  #gameArea { position: relative; width: 100%; height: 80vh; border: 2px solid #ff4500; overflow: hidden; margin:20px auto; }
-  iframe { width:100%; height:100%; border:none; }
-  #pointer {
-    position: absolute;
-    width: 20px; height: 20px;
-    background: #ff4500;
-    border-radius: 50%;
-    pointer-events: none;
-  }
-  #controls { text-align:center; margin-top:10px; }
-  button { font-size:18px; padding:10px 20px; margin:5px; }
+body { margin:0; overflow:hidden; font-family:sans-serif; background:#111; color:#fff; }
+#iframeContainer { position:relative; width:100%; height:100vh; overflow:hidden; border:2px solid #ff4500; }
+#contentFrame { width:100%; height:100%; border:none; }
+#controller { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
+.joystick, .btn { width:60px; height:60px; background:linear-gradient(135deg,#ff7f50,#ff4500); border-radius:50%; display:flex; justify-content:center; align-items:center; color:#fff; font-weight:bold; font-size:20px; user-select:none; touch-action:none; }
+#joystick { position:relative; }
+#pointer { position:absolute; width:20px; height:20px; background:#0f0; border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%); }
 </style>
 </head>
 <body>
 
-<div id="gameArea">
-  <iframe id="gameFrame" src="01zaklad.html"></iframe>
+<div id="iframeContainer">
+  <iframe id="contentFrame" src=""></iframe>
   <div id="pointer"></div>
 </div>
 
-<div id="controls">
-  <button id="up">↑</button>
-  <button id="down">↓</button>
-  <button id="left">←</button>
-  <button id="right">→</button>
-  <button id="X">X (klik)</button>
+<div id="controller">
+  <div id="joystick" class="joystick">L1</div>
+  <div id="btnX" class="btn">X</div>
+  <div id="btnO" class="btn">O</div>
 </div>
 
 <script>
+const iframe = document.getElementById('contentFrame');
 const pointer = document.getElementById('pointer');
-const iframe = document.getElementById('gameFrame');
+const iframeContainer = document.getElementById('iframeContainer');
 
-let pos = { x: 50, y: 50 };
-pointer.style.left = pos.x + 'px';
-pointer.style.top = pos.y + 'px';
+// Nastavenie hraníc hracej plochy
+const bounds = { minX:0, minY:0, maxX:window.innerWidth, maxY:window.innerHeight };
 
+// Ukazovák pohyb a scroll
+let pointerPos = { x: window.innerWidth/2, y: window.innerHeight/2 };
 function movePointer(dx, dy){
-  const area = document.getElementById('gameArea').getBoundingClientRect();
-  pos.x = Math.min(Math.max(pos.x + dx, 0), area.width - 20);
-  pos.y = Math.min(Math.max(pos.y + dy, 0), area.height - 20);
-  pointer.style.left = pos.x + 'px';
-  pointer.style.top = pos.y + 'px';
+    pointerPos.x = Math.min(bounds.maxX, Math.max(bounds.minX, pointerPos.x + dx));
+    pointerPos.y = Math.min(bounds.maxY, Math.max(bounds.minY, pointerPos.y + dy));
+    pointer.style.left = pointerPos.x+'px';
+    pointer.style.top = pointerPos.y+'px';
+    // Scroll iframe podľa pohybu ukazovák
+    iframe.contentWindow.scrollBy(dx, dy);
 }
 
-// Šípky
-document.getElementById('up').addEventListener('click', ()=>movePointer(0,-10));
-document.getElementById('down').addEventListener('click', ()=>movePointer(0,10));
-document.getElementById('left').addEventListener('click', ()=>movePointer(-10,0));
-document.getElementById('right').addEventListener('click', ()=>movePointer(10,0));
-
-// X tlačidlo - klik na element pod ukazovák
-document.getElementById('X').addEventListener('click', ()=>{
-  try{
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-    const el = iframeDoc.elementFromPoint(pos.x, pos.y);
-    if(el) el.click();
-    else alert('Ničoho sa nedotýka ukazovák!');
-  } catch(e){
-    alert('Externé stránky nemôžu byť kliknuté kvôli bezpečnosti.');
-  }
+// Joystick dotyk
+const joystick = document.getElementById('joystick');
+let touchStart = null;
+joystick.addEventListener('touchstart', e=>{ touchStart = e.touches[0]; });
+joystick.addEventListener('touchmove', e=>{
+    if(!touchStart) return;
+    let dx = e.touches[0].clientX - touchStart.clientX;
+    let dy = e.touches[0].clientY - touchStart.clientY;
+    movePointer(dx, dy);
+    touchStart = e.touches[0];
 });
-</script>
+joystick.addEventListener('touchend', e=>{ touchStart=null; });
 
+// Tlačidlo X – kliknutie na iframe obsah
+document.getElementById('btnX').addEventListener('click', ()=>{
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+    const el = iframeDoc.elementFromPoint(pointerPos.x - iframe.getBoundingClientRect().left, pointerPos.y - iframe.getBoundingClientRect().top);
+    if(el) el.click();
+});
+
+// Tlačidlo O – späť v histórii iframe
+document.getElementById('btnO').addEventListener('click', ()=>{
+    iframe.contentWindow.history.back();
+});
+
+// Na začiatok – stred
+pointer.style.left = pointerPos.x+'px';
+pointer.style.top = pointerPos.y+'px';
+
+// Pre jednoduché testovanie môžeš nastaviť iframe src
+iframe.src = "https://rawcdn.githack.com/ErikAI-demoA1/ErikAI/main/01zaklad.html";
+
+</script>
 </body>
 </html>
