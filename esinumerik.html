@@ -420,21 +420,38 @@ function stepOnce(){
   updateInfo();
 }
 
-function fitToView(){
-  if(segments.length===0) return;
-  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
-  for(const s of segments){
-    minX=Math.min(minX,s.from.x,s.to.x);
-    maxX=Math.max(maxX,s.from.x,s.to.x);
-    minY=Math.min(minY,s.from.y,s.to.y);
-    maxY=Math.max(maxY,s.from.y,s.to.y);
+function fitToView() {
+  if (segments.length === 0) return;
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const s of segments) {
+    minX = Math.min(minX, s.from.x, s.to.x);
+    maxX = Math.max(maxX, s.from.x, s.to.x);
+    minY = Math.min(minY, s.from.y, s.to.y);
+    maxY = Math.max(maxY, s.from.y, s.to.y);
   }
-  const dx=maxX-minX;
-  const dy=maxY-minY;
-  const scale=Math.min(simCanvas.width/(dx+20),simCanvas.height/(dy+20));
-  simState.zoom=scale;
-  simState.offsetX=-(minX+dx/2)*scale;
-  simState.offsetY=(minY+dy/2)*scale;
+
+  // pridaj mierny okraj, aby sa dráha nelepila na rám
+  const margin = 40;
+
+  const dx = maxX - minX;
+  const dy = maxY - minY;
+
+  // výpočet škály — zohľadní menší rozmer canvasu
+  const scaleX = (simCanvas.width - margin * 2) / (dx || 1);
+  const scaleY = (simCanvas.height - margin * 2) / (dy || 1);
+  const scale = Math.min(scaleX, scaleY);
+
+  // uloženie zoomu
+  simState.zoom = scale;
+
+  // výpočet posunu – centrovanie do stredu canvasu
+  const midX = (minX + maxX) / 2;
+  const midY = (minY + maxY) / 2;
+
+  simState.offsetX = simCanvas.width / 2 - midX * scale;
+  simState.offsetY = simCanvas.height / 2 + midY * scale; // + lebo invertované Y
+
   drawAll();
 }
 
