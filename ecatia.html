@@ -135,54 +135,73 @@ function drawTechnicalDimension(s) {
 }
 
 canvas.onmousedown = (e) => {
+  if (editMode) return; // v edit režime netvoríme nové tvary
+
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
   const p = {x, y};
 
-  if (!editMode) {
-    if (!startPt) {startPt=p; return;}
-    let shape = null;
-    if (tool==='line') shape={type:'line',x1:startPt.x,y1:startPt.y,x2:p.x,y2:p.y};
-    else if (tool==='circle') shape={type:'circle',cx:startPt.x,cy:startPt.y,r:Math.hypot(p.x-startPt.x,p.y-startPt.y)};
-    else if (tool==='rect') shape={type:'rect',x:startPt.x,y:startPt.y,w:p.x-startPt.x,h:p.y-startPt.y};
-    shapes.push(shape);
-    undoStack.push(JSON.parse(JSON.stringify(shapes)));
-    startPt = null;
-    drawAll();
-  }
+  if (!startPt) {startPt=p; return;}
+  let shape = null;
+  if (tool==='line') shape={type:'line',x1:startPt.x,y1:startPt.y,x2:p.x,y2:p.y};
+  else if (tool==='circle') shape={type:'circle',cx:startPt.x,cy:startPt.y,r:Math.hypot(p.x-startPt.x,p.y-startPt.y)};
+  else if (tool==='rect') shape={type:'rect',x:startPt.x,y:startPt.y,w:p.x-startPt.x,h:p.y-startPt.y};
+  shapes.push(shape);
+  undoStack.push(JSON.parse(JSON.stringify(shapes)));
+  startPt = null;
+  drawAll();
 };
 
 function updateDimensionsPanel() {
   dimsContent.innerHTML = '';
   if (!editMode) return;
 
-  shapes.forEach((s, i) => {
-    const div = document.createElement('div');
-    div.style.display = 'flex'; div.style.gap = '5px'; div.style.alignItems = 'center';
-    div.innerHTML = `<strong>${s.type} ${i+1}</strong> `;
+  shapes.forEach((s,i)=>{
+    const div=document.createElement('div');
+    div.style.display='flex'; div.style.gap='5px'; div.style.alignItems='center';
+    div.innerHTML=`<strong>${s.type} ${i+1}</strong> `;
 
-    if (s.type === 'line') {
-      const inp = document.createElement('input'); inp.type = 'number';
-      inp.value = Math.hypot(s.x2-s.x1, s.y2-s.y1).toFixed(2);
-      inp.onchange = e => {
-        const len = parseFloat(e.target.value);
-        const angle = Math.atan2(s.y2-s.y1, s.x2-s.x1);
-        s.x2 = s.x1 + len * Math.cos(angle);
-        s.y2 = s.y1 + len * Math.sin(angle);
-        drawAll();
-      };
-      div.appendChild(inp);
-    } else if (s.type === 'rect') {
-      const inpW = document.createElement('input'); inpW.type = 'number'; inpW.value = Math.abs(s.w);
+    // --- pozícia ---
+    if(s.type==='line'){
+      const inpX = document.createElement('input'); inpX.type='number'; inpX.value = s.x1;
+      inpX.onchange = e => { let dx = e.target.value - s.x1; s.x1+=dx; s.x2+=dx; drawAll(); };
+      const inpY = document.createElement('input'); inpY.type='number'; inpY.value = s.y1;
+      inpY.onchange = e => { let dy = e.target.value - s.y1; s.y1+=dy; s.y2+=dy; drawAll(); };
+      div.appendChild(document.createTextNode('X1:')); div.appendChild(inpX);
+      div.appendChild(document.createTextNode('Y1:')); div.appendChild(inpY);
+      // dĺžka
+      const inpLen = document.createElement('input'); inpLen.type='number'; inpLen.value=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
+      inpLen.onchange = e => { const len = parseFloat(e.target.value); const angle = Math.atan2(s.y2-s.y1,s.x2-s.x1); s.x2=s.x1+len*Math.cos(angle); s.y2=s.y1+len*Math.sin(angle); drawAll(); };
+      div.appendChild(document.createTextNode(' Dĺžka:')); 
+      div.appendChild(inpLen);
+    } else if(s.type==='rect'){
+      // pozícia
+      const inpX = document.createElement('input'); inpX.type='number'; inpX.value = s.x;
+      inpX.onchange = e => { s.x = parseFloat(e.target.value); drawAll(); };
+      const inpY = document.createElement('input'); inpY.type='number'; inpY.value = s.y;
+      inpY.onchange = e => { s.y = parseFloat(e.target.value); drawAll(); };
+      div.appendChild(document.createTextNode('X:')); div.appendChild(inpX);
+      div.appendChild(document.createTextNode('Y:')); div.appendChild(inpY);
+      // rozmery
+      const inpW = document.createElement('input'); inpW.type='number'; inpW.value = Math.abs(s.w);
       inpW.onchange = e => { s.w = parseFloat(e.target.value)*(s.w<0?-1:1); drawAll(); };
-      const inpH = document.createElement('input'); inpH.type = 'number'; inpH.value = Math.abs(s.h);
+      const inpH = document.createElement('input'); inpH.type='number'; inpH.value = Math.abs(s.h);
       inpH.onchange = e => { s.h = parseFloat(e.target.value)*(s.h<0?-1:1); drawAll(); };
-      div.appendChild(inpW); div.appendChild(inpH);
-    } else if (s.type === 'circle') {
-      const inpR = document.createElement('input'); inpR.type = 'number'; inpR.value = s.r.toFixed(2);
+      div.appendChild(document.createTextNode(' Šírka:')); div.appendChild(inpW);
+      div.appendChild(document.createTextNode(' Výška:')); div.appendChild(inpH);
+    } else if(s.type==='circle'){
+      // pozícia
+      const inpX = document.createElement('input'); inpX.type='number'; inpX.value = s.cx;
+      inpX.onchange = e => { s.cx = parseFloat(e.target.value); drawAll(); };
+      const inpY = document.createElement('input'); inpY.type='number'; inpY.value = s.cy;
+      inpY.onchange = e => { s.cy = parseFloat(e.target.value); drawAll(); };
+      div.appendChild(document.createTextNode('CX:')); div.appendChild(inpX);
+      div.appendChild(document.createTextNode(' CY:')); div.appendChild(inpY);
+      // polomer
+      const inpR = document.createElement('input'); inpR.type='number'; inpR.value = s.r.toFixed(2);
       inpR.onchange = e => { s.r = parseFloat(e.target.value); drawAll(); };
-      div.appendChild(inpR);
+      div.appendChild(document.createTextNode(' R:')); div.appendChild(inpR);
     }
 
     dimsContent.appendChild(div);
