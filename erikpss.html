@@ -1,136 +1,78 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="sk">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ErikAI Mobile Controller</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI Joystick</title>
 <style>
-body { margin:0; font-family:sans-serif; background:#111; color:#fff; display:flex; flex-direction:column; height:100vh; }
-#menu { background:#222; padding:10px; display:flex; flex-wrap:wrap; gap:5px; max-height:120px; overflow-y:auto; }
-#menu button { padding:8px 12px; background:#ff4500; border:none; border-radius:5px; color:#fff; font-weight:bold; flex:1; min-width:80px; }
-#iframeContainer { flex:1; position:relative; overflow:hidden; border-top:2px solid #ff4500; }
-#contentFrame { width:100%; height:100%; border:none; }
-#controller { background:#222; padding:10px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
-.ctrl-button { padding:15px 20px; background:#0080ff; border:none; border-radius:50%; color:#fff; font-size:16px; font-weight:bold; }
-#joystick { width:100px; height:100px; background:#444; border-radius:50%; position:relative; touch-action:none; margin:auto; }
-#stick { width:40px; height:40px; background:#ff4500; border-radius:50%; position:absolute; left:30px; top:30px; }
+  body, html { margin:0; padding:0; height:100%; overflow:hidden; }
+  #playarea { width:100%; height:100%; position:relative; overflow:auto; border:1px solid #333; }
+  #joystick { position:absolute; width:30px; height:30px; background:red; border-radius:50%; pointer-events:none; z-index:999; }
+  #controls { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
+  button { padding:15px; font-size:16px; }
 </style>
 </head>
 <body>
 
-<!-- MENU -->
-<div id="menu">
-  <!-- Tlačidlá sa dajú automaticky doplniť -->
+<div id="playarea">
+  <iframe src="luxuss.html" id="gameframe" style="width:100%; height:100%; border:none;"></iframe>
+  <div id="joystick"></div>
 </div>
 
-<!-- IFRAME -->
-<div id="iframeContainer">
-  <iframe id="contentFrame" src=""></iframe>
-</div>
-
-<!-- OVLÁDAČ -->
-<div id="controller">
-  <div id="joystick"><div id="stick"></div></div>
-  <button class="ctrl-button" id="btnX">X</button>
-  <button class="ctrl-button" id="btnO">O</button>
+<div id="controls">
+  <button id="btnUp">↑</button>
+  <button id="btnDown">↓</button>
+  <button id="btnLeft">←</button>
+  <button id="btnRight">→</button>
+  <button id="btnX">X</button>
+  <button id="btnO">O</button>
 </div>
 
 <script>
-const iframe = document.getElementById('contentFrame');
-const menu = document.getElementById('menu');
-
-// Všetky tvoje HTML súbory
-const htmlFiles = [
-  "01zaklad.html","02nadpisy.html","03odkazy.html","04zoznamy.html","05cssstyll.html",
-  "06javascript.html","07formular.html","08obrazkyavidea.html","09tlacidlastyl.html","10dizajn.html",
-  "11efekty.html","12profil.html","13kalkulacka.html","14github.html","android_apk.html",
-  "budik.html","coc.html","create_pwa.html","dama.html","dokumenty.html","emoji.html",
-  "erikai-chat.html","erikai_kniha-html.html","erikai_own_tube.html","erikai_tube.html","erikaiapkstudio.html",
-  "erikaicorelang.html","eriktv.html","erikvyh.html","format.html","fotak.html","galeria.html",
-  "generator_hesla_mena.html","generator_obrazkov.html","grafy.html","hodiny.html",
-  "hra.html","hudba.html","kalendar.html","kalkulacku.html","kompas.html","kontakt_hovor.html",
-  "kreslenie.html","kvantovy.html","ludo.html","mail.html","mapy.html","memorymatch.html",
-  "minicoc.html","mixnastroje.html","nastroje.html","nudzove.html","onlineprehliadac.html","pdfob.html",
-  "pdfsk.html","perrchat.html","pocasie.html","poznamky.html","prevodjednotiek.html","prezentacie.html",
-  "qr.html","radio.html","reakciahra.html","realnastavenie.html","remixsong.html","sachy.html",
-  "skener.html","sms.html","speedmeter.html","spravca_subor.html","spravy.html","support.html",
-  "tabulky.html","taprace.html","translate.html","univerzal.html","video_editor.html","vzorce.html",
-  "weberikai.html","writesped.html","zaznam_nahravok.html",
-  "hry_menu.html","index2.html","index3.html","nastroje_menu.html","platformy.html",
-  "prehliadac.html","programy_menu.html","ukazka.html","zakladne_nastavenie.html","zoznam_straniek.html"
-];
-
-// Vytvorenie tlačidiel v menu
-htmlFiles.forEach(file=>{
-  let btn = document.createElement('button');
-  btn.textContent = file;
-  btn.onclick = ()=>{iframe.src = `https://rawcdn.githack.com/ErikAI-demoA1/ErikAI/main/${file}`};
-  menu.appendChild(btn);
-});
-
-// RESET tlačidlo
-let resetBtn = document.createElement('button');
-resetBtn.textContent = "Reset";
-resetBtn.onclick = ()=>{ iframe.contentWindow.location.reload(); };
-menu.appendChild(resetBtn);
-
-// ----------- OVLÁDAČ -----------
-const stick = document.getElementById('stick');
 const joystick = document.getElementById('joystick');
-let dragging = false;
-let startX, startY;
+const playarea = document.getElementById('playarea');
+let pos = {x: playarea.clientWidth/2, y: playarea.clientHeight/2};
 
-// Pohyb ukazovateľa v iframe
-function moveCursor(dx,dy){
-  try {
-    const doc = iframe.contentDocument || iframe.contentWindow.document;
-    let evt = new MouseEvent('mousemove', {
-      bubbles: true,
-      clientX: dx,
-      clientY: dy
-    });
-    doc.dispatchEvent(evt);
-
-    // Scroll ak ideme mimo
-    iframe.contentWindow.scrollBy(dx*0.1, dy*0.1);
-  } catch(e){ console.log(e); }
+function updateJoystick() {
+  joystick.style.left = pos.x - joystick.offsetWidth/2 + 'px';
+  joystick.style.top = pos.y - joystick.offsetHeight/2 + 'px';
 }
 
-// Joystick touch
-joystick.addEventListener('pointerdown', e=>{
-  dragging = true;
-  startX = e.clientX;
-  startY = e.clientY;
+function move(dx, dy) {
+  pos.x += dx;
+  pos.y += dy;
+
+  // Obmedzenie v rámci plochy
+  pos.x = Math.max(0, Math.min(playarea.scrollWidth, pos.x));
+  pos.y = Math.max(0, Math.min(playarea.scrollHeight, pos.y));
+
+  // Scroll podľa pohybu ukazovákom
+  playarea.scrollLeft = pos.x - playarea.clientWidth/2;
+  playarea.scrollTop = pos.y - playarea.clientHeight/2;
+
+  updateJoystick();
+}
+
+// Kliknutie tlačidlom X
+document.getElementById('btnX').addEventListener('click', () => {
+  const elem = document.elementFromPoint(pos.x, pos.y);
+  if (elem) elem.click();
 });
 
-joystick.addEventListener('pointermove', e=>{
-  if(!dragging) return;
-  let dx = e.clientX - startX;
-  let dy = e.clientY - startY;
-  stick.style.transform = `translate(${dx}px, ${dy}px)`;
-  moveCursor(dx, dy);
+// Tlačidlo O - reset ukazovák do stredu
+document.getElementById('btnO').addEventListener('click', () => {
+  pos.x = playarea.clientWidth/2;
+  pos.y = playarea.clientHeight/2;
+  updateJoystick();
 });
 
-joystick.addEventListener('pointerup', e=>{
-  dragging = false;
-  stick.style.transform = `translate(0px,0px)`;
-});
+// Pohybové tlačidlá
+document.getElementById('btnUp').addEventListener('click', () => move(0, -40));
+document.getElementById('btnDown').addEventListener('click', () => move(0, 40));
+document.getElementById('btnLeft').addEventListener('click', () => move(-40, 0));
+document.getElementById('btnRight').addEventListener('click', () => move(40, 0));
 
-// Tlačidlo X = klik
-document.getElementById('btnX').addEventListener('click', ()=>{
-  try {
-    const doc = iframe.contentDocument || iframe.contentWindow.document;
-    const evt = new MouseEvent('click', {bubbles:true});
-    doc.dispatchEvent(evt);
-  } catch(e){ console.log(e); }
-});
-
-// Tlačidlo O = späť
-document.getElementById('btnO').addEventListener('click', ()=>{
-  try {
-    iframe.contentWindow.history.back();
-  } catch(e){ console.log(e); }
-});
+updateJoystick();
 </script>
 
 </body>
