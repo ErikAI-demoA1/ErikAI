@@ -203,7 +203,7 @@ N040 M30"></textarea>
 </div>
 
 <script>
-/* ========= EUS CNC — core JS (upravené live + center 0) ========= */
+/* ========= EUS CNC — core JS (upravené live + center 0 + trail) ========= */
 
 /* helpers */
 function safeDownload(contentOrBlob, filename, type='application/octet-stream'){
@@ -243,7 +243,8 @@ const openFile = document.getElementById('openFile');
 const speedSelect = document.getElementById('speed');
 const zoomIn = document.getElementById('zoomIn'), zoomOut = document.getElementById('zoomOut'), fitBtn = document.getElementById('fit');
 const resetView = document.getElementById('resetView');
-  openFile.addEventListener('click', ()=>fileInput.click());
+
+openFile.addEventListener('click', ()=>fileInput.click());
 fileInput.addEventListener('change', async (e)=>{
   const f = e.target.files[0];
   if(!f) return;
@@ -351,6 +352,21 @@ function drawAll(){
   for(let x=0;x<simCanvas.width;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,simCanvas.height); ctx.stroke(); }
   for(let y=0;y<simCanvas.height;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(simCanvas.width,y); ctx.stroke(); }
 
+  // trail / prejdená dráha
+  ctx.beginPath();
+  ctx.strokeStyle='rgba(52,211,153,0.4)';
+  ctx.lineWidth=2;
+  let trailStarted=false;
+  for(let i=0;i<=simState.ix;i++){
+    const s = segments[i];
+    const p1=worldToScreen(s.from.x,s.from.y);
+    const p2=worldToScreen((i===simState.ix)?getCurrentPosition().x:s.to.x,
+                            (i===simState.ix)?getCurrentPosition().y:s.to.y);
+    if(!trailStarted){ ctx.moveTo(p1.sx,p1.sy); trailStarted=true; }
+    ctx.lineTo(p2.sx,p2.sy);
+  }
+  ctx.stroke();
+
   // segments
   segments.forEach((s,i)=>{
     const p1=worldToScreen(s.from.x,s.from.y);
@@ -358,7 +374,8 @@ function drawAll(){
     ctx.beginPath();
     ctx.moveTo(p1.sx,p1.sy);
     ctx.lineTo(p2.sx,p2.sy);
-    ctx.strokeStyle = (s.type==='G00') ? '#ffa500' : '#34d399';
+    if(i===simState.ix) ctx.strokeStyle = '#60a5fa'; // aktívny segment modrá
+    else ctx.strokeStyle = (s.type==='G00') ? '#ffa500' : '#34d399';
     ctx.lineWidth = (i===simState.ix ? 3 : 2);
     ctx.stroke();
   });
@@ -394,6 +411,7 @@ function updateInfo(){
   posEl.textContent=`X${cur.x.toFixed(3)} Y${cur.y.toFixed(3)} Z${cur.z.toFixed(3)}`;
   const seg=segments[simState.ix];
   curLineEl.textContent = seg ? `Line ${seg.line} (${seg.type})` : '—';
+  distanceEl.textContent = simState.totalDistance.toFixed(3);
 }
 
 /* step */
@@ -410,6 +428,17 @@ function stepOnce(){
   const delta = segLen>0 ? advance/segLen : 1;
   simState.t += delta;
   simState.totalDistance += Math.min(advance, segLen*(1-simState.t+delta));
+
+  // update ETA
+  let remaining=0;
+  if(simState.t<1) remaining += segLen*(1-simState.t);
+  for(let i=simState.ix+1;i<segments.length;i++){
+    const s = segments[i];
+    const dx2=s.to.x-s.from.x, dy2=s.to.y-s.from.y, dz2=s.to.z-s.from.z;
+    remaining += Math.sqrt(dx2*dx2+dy2*dy2+dz2*dz2);
+  }
+  etaEl.textContent = `${(remaining/(feed/60*speedFactor)).toFixed(1)}s`;
+
   if(simState.t>=1-1e-9){
     simState.ix++;
     simState.t=0;
@@ -479,7 +508,6 @@ window.addEventListener('keydown',(e)=>{
 
 /* stop animation when hidden */
 document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopSimulation(); });
-
 </script>
 </body>
 </html>
