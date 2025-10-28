@@ -1,134 +1,144 @@
 <!doctype html>
 <html lang="sk">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mini CAD — Catia-like 2D</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mini CAD — Line, Circle, Rectangle</title>
 <style>
-  body{margin:0;font-family:sans-serif;background:#1a1a1a;color:#fff;}
-  canvas{background:#111;width:100%;height:80vh;display:block;}
-  .toolbar{padding:8px;background:#222;display:flex;gap:8px;flex-wrap:wrap;}
-  .toolbar button{padding:6px 10px;cursor:pointer;border:none;background:#34d399;color:#111;border-radius:4px;}
-  .toolbar label{margin-left:4px;}
-  .kota{position:absolute;color:#0af;font-size:12px;background:#0008;padding:2px 4px;border-radius:3px;}
+body{margin:0;font-family:sans-serif;background:#111;color:#eee;}
+header{padding:8px;background:#222;display:flex;gap:12px;align-items:center;}
+canvas{background:#1a1a1a;display:block;margin:0 auto;border:1px solid #333;}
+button{padding:6px 10px;border:none;border-radius:5px;background:#34d399;color:#000;cursor:pointer;}
+button.ghost{background:#222;border:1px solid #555;color:#eee;}
+.panel{padding:8px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+.info{padding:4px;color:#ccc;}
+input[type=number]{width:60px;}
 </style>
 </head>
 <body>
-
-<div class="toolbar">
-  <button id="lineBtn">Čiara</button>
-  <button id="rectBtn">Obdĺžnik</button>
-  <button id="circleBtn">Kruh</button>
-  <button id="exportImg">Export obrázok</button>
-</div>
-
-<canvas id="canvas"></canvas>
+<header>
+  <div class="panel">
+    <button id="lineBtn">Čiara</button>
+    <button id="circleBtn">Kruh</button>
+    <button id="rectBtn">Obdĺžnik</button>
+    <button id="undoBtn" class="ghost">Undo</button>
+    <button id="redoBtn" class="ghost">Redo</button>
+    <button id="exportImg" class="ghost">Export obrázok</button>
+    <button id="exportJSON" class="ghost">Export JSON</button>
+  </div>
+</header>
+<canvas id="cadCanvas" width="1200" height="800"></canvas>
+<div class="info" id="info">Vybratý nástroj: Čiara | Nulový bod: (0,0)</div>
 
 <script>
-const canvas=document.getElementById('canvas');
+const canvas=document.getElementById('cadCanvas');
 const ctx=canvas.getContext('2d');
-let width, height;
+let shapes=[],undoStack=[],redoStack=[];
+let tool='line';
+let startPt=null;
+let origin={x:100,y:100};
+let selectedShape=null;
 
-function resize(){width=canvas.width=canvas.clientWidth;height=canvas.height=canvas.clientHeight;drawAll();}
-window.addEventListener('resize',resize);
-resize();
+// Nástroje
+document.getElementById('lineBtn').onclick=()=>tool='line';
+document.getElementById('circleBtn').onclick=()=>tool='circle';
+document.getElementById('rectBtn').onclick=()=>tool='rect';
 
-// Stav kreslenia
-let mode='line'; // line, rect, circle
-let shapes=[];
-let current=null;
-const zeroPoint={x:100,y:height-100}; // pevný nulový bod
+// Undo/Redo
+document.getElementById('undoBtn').onclick=()=>{
+  if(shapes.length){redoStack.push(shapes.pop()); drawAll();}
+};
+document.getElementById('redoBtn').onclick=()=>{
+  if(redoStack.length){shapes.push(redoStack.pop()); drawAll();}
+};
 
-// Tlačidlá
-document.getElementById('lineBtn').onclick=()=>mode='line';
-document.getElementById('rectBtn').onclick=()=>mode='rect';
-document.getElementById('circleBtn').onclick=()=>mode='circle';
+// Export obrázka
 document.getElementById('exportImg').onclick=()=>{
   const link=document.createElement('a');
+  link.download='drawing.png';
   link.href=canvas.toDataURL();
-  link.download='cad.png';
   link.click();
 };
 
-// Pomocné funkcie
-function drawAll(){
-  ctx.clearRect(0,0,width,height);
+// Export JSON
+document.getElementById('exportJSON').onclick=()=>{
+  const link=document.createElement('a');
+  link.download='drawing.json';
+  link.href='data:text/json,'+encodeURIComponent(JSON.stringify({origin,shapes}));
+  link.click();
+};
 
+// Grid
+function drawGrid(){
+  const step=20;
+  ctx.strokeStyle='rgba(255,255,255,0.05)';
+  ctx.lineWidth=1;
+  for(let x=0;x<canvas.width;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
+  for(let y=0;y<canvas.height;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
+}
+
+// Kreslenie všetkého
+function drawAll(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawGrid();
   // nulový bod
   ctx.fillStyle='red';
-  ctx.beginPath();
-  ctx.arc(zeroPoint.x,zeroPoint.y,5,0,Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle='white';
-  ctx.fillText('0,0',zeroPoint.x+6,zeroPoint.y-6);
-
-  // všetky tvary
-  for(const s of shapes){
-    ctx.strokeStyle='white';ctx.fillStyle='transparent';
-    ctx.lineWidth=2;
-    if(s.type==='line'){
-      ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke();
-      drawKotaLine(s);
-    }else if(s.type==='rect'){
-      ctx.strokeRect(s.x,s.y,s.w,s.h);
-      drawKotaRect(s);
-    }else if(s.type==='circle'){
-      ctx.beginPath();ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2);ctx.stroke();
-      drawKotaCircle(s);
-    }
-  }
-
-  // aktuálny tvar pri kreslení
-  if(current){
+  ctx.beginPath(); ctx.arc(origin.x,origin.y,5,0,Math.PI*2); ctx.fill();
+  // tvary
+  shapes.forEach(s=>{
     ctx.strokeStyle='lime';
     ctx.lineWidth=2;
-    if(current.type==='line'){
-      ctx.beginPath();ctx.moveTo(current.x1,current.y1);ctx.lineTo(current.x2,current.y2);ctx.stroke();
-      drawKotaLine(current);
-    }else if(current.type==='rect'){
-      ctx.strokeRect(current.x,current.y,current.w,current.h);
-      drawKotaRect(current);
-    }else if(current.type==='circle'){
-      ctx.beginPath();ctx.arc(current.cx,current.cy,current.r,0,Math.PI*2);ctx.stroke();
-      drawKotaCircle(current);
+    ctx.beginPath();
+    if(s.type==='line'){
+      ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2);
+    }else if(s.type==='circle'){
+      ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2);
+    }else if(s.type==='rect'){
+      ctx.rect(s.x,s.y,s.w,s.h);
     }
-  }
+    ctx.stroke();
+  });
 }
 
-// Kota funkcie
-function drawKotaLine(s){
-  const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
-  ctx.fillStyle='cyan';
-  ctx.fillText(`L:${Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1)}`,midX,midY-6);
-}
-function drawKotaRect(s){
-  ctx.fillStyle='cyan';
-  ctx.fillText(`W:${s.w.toFixed(1)}`,s.x+s.w/2,s.y-6);
-  ctx.fillText(`H:${s.h.toFixed(1)}`,s.x+s.w+4,s.y+s.h/2);
-}
-function drawKotaCircle(s){
-  ctx.fillStyle='cyan';
-  ctx.fillText(`R:${s.r.toFixed(1)}`,s.cx+s.r+4,s.cy);
+// Snap na grid a body
+function snap(x,y){
+  const step=20;
+  let sx=Math.round(x/step)*step;
+  let sy=Math.round(y/step)*step;
+  // snap na konce tvarov
+  shapes.forEach(s=>{
+    if(s.type==='line'){
+      if(Math.hypot(x-s.x1,y-s.y1)<10){sx=s.x1;sy=s.y1;}
+      if(Math.hypot(x-s.x2,y-s.y2)<10){sx=s.x2;sy=s.y2;}
+    }else if(s.type==='circle'){
+      if(Math.hypot(x-s.cx,y-s.cy)<10){sx=s.cx;sy=s.cy;}
+    }else if(s.type==='rect'){
+      [[s.x,s.y],[s.x+s.w,s.y],[s.x+s.w,s.y+s.h],[s.x,s.y+s.h]].forEach(([px,py])=>{
+        if(Math.hypot(x-px,y-py)<10){sx=px;sy=py;}
+      });
+    }
+  });
+  return {x:sx,y:sy};
 }
 
-// Myš kreslenie
-canvas.addEventListener('mousedown',e=>{
-  const x=e.offsetX,y=e.offsetY;
-  if(mode==='line') current={type:'line',x1:x,y1:y,x2:x,y2:y};
-  else if(mode==='rect') current={type:'rect',x:x,y:y,w:0,h:0};
-  else if(mode==='circle') current={type:'circle',cx:x,cy:y,r:0};
-});
-canvas.addEventListener('mousemove',e=>{
-  if(!current)return;
-  const x=e.offsetX,y=e.offsetY;
-  if(current.type==='line'){current.x2=x;current.y2=y;}
-  else if(current.type==='rect'){current.w=x-current.x;current.h=y-current.y;}
-  else if(current.type==='circle'){current.r=Math.hypot(x-current.cx,y-current.cy);}
+// Kliky
+canvas.onmousedown=(e)=>{
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left;
+  const y=e.clientY-rect.top;
+  const p=snap(x,y);
+  if(!startPt){startPt=p; return;}
+  let shape=null;
+  if(tool==='line'){shape={type:'line',x1:startPt.x,y1:startPt.y,x2:p.x,y2:p.y};}
+  if(tool==='circle'){shape={type:'circle',cx:startPt.x,cy:startPt.y,r:Math.hypot(p.x-startPt.x,p.y-startPt.y)};}
+  if(tool==='rect'){shape={type:'rect',x:startPt.x,y:startPt.y,w:p.x-startPt.x,h:p.y-startPt.y};}
+  shapes.push(shape);
+  undoStack.push(JSON.parse(JSON.stringify(shapes)));
+  startPt=null;
   drawAll();
-});
-canvas.addEventListener('mouseup',e=>{
-  if(current){shapes.push(current);current=null;drawAll();}
-});
+};
+
+drawAll();
 </script>
 </body>
 </html>
