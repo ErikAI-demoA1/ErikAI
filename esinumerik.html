@@ -203,306 +203,264 @@ N040 M30"></textarea>
 </div>
 
 <script>
-  /* ========= EUS CNC — core JS (upravené) ========= */
-
-/* helpers */
-function safeDownload(contentOrBlob, filename, type='application/octet-stream'){
-  let blob;
-  if(contentOrBlob instanceof Blob) blob = contentOrBlob;
-  else blob = new Blob([contentOrBlob], {type});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(()=>{ try{ document.body.removeChild(a); }catch(e){} URL.revokeObjectURL(a.href); }, 150);
-}
-
-function toNum(v){ const n = Number(v); return isNaN(n)?null:n; }
-
-/* DOM */
 const editor = document.getElementById('editor');
-const parseBtn = document.getElementById('parseBtn');
-const report = document.getElementById('report');
 const simCanvas = document.getElementById('simCanvas');
 const ctx = simCanvas.getContext('2d');
+const report = document.getElementById('report');
 const posEl = document.getElementById('pos');
 const curLineEl = document.getElementById('curLine');
 const distanceEl = document.getElementById('distance');
 const etaEl = document.getElementById('eta');
 const modeBadge = document.getElementById('modeBadge');
-const machineMode = document.getElementById('machineMode');
-const loadSample = document.getElementById('loadSample');
-const stepBtn = document.getElementById('stepBtn');
-const playBtn = document.getElementById('playBtn');
-const stopBtn = document.getElementById('stopBtn');
-const exportTxt = document.getElementById('exportTxt');
-const exportMpf = document.getElementById('exportMpf');
-const fileInput = document.getElementById('fileInput');
-const openFile = document.getElementById('openFile');
-const speedSelect = document.getElementById('speed');
-const zoomIn = document.getElementById('zoomIn'), zoomOut = document.getElementById('zoomOut'), fitBtn = document.getElementById('fit');
-const resetView = document.getElementById('resetView');
 
-openFile.addEventListener('click', ()=>fileInput.click());
-fileInput.addEventListener('change', async (e)=>{
-  const f = e.target.files[0];
-  if(!f) return;
-  const txt = await f.text();
-  editor.value = txt;
-  parseProgram();
-});
+let segments = [];
+let simState = { ix: 0, progress: 0, playing: false, zoom: 1, offsetX: 0, offsetY: 0, totalDistance: 0 };
+let lastTimestamp = 0;
+let speedFactor = 1;
 
-/* sample */
-loadSample.addEventListener('click', ()=>{
+// Nacítanie príkladu
+document.getElementById('loadSample').addEventListener('click', ()=>{
   editor.value = `N010 G00 X0 Y0
-N020 G01 X80 Y0 F400
-N030 G01 X80 Y60
-N040 G01 X0 Y60
+N020 G01 X50 Y0 F300
+N030 G01 X50 Y30
+N040 G01 X0 Y30
 N050 G01 X0 Y0
 N060 M30`;
   parseProgram();
 });
 
-/* parser */
-let program = [];
+// Live update pri písaní
+editor.addEventListener('input', ()=>parseProgram());
+
+// Rýchlosť
+document.getElementById('speed').addEventListener('change', e=>{
+  speedFactor = Number(e.target.value);
+});
+
+// Ovládanie simulácie
+document.getElementById('parseBtn').addEventListener('click', parseProgram);
+document.getElementById('playBtn').addEventListener('click', ()=>{simState.playing=true; lastTimestamp=0; requestAnimationFrame(stepSimulation);});
+document.getElementById('stopBtn').addEventListener('click', ()=>{simState.playing=false; simState.ix=0; simState.progress=0; drawAll();});
+document.getElementById('stepBtn').addEventListener('click', ()=>stepOnce());
+
+// Zoom
+document.getElementById('zoomIn').addEventListener('click', ()=>{simState.zoom*=1.2; drawAll();});
+document.getElementById('zoomOut').addEventListener('click', ()=>{simState.zoom/=1.2; drawAll();});
+document.getElementById('fit').addEventListener('click', ()=>fitToView());
+document.getElementById('resetView').addEventListener('click', ()=>{simState.zoom=1; simState.offsetX=0; simState.offsetY=0; drawAll();});
+
+// Import / export
+document.getElementById('openFile').addEventListener('click', ()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const text = await file.text();
+  editor.value = text;
+  parseProgram();
+});
+document.getElementById('exportTxt').addEventListener('click', ()=>downloadFile(editor.value,'program.txt'));
+document.getElementById('exportMpf').addEventListener('click', ()=>downloadFile(editor.value,'program.mpf'));
+
+function downloadFile(content,name){
+  const blob = new Blob([content],{type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Parser G-kódu
 function parseProgram(){
-  program = [];
-  report.textContent = '';
-  const lines = editor.value.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
-  for(let i=0;i<lines.length;i++){
-    const raw = lines[i];
-    const noComment = raw.replace(/\(.*?\)/g,'').trim();
-    const toks = noComment.split(/\s+/);
-    const obj = {raw, line:i+1, n:null, g:null, params:{}, rawClean:noComment};
-    toks.forEach(t=>{
-      const up = t.toUpperCase();
-      if(/^N\d+/.test(up)) obj.n = up;
-      else if(/^G0?0$/.test(up)) obj.g = 'G00';
-      else if(/^G0?1$/.test(up)) obj.g = 'G01';
-      else if(/^G0?2$/.test(up)) obj.g = 'G02';
-      else if(/^G0?3$/.test(up)) obj.g = 'G03';
-      else if(/^M30$/.test(up)) obj.params.M = 'M30';
-      else if(/^[XYZF]\-?\d+(\.\d+)?$/.test(up)){
-        const key = up[0];
-        const val = up.slice(1);
-        obj.params[key] = Number(val);
-      } else {
-        if(up.length>0) obj.params['_unknown'] = obj.params['_unknown'] || [];
-        if(up.length>0) obj.params['_unknown'].push(up);
-      }
-    });
-    program.push(obj);
-  }
-
-  let rpt = `Načítaných riadkov: ${program.length}\n\n`;
-  const unknowns = program.flatMap(p => p.params._unknown ? p.params._unknown.map(u=>`Riadok ${p.line}: ${u}`) : []);
-  if(unknowns.length) rpt += 'Nepodporované tokeny (len upozornenie):\n' + unknowns.join('\n') + '\n\n';
-  rpt += 'Podporované príkazy: G00/G01, X Y Z F, M30\n';
-  report.textContent = rpt;
-  resetSimulator();
-  buildSegments();
-}
-
-/* build segments */
-let segments = [];
-function buildSegments(){
+  const lines = editor.value.split('\n');
   segments = [];
-  let cur = {x:0,y:0,z:0, feed:300};
-  for(let p of program){
-    if(p.params.M==='M30'){ segments.push({from:{...cur}, to:{...cur}, feed:cur.feed, type:'M30', line:p.line}); break; }
-    if(p.g==='G00'||p.g==='G01'){
-      const tgt = {x:cur.x, y:cur.y, z:cur.z};
-      if(typeof p.params.X!=='undefined') tgt.x = p.params.X;
-      if(typeof p.params.Y!=='undefined') tgt.y = p.params.Y;
-      if(typeof p.params.Z!=='undefined') tgt.z = p.params.Z;
-      if(typeof p.params.F!=='undefined') cur.feed = p.params.F;
-      segments.push({from:{...cur}, to:tgt, feed:cur.feed, type:p.g, line:p.line});
-      cur = {...tgt, feed:cur.feed};
+  simState.totalDistance = 0;
+  let cur = {x:0, y:0, z:0};
+  let lastF = 100;
+
+  for(let i=0;i<lines.length;i++){
+    const raw = lines[i].trim();
+    if(!raw) continue;
+    const parts = raw.split(' ');
+    const cmd = parts.find(p=>p.startsWith('G')||p.startsWith('M'));
+    if(!cmd) continue;
+
+    let next = {...cur};
+    let type = cmd;
+
+    for(const p of parts){
+      if(p.startsWith('X')) next.x = parseFloat(p.slice(1));
+      if(p.startsWith('Y')) next.y = parseFloat(p.slice(1));
+      if(p.startsWith('Z')) next.z = parseFloat(p.slice(1));
+      if(p.startsWith('F')) lastF = parseFloat(p.slice(1));
     }
+
+    if(type==='G00'||type==='G0'||type==='G01'||type==='G1'){
+      const dist = Math.hypot(next.x-cur.x,next.y-cur.y);
+      simState.totalDistance += dist;
+      segments.push({type:type.toUpperCase(),from:{...cur},to:{...next},f:lastF,line:i+1});
+      cur = next;
+    }
+    if(type==='M30') break;
   }
+
+  report.textContent = segments.length ? `OK — ${segments.length} segmentov` : 'Chyba: nič nenájdené';
+  simState.ix=0;
+  simState.progress=0;
   drawAll();
+  updateInfo();
 }
 
-/* simulation state */
-let simState = { ix:0, t:0, running:false, totalDistance:0, zoom:1, offsetX:0, offsetY:0 };
-
-/* drawing */
+// Kreslenie
 function clearCanvas(){
-  ctx.clearRect(0,0,simCanvas.width,simCanvas.height);
-  ctx.fillStyle='#071026';
+  ctx.fillStyle = '#071026';
   ctx.fillRect(0,0,simCanvas.width,simCanvas.height);
 }
 
-function worldToScreen(x,y){
-  const w=simCanvas.width,h=simCanvas.height;
-  const scale=simState.zoom;
-  const cx=w/2 + simState.offsetX;
-  const cy=h/2 + simState.offsetY;
-  return {sx: cx + x*scale, sy: cy - y*scale};
-}
-
-function drawAll(){
 function drawAll(){
   clearCanvas();
 
-  // grid
+  // Grid
   ctx.strokeStyle='rgba(255,255,255,0.03)';
   ctx.lineWidth=1;
   const step = 10*simState.zoom;
-  for(let x=0;x<simCanvas.width;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,simCanvas.height); ctx.stroke(); }
-  for(let y=0;y<simCanvas.height;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(simCanvas.width,y); ctx.stroke(); }
+  for(let x=0;x<simCanvas.width;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,simCanvas.height);ctx.stroke();}
+  for(let y=0;y<simCanvas.height;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(simCanvas.width,y);ctx.stroke();}
 
-  // trail (prejdená dráha)
+  // Trail (prechodená dráha)
   ctx.beginPath();
   ctx.strokeStyle='rgba(52,211,153,0.5)';
   ctx.lineWidth=2;
-  let trailStarted=false;
+  let started=false;
   for(let i=0;i<=simState.ix;i++){
-    const s = segments[i];
+    const s=segments[i];
+    if(!s) continue;
     const p1=worldToScreen(s.from.x,s.from.y);
     const p2=worldToScreen((i===simState.ix)?getCurrentPosition().x:s.to.x,
                             (i===simState.ix)?getCurrentPosition().y:s.to.y);
-    if(!trailStarted){ ctx.moveTo(p1.sx,p1.sy); trailStarted=true; }
+    if(!started){ctx.moveTo(p1.sx,p1.sy);started=true;}
     ctx.lineTo(p2.sx,p2.sy);
   }
   ctx.stroke();
 
-  // všetky segmenty
+  // Segmenty
   segments.forEach((s,i)=>{
     const p1=worldToScreen(s.from.x,s.from.y);
     const p2=worldToScreen(s.to.x,s.to.y);
     ctx.beginPath();
     ctx.moveTo(p1.sx,p1.sy);
     ctx.lineTo(p2.sx,p2.sy);
-    if(i===simState.ix) ctx.strokeStyle = '#60a5fa'; // aktívny segment modrá
-    else ctx.strokeStyle = (s.type==='G00') ? '#ffa500' : '#34d399';
-    ctx.lineWidth = (i===simState.ix ? 3 : 2);
+    ctx.strokeStyle=(i===simState.ix)?'#60a5fa':(s.type==='G00')?'#ffa500':'#34d399';
+    ctx.lineWidth=(i===simState.ix?3:2);
     ctx.stroke();
   });
 
-  // nástroj
-  const cur = getCurrentPosition();
-  const scr = worldToScreen(cur.x,cur.y);
+  // Tool
+  const cur=getCurrentPosition();
+  const scr=worldToScreen(cur.x,cur.y);
   ctx.beginPath();
   ctx.arc(scr.sx,scr.sy,6,0,Math.PI*2);
   ctx.fillStyle='#ff4d4d';
   ctx.fill();
 
-  // coordinates
+  // Text
   ctx.fillStyle='#dbeafe';
   ctx.font='13px monospace';
   ctx.fillText(`X:${cur.x.toFixed(3)} Y:${cur.y.toFixed(3)} Z:${cur.z.toFixed(3)}`,12,18);
-      }
-/* current pos */
-function getCurrentPosition(){
-  if(segments.length===0) return {x:0,y:0,z:0};
-  const idx=Math.min(simState.ix,segments.length-1);
-  const seg=segments[idx];
-  const fx=seg.from.x + (seg.to.x-seg.from.x)*simState.t;
-  const fy=seg.from.y + (seg.to.y-seg.from.y)*simState.t;
-  const fz=seg.from.z + (seg.to.z-seg.from.z)*simState.t;
-  return {x:fx,y:fy,z:fz};
 }
 
-/* update info */
+// Premeny súradníc
+function worldToScreen(x,y){
+  return {
+    sx:(x*simState.zoom)+simCanvas.width/2+simState.offsetX,
+    sy:simCanvas.height/2-(y*simState.zoom)-simState.offsetY
+  };
+}
+
+// Získanie aktuálnej pozície
+function getCurrentPosition(){
+  if(segments.length===0) return {x:0,y:0,z:0};
+  const s = segments[simState.ix];
+  const nx = s.from.x+(s.to.x-s.from.x)*simState.progress;
+  const ny = s.from.y+(s.to.y-s.from.y)*simState.progress;
+  const nz = s.from.z+(s.to.z-s.from.z)*simState.progress;
+  return {x:nx,y:ny,z:nz};
+}
+
+// Simulácia
+function stepSimulation(ts){
+  if(!simState.playing) return;
+  if(!lastTimestamp) lastTimestamp=ts;
+  const dt=(ts-lastTimestamp)/1000*speedFactor;
+  lastTimestamp=ts;
+
+  const s=segments[simState.ix];
+  if(!s){simState.playing=false;return;}
+
+  const dist=Math.hypot(s.to.x-s.from.x,s.to.y-s.from.y);
+  const feed=s.f||100;
+  const duration=dist/(feed/60);
+  simState.progress += dt/duration;
+
+  if(simState.progress>=1){
+    simState.ix++;
+    simState.progress=0;
+    if(simState.ix>=segments.length){simState.playing=false;}
+  }
+
+  drawAll();
+  updateInfo();
+  if(simState.playing) requestAnimationFrame(stepSimulation);
+}
+
+function stepOnce(){
+  if(segments.length===0) return;
+  simState.ix++;
+  if(simState.ix>=segments.length) simState.ix=segments.length-1;
+  drawAll();
+  updateInfo();
+}
+
+function fitToView(){
+  if(segments.length===0) return;
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  for(const s of segments){
+    minX=Math.min(minX,s.from.x,s.to.x);
+    maxX=Math.max(maxX,s.from.x,s.to.x);
+    minY=Math.min(minY,s.from.y,s.to.y);
+    maxY=Math.max(maxY,s.from.y,s.to.y);
+  }
+  const dx=maxX-minX;
+  const dy=maxY-minY;
+  const scale=Math.min(simCanvas.width/(dx+20),simCanvas.height/(dy+20));
+  simState.zoom=scale;
+  simState.offsetX=-(minX+dx/2)*scale;
+  simState.offsetY=(minY+dy/2)*scale;
+  drawAll();
+}
+
+// Info panel
 function updateInfo(){
   const cur=getCurrentPosition();
   posEl.textContent=`X${cur.x.toFixed(3)} Y${cur.y.toFixed(3)} Z${cur.z.toFixed(3)}`;
   const seg=segments[simState.ix];
   curLineEl.textContent = seg ? `Line ${seg.line} (${seg.type})` : '—';
+  distanceEl.textContent = simState.totalDistance.toFixed(3);
+  etaEl.textContent = `${(simState.totalDistance/100).toFixed(1)} s`;
 }
 
-/* step */
-function stepOnce(){
-  if(segments.length===0) return;
-  const seg=segments[simState.ix];
-  const dx=seg.to.x-seg.from.x, dy=seg.to.y-seg.from.y, dz=seg.to.z-seg.from.z;
-  const segLen=Math.sqrt(dx*dx+dy*dy+dz*dz);
-  const speedFactor=Number(speedSelect.value)||1;
-  const feed=seg.feed||300;
-  const mmPerSec=feed/60*speedFactor;
-  const dt=0.05*speedFactor;
-  const advance=mmPerSec*dt;
-  const delta = segLen>0 ? advance/segLen : 1;
-  simState.t += delta;
-  simState.totalDistance += Math.min(advance, segLen*(1-simState.t+delta));
-  if(simState.t>=1-1e-9){
-    simState.ix++;
-    simState.t=0;
-    if(simState.ix>=segments.length){
-      simState.ix=segments.length-1;
-      simState.t=1;
-      stopSimulation();
-    }
-  }
-  drawAll();
-  updateInfo();
-}
-
-/* play/stop */
-let animHandle=null;
-function playSimulation(){ if(simState.running) return; simState.running=true; modeBadge.textContent='Playing'; animHandle=setInterval(stepOnce,50);}
-function stopSimulation(){ if(!simState.running) return; simState.running=false; modeBadge.textContent='Stopped'; clearInterval(animHandle); animHandle=null;}
-function resetSimulator(){ simState.ix=0; simState.t=0; simState.totalDistance=0; simState.zoom=1; simState.offsetX=0; simState.offsetY=0; drawAll(); updateInfo();}
-
-/* events */
-parseBtn.addEventListener('click',()=>parseProgram());
-stepBtn.addEventListener('click',()=>{ if(!program.length) parseProgram(); stepOnce(); });
-playBtn.addEventListener('click',()=>{ if(!program.length) parseProgram(); playSimulation(); });
-stopBtn.addEventListener('click',()=>stopSimulation());
-
-zoomIn.addEventListener('click',()=>{ simState.zoom*=1.2; drawAll(); });
-zoomOut.addEventListener('click',()=>{ simState.zoom/=1.2; drawAll(); });
-fitBtn.addEventListener('click',()=>fitToContent());
-resetView.addEventListener('click',()=>{ simState.zoom=1; simState.offsetX=0; simState.offsetY=0; drawAll(); });
-
-/* fit to segments */
-function fitToContent(){
-  if(segments.length===0) return;
-  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-  segments.forEach(s=>{
-    minx=Math.min(minx,s.from.x,s.to.x); miny=Math.min(miny,s.from.y,s.to.y);
-    maxx=Math.max(maxx,s.from.x,s.to.x); maxy=Math.max(maxy,s.from.y,s.to.y);
-  });
-  const w=simCanvas.width,h=simCanvas.height;
-  const scaleX=(w*0.8)/(maxx-minx||1);
-  const scaleY=(h*0.8)/(maxy-miny||1);
-  simState.zoom=Math.min(scaleX,scaleY);
-  const midx=(minx+maxx)/2, midy=(miny+maxy)/2;
-  simState.offsetX=-midx*simState.zoom;
-  simState.offsetY=midy*simState.zoom;
-  drawAll();
-}
-
-/* export */
-exportTxt.addEventListener('click',()=>{ safeDownload(editor.value, (prompt('Názov súboru','program')||'program')+'.txt','text/plain;charset=utf-8'); });
-exportMpf.addEventListener('click',()=>{ const header=`(EUS MPF)\n; exported ${new Date().toISOString()}\n`; safeDownload(header+editor.value,(prompt('Názov súboru','program')||'program')+'.mpf','text/plain;charset=utf-8'); });
-
-/* initial draw */
-parseProgram();
-
-/* canvas adjust */
+// Resize
 function adjustCanvas(){
   const dpr=window.devicePixelRatio||1;
   simCanvas.width=Math.floor(simCanvas.clientWidth*dpr);
   simCanvas.height=Math.floor(simCanvas.clientHeight*dpr);
   ctx.setTransform(dpr,0,0,dpr,0,0);
   drawAll();
-  buildSegments();
 }
-window.addEventListener('resize',adjustCanvas);
+
+window.addEventListener('resize', adjustCanvas);
 adjustCanvas();
+parseProgram();
 
-/* keyboard shortcuts */
-window.addEventListener('keydown',(e)=>{
-  if(e.code==='Space'){ e.preventDefault(); simState.running?stopSimulation():playSimulation(); }
-  if(e.code==='ArrowRight'){ stepOnce(); }
-});
-
-/* stop animation when hidden */
-document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopSimulation(); });
-  
 </script>
 </body>
 </html>
