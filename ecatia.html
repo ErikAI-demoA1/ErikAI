@@ -47,6 +47,7 @@ let tool='line';
 let startPt=null;
 let origin={x:100,y:100};
 let editMode=false;
+let selectedShape=null;
 
 // DOM
 const info=document.getElementById('info');
@@ -63,6 +64,7 @@ document.getElementById('rectBtn').onclick=()=>tool='rect';
 editDimsBtn.onclick=()=>{
   editMode=!editMode;
   dimsPanel.style.display=editMode?'block':'none';
+  selectedShape=null;
   drawAll();
 };
 
@@ -107,34 +109,60 @@ function drawAll(){
   ctx.fillStyle='red';
   ctx.beginPath(); ctx.arc(origin.x,origin.y,5,0,Math.PI*2); ctx.fill();
 
-  // tvary
+  // shapes
   shapes.forEach((s,i)=>{
-    ctx.strokeStyle='lime'; ctx.lineWidth=2;
+    ctx.strokeStyle=(selectedShape===s)?'cyan':'lime'; ctx.lineWidth=2;
     ctx.beginPath();
     if(s.type==='line'){ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2);}
     else if(s.type==='circle'){ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2);}
     else if(s.type==='rect'){ctx.rect(s.x,s.y,s.w,s.h);}
     ctx.stroke();
-    if(!editMode) drawDimension(s);
+    drawTechnicalDimension(s);
   });
   if(editMode) updateDimensionsPanel();
 }
 
-// Draw dimension text
-function drawDimension(s){
-  ctx.fillStyle='yellow'; ctx.font='12px monospace';
+// Technical dimensions
+function drawTechnicalDimension(s){
+  ctx.strokeStyle='yellow';
+  ctx.fillStyle='yellow';
+  ctx.lineWidth=1;
+  ctx.font='12px monospace';
+
   if(s.type==='line'){
+    // šípky na koncoch
+    drawArrow(s.x1,s.y1,s.x2,s.y2);
     const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
     const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
     ctx.fillText(len, midX+5, midY-5);
   }else if(s.type==='rect'){
-    ctx.fillText(`W:${Math.abs(s.w)} H:${Math.abs(s.h)}`, s.x+s.w/2, s.y+s.h/2-5);
+    drawArrow(s.x,s.y,s.x+s.w,s.y);
+    drawArrow(s.x+s.w,s.y,s.x+s.w,s.y+s.h);
+    ctx.fillText(`W:${Math.abs(s.w)}`, s.x+s.w/2, s.y-5);
+    ctx.fillText(`H:${Math.abs(s.h)}`, s.x+s.w+5, s.y+s.h/2);
   }else if(s.type==='circle'){
-    ctx.fillText(`R:${s.r.toFixed(2)}`, s.cx, s.cy - s.r - 5);
+    drawArrow(s.cx,s.cy,s.cx+s.r,s.cy);
+    ctx.fillText(`R:${s.r.toFixed(2)}`, s.cx+s.cy/2, s.cy - s.r - 5);
   }
 }
 
-// Snap to grid & points
+// Draw arrow line
+function drawArrow(x1,y1,x2,y2){
+  const headlen=5;
+  const angle=Math.atan2(y2-y1,x2-x1);
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-headlen*Math.cos(angle-Math.PI/6), y2-headlen*Math.sin(angle-Math.PI/6));
+  ctx.lineTo(x2-headlen*Math.cos(angle+Math.PI/6), y2-headlen*Math.sin(angle+Math.PI/6));
+  ctx.lineTo(x2,y2);
+  ctx.fill();
+}
+
+// Snap
 function snap(x,y){
   const step=20;
   let sx=Math.round(x/step)*step;
@@ -160,6 +188,17 @@ canvas.onmousedown=(e)=>{
   const x=e.clientX-rect.left;
   const y=e.clientY-rect.top;
   const p=snap(x,y);
+
+  if(editMode){
+    // klik pre vybranie tvaru
+    selectedShape=null;
+    shapes.forEach(s=>{
+      if(isMouseOnShape(s,x,y)) selectedShape=s;
+    });
+    drawAll();
+    return;
+  }
+
   if(!startPt){startPt=p; return;}
   let shape=null;
   if(tool==='line'){shape={type:'line',x1:startPt.x,y1:startPt.y,x2:p.x,y2:p.y};}
@@ -170,14 +209,21 @@ canvas.onmousedown=(e)=>{
   startPt=null;
   drawAll();
 };
-
-// Origin move
-canvas.oncontextmenu=(e)=>{
-  e.preventDefault();
-  const rect=canvas.getBoundingClientRect();
-  origin={x:e.clientX-rect.left, y:e.clientY-rect.top};
-  drawAll();
-};
+// check if mouse is on shape (approx)
+function isMouseOnShape(s,x,y){
+  const margin=10;
+  if(s.type==='line'){
+    const d=Math.abs((s.y2-s.y1)*x-(s.x2-s.x1)*y+s.x2*s.y1-s.y2*s.x1)/Math.hypot(s.y2-s.y1,s.x2-s.x1);
+    return d<margin;
+  }else if(s.type==='rect'){
+    return x>=Math.min(s.x,s.x+s.w)-margin && x<=Math.max(s.x,s.x+s.w)+margin &&
+           y>=Math.min(s.y,s.y+s.h)-margin && y<=Math.max(s.y,s.y+s.h)+margin;
+  }else if(s.type==='circle'){
+    const d=Math.hypot(x-s.cx,y-s.cy);
+    return Math.abs(d-s.r)<margin;
+  }
+  return false;
+}
 
 // Dimensions panel edit
 function updateDimensionsPanel(){
