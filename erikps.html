@@ -5,79 +5,133 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ErikAI Mobile Controller</title>
 <style>
-body { margin:0; overflow:hidden; font-family:sans-serif; background:#111; color:#fff; }
-#iframeContainer { position:relative; width:100%; height:100vh; overflow:hidden; border:2px solid #ff4500; }
+body { margin:0; font-family:sans-serif; background:#111; color:#fff; display:flex; flex-direction:column; height:100vh; }
+#menu { background:#222; padding:10px; display:flex; flex-wrap:wrap; gap:5px; max-height:120px; overflow-y:auto; }
+#menu button { padding:8px 12px; background:#ff4500; border:none; border-radius:5px; color:#fff; font-weight:bold; flex:1; min-width:80px; }
+#iframeContainer { flex:1; position:relative; overflow:hidden; border-top:2px solid #ff4500; }
 #contentFrame { width:100%; height:100%; border:none; }
-#controller { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
-.joystick, .btn { width:60px; height:60px; background:linear-gradient(135deg,#ff7f50,#ff4500); border-radius:50%; display:flex; justify-content:center; align-items:center; color:#fff; font-weight:bold; font-size:20px; user-select:none; touch-action:none; }
-#joystick { position:relative; }
-#pointer { position:absolute; width:20px; height:20px; background:#0f0; border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%); }
+#controller { background:#222; padding:10px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
+.ctrl-button { padding:15px 20px; background:#0080ff; border:none; border-radius:50%; color:#fff; font-size:16px; font-weight:bold; }
+#joystick { width:100px; height:100px; background:#444; border-radius:50%; position:relative; touch-action:none; margin:auto; }
+#stick { width:40px; height:40px; background:#ff4500; border-radius:50%; position:absolute; left:30px; top:30px; }
 </style>
 </head>
 <body>
 
-<div id="iframeContainer">
-  <iframe id="contentFrame" src=""></iframe>
-  <div id="pointer"></div>
+<!-- MENU -->
+<div id="menu">
+  <!-- Tlačidlá sa dajú automaticky doplniť -->
 </div>
 
+<!-- IFRAME -->
+<div id="iframeContainer">
+  <iframe id="contentFrame" src=""></iframe>
+</div>
+
+<!-- OVLÁDAČ -->
 <div id="controller">
-  <div id="joystick" class="joystick">L1</div>
-  <div id="btnX" class="btn">X</div>
-  <div id="btnO" class="btn">O</div>
+  <div id="joystick"><div id="stick"></div></div>
+  <button class="ctrl-button" id="btnX">X</button>
+  <button class="ctrl-button" id="btnO">O</button>
 </div>
 
 <script>
 const iframe = document.getElementById('contentFrame');
-const pointer = document.getElementById('pointer');
-const iframeContainer = document.getElementById('iframeContainer');
+const menu = document.getElementById('menu');
 
-// Nastavenie hraníc hracej plochy
-const bounds = { minX:0, minY:0, maxX:window.innerWidth, maxY:window.innerHeight };
+// Všetky tvoje HTML súbory
+const htmlFiles = [
+  "01zaklad.html","02nadpisy.html","03odkazy.html","04zoznamy.html","05cssstyll.html",
+  "06javascript.html","07formular.html","08obrazkyavidea.html","09tlacidlastyl.html","10dizajn.html",
+  "11efekty.html","12profil.html","13kalkulacka.html","14github.html","android_apk.html",
+  "budik.html","coc.html","create_pwa.html","dama.html","dokumenty.html","emoji.html",
+  "erikai-chat.html","erikai_kniha-html.html","erikai_own_tube.html","erikai_tube.html","erikaiapkstudio.html",
+  "erikaicorelang.html","eriktv.html","erikvyh.html","format.html","fotak.html","galeria.html",
+  "generator_hesla_mena.html","generator_obrazkov.html","grafy.html","hodiny.html",
+  "hra.html","hudba.html","kalendar.html","kalkulacku.html","kompas.html","kontakt_hovor.html",
+  "kreslenie.html","kvantovy.html","ludo.html","mail.html","mapy.html","memorymatch.html",
+  "minicoc.html","mixnastroje.html","nastroje.html","nudzove.html","onlineprehliadac.html","pdfob.html",
+  "pdfsk.html","perrchat.html","pocasie.html","poznamky.html","prevodjednotiek.html","prezentacie.html",
+  "qr.html","radio.html","reakciahra.html","realnastavenie.html","remixsong.html","sachy.html",
+  "skener.html","sms.html","speedmeter.html","spravca_subor.html","spravy.html","support.html",
+  "tabulky.html","taprace.html","translate.html","univerzal.html","video_editor.html","vzorce.html",
+  "weberikai.html","writesped.html","zaznam_nahravok.html",
+  "hry_menu.html","index2.html","index3.html","nastroje_menu.html","platformy.html",
+  "prehliadac.html","programy_menu.html","ukazka.html","zakladne_nastavenie.html","zoznam_straniek.html"
+];
 
-// Ukazovák pohyb a scroll
-let pointerPos = { x: window.innerWidth/2, y: window.innerHeight/2 };
-function movePointer(dx, dy){
-    pointerPos.x = Math.min(bounds.maxX, Math.max(bounds.minX, pointerPos.x + dx));
-    pointerPos.y = Math.min(bounds.maxY, Math.max(bounds.minY, pointerPos.y + dy));
-    pointer.style.left = pointerPos.x+'px';
-    pointer.style.top = pointerPos.y+'px';
-    // Scroll iframe podľa pohybu ukazovák
-    iframe.contentWindow.scrollBy(dx, dy);
+// Vytvorenie tlačidiel v menu
+htmlFiles.forEach(file=>{
+  let btn = document.createElement('button');
+  btn.textContent = file;
+  btn.onclick = ()=>{iframe.src = `https://rawcdn.githack.com/ErikAI-demoA1/ErikAI/main/${file}`};
+  menu.appendChild(btn);
+});
+
+// RESET tlačidlo
+let resetBtn = document.createElement('button');
+resetBtn.textContent = "Reset";
+resetBtn.onclick = ()=>{ iframe.contentWindow.location.reload(); };
+menu.appendChild(resetBtn);
+
+// ----------- OVLÁDAČ -----------
+const stick = document.getElementById('stick');
+const joystick = document.getElementById('joystick');
+let dragging = false;
+let startX, startY;
+
+// Pohyb ukazovateľa v iframe
+function moveCursor(dx,dy){
+  try {
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    let evt = new MouseEvent('mousemove', {
+      bubbles: true,
+      clientX: dx,
+      clientY: dy
+    });
+    doc.dispatchEvent(evt);
+
+    // Scroll ak ideme mimo
+    iframe.contentWindow.scrollBy(dx*0.1, dy*0.1);
+  } catch(e){ console.log(e); }
 }
 
-// Joystick dotyk
-const joystick = document.getElementById('joystick');
-let touchStart = null;
-joystick.addEventListener('touchstart', e=>{ touchStart = e.touches[0]; });
-joystick.addEventListener('touchmove', e=>{
-    if(!touchStart) return;
-    let dx = e.touches[0].clientX - touchStart.clientX;
-    let dy = e.touches[0].clientY - touchStart.clientY;
-    movePointer(dx, dy);
-    touchStart = e.touches[0];
+// Joystick touch
+joystick.addEventListener('pointerdown', e=>{
+  dragging = true;
+  startX = e.clientX;
+  startY = e.clientY;
 });
-joystick.addEventListener('touchend', e=>{ touchStart=null; });
 
-// Tlačidlo X – kliknutie na iframe obsah
+joystick.addEventListener('pointermove', e=>{
+  if(!dragging) return;
+  let dx = e.clientX - startX;
+  let dy = e.clientY - startY;
+  stick.style.transform = `translate(${dx}px, ${dy}px)`;
+  moveCursor(dx, dy);
+});
+
+joystick.addEventListener('pointerup', e=>{
+  dragging = false;
+  stick.style.transform = `translate(0px,0px)`;
+});
+
+// Tlačidlo X = klik
 document.getElementById('btnX').addEventListener('click', ()=>{
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-    const el = iframeDoc.elementFromPoint(pointerPos.x - iframe.getBoundingClientRect().left, pointerPos.y - iframe.getBoundingClientRect().top);
-    if(el) el.click();
+  try {
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    const evt = new MouseEvent('click', {bubbles:true});
+    doc.dispatchEvent(evt);
+  } catch(e){ console.log(e); }
 });
 
-// Tlačidlo O – späť v histórii iframe
+// Tlačidlo O = späť
 document.getElementById('btnO').addEventListener('click', ()=>{
+  try {
     iframe.contentWindow.history.back();
+  } catch(e){ console.log(e); }
 });
-
-// Na začiatok – stred
-pointer.style.left = pointerPos.x+'px';
-pointer.style.top = pointerPos.y+'px';
-
-// Pre jednoduché testovanie môžeš nastaviť iframe src
-iframe.src = "https://rawcdn.githack.com/ErikAI-demoA1/ErikAI/main/01zaklad.html";
-
 </script>
+
 </body>
 </html>
