@@ -3,156 +3,122 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Erik CNC Studio — Sinumerik-style Simulator</title>
+<title>Sinumerik-style CNC Prep — EUS v1</title>
 <style>
-  :root{
-    --bg:#07151a; --panel:#0d262b; --muted:#9fb0b3; --accent:#60e0a0; --accent2:#60a5fa;
-    --card: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  }
+  :root{--bg:#071021;--panel:#0d1624;--accent:#34d399;--accent2:#60a5fa;--muted:#9fb0c8;}
   *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui,Arial;color:#e6f2f1;background:linear-gradient(180deg,var(--bg),#021014);min-height:100vh}
-  .wrap{max-width:1200px;margin:18px auto;padding:14px;border-radius:12px;background:var(--card);box-shadow:0 12px 30px rgba(0,0,0,0.6)}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,var(--bg),#04101a);color:#e6eef6}
+  .wrap{max-width:1100px;margin:18px auto;padding:14px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));box-shadow:0 10px 30px rgba(0,0,0,0.6)}
   header{display:flex;justify-content:space-between;align-items:center;gap:12px}
   h1{margin:0;font-size:18px}
   .meta{color:var(--muted);font-size:13px}
-  .grid{display:grid;grid-template-columns:380px 1fr;gap:12px;margin-top:12px}
+  main{display:grid;grid-template-columns:420px 1fr;gap:12px;margin-top:12px}
   .panel{background:var(--panel);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
-  textarea{width:100%;min-height:320px;background:#021b21;color:#dff7ef;border:1px solid rgba(255,255,255,0.03);padding:10px;border-radius:8px;font-family:monospace}
+  textarea{width:100%;height:320px;border-radius:8px;padding:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;resize:vertical}
   .row{display:flex;gap:8px;align-items:center}
-  select,input,button{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-  button.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#021014;border:none;font-weight:700;cursor:pointer}
+  button{padding:8px 10px;border-radius:8px;border:none;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#041014;font-weight:700;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+  canvas{width:100%;height:480px;border-radius:8px;background:#071026;display:block}
+  pre{white-space:pre-wrap;color:#dbeafe;background:rgba(0,0,0,0.12);padding:8px;border-radius:8px}
   .small{font-size:13px;color:var(--muted)}
-  canvas{width:100%;height:520px;border-radius:8px;background:linear-gradient(180deg,#042b2f,#012425);display:block}
-  table{width:100%;border-collapse:collapse;margin-top:8px}
-  th,td{border:1px solid rgba(255,255,255,0.04);padding:6px;font-size:13px}
   .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .muted{color:var(--muted)}
-  .legend{display:flex;gap:12px;align-items:center;margin-top:8px}
-  .dot{width:12px;height:12px;border-radius:6px;display:inline-block}
-  footer{margin-top:12px;color:var(--muted);text-align:center}
-  .input-inline{display:flex;gap:6px;align-items:center}
-  .tiny{font-size:12px;padding:6px}
-  .table-scroll{max-height:180px;overflow:auto;border-radius:6px;padding:4px}
+  .info{margin-top:8px}
+  .badge{background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);font-size:13px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div>
-      <h1>Erik CNC Studio — Sinumerik-style Simulator</h1>
-      <div class="meta">Zadaj G/M kódy, simuluj 2D dráhu (fréza / sústruh) • Export .txt</div>
+      <h1>Sinumerik-style CNC Prep — EUS CNC v1</h1>
+      <div class="meta">Základný editor, parser a 2D simulátor (G00/G01, X,Y,Z, F, M30). Export .txt / .mpf</div>
     </div>
-    <div class="small">Verzia 1 • Offline</div>
+    <div class="small">Offline • Lokálne • Príprava pre CNC</div>
   </header>
 
-  <div class="grid">
-    <!-- LEFT: editor and controls -->
+  <main>
     <div class="panel">
-      <div class="row" style="justify-content:space-between">
-        <div class="row">
-          <label class="small">Stroj:</label>
-          <select id="machineType">
+      <label>Editor G-kódu</label>
+      <textarea id="editor" placeholder="N010 G00 X0 Y0
+N020 G01 X50 Y0 F300
+N030 G01 X50 Y30
+N040 M30"></textarea>
+
+      <div class="row controls">
+        <button id="loadSample">Načítať príklad</button>
+        <button id="parseBtn" class="ghost">Analyzovať</button>
+        <button id="stepBtn" class="ghost">Krokovať ▶</button>
+        <button id="playBtn">Prehrať ⟳</button>
+        <button id="stopBtn" class="ghost">Stop ■</button>
+        <button id="exportTxt" class="ghost">Export .txt</button>
+        <button id="exportMpf" class="ghost">Export .mpf</button>
+        <input type="file" id="fileInput" accept=".txt,.nc,.mpf,.tap,.gcode" style="display:none">
+        <button id="openFile" class="ghost">Otvoriť súbor</button>
+      </div>
+
+      <div class="row" style="margin-top:8px;gap:12px;align-items:center">
+        <div>
+          <label>Stroj</label>
+          <select id="machineMode">
             <option value="mill">Fréza (X,Y)</option>
             <option value="lathe">Sústruh (X,Z)</option>
           </select>
-          <label class="small" style="margin-left:8px">Mierka:</label>
-          <input id="scaleInput" type="number" class="tiny" value="1" step="0.1" min="0.1" style="width:80px">
         </div>
 
-        <div class="row">
-          <button id="loadSample" class="tiny">Načítať ukážku</button>
-          <button id="simulateBtn" class="primary tiny">Simulovať</button>
+        <div>
+          <label>Rýchlosť animácie</label>
+          <select id="speed">
+            <option value="1">x1</option><option value="2">x2</option><option value="4">x4</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Ukážka režimu</label>
+          <div class="badge" id="modeBadge">Ready</div>
         </div>
       </div>
 
-      <label class="small" style="margin-top:8px">Editor G/M kódov</label>
-      <textarea id="gcodeEditor" placeholder="Príklad:
-%
-O1000 (Program start)
-G00 X0 Y0
-G01 X20 Y0 F100
-G01 X20 Y20
-G01 X0 Y20
-G01 X0 Y0
-M30
-%"></textarea>
-
-      <div class="controls">
-        <button id="exportBtn" class="primary tiny">Exportovať .txt</button>
-        <button id="clearBtn" class="tiny">Vymazať editor</button>
-        <button id="zoomFit" class="tiny">Fit</button>
-        <button id="copyToClipboard" class="tiny">Kopírovať kód</button>
+      <div class="info">
+        <div class="small">Základné G príkazy podporované: <strong>G00/G0 (rapid), G01/G1 (linear), M30</strong>. Podpora G2/G3 plánovaná.</div>
       </div>
 
       <div style="margin-top:10px">
-        <div class="small">Krátke nápovedy:</div>
-        <ul class="small muted">
-          <li>Podporované: G0/G00, G1/G01 (lineárne). Používaj X Y pre frézu, X Z pre sústruh.</li>
-          <li>F = feed (nepovinné). M kódy sú ignorované pri kreslení, zobrazia sa v logu.</li>
-          <li>Príkazy mimo rozsahu sú zobrazené, ale ignorované pri kreslení.</li>
-        </ul>
+        <label>Parser report / chyby</label>
+        <pre id="report" style="min-height:90px"></pre>
       </div>
     </div>
 
-    <!-- RIGHT: visual + table -->
     <div class="panel">
-      <div style="display:flex;justify-content:space-between;align-items:center">
+      <label>Simulátor — 2D dráha (X,Y)</label>
+      <canvas id="simCanvas" width="800" height="600"></canvas>
+
+      <div class="row" style="margin-top:8px;justify-content:space-between">
         <div>
-          <strong>2D Vizualizácia dráhy</strong>
-          <div class="small muted">Zobrazenie v rovine — červená = rapídne G0, zelená = G1 (rez)</div>
+          <div class="small">Aktuálna pozícia: <span id="pos">X0.000 Y0.000 Z0.000</span></div>
+          <div class="small">Aktuálny riadok: <span id="curLine">—</span></div>
+          <div class="small">Prejdená vzdialenosť: <span id="distance">0.000</span> mm</div>
+          <div class="small">Odhadovaný čas: <span id="eta">0s</span></div>
         </div>
-        <div class="row">
-          <div class="small">Zoom</div>
-          <input id="zoom" type="range" min="0.2" max="3" step="0.05" value="1" style="width:160px">
-        </div>
-      </div>
-
-      <canvas id="viewCanvas" width="800" height="520"></canvas>
-
-      <div class="legend">
-        <div><span class="dot" style="background:#ff6b6b"></span> G0 (rapid)</div>
-        <div><span class="dot" style="background:#60e0a0"></span> G1 (feed)</div>
-        <div><span class="dot" style="background:#9fb0c8"></span> Start / End</div>
-      </div>
-
-      <div style="display:flex;gap:12px;margin-top:12px">
-        <div style="flex:1">
-          <div class="small">G/M Kódy (referencia)</div>
-          <div class="table-scroll">
-            <table id="codesTable">
-              <thead><tr><th>Kód</th><th>Popis</th></tr></thead>
-              <tbody>
-                <tr><td>G00</td><td>Rýchly presun (rapid)</td></tr>
-                <tr><td>G01</td><td>Lineárny posuv (feed)</td></tr>
-                <tr><td>G02</td><td>Kruhový pohyb CW (nie v tejto verzii)</td></tr>
-                <tr><td>G03</td><td>Kruhový pohyb CCW (nie v tejto verzii)</td></tr>
-                <tr><td>M30</td><td>Program end / stop</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
-            <input id="newCodeName" type="text" placeholder="Kód (Gxx/Mxx)" style="width:120px">
-            <input id="newCodeDesc" type="text" placeholder="Popis" style="flex:1">
-            <button id="addCodeBtn" class="tiny">Pridať</button>
-          </div>
-        </div>
-
-        <div style="width:260px">
-          <div class="small">Log / info</div>
-          <pre id="log" style="background:rgba(0,0,0,0.16);padding:8px;border-radius:6px;min-height:120px;color:#dff7ef;overflow:auto"></pre>
+        <div style="text-align:right">
+          <div class="small">Zoom: <button id="zoomIn" class="ghost">+</button> <button id="zoomOut" class="ghost">−</button> <button id="fit" class="ghost">Fit</button></div>
+          <div style="margin-top:4px"><button id="resetView" class="ghost">Reset simulátor</button></div>
         </div>
       </div>
     </div>
-  </div>
+  </main>
 
-  <footer>Erik CNC Studio — jednoduchý Sinumerik-style prototyp • Export offline • Erik</footer>
+  <div style="margin-top:12px;text-align:center" class="small">EUS CNC — základná verzia. Chceš G2/G3 alebo 3D? Povedz a pridám to.</div>
 </div>
 
 <script>
-/* --- Utility: safe download (append a, click, remove) --- */
-function safeDownload(content, filename, mime='text/plain;charset=utf-8'){
-  const blob = (content instanceof Blob) ? content : new Blob([content], {type:mime});
+/* ========= EUS CNC — core JS ========= */
+
+/* helpers */
+function safeDownload(contentOrBlob, filename, type='application/octet-stream'){
+  let blob;
+  if(contentOrBlob instanceof Blob) blob = contentOrBlob;
+  else blob = new Blob([contentOrBlob], {type});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = filename;
@@ -161,265 +127,366 @@ function safeDownload(content, filename, mime='text/plain;charset=utf-8'){
   setTimeout(()=>{ try{ document.body.removeChild(a); }catch(e){} URL.revokeObjectURL(a.href); }, 150);
 }
 
-/* --- DOM refs --- */
-const editor = document.getElementById('gcodeEditor');
-const simulateBtn = document.getElementById('simulateBtn');
-const canvas = document.getElementById('viewCanvas');
-const ctx = canvas.getContext('2d');
-const logEl = document.getElementById('log');
-const machineType = document.getElementById('machineType');
-const zoom = document.getElementById('zoom');
-const scaleInput = document.getElementById('scaleInput');
+function toNum(v){ const n = Number(v); return isNaN(n)?null:n; }
 
-/* state */
-let pathSegments = []; // {type:'G0'|'G1', from:{x,y}, to:{x,y}}
-let view = {offsetX: canvas.width/2, offsetY: canvas.height/2, zoom: 1};
+/* DOM */
+const editor = document.getElementById('editor');
+const parseBtn = document.getElementById('parseBtn');
+const report = document.getElementById('report');
+const simCanvas = document.getElementById('simCanvas');
+const ctx = simCanvas.getContext('2d');
+const posEl = document.getElementById('pos');
+const curLineEl = document.getElementById('curLine');
+const distanceEl = document.getElementById('distance');
+const etaEl = document.getElementById('eta');
+const modeBadge = document.getElementById('modeBadge');
+const machineMode = document.getElementById('machineMode');
+const loadSample = document.getElementById('loadSample');
+const stepBtn = document.getElementById('stepBtn');
+const playBtn = document.getElementById('playBtn');
+const stopBtn = document.getElementById('stopBtn');
+const exportTxt = document.getElementById('exportTxt');
+const exportMpf = document.getElementById('exportMpf');
+const fileInput = document.getElementById('fileInput');
+const openFile = document.getElementById('openFile');
+const speedSelect = document.getElementById('speed');
+const zoomIn = document.getElementById('zoomIn'), zoomOut = document.getElementById('zoomOut'), fitBtn = document.getElementById('fit');
+const resetView = document.getElementById('resetView');
 
-/* helpers */
-function lg(msg){ logEl.textContent = (new Date()).toLocaleTimeString() + ' — ' + msg + '\n' + logEl.textContent; }
-function parseNumber(s){ const n=parseFloat(s); return isNaN(n)?null:n; }
+openFile.addEventListener('click', ()=>fileInput.click());
+fileInput.addEventListener('change', async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const txt = await f.text();
+  editor.value = txt;
+  parseProgram();
+});
 
-/* parse G-code (basic) */
-function parseGcode(text){
-  pathSegments = [];
-  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0 && !l.startsWith(';') );
-  let cx=0, cy=0, cz=0; // current position (units arbitrary)
-  let modalG = null;
-  let feed = null;
-  for(let raw of lines){
-    // remove comments ( ) or ; style
-    let line = raw.replace(/\(.*?\)/g,'').split(';')[0].trim();
-    if(!line) continue;
-    lg('Parsing: ' + line);
-    // tokenize
-    const toks = line.split(/\s+/);
-    // check codes
-    let code = toks[0].toUpperCase();
-    // allow lines like "G1 X10 Y0"
-    if(/^G\d{1,2}$/i.test(code) || /^M\d{1,2}$/i.test(code)){
-      // process this token and remaining tokens
-      let gcode = code.toUpperCase();
-      if(gcode.startsWith('G')){
-        modalG = gcode;
-      } else if(gcode.startsWith('M')){
-        // M codes: log only
-        lg('M-code encountered: ' + gcode);
-      }
-      // parse rest tokens including this line tokens
-      // create an object mapping letters to numbers
-      const map = {};
-      toks.forEach(t=>{
-        const m = t.match(/^([A-Za-z])([-+]?[0-9]*\.?[0-9]+)$/);
-        if(m){ map[m[1].toUpperCase()] = parseFloat(m[2]); }
-      });
-      // update feed if F present
-      if(map['F']!==undefined) feed = map['F'];
-      // decide movement based on modalG or gcode
-      const moveG = (gcode.startsWith('G') ? gcode : modalG);
-      if(moveG && (moveG==='G0' || moveG==='G00' || moveG==='G1' || moveG==='G01')){
-        // compute target coordinates depending on machine type
-        const mType = machineType.value;
-        let tx = (map['X']!==undefined) ? map['X'] : (mType==='lathe' ? cx : cx);
-        let tz = (map['Z']!==undefined) ? map['Z'] : cz;
-        let ty = (map['Y']!==undefined) ? map['Y'] : cy;
-        if(mType==='mill'){
-          const from = {x:cx, y:cy};
-          const to = {x: (map['X']!==undefined?map['X']:cx), y: (map['Y']!==undefined?map['Y']:cy)};
-          pathSegments.push({type: moveG.startsWith('G0')?'G0':'G1', from, to});
-          cx = to.x; cy = to.y;
-        } else {
-          // lathe: use X,Z plane mapped to X,Y for display (X horizontal, Z vertical)
-          const from = {x:cx, y:cz};
-          const to = {x: (map['X']!==undefined?map['X']:cx), y: (map['Z']!==undefined?map['Z']:cz)};
-          pathSegments.push({type: moveG.startsWith('G0')?'G0':'G1', from, to});
-          cx = (map['X']!==undefined?map['X']:cx); cz = (map['Z']!==undefined?map['Z']:cz);
-        }
+/* sample */
+loadSample.addEventListener('click', ()=>{
+  editor.value = `N010 G00 X0 Y0
+N020 G01 X80 Y0 F400
+N030 G01 X80 Y60
+N040 G01 X0 Y60
+N050 G01 X0 Y0
+N060 M30`;
+});
+
+/* parser */
+let program = []; // array of {raw, n, g, params:{X:,Y:,Z:,F:,M:...}}
+function parseProgram(){
+  program = [];
+  report.textContent = '';
+  const lines = editor.value.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+  let errors = [];
+  for(let i=0;i<lines.length;i++){
+    const raw = lines[i];
+    // remove comments in parentheses
+    const noComment = raw.replace(/\(.*?\)/g,'').trim();
+    const toks = noComment.split(/\s+/);
+    const obj = {raw, line:i+1, n:null, g:null, params:{}, rawClean:noComment};
+    toks.forEach(t=>{
+      const up = t.toUpperCase();
+      if(/^N\d+/.test(up)) obj.n = up;
+      else if(/^G0?0$/.test(up)) obj.g = 'G00';
+      else if(/^G0?1$/.test(up)) obj.g = 'G01';
+      else if(/^G0?2$/.test(up)) obj.g = 'G02';
+      else if(/^G0?3$/.test(up)) obj.g = 'G03';
+      else if(/^M30$/.test(up)) obj.params.M = 'M30';
+      else if(/^[XYZF]\-?\d+(\.\d+)?$/.test(up)){
+        const key = up[0];
+        const val = up.slice(1);
+        obj.params[key] = Number(val);
       } else {
-        // unsupported G -> log
-        lg('Unsupported/ignored code: ' + (moveG||gcode));
+        // unknown token -> record but not fatal
+        if(up.length>0) obj.params['_unknown'] = obj.params['_unknown'] || [];
+        if(up.length>0) obj.params['_unknown'].push(up);
       }
-
-    } else {
-      // try to parse tokens when first token is not G/M (e.g., X10 Y10)
-      const map = {};
-      toks.forEach(t=>{
-        const m = t.match(/^([A-Za-z])([-+]?[0-9]*\.?[0-9]+)$/);
-        if(m){ map[m[1].toUpperCase()] = parseFloat(m[2]); }
-      });
-      if(Object.keys(map).length>0){
-        // assume modalG or G1
-        const moveG = modalG || 'G1';
-        if(moveG && (moveG==='G0' || moveG==='G00' || moveG==='G1' || moveG==='G01')){
-          if(machineType.value==='mill'){
-            const from = {x:cx, y:cy};
-            const to = {x: (map['X']!==undefined?map['X']:cx), y: (map['Y']!==undefined?map['Y']:cy)};
-            pathSegments.push({type: moveG.startsWith('G0')?'G0':'G1', from, to});
-            cx = to.x; cy = to.y;
-          } else {
-            const from = {x:cx, y:cz};
-            const to = {x: (map['X']!==undefined?map['X']:cx), y: (map['Z']!==undefined?map['Z']:cz)};
-            pathSegments.push({type: moveG.startsWith('G0')?'G0':'G1', from, to});
-            cx = (map['X']!==undefined?map['X']:cx); cz = (map['Z']!==undefined?map['Z']:cz);
-          }
-        }
-      } else {
-        // ignore other lines
-        lg('Ignored line: ' + raw);
-      }
+    });
+    // basic validation
+    if(!obj.g && !obj.params.M && !obj.n && obj.rawClean.length>0 && !/^\s*$/.test(obj.rawClean)){
+      // could be comment-only or blank; allow but warn
     }
+    program.push(obj);
   }
-  lg('Parsing complete — ' + pathSegments.length + ' segments');
-  return pathSegments;
+  // simple report
+  let rpt = `Načítaných riadkov: ${program.length}\n\n`;
+  const unknowns = program.flatMap(p => p.params._unknown ? p.params._unknown.map(u=>`Riadok ${p.line}: ${u}`) : []);
+  if(unknowns.length) rpt += 'Nepodporované tokeny (len upozornenie):\n' + unknowns.join('\n') + '\n\n';
+  rpt += 'Podporované príkazy: G00/G01, X Y Z F, M30\n';
+  report.textContent = rpt;
+  resetSimulator();
+  buildSegments();
 }
 
-/* draw grid + path */
-function draw(){
-  // clear
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  // background gradient already in CSS but ensure dark fill
-  // draw grid
-  const z = parseFloat(zoom.value) * parseFloat(scaleInput.value);
-  const spacing = 20 * z;
-  ctx.save();
-  ctx.translate(view.offsetX, view.offsetY);
-  // grid lines
+/* build segments from program */
+let segments = []; // [{from:{x,y,z}, to:{x,y,z}, feed, type:'G00'|'G01', line}]
+function buildSegments(){
+  segments = [];
+  let cur = {x:0,y:0,z:0, feed:300}; // starting at 0
+  for(let p of program){
+    if(p.params.M === 'M30'){ segments.push({from:{...cur}, to:{...cur}, feed:cur.feed, type:'M30', line:p.line}); break; }
+    if(p.g === 'G00' || p.g === 'G01'){
+      const tgt = {x: cur.x, y: cur.y, z: cur.z};
+      if(typeof p.params.X !== 'undefined') tgt.x = p.params.X;
+      if(typeof p.params.Y !== 'undefined') tgt.y = p.params.Y;
+      if(typeof p.params.Z !== 'undefined') tgt.z = p.params.Z;
+      if(typeof p.params.F !== 'undefined') cur.feed = p.params.F;
+      segments.push({from:{...cur}, to:tgt, feed:cur.feed, type:p.g, line:p.line});
+      cur = {...tgt, feed:cur.feed};
+    } else if(p.params.M === 'M30'){
+      segments.push({from:{...cur}, to:{...cur}, feed:cur.feed, type:'M30', line:p.line});
+    }
+  }
+  drawAll();
+}
+
+/* simulation state */
+let simState = {
+  ix: 0, // index in segments
+  t: 0, // progress 0..1 within current segment
+  running: false,
+  totalDistance: 0,
+  zoom: 1,
+  offsetX: 0, offsetY:0
+};
+
+/* drawing utilities */
+function clearCanvas(){
+  ctx.clearRect(0,0,simCanvas.width,simCanvas.height);
+  ctx.fillStyle = '#071026';
+  ctx.fillRect(0,0,simCanvas.width,simCanvas.height);
+}
+
+function worldToScreen(x,y){
+  // world coordinates in mm; center on canvas
+  const w = simCanvas.width, h = simCanvas.height;
+  const scale = simState.zoom;
+  // center world mid point -> implement simple pan offset
+  const cx = w/2 + simState.offsetX;
+  const cy = h/2 + simState.offsetY;
+  return {sx: cx + x*scale, sy: cy - y*scale};
+}
+
+function drawAll(){
+  clearCanvas();
+  // axes grid
   ctx.strokeStyle = 'rgba(255,255,255,0.03)';
   ctx.lineWidth = 1;
-  for(let x=-2000; x<2000; x+=spacing){
-    ctx.beginPath(); ctx.moveTo(x, -2000); ctx.lineTo(x, 2000); ctx.stroke();
-  }
-  for(let y=-2000; y<2000; y+=spacing){
-    ctx.beginPath(); ctx.moveTo(-2000, y); ctx.lineTo(2000, y); ctx.stroke();
-  }
-  // axes
-  ctx.strokeStyle = 'rgba(200,200,200,0.12)'; ctx.lineWidth=1.2;
-  ctx.beginPath(); ctx.moveTo(-2000,0); ctx.lineTo(2000,0); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,-2000); ctx.lineTo(0,2000); ctx.stroke();
+  const step = 10 * simState.zoom;
+  for(let x=0;x<simCanvas.width;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,simCanvas.height); ctx.stroke(); }
+  for(let y=0;y<simCanvas.height;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(simCanvas.width,y); ctx.stroke(); }
 
-  // draw path
-  if(pathSegments.length>0){
-    // find bounding box to auto-fit when requested
-    for(let i=0;i<pathSegments.length;i++){
-      const s = pathSegments[i];
-      // draw segment
-      ctx.beginPath();
-      ctx.moveTo(s.from.x * z, -s.from.y * z);
-      ctx.lineTo(s.to.x * z, -s.to.y * z);
-      ctx.strokeStyle = (s.type==='G0') ? '#ff6b6b' : '#60e0a0';
-      ctx.lineWidth = (s.type==='G0') ? 1.2 : 2.4;
-      ctx.stroke();
+  // draw segments
+  for(let i=0;i<segments.length;i++){
+    const s = segments[i];
+    const p1 = worldToScreen(s.from.x,s.from.y);
+    const p2 = worldToScreen(s.to.x,s.to.y);
+    ctx.beginPath();
+    ctx.moveTo(p1.sx,p1.sy);
+    ctx.lineTo(p2.sx,p2.sy);
+    ctx.strokeStyle = (s.type==='G00') ? '#ffa500' : '#34d399';
+    ctx.lineWidth = (i===simState.ix ? 3 : 2);
+    ctx.stroke();
+  }
+
+  // draw tool position (current)
+  const curPos = getCurrentPosition();
+  const screen = worldToScreen(curPos.x,curPos.y);
+  ctx.beginPath();
+  ctx.arc(screen.sx, screen.sy, 6, 0, Math.PI*2);
+  ctx.fillStyle = '#ff4d4d';
+  ctx.fill();
+
+  // show coordinate text
+  ctx.fillStyle = '#dbeafe';
+  ctx.font = '13px monospace';
+  ctx.fillText(`X:${curPos.x.toFixed(3)} Y:${curPos.y.toFixed(3)} Z:${curPos.z.toFixed(3)}`, 12, 18);
+}
+
+/* current position based on simState */
+function getCurrentPosition(){
+  if(segments.length===0) return {x:0,y:0,z:0};
+  const idx = Math.min(simState.ix, segments.length-1);
+  const seg = segments[idx];
+  const fx = seg.from.x + (seg.to.x - seg.from.x) * simState.t;
+  const fy = seg.from.y + (seg.to.y - seg.from.y) * simState.t;
+  const fz = seg.from.z + (seg.to.z - seg.from.z) * simState.t;
+  return {x:fx,y:fy,z:fz};
+}
+
+/* draw helpers */
+function updateInfo(){
+  const cur = getCurrentPosition();
+  posEl.textContent = `X${cur.x.toFixed(3)} Y${cur.y.toFixed(3)} Z${cur.z.toFixed(3)}`;
+  const seg = segments[simState.ix];
+  curLineEl.textContent = seg ? `Line ${seg.line} (${seg.type})` : '—';
+  distanceEl.textContent = simState.totalDistance.toFixed(3);
+  // ETA calculation: remaining distance / feed (converted)
+  let remaining = 0;
+  // progress within current
+  if(segments.length){
+    const s = segments[simState.ix];
+    function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y, dz=a.z-b.z; return Math.sqrt(dx*dx+dy*dy+dz*dz); }
+    remaining += dist({x:s.to.x,y:s.to.y,z:s.to.z}, {x:cur.x,y:cur.y,z:cur.z});
+    for(let i=simState.ix+1;i<segments.length;i++){
+      const ss = segments[i];
+      remaining += dist(ss.from, ss.to);
     }
-    // start / end marker
-    const first = pathSegments[0].from;
-    const last = pathSegments[pathSegments.length-1].to;
-    ctx.fillStyle = '#9fb0c8';
-    ctx.beginPath(); ctx.arc(first.x*z, -first.y*z, 6,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(last.x*z, -last.y*z, 6,0,Math.PI*2); ctx.fill();
   }
-
-  ctx.restore();
+  // feed in mm/min -> convert to mm/s
+  const feed = (segments[simState.ix] && segments[simState.ix].feed) ? segments[simState.ix].feed : 300;
+  const mmPerSec = feed/60;
+  const secs = mmPerSec>0 ? remaining/mmPerSec : 0;
+  etaEl.textContent = secs>0 ? formatTime(secs) : '0s';
 }
 
-/* Fit view to content */
-function fitView(){
-  if(pathSegments.length===0){
-    view.offsetX = canvas.width/2;
-    view.offsetY = canvas.height/2;
-    view.zoom = 1;
-    zoom.value = 1;
-    scaleInput.value = 1;
-    draw();
-    return;
-  }
-  // compute bounds
-  let minx=Infinity, maxx=-Infinity, miny=Infinity, maxy=-Infinity;
-  pathSegments.forEach(s=>{
-    [s.from, s.to].forEach(p=>{
-      minx = Math.min(minx, p.x); maxx = Math.max(maxx,p.x);
-      miny = Math.min(miny, p.y); maxy = Math.max(maxy,p.y);
-    });
-  });
-  const w = maxx - minx || 1;
-  const h = maxy - miny || 1;
-  // compute zoom such that content fits into 80% of canvas
-  const margin = 40;
-  const zx = (canvas.width - margin) / (w||1);
-  const zy = (canvas.height - margin) / (h||1);
-  const z = Math.min(zx, zy) * 0.9;
-  // set offsets so center matches center
-  const cx = (minx + maxx)/2;
-  const cy = (miny + maxy)/2;
-  view.zoom = 1; // zoom control used for simple scaling, we will use zoom input instead
-  // update scaleInput to approximate
-  const targetScale = z/20; // because grid spacing base approx 20px/unit
-  scaleInput.value = Math.max(0.1, targetScale.toFixed(2));
-  view.offsetX = canvas.width/2 - (cx * parseFloat(zoom.value) * parseFloat(scaleInput.value));
-  view.offsetY = canvas.height/2 + (cy * parseFloat(zoom.value) * parseFloat(scaleInput.value));
-  draw();
-  lg('Fit applied');
+function formatTime(s){
+  s = Math.round(s);
+  const h = Math.floor(s/3600); s%=3600;
+  const m = Math.floor(s/60); s%=60;
+  const sec = s;
+  if(h>0) return `${h}h ${m}m ${sec}s`;
+  if(m>0) return `${m}m ${sec}s`;
+  return `${sec}s`;
 }
 
-/* event handlers */
-simulateBtn.addEventListener('click', ()=>{
-  logEl.textContent = '';
-  parseGcode(editor.value);
-  // center view
-  view.offsetX = canvas.width/2;
-  view.offsetY = canvas.height/2;
-  draw();
+/* simulation stepping */
+function stepOnce(){
+  if(segments.length===0) return;
+  const seg = segments[simState.ix];
+  // compute segment length
+  const dx = seg.to.x - seg.from.x;
+  const dy = seg.to.y - seg.from.y;
+  const dz = seg.to.z - seg.from.z;
+  const segLen = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  // advance progress by a fixed small step proportional to speed
+  const speedFactor = Number(speedSelect.value) || 1;
+  // we convert based on feed (mm/min) to step per frame (simulate)
+  const feed = seg.feed || 300; // mm/min
+  const mmPerSec = feed/60 * speedFactor;
+  // time per tick ~ 0.05s
+  const dt = 0.05 * speedFactor;
+  const advance = mmPerSec * dt; // mm per tick
+  const delta = segLen>0 ? advance/segLen : 1;
+  simState.t += delta;
+  simState.totalDistance += Math.min(advance, segLen*(1-simState.t+delta)); // approximate
+  if(simState.t >= 1 - 1e-9){
+    // move to next segment
+    simState.ix++;
+    simState.t = 0;
+    if(simState.ix >= segments.length){
+      simState.ix = segments.length-1;
+      simState.t = 1;
+      stopSimulation();
+    }
+  }
+  drawAll();
+  updateInfo();
+}
+
+/* playback control */
+let animHandle = null;
+function playSimulation(){
+  if(simState.running) return;
+  simState.running = true;
+  modeBadge.textContent = 'Playing';
+  animHandle = setInterval(()=>{ stepOnce(); }, 50);
+}
+function stopSimulation(){
+  if(!simState.running) return;
+  simState.running = false;
+  modeBadge.textContent = 'Stopped';
+  clearInterval(animHandle);
+  animHandle = null;
+}
+function resetSimulator(){
+  simState.ix = 0; simState.t = 0; simState.totalDistance = 0;
+  simState.zoom = 1; simState.offsetX = 0; simState.offsetY = 0;
+  drawAll();
+  updateInfo();
+}
+
+/* event hooks */
+parseBtn.addEventListener('click', ()=>{ parseProgram(); });
+stepBtn.addEventListener('click', ()=>{
+  if(!program.length) parseProgram();
+  stepOnce();
 });
-
-zoom.addEventListener('input', ()=>{ draw(); });
-scaleInput.addEventListener('change', ()=>{ draw(); });
-document.getElementById('zoomFit').addEventListener('click', fitView);
-
-document.getElementById('loadSample').addEventListener('click', ()=>{
-  const sample = `%
-O1000 (Square simple)
-G00 X0 Y0
-G01 X40 Y0 F200
-G01 X40 Y40
-G01 X0 Y40
-G01 X0 Y0
-M30
-%`;
-  editor.value = sample;
-  lg('Sample loaded');
+playBtn.addEventListener('click', ()=>{
+  if(!program.length) parseProgram();
+  playSimulation();
 });
+stopBtn.addEventListener('click', ()=>{ stopSimulation(); });
 
-document.getElementById('clearBtn').addEventListener('click', ()=>{ if(confirm('Vymazať editor?')) editor.value=''; lg('Editor cleared'); });
+speedSelect.addEventListener('change', ()=>{ /* speed affects stepOnce */ });
 
-document.getElementById('exportBtn').addEventListener('click', ()=>{
+zoomIn.addEventListener('click', ()=>{ simState.zoom *= 1.2; drawAll(); });
+zoomOut.addEventListener('click', ()=>{ simState.zoom /= 1.2; drawAll(); });
+fitBtn.addEventListener('click', fitToContent);
+resetView.addEventListener('click', ()=>{ simState.zoom=1; simState.offsetX=0; simState.offsetY=0; drawAll(); });
+
+/* fit the view to the extents of the geometry */
+function fitToContent(){
+  if(segments.length===0) return;
+  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+  for(let s of segments){
+    minx = Math.min(minx, s.from.x, s.to.x);
+    miny = Math.min(miny, s.from.y, s.to.y);
+    maxx = Math.max(maxx, s.from.x, s.to.x);
+    maxy = Math.max(maxy, s.from.y, s.to.y);
+  }
+  const w = simCanvas.width, h = simCanvas.height;
+  const worldW = Math.max(1, (maxx-minx));
+  const worldH = Math.max(1, (maxy-miny));
+  const scaleX = (w*0.8)/worldW;
+  const scaleY = (h*0.8)/worldH;
+  simState.zoom = Math.min(scaleX, scaleY);
+  // center on midpoint
+  const midx = (minx+maxx)/2, midy = (miny+maxy)/2;
+  simState.offsetX = -midx*simState.zoom;
+  simState.offsetY = midy*simState.zoom;
+  drawAll();
+}
+
+/* export */
+exportTxt.addEventListener('click', ()=>{
   const name = prompt('Názov súboru (bez prípony)', 'program') || 'program';
   safeDownload(editor.value, name + '.txt', 'text/plain;charset=utf-8');
-  lg('Exported ' + name + '.txt');
 });
-
-document.getElementById('copyToClipboard').addEventListener('click', async ()=>{
-  try{
-    await navigator.clipboard.writeText(editor.value);
-    lg('Kód skopírovaný do clipboardu');
-  }catch(e){ lg('Clipboard copy failed'); alert('Kopírovanie zlyhalo'); }
-});
-
-/* adding custom codes */
-document.getElementById('addCodeBtn').addEventListener('click', ()=>{
-  const name = (document.getElementById('newCodeName').value||'').trim();
-  const desc = (document.getElementById('newCodeDesc').value||'').trim();
-  if(!name || !desc){ alert('Vyplň kód a popis'); return; }
-  const tbody = document.querySelector('#codesTable tbody');
-  const tr = document.createElement('tr');
-  const td1 = document.createElement('td'); td1.textContent = name.toUpperCase();
-  const td2 = document.createElement('td'); td2.textContent = desc;
-  tr.appendChild(td1); tr.appendChild(td2);
-  tbody.appendChild(tr);
-  document.getElementById('newCodeName').value=''; document.getElementById('newCodeDesc').value='';
-  lg('Added code ' + name.toUpperCase());
+exportMpf.addEventListener('click', ()=>{
+  // create a simple mpf: same content, maybe add header
+  const header = `(Erik EUS MPF export)\n; exported: ${new Date().toISOString()}\n`;
+  const out = header + editor.value + '\n';
+  const name = prompt('Názov súboru (bez prípony)', 'program') || 'program';
+  safeDownload(out, name + '.mpf', 'text/plain;charset=utf-8');
 });
 
 /* initial draw */
-draw();
-lg('Ready — vlož G/M kód a klikni Simulovať');
+parseProgram();
+
+/* resize canvas to device pixel ratio */
+function adjustCanvas(){
+  const dpr = window.devicePixelRatio || 1;
+  simCanvas.width = Math.floor(simCanvas.clientWidth * dpr);
+  simCanvas.height = Math.floor(simCanvas.clientHeight * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  drawAll();
+}
+window.addEventListener('resize', ()=>{
+  adjustCanvas();
+});
+adjustCanvas();
+
+/* keyboard shortcuts: Space play/pause, ArrowRight step */
+window.addEventListener('keydown',(e)=>{
+  if(e.code==='Space'){ e.preventDefault(); if(simState.running) stopSimulation(); else playSimulation(); }
+  if(e.code==='ArrowRight'){ stepOnce(); }
+});
+
+/* stop animation when window hidden */
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stopSimulation(); });
+
 </script>
 </body>
-              </html>
+  </html>
