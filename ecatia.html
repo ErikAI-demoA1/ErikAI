@@ -6,16 +6,13 @@
 <title>Mini CAD — Line, Circle, Rectangle</title>
 <style>
 body{margin:0;font-family:sans-serif;background:#111;color:#eee;}
-header{padding:8px;background:#222;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+header{padding:8px;background:#222;display:flex;gap:12px;align-items:center;}
 canvas{background:#1a1a1a;display:block;margin:0 auto;border:1px solid #333;}
 button{padding:6px 10px;border:none;border-radius:5px;background:#34d399;color:#000;cursor:pointer;}
 button.ghost{background:#222;border:1px solid #555;color:#eee;}
 .panel{padding:8px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
 .info{padding:4px;color:#ccc;}
 input[type=number]{width:60px;}
-#dimensionsPanel{position:fixed;top:10px;right:10px;background:#222;padding:10px;border-radius:5px;max-height:90vh;overflow:auto;}
-#dimensionsPanel h3{margin:0 0 5px 0;color:#34d399;}
-#dimensionsPanel div{margin-bottom:5px;}
 </style>
 </head>
 <body>
@@ -28,18 +25,10 @@ input[type=number]{width:60px;}
     <button id="redoBtn" class="ghost">Redo</button>
     <button id="exportImg" class="ghost">Export obrázok</button>
     <button id="exportJSON" class="ghost">Export JSON</button>
-    <button id="importJSON" class="ghost">Import JSON</button>
   </div>
 </header>
 <canvas id="cadCanvas" width="1200" height="800"></canvas>
 <div class="info" id="info">Vybratý nástroj: Čiara | Nulový bod: (0,0)</div>
-
-<div id="dimensionsPanel">
-  <h3>Kóty</h3>
-  <div id="dimsContent">Žiadne tvary</div>
-</div>
-
-<input type="file" id="fileInput" style="display:none"/>
 
 <script>
 const canvas=document.getElementById('cadCanvas');
@@ -50,11 +39,6 @@ let startPt=null;
 let origin={x:100,y:100};
 let selectedShape=null;
 
-// DOM
-const info=document.getElementById('info');
-const dimsContent=document.getElementById('dimsContent');
-const fileInput=document.getElementById('fileInput');
-
 // Nástroje
 document.getElementById('lineBtn').onclick=()=>tool='line';
 document.getElementById('circleBtn').onclick=()=>tool='circle';
@@ -62,10 +46,10 @@ document.getElementById('rectBtn').onclick=()=>tool='rect';
 
 // Undo/Redo
 document.getElementById('undoBtn').onclick=()=>{
-  if(undoStack.length){redoStack.push(JSON.parse(JSON.stringify(shapes))); shapes=undoStack.pop(); drawAll();}
+  if(undoStack.length){redoStack.push(shapes); shapes=undoStack.pop(); drawAll();}
 };
 document.getElementById('redoBtn').onclick=()=>{
-  if(redoStack.length){undoStack.push(JSON.parse(JSON.stringify(shapes))); shapes=redoStack.pop(); drawAll();}
+  if(redoStack.length){undoStack.push(shapes); shapes=redoStack.pop(); drawAll();}
 };
 
 // Export obrázka
@@ -82,22 +66,6 @@ document.getElementById('exportJSON').onclick=()=>{
   link.download='drawing.json';
   link.href='data:text/json,'+encodeURIComponent(JSON.stringify({origin,shapes}));
   link.click();
-};
-
-// Import JSON
-document.getElementById('importJSON').onclick=()=>fileInput.click();
-fileInput.onchange=(e)=>{
-  const file=e.target.files[0];
-  const reader=new FileReader();
-  reader.onload=function(ev){
-    const data=JSON.parse(ev.target.result);
-    origin=data.origin;
-    shapes=data.shapes;
-    undoStack=[];
-    redoStack=[];
-    drawAll();
-  };
-  reader.readAsText(file);
 };
 
 // Grid
@@ -121,13 +89,17 @@ function drawAll(){
   shapes.forEach(s=>{
     ctx.strokeStyle='lime'; ctx.lineWidth=2;
     ctx.beginPath();
-    if(s.type==='line'){ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2);}
-    else if(s.type==='circle'){ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2);}
-    else if(s.type==='rect'){ctx.rect(s.x,s.y,s.w,s.h);}
-    ctx.stroke();
-    drawDimension(s);
+    if(s.type==='line'){
+      ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
+      drawDimension(s);
+    }else if(s.type==='circle'){
+      ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2); ctx.stroke();
+      drawDimension(s);
+    }else if(s.type==='rect'){
+      ctx.rect(s.x,s.y,s.w,s.h); ctx.stroke();
+      drawDimension(s);
+    }
   });
-  updateDimensionsPanel();
 }
 
 // Draw dimension text
@@ -188,38 +160,6 @@ canvas.oncontextmenu=(e)=>{
   origin={x:e.clientX-rect.left, y:e.clientY-rect.top};
   drawAll();
 };
-
-// Dimensions panel
-function updateDimensionsPanel(){
-  dimsContent.innerHTML='';
-  shapes.forEach((s,i)=>{
-    const div=document.createElement('div');
-    div.style.display='flex'; div.style.gap='5px'; div.style.alignItems='center';
-    div.innerHTML=`<strong>${s.type} ${i+1}</strong> `;
-    if(s.type==='line'){
-      const inp=document.createElement('input'); inp.type='number'; inp.value=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
-      inp.onchange=(e)=>{
-        const len=parseFloat(e.target.value);
-        const angle=Math.atan2(s.y2-s.y1,s.x2-s.x1);
-        s.x2=s.x1+len*Math.cos(angle);
-        s.y2=s.y1+len*Math.sin(angle);
-        drawAll();
-      };
-      div.appendChild(inp);
-    }else if(s.type==='rect'){
-      const inpW=document.createElement('input'); inpW.type='number'; inpW.value=Math.abs(s.w);
-      inpW.onchange=(e)=>{s.w=parseFloat(e.target.value)*(s.w<0?-1:1); drawAll();};
-      const inpH=document.createElement('input'); inpH.type='number'; inpH.value=Math.abs(s.h);
-      inpH.onchange=(e)=>{s.h=parseFloat(e.target.value)*(s.h<0?-1:1); drawAll();};
-      div.appendChild(inpW); div.appendChild(inpH);
-    }else if(s.type==='circle'){
-      const inpR=document.createElement('input'); inpR.type='number'; inpR.value=s.r.toFixed(2);
-      inpR.onchange=(e)=>{s.r=parseFloat(e.target.value); drawAll();};
-      div.appendChild(inpR);
-    }
-    dimsContent.appendChild(div);
-  });
-}
 
 drawAll();
 </script>
