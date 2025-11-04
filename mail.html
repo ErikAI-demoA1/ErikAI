@@ -5,186 +5,249 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ErikAI Mail</title>
   <style>
+    :root {
+      --bg: #f3f3f3;
+      --card-bg: #ffffff;
+      --text: #111;
+      --accent: #d90000;
+      --shadow: rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode {
+      --bg: #121212;
+      --card-bg: #1e1e1e;
+      --text: #f0f0f0;
+      --accent: #ff5555;
+      --shadow: rgba(0,0,0,0.6);
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f3f3f3;
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
       margin: 0;
-      padding: 20px;
+      padding: 30px;
+      transition: background 0.4s, color 0.4s;
     }
+
     h1 {
-      color: #d90000;
+      color: var(--accent);
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 25px;
     }
-    form {
-      background-color: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      max-width: 600px;
-      margin: auto;
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px var(--shadow);
+      padding: 25px;
+      max-width: 650px;
+      margin: 20px auto;
+      transition: all 0.3s ease;
     }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 40px var(--shadow);
+    }
+
     label {
       display: block;
       margin-top: 15px;
-      font-weight: bold;
+      font-weight: 600;
     }
-    input, textarea {
+
+    input, textarea, select {
       width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
+      padding: 12px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 12px;
       font-size: 1rem;
+      background: rgba(255,255,255,0.7);
+      color: var(--text);
+      box-shadow: inset 0 2px 6px var(--shadow);
+      outline: none;
+      transition: all 0.3s ease;
     }
+
+    input:focus, textarea:focus {
+      box-shadow: 0 0 0 2px var(--accent);
+      background: #fff;
+    }
+
     button {
       margin-top: 20px;
-      padding: 10px 20px;
-      background-color: #d90000;
+      padding: 12px 20px;
+      background: var(--accent);
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       font-size: 1rem;
       cursor: pointer;
+      transition: all 0.3s ease;
     }
+
     button:hover {
-      background-color: #b30000;
+      background: #b30000;
+      transform: scale(1.05);
     }
+
+    #toggleBtn {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: var(--card-bg);
+      color: var(--text);
+      border: 2px solid var(--accent);
+      padding: 10px 16px;
+      border-radius: 50px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 10px var(--shadow);
+      transition: 0.3s;
+    }
+
+    #toggleBtn:hover {
+      background: var(--accent);
+      color: white;
+    }
+
     .info {
-      margin-top: 30px;
+      margin-top: 25px;
       font-size: 0.9rem;
-      color: #444;
-      background-color: #fff9e6;
+      color: var(--text);
+      background: rgba(255, 249, 230, 0.8);
       padding: 15px;
       border-left: 4px solid #ffa600;
-      border-radius: 6px;
+      border-radius: 10px;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 0.8rem;
+      color: gray;
     }
   </style>
 </head>
+
 <body>
-<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<button id="toggleBtn" onclick="toggleTheme()">🌓 Režim</button>
+
+<h1>📧 ErikAI Mail</h1>
+
+<p id="cas" style="text-align:center; font-size: 18px;"></p>
 
 <script>
+  function aktualizujCas() {
+    const teraz = new Date();
+    const moznosti = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    };
+    document.getElementById('cas').innerText =
+      "🕓 " + teraz.toLocaleDateString('sk-SK', moznosti);
+  }
+  setInterval(aktualizujCas, 1000);
+  aktualizujCas();
+
   function toggleTheme() {
     document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
   }
+  if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
 </script>
 
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
-
-<p id="cas" style="font-size: 18px;"></p>
-
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
-
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
+<div id="google_translate_element" style="text-align:center; margin:20px;"></div>
+<script>
   function googleTranslateElementInit() {
     new google.translate.TranslateElement({
       pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
+      includedLanguages: 'en,cs,de,fr,hu,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN,zh-TW,ar,tr,sv,fi,da,no,nl,pt,vi,id,el,hi,th,he,bg,hr,lt,lv,et',
       layout: google.translate.TranslateElement.InlineLayout.SIMPLE
     }, 'google_translate_element');
   }
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  <h1>📧 ErikAI Mail</h1>
+
+<div class="card">
   <button type="button" onclick="diktojEmail()">🎤 Komu</button>
-<button type="button" onclick="diktojPredmet()">🎙️ Predmet</button>
-<button type="button" onclick="diktojSpravu()">🗣️ Správa</button>
-
-  <script>
-function diktojEmail() {
-  const recognition = new webkitSpeechRecognition();
-  recognition.lang = 'sk-SK';
-  recognition.onresult = function(event) {
-    document.getElementById("to").value = event.results[0][0].transcript;
-  };
-  recognition.start();
-}
-
-function diktojPredmet() {
-  const recognition = new webkitSpeechRecognition();
-  recognition.lang = 'sk-SK';
-  recognition.onresult = function(event) {
-    document.getElementById("subject").value = event.results[0][0].transcript;
-  };
-  recognition.start();
-}
-
-function diktojSpravu() {
-  const recognition = new webkitSpeechRecognition();
-  recognition.lang = 'sk-SK';
-  recognition.onresult = function(event) {
-    document.getElementById("body").value += event.results[0][0].transcript + " ";
-  };
-  recognition.start();
-}
-  </script>
+  <button type="button" onclick="diktojPredmet()">🎙️ Predmet</button>
+  <button type="button" onclick="diktojSpravu()">🗣️ Správa</button>
 
   <form id="emailForm">
-    <label for="to">📬 Komu (e-mail):</label>
+    <label>📬 Komu:</label>
+    <select id="toSelect" onchange="loadSelected('to')">
+      <option value="">-- Vyber e-mail --</option>
+    </select>
     <input type="email" id="to" required placeholder="napr. meno@gmail.com">
 
-    <label for="subject">📝 Predmet:</label>
+    <label>📝 Predmet:</label>
+    <select id="subjectSelect" onchange="loadSelected('subject')">
+      <option value="">-- Vyber predmet --</option>
+    </select>
     <input type="text" id="subject" placeholder="Napr. Otázka ohľadom ErikAI">
 
-    <label for="body">💬 Správa:</label>
+    <label>💬 Správa:</label>
+    <select id="bodySelect" onchange="loadSelected('body')">
+      <option value="">-- Vyber správu --</option>
+    </select>
     <textarea id="body" rows="6" placeholder="Sem napíš svoju správu..."></textarea>
 
     <button type="submit">✉️ Odoslať e-mail</button>
+    <button type="button" onclick="saveField('to')">💾 Ulož e-mail</button>
+    <button type="button" onclick="saveField('subject')">💾 Ulož predmet</button>
+    <button type="button" onclick="saveField('body')">💾 Ulož správu</button>
   </form>
 
-  
-  <label for="to">📫 Komu (e-mail):</label>
-<select id="toSelect" onchange="loadSelected('to')">
-  <option value="">-- Vyber e-mail --</option>
-</select>
-<input type="email" id="to" required placeholder="napr. meno@gmail.com">
+  <div class="info">
+    ⚠️ <strong>Upozornenie:</strong><br>
+    Táto aplikácia neodosiela e-mail automaticky. Po kliknutí sa otvorí tvoja e-mailová aplikácia (napr. Gmail, Outlook).<br>
+    🔒 Všetko prebieha <strong>lokálne a bezpečne</strong> – žiadne dáta neopúšťajú tvoj počítač.
+  </div>
+</div>
 
-<label for="subject">📝 Predmet:</label>
-<select id="subjectSelect" onchange="loadSelected('subject')">
-  <option value="">-- Vyber predmet --</option>
-</select>
-<input type="text" id="subject" placeholder="Napr. Otázka ohľadom ErikAI">
+<footer>
+  © 2025 Erik Mohylák – All rights reserved.<br>
+  Licencia: CC BY-NC-ND 4.0
+</footer>
 
-<label for="body">💬 Správa:</label>
-<select id="bodySelect" onchange="loadSelected('body')">
-  <option value="">-- Vyber správu --</option>
-</select>
-<textarea id="body" rows="6" placeholder="Sem napíš svoju správu..."></textarea>
-<button onclick="saveField('to')">💾 Ulož e-mail</button>
-<button onclick="saveField('subject')">💾 Ulož predmet</button>
-<button onclick="saveField('body')">💾 Ulož správu</button>
+<script>
+function diktojEmail() {
+  const rec = new webkitSpeechRecognition();
+  rec.lang = 'sk-SK';
+  rec.onresult = e => document.getElementById("to").value = e.results[0][0].transcript;
+  rec.start();
+}
 
-  <script>
+function diktojPredmet() {
+  const rec = new webkitSpeechRecognition();
+  rec.lang = 'sk-SK';
+  rec.onresult = e => document.getElementById("subject").value = e.results[0][0].transcript;
+  rec.start();
+}
+
+function diktojSpravu() {
+  const rec = new webkitSpeechRecognition();
+  rec.lang = 'sk-SK';
+  rec.onresult = e => document.getElementById("body").value += e.results[0][0].transcript + " ";
+  rec.start();
+}
+
 function saveField(fieldId) {
   const value = document.getElementById(fieldId).value.trim();
   if (!value) return;
   let stored = JSON.parse(localStorage.getItem(fieldId)) || [];
   if (!stored.includes(value)) {
     stored.unshift(value);
-    if (stored.length > 10) stored.pop(); // max 10 položiek
+    if (stored.length > 10) stored.pop();
     localStorage.setItem(fieldId, JSON.stringify(stored));
     updateSelect(fieldId);
   }
@@ -207,30 +270,15 @@ function loadSelected(fieldId) {
   document.getElementById(fieldId).value = select.value;
 }
 
-// Načítaj všetky výbery po načítaní
 ['to', 'subject', 'body'].forEach(updateSelect);
-  </script>
-  
-  <div class="info">
-    ⚠️ <strong>Upozornenie:</strong><br>
-    Táto funkcia neodosiela e-mail automaticky. Po kliknutí sa otvorí tvoja e-mailová aplikácia (napr. Gmail, Outlook), kde manuálne potvrdíš odoslanie.<br>
-    🔒 ErikAI neukladá žiadne údaje. Všetko prebieha <strong>lokálne a bezpečne</strong>.
-  </div>
 
-  <script>
-    document.getElementById("emailForm").addEventListener("submit", function(event) {
-      event.preventDefault();
-      let to = document.getElementById("to").value;
-      let subject = encodeURIComponent(document.getElementById("subject").value);
-      let body = encodeURIComponent(document.getElementById("body").value);
-      window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
-    });
-  </script>
-
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-  </p>
+document.getElementById("emailForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const to = document.getElementById("to").value;
+  const subject = encodeURIComponent(document.getElementById("subject").value);
+  const body = encodeURIComponent(document.getElementById("body").value);
+  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+});
+</script>
 </body>
 </html>
