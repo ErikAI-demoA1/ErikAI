@@ -37,9 +37,16 @@
 <body>
   <h1>🔐 Prístup do ErikAI</h1>
   <p>Zadaj všetky údaje pre overenie</p>
+
+  <!-- pôvodné polia -->
   <input type="text" id="accessKey" placeholder="Licenčný kód..." /><br />
   <input type="password" id="shortPass" placeholder="Krátke heslo..." /><br />
   <input type="text" id="specialCode" placeholder="Špeciálny kód..." /><br />
+
+  <!-- nové polia -->
+  <input type="text" id="firstName" placeholder="Meno (zadaj raz)" /><br />
+  <input type="text" id="lastName" placeholder="Priezvisko (zadaj raz)" /><br />
+  <input type="password" id="pin" placeholder="PIN (4-6 číslic)" /><br />
 
   <button onclick="checkAccess()">Odomknúť</button>
 
@@ -68,7 +75,6 @@
       { znacka: "Tecno", userAgentRegex: /Tecno/i, licenceKey: "TECNO-ERIK-2025", shortPass: "tecno123", specialCode: "TC-987" },
       { znacka: "Infinix", userAgentRegex: /Infinix/i, licenceKey: "INFINIX-ERIK-2025", shortPass: "infinix123", specialCode: "IX-987" },
       { znacka: "Nothing", userAgentRegex: /Nothing/i, licenceKey: "NOTHING-ERIK-2025", shortPass: "nothing123", specialCode: "NTG-987" },
-      // ➕ Záložná kategória pre všetky Android zariadenia
       { znacka: "Android", userAgentRegex: /Android/i, licenceKey: ["ANDROID-ERIK-2025", "ANDROID2-ERIK-2025"], shortPass: ["android123", "android456"], specialCode: ["AD-987", "AD-123"]}
     ];
 
@@ -76,6 +82,7 @@
       window.location.href = "index3.html";
     }
 
+    // === časovač ===
     let timeLeft = 100;
     const timerElement = document.getElementById("timer");
     const interval = setInterval(() => {
@@ -88,26 +95,88 @@
       }
     }, 1000);
 
-    function checkAccess() {
+    // --- SHA256 helper ---
+    async function sha256Hex(text) {
+      const enc = new TextEncoder();
+      const hash = await crypto.subtle.digest('SHA-256', enc.encode(text));
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    // === lokálne uloženie používateľa ===
+    function keyForLicence(lic) { return "erik_user_" + lic; }
+    function loadUser(lic) {
+      const data = localStorage.getItem(keyForLicence(lic));
+      return data ? JSON.parse(data) : null;
+    }
+    function saveUser(lic, obj) {
+      localStorage.setItem(keyForLicence(lic), JSON.stringify(obj));
+    }
+    function getOrCreateDeviceId() {
+      let id = localStorage.getItem('erik_device_id');
+      if (!id) {
+        id = crypto.getRandomValues(new Uint8Array(16)).reduce((s,b)=>s+b.toString(16).padStart(2,'0'),'');
+        localStorage.setItem('erik_device_id', id);
+      }
+      return id;
+    }
+
+    async function checkAccess() {
       const inputKey = document.getElementById("accessKey").value.trim();
       const inputPass = document.getElementById("shortPass").value.trim();
       const inputCode = document.getElementById("specialCode").value.trim();
+      const firstName = document.getElementById("firstName").value.trim();
+      const lastName = document.getElementById("lastName").value.trim();
+      const pin = document.getElementById("pin").value.trim();
 
       const firma = FIRMY.find(f =>
-  (Array.isArray(f.licenceKey) ? f.licenceKey.includes(inputKey) : f.licenceKey === inputKey) &&
-  (Array.isArray(f.shortPass) ? f.shortPass.includes(inputPass) : f.shortPass === inputPass) &&
-  (Array.isArray(f.specialCode) ? f.specialCode.includes(inputCode) : f.specialCode === inputCode) &&
-  f.userAgentRegex.test(deviceInfo)
-);
+        (Array.isArray(f.licenceKey) ? f.licenceKey.includes(inputKey) : f.licenceKey === inputKey) &&
+        (Array.isArray(f.shortPass) ? f.shortPass.includes(inputPass) : f.shortPass === inputPass) &&
+        (Array.isArray(f.specialCode) ? f.specialCode.includes(inputCode) : f.specialCode === inputCode) &&
+        f.userAgentRegex.test(deviceInfo)
+      );
 
-      if (firma) {
-        clearInterval(interval);
-        localStorage.setItem("erik_access", "granted");
-        window.location.href = "index3.html";
-      } else {
-        document.getElementById("error").innerText =
-          "❌ Prístup zamietnutý: Nesprávne údaje alebo zariadenie.";
+      if (!firma) {
+        document.getElementById("error").innerText = "❌ Nesprávne 4-overenie alebo zariadenie.";
+        return;
       }
+
+      if (!firstName || !lastName || !pin) {
+        document.getElementById("error").innerText = "Zadaj meno, priezvisko a PIN.";
+        return;
+      }
+
+      if (!/^[0-9]{4,6}$/.test(pin)) {
+        document.getElementById("error").innerText = "PIN musí byť 4–6 číslic.";
+        return;
+      }
+
+      const deviceId = getOrCreateDeviceId();
+      const saved = loadUser(inputKey);
+      const pinHash = await sha256Hex(pin);
+
+      if (!saved) {
+        // prvé uloženie
+        saveUser(inputKey, { firstName, lastName, pinHash, deviceId, ts: Date.now() });
+        alert("✅ Údaje uložené a prístup povolený.");
+      } else {
+        if (saved.firstName.toLowerCase() !== firstName.toLowerCase() ||
+            saved.lastName.toLowerCase() !== lastName.toLowerCase()) {
+          document.getElementById("error").innerText = "Meno alebo priezvisko nesedia.";
+          return;
+        }
+        if (saved.pinHash !== pinHash) {
+          document.getElementById("error").innerText = "Nesprávny PIN.";
+          return;
+        }
+        if (saved.deviceId && saved.deviceId !== deviceId) {
+          document.getElementById("error").innerText = "Licencia viazaná na iné zariadenie.";
+          return;
+        }
+      }
+
+      clearInterval(interval);
+      localStorage.setItem("erik_access", "granted");
+      window.location.href = "index3.html";
     }
   </script>
 
@@ -122,19 +191,21 @@
     This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
     © 2025 Erik Mohylák
   </p>
+
   <div id="wifiStatus">WiFi: off</div>
-<div id="brightnessStatus">Jas: 50%</div>
-<div id="volumeStatus">Hlasitosť: 50%</div>
+  <div id="brightnessStatus">Jas: 50%</div>
+  <div id="volumeStatus">Hlasitosť: 50%</div>
+
   <script>
-function updateWifiStatus(status) {
-    document.getElementById("wifiStatus").innerText = "WiFi: " + status;
-}
-function updateBrightness(level) {
-    document.getElementById("brightnessStatus").innerText = "Jas: " + Math.round(level*100) + "%";
-}
-function updateVolume(level) {
-    document.getElementById("volumeStatus").innerText = "Hlasitosť: " + Math.round(level*100) + "%";
-}
+  function updateWifiStatus(status) {
+      document.getElementById("wifiStatus").innerText = "WiFi: " + status;
+  }
+  function updateBrightness(level) {
+      document.getElementById("brightnessStatus").innerText = "Jas: " + Math.round(level*100) + "%";
+  }
+  function updateVolume(level) {
+      document.getElementById("volumeStatus").innerText = "Hlasitosť: " + Math.round(level*100) + "%";
+  }
   </script>
 </body>
 </html>
