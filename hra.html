@@ -1,241 +1,799 @@
-<!DOCTYPE html><html lang="sk">
+<!doctype html>
+<html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <title>Piškvorky 5x5 - ErikAI OS</title>
-  <style>
-    body {
-      text-align: center;
-      font-family: sans-serif;
-      background-color: #f9f9f9;
-    }
-    h2 {
-      margin-top: 20px;
-    }
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-    }
-    td {
-      width: 60px;
-      height: 60px;
-      border: 2px solid black;
-      font-size: 30px;
-      cursor: pointer;
-      text-align: center;
-      vertical-align: middle;
-      transition: all 0.2s ease;
-    }
-    td:hover {
-      background-color: #e0e0e0;
-    }
-    button {
-      margin: 10px;
-      padding: 8px 20px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .menu {
-      margin-top: 30px;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ErikAI Piškvorky — Profi (2–8 hráčov, 3–10 polí)</title>
+<style>
+  :root{
+    --bg:#0f1724; --panel:#0b1220; --card:#0e1a2a;
+    --accent:#ff4b2b; --muted:#9fb0c8; --glass: rgba(255,255,255,0.03);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:Inter, "Segoe UI", system-ui, Arial, sans-serif;
+    background:linear-gradient(180deg,var(--bg),#071026); color:#e8f0f8;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    padding:20px;
+  }
+  header{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#ff416c,#ffb86b);display:flex;align-items:center;justify-content:center;font-weight:800;color:#041014;font-size:20px}
+  h1{margin:0;font-size:20px}
+  p.lead{margin:0;color:var(--muted)}
+  .layout{display:grid;grid-template-columns:360px 1fr;gap:20px;margin-top:20px}
+  @media (max-width:980px){.layout{grid-template-columns:1fr} .left{order:2}}
+  .panel{background:linear-gradient(180deg,var(--card), rgba(255,255,255,0.02)); padding:14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.5)}
+  .left{min-height:420px}
+  label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+  input[type=number],select,input[type=text]{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+  .small{font-size:13px;color:var(--muted)}
+  .players-list{display:grid;gap:8px;margin-top:8px;max-height:260px;overflow:auto;padding:6px;border-radius:8px;background:var(--glass)}
+  .player-row{display:flex;gap:8px;align-items:center}
+  .player-row input[type=text]{flex:1}
+  .player-color{width:36px;height:36px;border-radius:8px;border:1px solid rgba(255,255,255,0.06)}
+  .controls{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button{cursor:pointer;border:0;padding:10px 12px;border-radius:10px;font-weight:700}
+  .btn-primary{background:linear-gradient(90deg,var(--accent),#7dd3fc);color:#041014}
+  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  .board-wrap{display:flex;flex-direction:column;gap:12px}
+  .meta{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .board{display:grid;border-radius:10px;overflow:hidden;margin:auto;box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+  .cell{display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;user-select:none;background:linear-gradient(180deg,rgba(255,255,255,0.015),transparent);border:1px solid rgba(255,255,255,0.03)}
+  .cell:hover{filter:brightness(1.08)}
+  .status{font-weight:700;font-size:18px}
+  .score{color:var(--muted)}
+  .settings-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+  .color-input{width:48px;height:36px;border-radius:8px;border:0;padding:0}
+  .symbol-input{width:64px;text-align:center}
+  .player-num{width:44px}
+</style>
 </head>
 <body>
-    <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+
+<header>
+  <div class="brand">
+    <div class="logo">EA</div>
+    <div>
+      <h1>ErikAI — Piškvorky (profi)</h1>
+      <p class="lead">Multiplayer 2–8 | Plne konfigurovateľné dosky 3×3 → 10×10 | Vlastné symboly & mená</p>
+    </div>
+  </div>
+  <div class="meta small">Verzia: 1.0 • Lokálne</div>
+</header>
+
+<div class="layout">
+  <!-- LEFT: settings -->
+  <aside class="panel left" aria-label="Nastavenia">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <label>Počet hráčov</label>
+        <select id="playerCount">
+          <!-- options filled by JS -->
+        </select>
+      </div>
+      <div>
+        <label>Veľkosť polí (N×N)</label>
+        <select id="boardSize">
+          <!-- options by JS -->
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div style="flex:1">
+        <label>Pravidlo výhry (automaticky)</label>
+        <div class="small" id="winInfo">—</div>
+      </div>
+      <div>
+        <label>Hra proti botovi</label>
+        <div><input type="checkbox" id="enableBot"> Ak áno, bot je posledný hráč</div>
+      </div>
+    </div>
+
+    <label class="small">Nastavenie hráčov (meno, symbol, farba)</label>
+    <div class="players-list" id="playersList">
+      <!-- player rows -->
+    </div>
+
+    <div class="controls">
+      <button class="btn-primary" id="startBtn">▶ Spustiť hru</button>
+      <button class="btn-ghost" id="resetBtn">🔁 Nová hra</button>
+      <button class="btn-ghost" id="clearBtn">🧹 Vymazať skóre</button>
+    </div>
+
+    <div style="margin-top:12px" class="small">
+      Tip: Symbol môže byť akýkoľvek 1 znak (napr. X, O, △) alebo emotikon. Farby pomáhajú v prehľade.
+    </div>
+  </aside>
+
+  <!-- RIGHT: board & info -->
+  <main class="panel board-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div>
+        <div class="status" id="statusText">Stav: Čaká sa na štart</div>
+        <div class="score" id="scoreBoard">Skóre: -</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="small">Aktuálny hráč:</div><div id="currentPlayerBadge" class="status">—</div>
+      </div>
+    </div>
+
+    <div id="boardContainer" style="margin-top:12px;display:flex;justify-content:center;align-items:center;min-height:360px">
+      <!-- board inserted here -->
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">
+      <button class="btn-ghost" id="undoBtn">⤺ Späť ťah</button>
+      <button class="btn-ghost" id="hintBtn">💡 Tip (bot)</button>
+      <button class="btn-ghost" id="shuffleBtn">🔀 Náhodné poradie</button>
+    </div>
+
+    <div class="footer">© 2025 Erik Mohylák — ErikAI Games • Všetko lokálne</div>
+  </main>
+</div>
 
 <script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
+/* =====================
+   Initial configuration
+   ===================== */
+
+const MIN_PLAYERS = 2, MAX_PLAYERS = 8;
+const MIN_SIZE = 3, MAX_SIZE = 10;
+const DEFAULT_SYMBOLS = ["X","O","△","◆","●","▲","■","◼"];
+const DEFAULT_NAMES = ["Hráč 1","Hráč 2","Hráč 3","Hráč 4","Hráč 5","Hráč 6","Hráč 7","Hráč 8"];
+const DEFAULT_COLORS = ["#ff6666","#66b3ff","#ffd66b","#9be66b","#d48bff","#ff9fb5","#7fe0d4","#f3b36b"];
+
+let playerCount = 2;
+let boardSize = 5;
+let winLen = 4;
+let players = []; // {name,symbol,color,score}
+let board = []; // flat array of size N*N
+let currentIndex = 0;
+let history = [];
+let gameActive = false;
+let enableBot = false;
+let botIndex = null;
+
+/* DOM */
+const playerCountSel = document.getElementById('playerCount');
+const boardSizeSel = document.getElementById('boardSize');
+const playersList = document.getElementById('playersList');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const clearBtn = document.getElementById('clearBtn');
+const boardContainer = document.getElementById('boardContainer');
+const statusText = document.getElementById('statusText');
+const scoreBoard = document.getElementById('scoreBoard');
+const currentPlayerBadge = document.getElementById('currentPlayerBadge');
+const undoBtn = document.getElementById('undoBtn');
+const hintBtn = document.getElementById('hintBtn');
+const shuffleBtn = document.getElementById('shuffleBtn');
+const enableBotChk = document.getElementById('enableBot');
+const winInfo = document.getElementById('winInfo');
+
+/* populate selects */
+for(let i=MIN_PLAYERS;i<=MAX_PLAYERS;i++){
+  const opt = document.createElement('option'); opt.value=i; opt.textContent=i;
+  playerCountSel.appendChild(opt);
+}
+for(let s=MIN_SIZE;s<=MAX_SIZE;s++){
+  const opt = document.createElement('option'); opt.value=s; opt.textContent=s + " × " + s;
+  boardSizeSel.appendChild(opt);
+}
+playerCountSel.value = playerCount;
+boardSizeSel.value = boardSize;
+
+/* helpers */
+function computeWinLen(size){
+  // deterministic rule:
+  // 3x3 -> 3, 4-5 -> 4, >=6 -> 5
+  if(size <= 3) return 3;
+  if(size <= 5) return 4;
+  return 5;
+}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function updateWinInfo(){ winLen = computeWinLen(boardSize); winInfo.textContent = `Pre veľkosť ${boardSize} × ${boardSize} vyhráva ten, kto získa ${winLen} za sebou.`; }
+
+/* init players UI */
+function buildPlayersUI(){
+  playersList.innerHTML = "";
+  for(let i=0;i<playerCount;i++){
+    const row = document.createElement('div'); row.className='player-row';
+    const num = document.createElement('input'); num.className='player-num'; num.value = i+1; num.disabled=true;
+    const name = document.createElement('input'); name.type='text'; name.value = DEFAULT_NAMES[i] || `Hráč ${i+1}`;
+    const symbol = document.createElement('input'); symbol.type='text'; symbol.maxLength=2; symbol.className='symbol-input'; symbol.value = DEFAULT_SYMBOLS[i] || "?";
+    const color = document.createElement('input'); color.type='color'; color.className='color-input'; color.value = DEFAULT_COLORS[i] || '#cccccc';
+    const remove = document.createElement('button'); remove.className='btn-ghost'; remove.textContent='✕'; remove.title='Vymazať'; remove.onclick = ()=>{ name.value=''; symbol.value=''; color.value='#999999'; };
+    row.appendChild(num); row.appendChild(name); row.appendChild(symbol); row.appendChild(color); row.appendChild(remove);
+    playersList.appendChild(row);
   }
+}
+buildPlayersUI();
+updateWinInfo();
+
+/* read settings to players array */
+function readPlayersFromUI(){
+  const rows = Array.from(playersList.querySelectorAll('.player-row'));
+  players = rows.map((r,idx)=>{
+    const inputs = r.querySelectorAll('input');
+    const name = inputs[1].value.trim() || `Hráč ${idx+1}`;
+    const symbol = (inputs[2].value || DEFAULT_SYMBOLS[idx] || '?').trim().slice(0,2) || DEFAULT_SYMBOLS[idx] || '?';
+    const color = inputs[3].value || DEFAULT_COLORS[idx] || '#ccc';
+    // preserve score if exists
+    const prev = players[idx];
+    return { name, symbol, color, score: prev? prev.score||0:0 };
+  });
+}
+
+/* board drawing */
+function renderBoard(){
+  boardContainer.innerHTML = "";
+  const N = boardSize;
+  const grid = document.createElement('div'); grid.className='board';
+  grid.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+  // size and cell sizing
+  const sizePx = Math.min(640, Math.max(240, N * 56));
+  grid.style.width = sizePx + 'px';
+  grid.style.height = sizePx + 'px';
+  for(let i=0;i<N*N;i++){
+    const cell = document.createElement('div'); cell.className='cell';
+    cell.dataset.index = i;
+    cell.style.fontSize = Math.max(12, Math.round(sizePx / N * 0.45)) + 'px';
+    cell.style.lineHeight = '1';
+    cell.onclick = () => onCellClick(i);
+    const v = board[i];
+    if(v != null && v !== ""){
+      cell.textContent = v.symbol;
+      cell.style.color = v.color;
+      cell.style.fontWeight = '800';
+    } else {
+      cell.textContent = "";
+    }
+    grid.appendChild(cell);
+  }
+  boardContainer.appendChild(grid);
+}
+
+/* game control */
+function startGame(){
+  readPlayersFromUI();
+  // prune players array to playerCount
+  players = players.slice(0, playerCount);
+  // ensure unique symbols if empty - fill defaults
+  for(let i=0;i<players.length;i++){
+    if(!players[i].symbol) players[i].symbol = DEFAULT_SYMBOLS[i] || `P${i+1}`;
+    if(!players[i].name) players[i].name = `Hráč ${i+1}`;
+  }
+  // bot handling
+  enableBot = enableBotChk.checked;
+  if(enableBot){
+    botIndex = players.length - 1; // last player is bot
+  } else botIndex = null;
+
+  // init board
+  boardSize = clamp(parseInt(boardSizeSel.value)||boardSize, MIN_SIZE, MAX_SIZE);
+  playerCount = clamp(parseInt(playerCountSel.value)||playerCount, MIN_PLAYERS, MAX_PLAYERS);
+  updateWinInfo();
+  board = Array(boardSize*boardSize).fill("");
+  history = [];
+  currentIndex = 0;
+  gameActive = true;
+  updateUIState();
+  renderBoard();
+  writeStatus(`${players[currentIndex].name} (${players[currentIndex].symbol}) začína.`);
+  // if bot starts
+  if(enableBot && currentIndex === botIndex){
+    setTimeout(botMove, 400);
+  }
+}
+
+function resetGame(){
+  // keep scores
+  for(let p of players) p.score = p.score || 0;
+  board = Array(boardSize*boardSize).fill("");
+  history = [];
+  currentIndex = 0;
+  gameActive = true;
+  renderBoard();
+  updateUIState();
+  writeStatus('Nová hra — hráč ' + players[currentIndex].name + ' na rade.');
+}
+function clearScores(){
+  for(let p of players) p.score = 0;
+  updateScoreBoard();
+}
+
+/* UI helpers */
+function updateUIState(){
+  scoreBoard.textContent = 'Skóre: ' + players.map(p => `${p.name}: ${p.score}`).join('  |  ');
+  currentPlayerBadge.textContent = `${players[currentIndex].name} (${players[currentIndex].symbol})`;
+  currentPlayerBadge.style.color = players[currentIndex] ? players[currentIndex].color : '#fff';
+}
+function writeStatus(text){ statusText.textContent = 'Stav: ' + text; }
+function updateScoreBoard(){ scoreBoard.textContent = 'Skóre: ' + players.map(p => `${p.name}: ${p.score}`).join('  |  '); }
+
+/* click logic */
+function onCellClick(index){
+  if(!gameActive) return;
+  if(board[index]) return; // occupied
+  // place current player's mark
+  const p = players[currentIndex];
+  board[index] = { symbol: p.symbol, color: p.color, playerIndex: currentIndex };
+  history.push({ index, playerIndex: currentIndex });
+  renderBoard();
+
+  // check win
+  const winner = checkWinFrom(index, currentIndex);
+  if(winner){
+    players[currentIndex].score = (players[currentIndex].score||0) + 1;
+    updateScoreBoard();
+    writeStatus(`${players[currentIndex].name} vyhral! (${players[currentIndex].symbol})`);
+    gameActive = false;
+    highlightWinningSequence(winner.seq);
+    return;
+  }
+
+  // check draw
+  if(board.every(c => c !== "")){
+    writeStatus('Remíza — doska zaplnená.');
+    gameActive = false;
+    return;
+  }
+
+  // next player
+  currentIndex = (currentIndex + 1) % players.length;
+  updateUIState();
+  writeStatus(`Na rade: ${players[currentIndex].name}`);
+  // if bot
+  if(enableBot && currentIndex === botIndex){
+    setTimeout(botMove, 400);
+  }
+}
+
+/* win detection: check sequences of length winLen including given index for given player */
+function checkWinFrom(index, playerIndex){
+  const N = boardSize;
+  const r = Math.floor(index / N);
+  const c = index % N;
+  const symbol = players[playerIndex].symbol;
+  const need = computeWinLen(N);
+
+  // helper to collect sequence
+  function collect(dr, dc){
+    let seq = [[r,c]];
+    // backward
+    let rr=r-dr, cc=c-dc;
+    while(rr>=0 && rr<N && cc>=0 && cc<N && board[rr*N+cc] && board[rr*N+cc].playerIndex===playerIndex){
+      seq.unshift([rr,cc]);
+      rr -= dr; cc -= dc;
+    }
+    // forward
+    rr = r+dr; cc = c+dc;
+    while(rr>=0 && rr<N && cc>=0 && cc<N && board[rr*N+cc] && board[rr*N+cc].playerIndex===playerIndex){
+      seq.push([rr,cc]);
+      rr += dr; cc += dc;
+    }
+    return seq;
+  }
+
+  // directions: horiz, vert, diag1, diag2
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for(const [dr,dc] of dirs){
+    const seq = collect(dr,dc);
+    if(seq.length >= need){
+      // we can return first contiguous subsequence of length need that includes (r,c)
+      // find window containing r,c
+      for(let i=0;i+need<=seq.length;i++){
+        const window = seq.slice(i,i+need);
+        // ensure window includes our cell coordinates
+        if(window.some(([rr,cc])=>rr===r && cc===c)){
+          return { playerIndex, seq: window };
+        }
+      }
+      // fallback return whole
+      return { playerIndex, seq };
+    }
+  }
+  return null;
+}
+
+/* highlight winning cells */
+function highlightWinningSequence(seq){
+  // color thicker border
+  const grid = boardContainer.querySelector('.board');
+  if(!grid) return;
+  // compute cell size index to DOM
+  for(const [r,c] of seq){
+    const idx = r * boardSize + c;
+    const cell = grid.children[idx];
+    if(cell){
+      cell.style.boxShadow = `0 0 20px 6px rgba(255,255,255,0.06) inset, 0 6px 22px ${players[currentIndex].color}`;
+      cell.style.border = `2px solid ${players[currentIndex].color}`;
+    }
+  }
+}
+
+/* undo */
+function undo(){
+  if(history.length===0 || !gameActive) return;
+  const last = history.pop();
+  board[last.index] = "";
+  currentIndex = last.playerIndex;
+  renderBoard();
+  updateUIState();
+  writeStatus('Ťah vrátený. Na rade: ' + players[currentIndex].name);
+}
+
+/* randomize order */
+function shufflePlayers(){
+  for(let i = players.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [players[i], players[j]] = [players[j], players[i]];
+  }
+  currentIndex = 0;
+  updateUIState();
+  writeStatus('Poradie hráčov náhodné.');
+}
+
+/* hint / bot: try to win, else block, else random */
+function botMove(){
+  if(!gameActive) return;
+  // simple AI for botIndex
+  const idx = botIndex;
+  if(idx == null) return;
+  // 1) winning move
+  const N = boardSize;
+  for(let i=0;i<N*N;i++){
+    if(!board[i]){
+      board[i] = { symbol: players[idx].symbol, color: players[idx].color, playerIndex: idx };
+      if(checkWinFrom(i, idx)){
+        history.push({ index:i, playerIndex: idx });
+        renderBoard();
+        // handle winning in onCellClick style:
+        const winner = checkWinFrom(i, idx);
+        if(winner){
+          players[idx].score = (players[idx].score||0) + 1;
+          updateScoreBoard();
+          writeStatus(`${players[idx].name} (bot) vyhral!`);
+          gameActive = false;
+          highlightWinningSequence(winner.seq);
+          return;
+        }
+      }
+      // revert
+      board[i] = "";
+    }
+  }
+  // 2) block opponent immediate wins
+  for(let opponent=0; opponent<players.length; opponent++){
+    if(opponent===idx) continue;
+    for(let i=0;i<N*N;i++){
+      if(!board[i]){
+        board[i] = { symbol: players[opponent].symbol, color: players[opponent].color, playerIndex: opponent };
+        if(checkWinFrom(i, opponent)){
+          // block here by placing our mark
+          board[i] = { symbol: players[idx].symbol, color: players[idx].color, playerIndex: idx };
+          history.push({ index:i, playerIndex: idx });
+          renderBoard();
+          // check if bot wins now (rare)
+          if(checkWinFrom(i, idx)){
+            players[idx].score = (players[idx].score||0) + 1;
+            updateScoreBoard();
+            writeStatus(`${players[idx].name} (bot) vyhral!`);
+            gameActive = false;
+            highlightWinningSequence(checkWinFrom(i, idx).seq);
+            return;
+          }
+          // continue normal flow
+          currentIndex = (currentIndex + 1) % players.length;
+          updateUIState();
+          writeStatus(`Na rade: ${players[currentIndex].name}`);
+          return;
+        }
+        board[i] = "";
+      }
+    }
+  }
+  // 3) fallback: pick center if available, else a random best spot (corners), else random
+  const center = Math.floor(N/2) * N + Math.floor(N/2);
+  const candidates = [];
+  if(!board[center]) candidates.push(center);
+  // corners
+  const corners = [0, N-1, N*(N-1), N*N-1];
+  for(const c of corners) if(!board[c]) candidates.push(c);
+  // edges then random
+  for(let i=0;i<N*N;i++) if(!board[i] && candidates.indexOf(i)===-1) candidates.push(i);
+  if(candidates.length===0) return;
+  const choice = candidates[Math.floor(Math.random()*candidates.length)];
+  board[choice] = { symbol: players[idx].symbol, color: players[idx].color, playerIndex: idx };
+  history.push({ index: choice, playerIndex: idx });
+  renderBoard();
+  // evaluate
+  const winner = checkWinFrom(choice, idx);
+  if(winner){
+    players[idx].score = (players[idx].score||0) + 1;
+    updateScoreBoard();
+    writeStatus(`${players[idx].name} (bot) vyhral!`);
+    gameActive = false;
+    highlightWinningSequence(winner.seq);
+    return;
+  }
+  // next player
+  currentIndex = (currentIndex + 1) % players.length;
+  updateUIState();
+  writeStatus(`Na rade: ${players[currentIndex].name}`);
+  // if bot
+  if(enableBot && currentIndex === botIndex){
+    setTimeout(botMove, 400);
+  }
+}
+
+/* win detection: check sequences of length winLen including given index for given player */
+function checkWinFrom(index, playerIndex){
+  const N = boardSize;
+  const r = Math.floor(index / N);
+  const c = index % N;
+  const symbol = players[playerIndex].symbol;
+  const need = computeWinLen(N);
+
+  // helper to collect sequence
+  function collect(dr, dc){
+    let seq = [[r,c]];
+    // backward
+    let rr=r-dr, cc=c-dc;
+    while(rr>=0 && rr<N && cc>=0 && cc<N && board[rr*N+cc] && board[rr*N+cc].playerIndex===playerIndex){
+      seq.unshift([rr,cc]);
+      rr -= dr; cc -= dc;
+    }
+    // forward
+    rr = r+dr; cc = c+dc;
+    while(rr>=0 && rr<N && cc>=0 && cc<N && board[rr*N+cc] && board[rr*N+cc].playerIndex===playerIndex){
+      seq.push([rr,cc]);
+      rr += dr; cc += dc;
+    }
+    return seq;
+  }
+
+  // directions: horiz, vert, diag1, diag2
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for(const [dr,dc] of dirs){
+    const seq = collect(dr,dc);
+    if(seq.length >= need){
+      // we can return first contiguous subsequence of length need that includes (r,c)
+      // find window containing r,c
+      for(let i=0;i+need<=seq.length;i++){
+        const window = seq.slice(i,i+need);
+        // ensure window includes our cell coordinates
+        if(window.some(([rr,cc])=>rr===r && cc===c)){
+          return { playerIndex, seq: window };
+        }
+      }
+      // fallback return whole
+      return { playerIndex, seq };
+    }
+  }
+  return null;
+}
+
+/* highlight winning cells */
+function highlightWinningSequence(seq){
+  // color thicker border
+  const grid = boardContainer.querySelector('.board');
+  if(!grid) return;
+  // compute cell size index to DOM
+  for(const [r,c] of seq){
+    const idx = r * boardSize + c;
+    const cell = grid.children[idx];
+    if(cell){
+      cell.style.boxShadow = `0 0 20px 6px rgba(255,255,255,0.06) inset, 0 6px 22px ${players[currentIndex].color}`;
+      cell.style.border = `2px solid ${players[currentIndex].color}`;
+    }
+  }
+}
+
+/* undo */
+function undo(){
+  if(history.length===0 || !gameActive) return;
+  const last = history.pop();
+  board[last.index] = "";
+  currentIndex = last.playerIndex;
+  renderBoard();
+  updateUIState();
+  writeStatus('Ťah vrátený. Na rade: ' + players[currentIndex].name);
+}
+
+/* randomize order */
+function shufflePlayers(){
+  for(let i = players.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [players[i], players[j]] = [players[j], players[i]];
+  }
+  currentIndex = 0;
+  updateUIState();
+  writeStatus('Poradie hráčov náhodné.');
+}
+
+/* hint / bot: try to win, else block, else random */
+function botMove(){
+  if(!gameActive) return;
+  // simple AI for botIndex
+  const idx = botIndex;
+  if(idx == null) return;
+  // 1) winning move
+  const N = boardSize;
+  for(let i=0;i<N*N;i++){
+    if(!board[i]){
+      board[i] = { symbol: players[idx].symbol, color: players[idx].color, playerIndex: idx };
+      if(checkWinFrom(i, idx)){
+        history.push({ index:i, playerIndex: idx });
+        renderBoard();
+        // handle winning in onCellClick style:
+        const winner = checkWinFrom(i, idx);
+        if(winner){
+          players[idx].score = (players[idx].score||0) + 1;
+          updateScoreBoard();
+          writeStatus(`${players[idx].name} (bot) vyhral!`);
+          gameActive = false;
+          highlightWinningSequence(winner.seq);
+          return;
+        }
+      }
+      // revert
+      board[i] = "";
+    }
+  }
+  // 2) block opponent immediate wins
+  for(let opponent=0; opponent<players.length; opponent++){
+    if(opponent===idx) continue;
+    for(let i=0;i<N*N;i++){
+      if(!board[i]){
+        board[i] = { symbol: players[opponent].symbol, color: players[opponent].color, playerIndex: opponent };
+        if(checkWinFrom(i, opponent)){
+          // block here by placing our mark
+          board[i] = { symbol: players[idx].symbol, color: players[idx].color, playerIndex: idx };
+          history.push({ index:i, playerIndex: idx });
+          renderBoard();
+          // check if bot wins now (rare)
+          if(checkWinFrom(i, idx)){
+            players[idx].score = (players[idx].score||0) + 1;
+            updateScoreBoard();
+            writeStatus(`${players[idx].name} (bot) vyhral!`);
+            gameActive = false;
+            highlightWinningSequence(checkWinFrom(i, idx).seq);
+            return;
+          }
+          // continue normal flow
+          currentIndex = (currentIndex + 1) % players.length;
+          updateUIState();
+          writeStatus(`Na rade: ${players[currentIndex].name}`);
+          return;
+        }
+        board[i] = "";
+      }
+    }
+  }
+  // 3) fallback: pick center if available, else a random best spot (corners), else random
+  const center = Math.floor(N/2) * N + Math.floor(N/2);
+  const candidates = [];
+  if(!board[center]) candidates.push(center);
+  // corners
+  const corners = [0, N-1, N*(N-1), N*N-1];
+  for(const c of corners) if(!board[c]) candidates.push(c);
+  // edges then random
+  for(let i=0;i<N*N;i++) if(!board[i] && candidates.indexOf(i)===-1) candidates.push(i);
+  if(candidates.length===0) return;
+  const choice = candidates[Math.floor(Math.random()*candidates.length)];
+  board[choice] = { symbol: players[idx].symbol, color: players[idx].color, playerIndex: idx };
+  history.push({ index: choice, playerIndex: idx });
+  renderBoard();
+  // evaluate
+  const winner = checkWinFrom(choice, idx);
+  if(winner){
+    players[idx].score = (players[idx].score||0) + 1;
+    updateScoreBoard();
+    writeStatus(`${players[idx].name} (bot) vyhral!`);
+    gameActive = false;
+    highlightWinningSequence(winner.seq);
+    return;
+  }
+  // next player
+  currentIndex = (currentIndex + 1) % players.length;
+  updateUIState();
+  writeStatus(`Na rade: ${players[currentIndex].name}`);
+}
+
+/* hint function uses same logic as bot but doesn't place; returns index suggestion */
+function computeHint(){
+  if(!gameActive) return null;
+  const idx = botIndex !== null ? botIndex : currentIndex;
+  // reuse bot logic to find move but without mutating permanent board
+  const N = boardSize;
+  // try winning
+  for(let i=0;i<N*N;i++){
+    if(!board[i]){
+      board[i] = { symbol: players[idx].symbol, color: players[idx].color, playerIndex: idx };
+      if(checkWinFrom(i, idx)){ board[i] = ""; return i; }
+      board[i] = "";
+    }
+  }
+  // try block opponent
+  for(let opponent=0; opponent<players.length; opponent++){
+    if(opponent===idx) continue;
+    for(let i=0;i<N*N;i++){
+      if(!board[i]){
+        board[i] = { symbol: players[opponent].symbol, color: players[opponent].color, playerIndex: opponent };
+        if(checkWinFrom(i, opponent)){ board[i] = ""; return i; }
+        board[i] = "";
+      }
+    }
+  }
+  // center or corners
+  const center = Math.floor(N/2)*N + Math.floor(N/2);
+  if(!board[center]) return center;
+  const corners = [0, N-1, N*(N-1), N*N-1].filter(c=>!board[c]);
+  if(corners.length) return corners[0];
+  // else first empty
+  for(let i=0;i<N*N;i++) if(!board[i]) return i;
+  return null;
+  }
+  /* highlight hint */
+function showHint(){
+  const idx = computeHint();
+  if(idx==null) { writeStatus('Žiadny tip — doska plná alebo hra neaktívna.'); return; }
+  const grid = boardContainer.querySelector('.board');
+  if(!grid) return;
+  const cell = grid.children[idx];
+  cell.style.outline = `4px dashed rgba(255,255,255,0.12)`;
+  setTimeout(()=>{ cell.style.outline=''; }, 1200);
+  writeStatus(`Tip: odporúčané pole #${idx+1}`);
+}
+
+/* event listeners */
+playerCountSel.addEventListener('change', ()=>{ playerCount = parseInt(playerCountSel.value); buildPlayersUI(); });
+boardSizeSel.addEventListener('change', ()=>{ boardSize = parseInt(boardSizeSel.value); updateWinInfo(); renderBoard(); });
+startBtn.addEventListener('click', ()=>{ startGame(); });
+resetBtn.addEventListener('click', ()=>{ resetGame(); });
+clearBtn.addEventListener('click', ()=>{ clearScores(); });
+undoBtn.addEventListener('click', ()=>{ undo(); });
+hintBtn.addEventListener('click', ()=>{ showHint(); });
+shuffleBtn.addEventListener('click', ()=>{ shufflePlayers(); updateScoreBoard(); });
+
+enableBotChk.addEventListener('change', ()=>{
+  if(enableBotChk.checked){
+    // ensure at least 2 players and bot as last
+    const cnt = parseInt(playerCountSel.value);
+    if(cnt < 2){ playerCountSel.value = 2; playerCount = 2; buildPlayersUI(); }
+  }
+});
+
+/* initialize default board rendering */
+(function init(){
+  // apply initial UI defaults
+  playerCountSel.value = playerCount;
+  boardSizeSel.value = boardSize;
+  buildPlayersUI();
+  updateWinInfo();
+  board = Array(boardSize*boardSize).fill("");
+  renderBoard();
+  updateScoreBoard();
+})();
+
+/* utility: check win in full board (optional) */
+function checkFullBoardWinner(){
+  for(let i=0;i<board.length;i++){
+    if(board[i] && board[i].playerIndex!=null){
+      const res = checkWinFrom(i, board[i].playerIndex);
+      if(res) return res;
+    }
+  }
+  return null;
+}
+
+/* expose small debugging to console */
+window.erikai = { startGame, resetGame, players, board, computeHint };
+
 </script>
-
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
-
-  <p id="cas" style="font-size: 18px;"></p>
-
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
-
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
-  }
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-   
-  <h1>ErikAI Piškvorky – verzia 5x5 pre 3 hráčov</h1>
-  <p><strong>Pravidlo výhry:</strong> Hráč, ktorý ako prvý spojí <u>4 rovnaké symboly</u> za sebou (vodorovne, zvislo alebo diagonálne), vyhráva hru.</p>
-  <h1>🎮 Piškvorky 5x5 – ErikAI OS</h1>  <div id="menu" class="menu">
-    <p>Zvoľ režim hry:</p>
-    <button onclick="startGame(2)">Hra 2 hráči</button>
-    <button onclick="startGame(3)">Hra 3 hráči</button>
-    <button onclick="startBotGame()">Hra proti botovi</button>
-  </div>  <div id="game" style="display:none;">
-    <h2 id="stav">Na rade: X</h2>
-    <div id="skore"></div>
-    <button onclick="resetuj()">Začať znova</button>
-    <table id="hra"></table>
-  </div>  <script>
-    const hraci = ["X", "O", "△"];
-    let pocetHracov = 2;
-    let indexHraca = 0;
-    let hrac = hraci[indexHraca];
-    const velkost = 5;
-    let polia = [];
-    let koniec = false;
-    let botHrac = null;
-    let skore = { X: 0, O: 0, "△": 0 };
-
-    function startGame(pocet) {
-      pocetHracov = pocet;
-      botHrac = null;
-      document.getElementById("menu").style.display = "none";
-      document.getElementById("game").style.display = "block";
-      resetuj();
-    }
-
-    function startBotGame() {
-      pocetHracov = 2;
-      botHrac = "O"; // Bot bude O
-      document.getElementById("menu").style.display = "none";
-      document.getElementById("game").style.display = "block";
-      resetuj();
-    }
-
-    function vytvorPlochu() {
-      const hra = document.getElementById("hra");
-      hra.innerHTML = "";
-      for (let r = 0; r < velkost; r++) {
-        const riadok = document.createElement("tr");
-        for (let s = 0; s < velkost; s++) {
-          const bunka = document.createElement("td");
-          bunka.addEventListener("click", () => klik(r * velkost + s));
-          bunka.innerText = polia[r * velkost + s];
-          riadok.appendChild(bunka);
-        }
-        hra.appendChild(riadok);
-      }
-    }
-
-    function klik(index) {
-      if (polia[index] || koniec) return;
-      polia[index] = hrac;
-      document.getElementsByTagName("td")[index].innerText = hrac;
-
-      if (vyhra(hrac)) {
-        document.getElementById("stav").innerText = `${hrac} vyhral!`;
-        skore[hrac]++;
-        zobrazSkore();
-        koniec = true;
-      } else {
-        indexHraca = (indexHraca + 1) % pocetHracov;
-        hrac = hraci[indexHraca];
-        document.getElementById("stav").innerText = `Na rade: ${hrac}`;
-        if (botHrac === hrac) {
-          setTimeout(botTah, 500);
-        }
-      }
-    }
-
-    function botTah() {
-      const prazdne = polia.map((v, i) => v === "" ? i : null).filter(v => v !== null);
-      if (prazdne.length === 0) return;
-      const nahodnyIndex = prazdne[Math.floor(Math.random() * prazdne.length)];
-      klik(nahodnyIndex);
-    }
-
-    function vyhra(hrac) {
-      const win = 4;
-      for (let r = 0; r < velkost; r++) {
-        for (let s = 0; s <= velkost - win; s++) {
-          if (hraciRiadok(r, s, hrac)) return true;
-        }
-      }
-      for (let s = 0; s < velkost; s++) {
-        for (let r = 0; r <= velkost - win; r++) {
-          if (hraciStlpec(r, s, hrac)) return true;
-        }
-      }
-      for (let r = 0; r <= velkost - win; r++) {
-        for (let s = 0; s <= velkost - win; s++) {
-          if (hraciDiagonal(r, s, hrac) || hraciOpacnaDiagonal(r, s, hrac)) return true;
-        }
-      }
-      return false;
-    }
-
-    function hraciRiadok(r, s, h) {
-      for (let i = 0; i < 4; i++) {
-        if (polia[r * velkost + (s + i)] !== h) return false;
-      }
-      return true;
-    }
-    function hraciStlpec(r, s, h) {
-      for (let i = 0; i < 4; i++) {
-        if (polia[(r + i) * velkost + s] !== h) return false;
-      }
-      return true;
-    }
-    function hraciDiagonal(r, s, h) {
-      for (let i = 0; i < 4; i++) {
-        if (polia[(r + i) * velkost + (s + i)] !== h) return false;
-      }
-      return true;
-    }
-    function hraciOpacnaDiagonal(r, s, h) {
-      for (let i = 0; i < 4; i++) {
-        if (polia[(r + i) * velkost + (s + 3 - i)] !== h) return false;
-      }
-      return true;
-    }
-
-    function zobrazSkore() {
-      document.getElementById("skore").innerText = `Skóre – X: ${skore.X}, O: ${skore.O}, △: ${skore["△"]}`;
-    }
-
-    function resetuj() {
-      polia = Array(velkost * velkost).fill("");
-      koniec = false;
-      indexHraca = 0;
-      hrac = hraci[indexHraca];
-      document.getElementById("stav").innerText = `Na rade: ${hrac}`;
-      vytvorPlochu();
-      zobrazSkore();
-      if (botHrac === hrac) {
-        setTimeout(botTah, 500);
-      }
-    }
-  </script>
-
-<p style="font-size: 14px; color: gray; margin-top: 20px;">  
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.    
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/    
-© 2025 Erik Mohylák – All rights reserved.  
-  </p>  
 </body>
 </html>
