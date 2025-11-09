@@ -1,184 +1,409 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sk">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI Game Engine</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ErikAI Game Engine — Text & Scene Editor (v2)</title>
 <style>
-  body { 
-    font-family: 'Segoe UI', sans-serif; 
-    background: linear-gradient(135deg, #e3f2fd, #bbdefb); 
-    text-align: center; 
-    padding: 20px; 
-  }
-  h1 { 
-    margin-bottom: 15px; 
-    color: #0d47a1; 
-  }
-  input, select { 
-    padding: 6px; 
-    margin: 5px; 
-    border-radius: 6px; 
-    border: 1px solid #90caf9; 
-    width: 150px; 
-  }
-  button { 
-    padding: 10px 18px; 
-    margin: 10px; 
-    cursor: pointer; 
-    border: none; 
-    border-radius: 8px; 
-    background: #1976d2; 
-    color: white; 
-    transition: 0.2s; 
-  }
-  button:hover { 
-    background: #1565c0; 
-    transform: scale(1.05); 
-  }
-  #grid { 
-    margin: 25px auto; 
-    display: grid; 
-    gap: 3px; 
-  }
-  .cell { 
-    width: 50px; 
-    height: 50px; 
-    border: 1px solid #333; 
-    font-size: 24px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    cursor: pointer; 
-    transition: 0.2s; 
-    border-radius: 6px;
-  }
-  .cell:hover { 
-    background: #e3f2fd; 
-    transform: scale(1.1);
-  }
-  #exportedCode { 
-    width: 90%; 
-    height: 180px; 
-    margin-top: 20px; 
-    font-family: monospace; 
-    display: none; /* Skryté - už nepotrebujeme zobrazovať */
-  }
+  :root{--ui-bg:#f6f7fb;--panel:#ffffff;--accent:#ff3b3b;--muted:#666;}
+  body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#eef2fb,#f7f9ff);color:#111}
+  header{padding:18px 20px;display:flex;align-items:center;gap:16px}
+  header h1{margin:0;font-size:18px;color:#111}
+  .wrap{display:flex;gap:18px;padding:12px}
+  .left {width:320px; min-width:260px}
+  .panel {background:var(--panel);border-radius:12px;padding:14px;box-shadow:0 6px 20px rgba(20,30,60,.06)}
+  label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+  input[type="text"], input[type="number"], select, textarea {width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid #e3e6ee;margin-top:6px;font-size:14px}
+  button{margin-top:10px;padding:8px 12px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+  button.secondary{background:#2b7cff}
+  .scene-wrap{flex:1;display:flex;flex-direction:column;gap:12px}
+  .scene {background:linear-gradient(180deg,#fff,#fafcff);border-radius:12px;min-height:520px;position:relative;overflow:hidden;border:1px solid #e6e9f2}
+  .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .objects-list{max-height:200px;overflow:auto;margin-top:8px}
+  .obj-item{display:flex;justify-content:space-between;padding:6px 8px;border-radius:8px;margin-bottom:6px;background:#fbfbff;border:1px solid #eef0f8;font-size:14px}
+  .obj-item button{padding:6px 8px;border-radius:8px;background:#ddd;color:#111;border:0;cursor:pointer}
+  .scene-inner{position:relative;width:100%;height:520px;background:repeating-linear-gradient(45deg,#fafbff 0 1px, transparent 1px 24px)}
+  .scene-element{position:absolute;cursor:grab;user-select:none;touch-action:none;box-sizing:border-box}
+  .selected{outline:2px dashed rgba(0,120,255,.35);transform:scale(1.01)}
+  .controls-row{display:flex;gap:8px;align-items:center}
+  footer{padding:12px;text-align:center;color:var(--muted);font-size:13px}
+  .export-area{margin-top:10px}
+  pre#exported{width:100%;height:160px;overflow:auto;padding:8px;border-radius:8px;border:1px solid #e6e9f2;background:#0f1724;color:#dbeafe}
+  @media (max-width:900px){.wrap{flex-direction:column}.left{width:100%}}
 </style>
 </head>
 <body>
 
-<h1>ErikAI Game Engine</h1>
+<header>
+  <h1>ErikAI Game Engine — Text & Scene Editor (v2)</h1>
+  <div style="color:var(--muted);font-size:13px">Pridať texty → presunúť → exportovať čistý HTML</div>
+</header>
 
-<div>
-  <label>Počet hráčov:</label>
-  <input type="number" id="numPlayers" min="2" max="8" value="2"><br>
+<div class="wrap">
+  <div class="left">
+    <div class="panel">
+      <strong>1) Pridať objekt</strong>
+      <label>Názov (interný)</label>
+      <input id="objName" type="text" placeholder="napr. nadpis1">
+      <label>Typ objektu</label>
+      <select id="objType">
+        <option value="text">Text</option>
+        <option value="button">Tlačidlo</option>
+        <option value="image">Obrázok (URL)</option>
+      </select>
 
-  <label>Počet políčok:</label>
-  <input type="number" id="gridSize" min="3" max="10" value="5"><br>
+      <div id="textInputs">
+        <label>Text</label>
+        <input id="objText" type="text" placeholder="Zadaj text...">
+        <label>Farba textu</label>
+        <input id="objColor" type="color" value="#111111">
+        <div class="controls-row">
+          <div style="flex:1">
+            <label>Veľkosť (px)</label>
+            <input id="objSize" type="number" value="24" min="8" max="200">
+          </div>
+          <div style="width:110px">
+            <label>Štýl</label>
+            <select id="objStyle">
+              <option value="normal">normálny</option>
+              <option value="italic">kurzíva</option>
+              <option value="bold">tučný</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
-  <label>Symboly hráčov (oddelené čiarkou):</label>
-  <input type="text" id="symbols" value="X,O,△,□,☆,♢,⚡,♥"><br>
+      <div id="imageInputs" style="display:none">
+        <label>URL obrázka</label>
+        <input id="objImageUrl" type="text" placeholder="https://...">
+        <label>Šírka (px)</label>
+        <input id="objImgW" type="number" value="120">
+        <label>Výška (px)</label>
+        <input id="objImgH" type="number" value="80">
+      </div>
 
-  <label>Farba políčka:</label>
-  <input type="color" id="cellColor" value="#ffffff"><br>
+      <div id="buttonInputs" style="display:none">
+        <label>Štítok tlačidla</label>
+        <input id="objBtnText" type="text" placeholder="Klikni sem">
+      </div>
 
-  <button onclick="generateGrid()">Vytvoriť hraciu plochu</button>
-  <button onclick="exportHTML()">Exportovať HTML</button>
+      <label>Počiatočná pozícia X (px)</label>
+      <input id="posX" type="number" value="40">
+      <label>Počiatočná pozícia Y (px)</label>
+      <input id="posY" type="number" value="40">
+
+      <button id="addObjBtn">➕ Pridať objekt do scény</button>
+
+      <hr style="margin:12px 0;border:none;border-top:1px solid #eef2fb">
+
+      <strong>2) Objekty v scéne</strong>
+      <div class="objects-list" id="objectsList"></div>
+
+      <button id="clearBtn" class="secondary">Vymazať všetko</button>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <strong>3) Export</strong>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px">Exportuje čistý HTML súbor obsahujúci statickú scénu s elementmi.</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="downloadBtn">⬇ Stiahnuť HTML</button>
+        <button id="showCodeBtn" class="secondary">Zobraziť kód</button>
+      </div>
+
+      <div class="export-area" id="exportArea" style="display:none">
+        <pre id="exported" readonly></pre>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="scene-wrap">
+    <div class="panel toolbar">
+      <div style="flex:1;font-weight:600">Scéna / Náhľad</div>
+      <div style="color:var(--muted)">Klikni + ťahaj element pre presun</div>
+    </div>
+
+    <div class="scene panel">
+      <div class="scene-inner" id="sceneInner"></div>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <div style="flex:1" class="panel">
+        <strong>Vybraný objekt</strong>
+        <div id="selectedInfo" style="margin-top:8px;color:var(--muted)">Žiadny</div>
+        <div id="editControls" style="display:none;margin-top:8px">
+          <label>Text / Štítok</label>
+          <input id="editText" type="text">
+          <label>Farba</label>
+          <input id="editColor" type="color">
+          <label>Veľkosť (px)</label>
+          <input id="editSize" type="number">
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="applyBtn">Uložiť zmeny</button>
+            <button id="deleteBtn" style="background:#ff7b7b">Zmazať</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:260px" class="panel">
+        <strong>Nápoveda a tipy</strong>
+        <ul style="padding-left:16px;color:var(--muted);font-size:14px">
+          <li>Pridaj text, potom ho ťahaj myšou.</li>
+          <li>Exportuje sa do samostatného .html súboru.</li>
+          <li>V exporte sú pozície v px; môžeš to upraviť manuálne v kóde.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<div id="grid"></div>
-
-<textarea id="exportedCode" readonly></textarea>
+<footer>© 2025 Erik Mohylák — ErikAI Game Engine</footer>
 
 <script>
-let gridData = [];
-let currentPlayerIndex = 0;
+/* --- dátová štruktúra elementov --- */
+let elems = []; // {id,name,type,x,y,props}
+let selectedId = null;
+const sceneInner = document.getElementById('sceneInner');
+const objectsList = document.getElementById('objectsList');
 
-// 🔹 Pomocná funkcia na stiahnutie súboru
-function saveFile(filename, content) {
-  const blob = new Blob([content], { type: 'text/html' });
+function uid(prefix='el'){ return prefix + Math.random().toString(36).slice(2,9); }
+
+/* --- prepínanie vstupov podľa typu --- */
+const objType = document.getElementById('objType');
+objType.addEventListener('change', ()=>{
+  document.getElementById('textInputs').style.display = objType.value==='text' ? '' : 'none';
+  document.getElementById('imageInputs').style.display = objType.value==='image' ? '' : 'none';
+  document.getElementById('buttonInputs').style.display = objType.value==='button' ? '' : 'none';
+});
+
+/* --- pridanie objektu --- */
+document.getElementById('addObjBtn').addEventListener('click', ()=>{
+  const name = (document.getElementById('objName').value || '').trim() || 'obj_'+(elems.length+1);
+  const type = document.getElementById('objType').value;
+  const x = parseInt(document.getElementById('posX').value) || 20;
+  const y = parseInt(document.getElementById('posY').value) || 20;
+  const id = uid();
+  const base = { id, name, type, x, y, w: null, h: null, z: elems.length+1, props:{} };
+
+  if(type==='text'){
+    base.props.text = document.getElementById('objText').value || 'Text';
+    base.props.color = document.getElementById('objColor').value || '#111';
+    base.props.size = parseInt(document.getElementById('objSize').value) || 20;
+    base.props.style = document.getElementById('objStyle').value || 'normal';
+  } else if(type==='image'){
+    base.props.url = document.getElementById('objImageUrl').value || '';
+    base.w = parseInt(document.getElementById('objImgW').value) || 120;
+    base.h = parseInt(document.getElementById('objImgH').value) || 80;
+  } else if(type==='button'){
+    base.props.label = document.getElementById('objBtnText').value || 'Klik';
+    base.props.color = '#fff';
+    base.props.bg = '#2b7cff';
+    base.props.size = 16;
+  }
+
+  elems.push(base);
+  renderScene();
+  renderList();
+});
+
+/* --- render scény --- */
+function renderScene(){
+  sceneInner.innerHTML = '';
+  elems.forEach(el => {
+    const div = document.createElement('div');
+    div.className = 'scene-element';
+    div.dataset.id = el.id;
+    div.style.left = el.x + 'px';
+    div.style.top = el.y + 'px';
+    div.style.zIndex = el.z;
+
+    if(el.type==='text'){
+      div.style.fontSize = el.props.size + 'px';
+      div.style.color = el.props.color;
+      div.style.fontStyle = el.props.style==='italic' ? 'italic' : 'normal';
+      div.style.fontWeight = el.props.style==='bold' ? '700' : '400';
+      div.textContent = el.props.text;
+    } else if(el.type==='image'){
+      const img = document.createElement('img');
+      img.src = el.props.url || '';
+      img.style.width = (el.w || 120)+'px';
+      img.style.height = (el.h || 80)+'px';
+      img.alt = el.name;
+      div.appendChild(img);
+    } else if(el.type==='button'){
+      const btn = document.createElement('button');
+      btn.textContent = el.props.label;
+      btn.style.fontSize = (el.props.size||16)+'px';
+      btn.style.background = el.props.bg;
+      btn.style.color = el.props.color;
+      btn.style.border = 'none';
+      btn.style.padding = '6px 10px';
+      btn.style.borderRadius = '8px';
+      div.appendChild(btn);
+    }
+
+    // make draggable
+    makeDraggable(div);
+    sceneInner.appendChild(div);
+  });
+}
+
+/* --- render list --- */
+function renderList(){
+  objectsList.innerHTML = '';
+  elems.forEach(el=>{
+    const div = document.createElement('div');
+    div.className = 'obj-item';
+    div.innerHTML = `<div>${el.name} <small style="color:#8a90a6">(${el.type})</small></div>
+      <div style="display:flex;gap:6px">
+        <button onclick="selectElem('${el.id}')">✏</button>
+        <button onclick="bringToFront('${el.id}')">⬆</button>
+        <button onclick="removeElem('${el.id}')">✖</button>
+      </div>`;
+    objectsList.appendChild(div);
+  });
+}
+
+/* --- selection, edit and delete --- */
+function selectElem(id){
+  selectedId = id;
+  const el = elems.find(e=>e.id===id);
+  if(!el) return;
+  document.querySelectorAll('.scene-element').forEach(n=>n.classList.remove('selected'));
+  const node = document.querySelector(`.scene-element[data-id="${id}"]`);
+  if(node) node.classList.add('selected');
+  document.getElementById('selectedInfo').innerText = el.name + ' • ' + el.type;
+  if(el.type==='text' || el.type==='button'){
+    document.getElementById('editControls').style.display = '';
+    document.getElementById('editText').value = el.type==='text'? el.props.text : el.props.label;
+    document.getElementById('editColor').value = el.props.color || '#111';
+    document.getElementById('editSize').value = el.props.size || 20;
+  } else {
+    document.getElementById('editControls').style.display = 'none';
+  }
+}
+
+document.getElementById('applyBtn').addEventListener('click', ()=>{
+  if(!selectedId) return;
+  const el = elems.find(e=>e.id===selectedId);
+  if(!el) return;
+  if(el.type==='text') { el.props.text = document.getElementById('editText').value; el.props.color = document.getElementById('editColor').value; el.props.size = parseInt(document.getElementById('editSize').value)||20; }
+  if(el.type==='button'){ el.props.label = document.getElementById('editText').value; el.props.color = document.getElementById('editColor').value; el.props.size = parseInt(document.getElementById('editSize').value)||16; }
+  renderScene();
+});
+
+document.getElementById('deleteBtn').addEventListener('click', ()=>{
+  if(!selectedId) return;
+  removeElem(selectedId);
+});
+
+/* --- utility functions --- */
+function removeElem(id){
+  elems = elems.filter(e=>e.id!==id);
+  if(selectedId===id) { selectedId = null; document.getElementById('selectedInfo').innerText='Žiadny'; document.getElementById('editControls').style.display='none'; }
+  renderScene(); renderList();
+}
+function bringToFront(id){
+  const maxz = elems.reduce((m,e)=>Math.max(m,e.z),0);
+  const el = elems.find(e=>e.id===id);
+  if(el) { el.z = maxz+1; renderScene(); renderList(); }
+}
+
+/* --- draggable implementation --- */
+function makeDraggable(node){
+  let startX, startY, origX, origY, dragging=false;
+  node.onpointerdown = (ev) => {
+    ev.preventDefault();
+    node.setPointerCapture(ev.pointerId);
+    startX = ev.clientX; startY = ev.clientY;
+    const id = node.dataset.id;
+    const el = elems.find(e=>e.id===id);
+    origX = el.x; origY = el.y;
+    dragging = true;
+    selectElem(id);
+  };
+  node.onpointermove = (ev) => {
+    if(!dragging) return;
+    const id = node.dataset.id;
+    const el = elems.find(e=>e.id===id);
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    el.x = Math.max(0, Math.round(origX + dx));
+    el.y = Math.max(0, Math.round(origY + dy));
+    node.style.left = el.x + 'px';
+    node.style.top = el.y + 'px';
+  };
+  node.onpointerup = (ev) => {
+    dragging = false;
+    try{ node.releasePointerCapture(ev.pointerId); }catch(e){}
+    renderList();
+  };
+}
+
+/* --- clear --- */
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(!confirm('Vymazať všetky objekty?')) return;
+  elems = []; selectedId = null; renderScene(); renderList();
+});
+
+/* --- export logic --- */
+function generateExportHTML(){
+  // Build HTML string with inline styles & static elements
+  const baseStyle = `
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f7fb}
+  .stage{position:relative;width:100%;max-width:1000px;margin:24px auto;background:#fff;border-radius:8px;padding:12px;box-shadow:0 10px 30px rgba(20,30,60,.06)}
+  .stage-inner{position:relative;height:520px;border:1px solid #eef2f8;overflow:hidden}
+  .stage-element{position:absolute;box-sizing:border-box}
+  `;
+  const elemsHtml = elems.map(el=>{
+    if(el.type==='text'){
+      const safeText = escapeHtml(el.props.text);
+      return `<div class="stage-element" style="left:${el.x}px;top:${el.y}px;font-size:${el.props.size}px;color:${el.props.color};font-style:${el.props.style==='italic'?'italic':'normal'};font-weight:${el.props.style==='bold'?'700':'400'}">${safeText}</div>`;
+    } else if(el.type==='image'){
+      const url = escapeHtml(el.props.url||'');
+      return `<img class="stage-element" src="${url}" alt="${escapeHtml(el.name)}" style="left:${el.x}px;top:${el.y}px;width:${el.w||120}px;height:${el.h||80}px;object-fit:cover;border-radius:6px">`;
+    } else if(el.type==='button'){
+      return `<button class="stage-element" style="left:${el.x}px;top:${el.y}px;padding:8px 12px;background:${el.props.bg};color:${el.props.color};font-size:${el.props.size||16}px;border-radius:8px;border:none">${escapeHtml(el.props.label)}</button>`;
+    }
+    return '';
+  }).join('\n');
+
+  const html = `<!doctype html>
+<html lang="sk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ErikAI — Exportovaná scéna</title>
+<style>${baseStyle}</style>
+</head><body>
+<div class="stage"><h2 style="margin:8px 12px 0 12px;font-family:inherit">Exportovaná scéna</h2>
+<div class="stage-inner">${elemsHtml}</div></div>
+</body></html>`;
+  return html;
+}
+
+function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* --- buttons: download & show code --- */
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  const html = generateExportHTML();
+  const blob = new Blob([html], {type:'text/html'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
+  a.download = 'erikai_scene.html';
   a.click();
-  document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
+});
 
-// --- Generovanie hracej plochy ---
-function generateGrid() {
-  const size = parseInt(document.getElementById('gridSize').value);
-  const players = parseInt(document.getElementById('numPlayers').value);
-  const symbols = document.getElementById('symbols').value.split(',').slice(0, players);
-  const color = document.getElementById('cellColor').value;
+document.getElementById('showCodeBtn').addEventListener('click', ()=>{
+  const html = generateExportHTML();
+  const box = document.getElementById('exportArea');
+  document.getElementById('exported').textContent = html;
+  box.style.display = box.style.display==='none' ? '' : 'none';
+});
 
-  gridData = Array(size * size).fill('');
-  currentPlayerIndex = 0;
+/* --- initial render --- */
+renderScene(); renderList();
 
-  const grid = document.getElementById('grid');
-  grid.style.gridTemplateColumns = `repeat(${size}, 50px)`;
-  grid.innerHTML = '';
-
-  for (let i = 0; i < size * size; i++) {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.style.background = color;
-    cell.addEventListener('click', () => {
-      if (!gridData[i]) {
-        gridData[i] = symbols[currentPlayerIndex];
-        cell.innerText = symbols[currentPlayerIndex];
-        currentPlayerIndex = (currentPlayerIndex + 1) % players;
-      }
-    });
-    grid.appendChild(cell);
-  }
-}
-
-// --- Export HTML ---
-function exportHTML() {
-  const size = parseInt(document.getElementById('gridSize').value);
-  const players = parseInt(document.getElementById('numPlayers').value);
-  const symbols = document.getElementById('symbols').value.split(',').slice(0, players);
-  const color = document.getElementById('cellColor').value;
-
-  const html = `<!DOCTYPE html>
-<html lang="sk">
-<head>
-<meta charset="UTF-8">
-<title>Vlastná hra</title>
-<style>
-body { text-align:center; font-family:sans-serif; background:#f5f5f5; }
-#grid { margin:20px auto; display:grid; gap:3px; grid-template-columns: repeat(${size}, 50px); }
-.cell { width:50px; height:50px; border:1px solid #333; font-size:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:6px; background:${color}; transition:0.2s; }
-.cell:hover { background:#e3f2fd; transform:scale(1.1); }
-</style>
-</head>
-<body>
-<h1>Vlastná hra</h1>
-<div id="grid"></div>
-<script>
-let gridData = Array(${size * size}).fill('');
-let currentPlayerIndex = 0;
-const symbols = ${JSON.stringify(symbols)};
-const grid = document.getElementById('grid');
-for(let i=0;i<${size * size};i++){
-  const cell=document.createElement('div');
-  cell.className='cell';
-  cell.addEventListener('click',()=>{if(!gridData[i]){gridData[i]=symbols[currentPlayerIndex];cell.innerText=symbols[currentPlayerIndex];currentPlayerIndex=(currentPlayerIndex+1)%symbols.length;}});
-  grid.appendChild(cell);
-}
-<\/script>
-</body>
-</html>`;
-
-  // ✅ Automatické stiahnutie namiesto zobrazovania
-  saveFile("moja_hra.html", html);
-}
 </script>
-
 </body>
-  </html>
+              </html>
