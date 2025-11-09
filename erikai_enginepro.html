@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI Game Engine</title>
+<style>
+  body { font-family: sans-serif; background:#f5f5f5; text-align:center; padding:20px; }
+  h1 { margin-bottom:10px; }
+  input, select { padding:5px; margin:5px; width:150px; }
+  button { padding:8px 15px; margin:10px; cursor:pointer; }
+  #grid { margin:20px auto; display:grid; gap:2px; }
+  .cell { width:50px; height:50px; border:1px solid #333; font-size:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:0.2s; }
+  .cell:hover { background:#ddd; }
+  #exportedCode { width:90%; height:200px; margin-top:20px; }
+</style>
+</head>
+<body>
+
+<h1>ErikAI Game Engine</h1>
+
+<div>
+  <label>Počet hráčov:</label>
+  <input type="number" id="numPlayers" min="2" max="8" value="2"><br>
+
+  <label>Počet políčok:</label>
+  <input type="number" id="gridSize" min="3" max="10" value="5"><br>
+
+  <label>Symboly hráčov (oddelené čiarkou):</label>
+  <input type="text" id="symbols" value="X,O,△,□,☆,♢,⚡,♥"><br>
+
+  <label>Farba políčka:</label>
+  <input type="color" id="cellColor" value="#ffffff"><br>
+
+  <button onclick="generateGrid()">Vytvoriť hraciu plochu</button>
+  <button onclick="exportHTML()">Exportovať HTML</button>
+</div>
+
+<div id="grid"></div>
+
+<textarea id="exportedCode" readonly placeholder="Tu sa zobrazí vygenerovaný HTML kód"></textarea>
+
+<script>
+let gridData = [];
+let currentPlayerIndex = 0;
+
+function generateGrid() {
+  const size = parseInt(document.getElementById('gridSize').value);
+  const players = parseInt(document.getElementById('numPlayers').value);
+  const symbols = document.getElementById('symbols').value.split(',').slice(0, players);
+  const color = document.getElementById('cellColor').value;
+
+  gridData = Array(size*size).fill('');
+  currentPlayerIndex = 0;
+
+  const grid = document.getElementById('grid');
+  grid.style.gridTemplateColumns = `repeat(${size}, 50px)`;
+  grid.innerHTML = '';
+
+  for(let i=0; i<size*size; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.style.background = color;
+    cell.addEventListener('click', () => {
+      if(!gridData[i]) {
+        gridData[i] = symbols[currentPlayerIndex];
+        cell.innerText = symbols[currentPlayerIndex];
+        currentPlayerIndex = (currentPlayerIndex + 1) % players;
+      }
+    });
+    grid.appendChild(cell);
+  }
+}
+
+function exportHTML() {
+  const size = parseInt(document.getElementById('gridSize').value);
+  const players = parseInt(document.getElementById('numPlayers').value);
+  const symbols = document.getElementById('symbols').value.split(',').slice(0, players);
+  const color = document.getElementById('cellColor').value;
+
+  let html = `<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vlastná hra</title>
+<style>
+body { text-align:center; font-family:sans-serif; background:#f5f5f5; }
+#grid { margin:20px auto; display:grid; gap:2px; grid-template-columns: repeat(${size}, 50px); }
+.cell { width:50px; height:50px; border:1px solid #333; font-size:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; background:${color}; transition:0.2s; }
+.cell:hover { background:#ddd; }
+</style>
+</head>
+<body>
+<h1>Vlastná hra</h1>
+<div id="grid"></div>
+<script>
+let gridData = Array(${size*size}).fill('');
+let currentPlayerIndex = 0;
+const symbols = ${JSON.stringify(symbols)};
+const grid = document.getElementById('grid');
+for(let i=0;i<${size*size};i++){
+  const cell = document.createElement('div');
+  cell.className='cell';
+  cell.addEventListener('click',()=>{if(!gridData[i]){gridData[i]=symbols[currentPlayerIndex];cell.innerText=symbols[currentPlayerIndex];currentPlayerIndex=(currentPlayerIndex+1)%symbols.length;}});
+  grid.appendChild(cell);
+}
+</script>
+</body>
+</html>`;
+
+  document.getElementById('exportedCode').value = html;
+}
+</script>
+
+</body>
+</html>
