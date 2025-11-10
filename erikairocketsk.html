@@ -65,10 +65,10 @@ let maxSpeed=9, accel=28, brake=36, driftFactor=0.88;
 let boostMultiplier=2.6, boostDuration=1200, boostDrainRate=80, boostRechargeRate=25;
 let boost = { val: 100, max: 100, active:false };
 
-// --- Jump variables ---
+// --- Jump ---
 let playerVelY = 0;      
 let playerGrounded = true; 
-const jumpForce = 6;    
+const jumpForce = 6;
 
 // --- Arena / Goals ---
 const goalWidthRatio = 0.36, goalDepth = 2.5;
@@ -100,7 +100,7 @@ function init(){
   // Ball
   const ballMat = new THREE.MeshStandardMaterial({color:0xffff7f, roughness:0.5});
   ball = new THREE.Mesh(new THREE.SphereGeometry(0.95,32,32), ballMat);
-  ball.position.set(6,1.5,-6); scene.add(ball);
+  ball.position.set(6,2.5,-6); scene.add(ball); // vyššie pre skok
 
   // AI Car
   const aiMat = new THREE.MeshStandardMaterial({color:0x6b6bff, roughness:0.4, metalness:0.1});
@@ -141,7 +141,7 @@ function resetPositions(afterGoal=false){
   car.position.set(0,0.5, afterGoal? (Math.random()>0.5?6:-6):0);
   car.rotation.set(0,0,0); carSpeed=0; targetSpeed=0; steer=0;
   playerVelY=0; playerGrounded=true;
-  ball.position.set((Math.random()-0.5)*6,1.5,(Math.random()-0.5)*6 - (afterGoal? (Math.random()>0.5?-8:8):0));
+  ball.position.set((Math.random()-0.5)*6,2.5,(Math.random()-0.5)*6 - (afterGoal? (Math.random()>0.5?-8:8):0));
   ballVel.set(0,0,0);
   aiCar.position.set(0,0.5,8);
   boost.val = boost.max; boost.active=false;
@@ -162,7 +162,7 @@ function animate(){
   const dt = Math.min(0.05, clock.getDelta());
 
   if(playing){
-    // --- Player car physics ---
+    // Player physics
     if(targetSpeed>carSpeed){ carSpeed+=accel*dt; if(carSpeed>targetSpeed) carSpeed=targetSpeed; }
     else if(targetSpeed<carSpeed){ carSpeed-=brake*dt; if(carSpeed<targetSpeed) carSpeed=targetSpeed; }
 
@@ -172,16 +172,16 @@ function animate(){
     car.rotation.y += steer*(0.8 + (Math.abs(carSpeed)/maxSpeed)*1.8)*dt;
     carSpeed *= 0.999 - (0.0004*dt*100);
 
-    // --- Player jump ---
+    // Player jump
     playerVelY -= 9.8*dt;
     car.position.y += playerVelY*dt;
     if(car.position.y <= 0.5){ car.position.y=0.5; playerVelY=0; playerGrounded=true; }
 
-    // --- Ball physics ---
+    // Ball physics
     ballVel.y -= 9.8*dt; ball.position.addScaledVector(ballVel,dt);
     if(ball.position.y<0.95){ ball.position.y=0.95; if(ballVel.y<0) ballVel.y*=-0.42; ballVel.x*=0.993; ballVel.z*=0.993; }
 
-    // --- Collision car-ball ---
+    // Collision car-ball
     const carToBall = new THREE.Vector3().subVectors(ball.position,car.position);
     const dist = carToBall.length(); const rBall=0.95,rCar=1.42,minDist=rBall+rCar;
     if(dist<minDist){
@@ -192,18 +192,18 @@ function animate(){
       car.position.addScaledVector(n,-0.02*Math.min(carSpeed,3.2));
     }
 
-    // --- Ball-wall bounce ---
+    // Ball-wall bounce
     const halfArena = arena/2-0.7;
     if(ball.position.x<-halfArena){ ball.position.x=-halfArena; ballVel.x*=-0.72; }
     if(ball.position.x>halfArena){ ball.position.x=halfArena; ballVel.x*=-0.72; }
     if(ball.position.z<-halfArena){ ball.position.z=-halfArena; ballVel.z*=-0.72; }
     if(ball.position.z>halfArena){ ball.position.z=halfArena; ballVel.z*=-0.72; }
 
-    // --- Car clamp ---
+    // Car clamp
     car.position.x = Math.max(-halfArena, Math.min(halfArena, car.position.x));
     car.position.z = Math.max(-halfArena, Math.min(halfArena, car.position.z));
 
-    // --- Camera follow ---
+    // Camera follow
     if(cameraFollow){
       const camOffset = new THREE.Vector3(0,6.2,13.2).applyAxisAngle(new THREE.Vector3(0,1,0),car.rotation.y);
       const camTarget = new THREE.Vector3().copy(car.position).add(camOffset);
@@ -211,22 +211,27 @@ function animate(){
       camera.lookAt(new THREE.Vector3().copy(car.position).add(new THREE.Vector3(0,1.2,0)));
     }
 
-    // --- Boost ---
+    // Boost
     if(boost.active){ boost.val-=boostDrainRate*dt; if(boost.val<=0){ boost.val=0; boost.active=false; } }
     else{ boost.val = Math.min(boost.max, boost.val+boostRechargeRate*dt); }
 
     updateHUD();
     checkGoal();
 
-    // --- AI car ---
+    // AI car
     let dirToBall = new THREE.Vector3().subVectors(ball.position, aiCar.position); dirToBall.y=0;
-    if(dirToBall.length()>0.5){ dirToBall.normalize(); aiCar.position.addScaledVector(dirToBall,5*dt); aiCar.lookAt(ball.position.x, aiCar.position.y, ball.position.z);}
+    if(dirToBall.length()>0.5){
+        dirToBall.normalize();
+        aiCar.position.addScaledVector(dirToBall, 5*dt);
+        let targetRotation = Math.atan2(dirToBall.x, dirToBall.z);
+        aiCar.rotation.y += (targetRotation - aiCar.rotation.y) * 0.08;
+    }
   }
 
   renderer.render(scene,camera);
 }
 
-// --- Goal ---
+// Goal
 function checkGoal(){
   if(goalCooldown) return;
   const halfArena = arena/2-0.7;
@@ -237,7 +242,7 @@ function checkGoal(){
 }
 function goalHappened(team){ goalCooldown=true; showGoalBanner(); playing=false; setTimeout(()=>{ resetPositions(true); playing=true; goalCooldown=false;},1400); }
 
-// --- Joystick ---
+// Joystick
 const joy = document.getElementById('joy'); const stick = document.getElementById('stick');
 let active=false, start={x:0,y:0}, maxR=48;
 function joyDown(ev){ ev.preventDefault(); active=true; const p=ev.touches?ev.touches[0]:ev; const rect=joy.getBoundingClientRect(); start.x=rect.left+rect.width/2; start.y=rect.top+rect.height/2; moveStick(p.clientX,p.clientY); }
@@ -247,51 +252,60 @@ function moveStick(cx,cy){ const dx=cx-start.x, dy=cy-start.y; const nx=Math.max
 joy.addEventListener('pointerdown',joyDown,{passive:false}); joy.addEventListener('pointermove',joyMove,{passive:false}); window.addEventListener('pointerup',joyUp);
 joy.addEventListener('touchstart',joyDown,{passive:false}); joy.addEventListener('touchmove',joyMove,{passive:false}); window.addEventListener('touchend',joyUp);
 
-// --- Boost ---
+// Boost
 const boostBtn = document.getElementById('boostBtn');
-boostBtn.addEventListener('click',()=>{ if(!playing) return; if(boost.val>18&&!boost.active) enableBoost(); });
-boostBtn.addEventListener('touchstart',(e)=>{ e.preventDefault(); if(!playing) return; if(boost.val>18&&!boost.active) enableBoost(); });
-function enableBoost(){ if(boost.val)
-    function enableBoost(){ 
-    if(boost.val<=0) return; 
-    boost.active=true; 
-    setTimeout(()=>{boost.active=false;}, boostDuration); 
+boostBtn.addEventListener('click', ()=>{
+    if(!playing) return;
+    if(boost.val>18 && !boost.active) enableBoost();
+});
+boostBtn.addEventListener('touchstart', (e)=>{
+    e.preventDefault();
+    if(!playing) return;
+    if(boost.val>18 && !boost.active) enableBoost();
+});
+
+function enableBoost(){
+    if(boost.val <= 0) return;
+    boost.active = true;
+    setTimeout(()=>{
+        boost.active = false;
+    }, boostDuration);
 }
 
-// --- Jump Button (Space alebo dotyk) ---
+// Jump (Space)
 window.addEventListener('keydown', (e)=>{
     if(!playing) return;
-    if(e.code==='Space' && playerGrounded){
+    if(e.code === 'Space' && playerGrounded){
         playerVelY = jumpForce;
         playerGrounded = false;
     }
 });
 
-// --- Camera Toggle ---
+// Camera toggle
 document.getElementById('cameraBtn').addEventListener('click', ()=>{
-    cameraFollow = !cameraFollow; 
-    document.getElementById('cameraBtn').innerText = cameraFollow?'Kamera: Follow':'Kamera: Free'; 
+    cameraFollow = !cameraFollow;
+    document.getElementById('cameraBtn').innerText = cameraFollow ? 'Kamera: Follow' : 'Kamera: Free';
 });
 
-// --- Start / Reset ---
-document.getElementById('startBtn').addEventListener('click', () => {
+// Start / Reset
+document.getElementById('startBtn').addEventListener('click', ()=>{
     playing = true;
     resetPositions(false);
     document.getElementById('startBtn').innerText = 'Reset';
 });
 
-// --- Optional: Device Tilt Steering ---
-if (window.DeviceOrientationEvent) {
-    window.addEventListener('deviceorientation', (e) => {
-        if (!playing) return;
+// Device tilt steering
+if(window.DeviceOrientationEvent){
+    window.addEventListener('deviceorientation', (e)=>{
+        if(!playing) return;
         const gamma = e.gamma || 0; // left-right tilt
         const beta = e.beta || 0;   // forward-back tilt
         steer = Math.max(-1, Math.min(1, gamma / 30)) * 0.9;
-        targetSpeed = Math.max(-maxSpeed * 0.5, Math.min(maxSpeed, ((beta - 45) / 25) * maxSpeed));
+        targetSpeed = Math.max(-maxSpeed*0.5, Math.min(maxSpeed, ((beta - 45)/25)*maxSpeed));
     });
 }
 
-// --- Initialize ---
+// Initialize
 init();
 resetPositions(false);
 animate();
