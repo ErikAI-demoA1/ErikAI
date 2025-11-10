@@ -1,47 +1,82 @@
 <!doctype html>
-
 <html lang="sk">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ErikAI — RocketBall 3D (prototyp)</title>
+<title>RocketBall 1.1 — ErikAI Prototype</title>
 <style>
-  html,body{height:100%;margin:0;font-family:Inter,Arial;overflow:hidden;background:#081226;color:#fff}
-  #ui{position:fixed;left:12px;bottom:12px;z-index:20;display:flex;gap:8px;align-items:center}
-  .joystick{width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.03);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;touch-action:none}
-  .stick{width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;transform:translate(0,0)}
-  #hud{position:fixed;right:12px;top:12px;background:rgba(0,0,0,0.25);padding:8px 12px;border-radius:8px;font-size:14px}
-  #startBtn{position:fixed;left:50%;top:12px;transform:translateX(-50%);padding:8px 12px;border-radius:10px;border:none;background:#1db954;color:#fff;z-index:20}
+  html,body{height:100%;margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:#071225;color:#fff;overflow:hidden}
+  #ui{position:fixed;left:12px;bottom:12px;z-index:30;display:flex;gap:10px;align-items:center;pointer-events:none}
+  .joystick{width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.03);backdrop-filter: blur(2px);display:flex;align-items:center;justify-content:center;touch-action:none;pointer-events:auto}
+  .stick{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;transform:translate(0,0)}
+  #controlsRight{position:fixed;right:12px;bottom:12px;display:flex;flex-direction:column;gap:10px;pointer-events:none;z-index:30}
+  .btn{padding:10px 14px;border-radius:10px;border:none;background:#1db954;color:white;font-weight:600;cursor:pointer;pointer-events:auto}
+  .btn.ghost{background:rgba(255,255,255,0.06)}
+  #startBtn{position:fixed;left:50%;top:12px;transform:translateX(-50%);padding:8px 14px;border-radius:10px;border:none;background:#ff7b59;color:#fff;z-index:30}
+  #hud{position:fixed;left:12px;top:12px;background:rgba(0,0,0,0.22);padding:8px 12px;border-radius:8px;font-size:14px;z-index:30}
+  #mini{position:fixed;right:12px;top:12px;background:rgba(0,0,0,0.16);padding:8px 12px;border-radius:8px;font-size:13px;z-index:30}
   canvas{display:block}
-  .note{position:fixed;left:12px;top:12px;color:#9fb2d1;font-size:13px}
+  .note{position:fixed;left:12px;top:56px;color:#9fb2d1;font-size:13px;z-index:30}
+  @media (min-width:900px){
+    .joystick{width:110px;height:110px}.stick{width:48px;height:48px}
+  }
 </style>
 </head>
 <body>
-<div class="note">Prototyp: jednoduché 3D auto a lopta. Dotykový ovládač vľavo.</div>
 <button id="startBtn">Spusti / Reset</button>
-<div id="hud">Rýchlosť: <span id="speed">0</span></div>
+<div id="hud">Rýchlosť: <span id="speed">0</span> • Boost: <span id="boostVal">100</span>%</div>
+<div id="mini">Aréna: <span id="arenaSize">200</span>m</div>
+<div class="note">Proto: RocketBall 1.1 — dotykový joystick + boost + lepšia fyzika</div>
+
 <div id="ui">
   <div id="joy" class="joystick" aria-label="Joystick">
     <div id="stick" class="stick"></div>
   </div>
-</div><!-- three.js CDN --><script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script><script>
-// Simple RocketBall prototype — no external physics, basic collision + bounce + camera follow
+</div>
+<div id="controlsRight">
+  <button id="boostBtn" class="btn">BOOST</button>
+  <button id="cameraBtn" class="btn ghost">Kamera: Follow</button>
+</div>
+
+<!-- three.js CDN -->
+<script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
+
+<script>
+/*
+  RocketBall 1.1 — improved prototype
+  - acceleration / brake / drift
+  - boost with cooldown
+  - better ball bounce
+  - camera follow smoothing
+  - mobile joystick + optional gyro
+*/
+
 let scene, camera, renderer;
 let car, ball, ground;
-let clock;
-let velocity = new THREE.Vector3(0,0,0);
-let carSpeed = 0;
-let steer = 0;
-let ballVelocity = new THREE.Vector3(0,0,0);
-let playing = false;
-const maxSpeed = 6; // units/sec
+let clock, playing = false;
+let carSpeed = 0;         // current forward speed (units/s)
+let targetSpeed = 0;      // desired speed from input
+let steer = 0;            // -1..1 left/right
+let ballVel = new THREE.Vector3(0,0,0);
+let maxSpeed = 8;        // normal max speed
+let accel = 20;          // acceleration units/s^2
+let brake = 28;          // braking deceleration
+let driftFactor = 0.96;  // lateral friction factor
+let arena = 200;         // arena dimension (square side)
+let boost = { val: 100, max: 100, recharging:false };
+let cameraFollow = true;
+
+const hudSpeed = document.getElementById('speed');
+const hudBoost = document.getElementById('boostVal');
+const arenaSizeEl = document.getElementById('arenaSize');
+arenaSizeEl.innerText = arena;
 
 function init(){
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x071226);
+  scene.background = new THREE.Color(0x071225);
 
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
-  camera.position.set(0, 8, 14);
+  camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 4000);
+  camera.position.set(0, 10, 18);
 
   renderer = new THREE.WebGLRenderer({antialias:true});
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -49,38 +84,41 @@ function init(){
   document.body.appendChild(renderer.domElement);
 
   // lights
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x444466, 0.7);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x222A3A, 0.8);
   scene.add(hemi);
   const dir = new THREE.DirectionalLight(0xffffff, 0.6);
-  dir.position.set(5,10,7);
+  dir.position.set(8, 20, 10);
   scene.add(dir);
 
-  // ground
-  const gmat = new THREE.MeshStandardMaterial({color:0x16304a,roughness:0.9,metalness:0});
-  ground = new THREE.Mesh(new THREE.PlaneGeometry(120,120), gmat);
+  // ground (textured-like)
+  const gmat = new THREE.MeshStandardMaterial({color:0x143443, roughness:0.95, metalness:0.02});
+  ground = new THREE.Mesh(new THREE.PlaneGeometry(arena, arena, 4,4), gmat);
   ground.rotation.x = -Math.PI/2;
   scene.add(ground);
 
-  // car (simple box)
-  const carMat = new THREE.MeshStandardMaterial({color:0xff6b6b});
-  car = new THREE.Mesh(new THREE.BoxGeometry(1.8,0.6,2.6), carMat);
+  // car (rounded box)
+  const carMat = new THREE.MeshStandardMaterial({color:0xff6b6b, roughness:0.4, metalness:0.1});
+  car = new THREE.Mesh(new THREE.BoxGeometry(1.9,0.6,2.6), carMat);
   car.position.set(0,0.5,0);
+  car.castShadow = true;
   scene.add(car);
 
   // ball
-  const ballMat = new THREE.MeshStandardMaterial({color:0xffff7f});
-  ball = new THREE.Mesh(new THREE.SphereGeometry(0.8, 24,24), ballMat);
-  ball.position.set(4,0.8,-4);
+  const ballMat = new THREE.MeshStandardMaterial({color:0xffff7f, roughness:0.5});
+  ball = new THREE.Mesh(new THREE.SphereGeometry(0.9, 32,32), ballMat);
+  ball.position.set(6,0.9,-6);
   scene.add(ball);
 
-  // arena walls (visual)
-  const wallMat = new THREE.MeshStandardMaterial({color:0x0f2233});
-  const w = 60;
-  const wallGeo = new THREE.BoxGeometry(w,2,1);
-  const wall1 = new THREE.Mesh(wallGeo, wallMat); wall1.position.set(0,1,-w/2); scene.add(wall1);
-  const wall2 = new THREE.Mesh(wallGeo, wallMat); wall2.position.set(0,1,w/2); scene.add(wall2);
-  const wall3 = new THREE.Mesh(new THREE.BoxGeometry(1,2,w), wallMat); wall3.position.set(-w/2,1,0); scene.add(wall3);
-  const wall4 = new THREE.Mesh(new THREE.BoxGeometry(1,2,w), wallMat); wall4.position.set(w/2,1,0); scene.add(wall4);
+  // arena walls (visual, invisible collision via limits)
+  const wallMat = new THREE.MeshStandardMaterial({color:0x072033});
+  const wallThickness = 1;
+  const w = arena/2;
+  const wallGeoH = new THREE.BoxGeometry(arena + 2*wallThickness, 2.2, wallThickness);
+  const wallGeoV = new THREE.BoxGeometry(wallThickness, 2.2, arena + 2*wallThickness);
+  const wall1 = new THREE.Mesh(wallGeoH, wallMat); wall1.position.set(0,1,-w); scene.add(wall1);
+  const wall2 = new THREE.Mesh(wallGeoH, wallMat); wall2.position.set(0,1,w); scene.add(wall2);
+  const wall3 = new THREE.Mesh(wallGeoV, wallMat); wall3.position.set(-w,1,0); scene.add(wall3);
+  const wall4 = new THREE.Mesh(wallGeoV, wallMat); wall4.position.set(w,1,0); scene.add(wall4);
 
   clock = new THREE.Clock();
   window.addEventListener('resize', onResize);
@@ -93,13 +131,13 @@ function onResize(){
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function reset(){
-  car.position.set(0,0.5,0);
-  car.rotation.set(0,0,0);
-  velocity.set(0,0,0);
-  carSpeed = 0;
-  ball.position.set(4,0.8,-4);
-  ballVelocity.set(0,0,0);
+function resetState(){
+  car.position.set(0,0.5,0); car.rotation.set(0,0,0);
+  carSpeed = 0; targetSpeed = 0; steer = 0;
+  ball.position.set(6,0.9,-6); ballVel.set(0,0,0);
+  boost.val = boost.max; boost.recharging=false;
+  hudBoost.innerText = Math.round(boost.val);
+  hudSpeed.innerText = '0';
 }
 
 function animate(){
@@ -107,67 +145,118 @@ function animate(){
   const dt = Math.min(0.05, clock.getDelta());
 
   if(playing){
-    // simple car physics: forward/backward speed and rotation
-    const forward = new THREE.Vector3(Math.sin(car.rotation.y),0,Math.cos(car.rotation.y));
-    // change speed from joystick
-    carSpeed += (velocity.z - carSpeed) * Math.min(1, dt*5); // smooth
-    // apply movement
-    car.position.addScaledVector(forward, carSpeed * dt);
-    car.rotation.y += steer * dt * 1.8; // steering
-
-    // simple friction
-    carSpeed *= 0.995;
-
-    // ball physics (very simple)
-    ballVelocity.y -= 9.8 * dt; // gravity
-    ball.position.addScaledVector(ballVelocity, dt);
-    // ground collision for ball
-    if(ball.position.y < 0.8){
-      ball.position.y = 0.8;
-      if(ballVelocity.y < 0) ballVelocity.y *= -0.45; // bounce damping
-      // friction
-      ballVelocity.x *= 0.99; ballVelocity.z *= 0.99;
+    // update speed toward targetSpeed with acceleration/brake
+    if(targetSpeed > carSpeed){
+      carSpeed += accel * dt;
+      if(carSpeed > targetSpeed) carSpeed = targetSpeed;
+    } else if(targetSpeed < carSpeed){
+      carSpeed -= brake * dt;
+      if(carSpeed < targetSpeed) carSpeed = targetSpeed;
     }
 
-    // ball-car collision (sphere vs box approx)
+    // apply boost effect (temporary higher speed)
+    let effectiveMax = maxSpeed;
+    if(boost.active){ effectiveMax *= 1.9; } // strong boost
+    if(carSpeed > effectiveMax) carSpeed = effectiveMax;
+
+    // movement vector (in car local forward)
+    const forward = new THREE.Vector3(Math.sin(car.rotation.y), 0, Math.cos(car.rotation.y));
+    // lateral slip: simple drift effect by reducing lateral movement component
+    const lateral = new THREE.Vector3(Math.sin(car.rotation.y + Math.PI/2), 0, Math.cos(car.rotation.y + Math.PI/2));
+
+    // compute displacement
+    const move = forward.clone().multiplyScalar(carSpeed * dt);
+    // slight lateral drift when steering+moving
+    const lateralFactor = (Math.abs(steer) * 0.25 * (carSpeed / maxSpeed));
+    car.position.add(move);
+    car.position.add(lateral.clone().multiplyScalar( (carSpeed * dt) * lateralFactor * (carSpeed>0? (steer>0?0.2:-0.2) : 0)));
+
+    // rotate car based on steer and speed
+    const turnSpeed = steer * (0.9 + (carSpeed / maxSpeed) * 1.6);
+    car.rotation.y += turnSpeed * dt;
+
+    // damp speed gradually (rolling friction)
+    carSpeed *= 0.999 - (0.0005 * dt*100);
+
+    // ball physics: gravity + integration
+    ballVel.y -= 9.8 * dt;
+    ball.position.addScaledVector(ballVel, dt);
+
+    // ball-ground collision
+    if(ball.position.y < 0.9){
+      ball.position.y = 0.9;
+      if(ballVel.y < 0) ballVel.y *= -0.45;
+      // ground friction on ball
+      ballVel.x *= 0.995;
+      ballVel.z *= 0.995;
+      // small stop threshold
+      if(Math.abs(ballVel.x) + Math.abs(ballVel.z) < 0.01) { ballVel.x = 0; ballVel.z = 0; }
+    }
+
+    // car-ball interaction (sphere vs box approx)
     const carToBall = new THREE.Vector3().subVectors(ball.position, car.position);
     const dist = carToBall.length();
-    const minDist = 0.8 + 1.3; // ball radius + approx car radius
+    const rBall = 0.9;
+    const rCar = 1.4; // approximate radius
+    const minDist = rBall + rCar;
     if(dist < minDist){
       const n = carToBall.clone().normalize();
-      // push ball away
-      ball.position.addScaledVector(n, (minDist - dist) + 0.01);
-      // transfer momentum
-      const push = new THREE.Vector3().copy(n).multiplyScalar(carSpeed*1.6 + 1.2);
-      ballVelocity.add(push);
+      // push ball out
+      ball.position.addScaledVector(n, (minDist - dist) + 0.001);
+      // compute impulse (based on carSpeed and steer)
+      const speedImpulse = Math.max(0.5, carSpeed);
+      const impulse = n.clone().multiplyScalar(speedImpulse * (boost.active?2.0:1.0));
+      // add vertical component to make ball 'pop'
+      impulse.y = 1.0 + Math.min(1.8, carSpeed * 0.15);
+      ballVel.add(impulse);
+      // small recoil to car (simple)
+      car.position.addScaledVector(n, -0.02 * Math.min(carSpeed, 4));
     }
 
-    // walls: reflect ball
-    const limit = 58/2;
-    if(ball.position.x < -limit){ ball.position.x = -limit; ballVelocity.x *= -0.7; }
-    if(ball.position.x > limit){ ball.position.x = limit; ballVelocity.x *= -0.7; }
-    if(ball.position.z < -limit){ ball.position.z = -limit; ballVelocity.z *= -0.7; }
-    if(ball.position.z > limit){ ball.position.z = limit; ballVelocity.z *= -0.7; }
+    // walls bounce for ball
+    const half = arena/2 - 0.5;
+    if(ball.position.x < -half){ ball.position.x = -half; ballVel.x *= -0.75; }
+    if(ball.position.x > half){ ball.position.x = half; ballVel.x *= -0.75; }
+    if(ball.position.z < -half){ ball.position.z = -half; ballVel.z *= -0.75; }
+    if(ball.position.z > half){ ball.position.z = half; ballVel.z *= -0.75; }
 
-    // keep car inside
-    if(car.position.x < -limit) car.position.x = -limit;
-    if(car.position.x > limit) car.position.x = limit;
-    if(car.position.z < -limit) car.position.z = -limit;
-    if(car.position.z > limit) car.position.z = limit;
+    // keep car inside arena (clamp)
+    if(car.position.x < -half) car.position.x = -half;
+    if(car.position.x > half) car.position.x = half;
+    if(car.position.z < -half) car.position.z = -half;
+    if(car.position.z > half) car.position.z = half;
 
-    // camera follow
-    const camTarget = new THREE.Vector3().copy(car.position).add(new THREE.Vector3(0,2,6).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y));
-    camera.position.lerp(camTarget, 0.14);
-    camera.lookAt(new THREE.Vector3().copy(car.position).add(new THREE.Vector3(0,1.2,0)));
+    // camera follow smoothing
+    if(cameraFollow){
+      const camOffset = new THREE.Vector3(0, 6.0, 12.0).applyAxisAngle(new THREE.Vector3(0,1,0), car.rotation.y);
+      const camTarget = new THREE.Vector3().copy(car.position).add(camOffset);
+      camera.position.lerp(camTarget, 0.14);
+      camera.lookAt(new THREE.Vector3().copy(car.position).add(new THREE.Vector3(0,1.2,0)));
+    }
+
+    // boost regen & management
+    if(boost.active){
+      boost.val -= 60 * dt; // drain faster
+      if(boost.val <= 0){ boost.val = 0; disableBoost(); }
+    } else {
+      // regen slowly when not active
+      if(boost.val < boost.max){
+        boost.val += 20 * dt;
+        if(boost.val > boost.max) boost.val = boost.max;
+      }
+    }
+
+    hudSpeed.innerText = Math.round(Math.abs(carSpeed*10))/10;
+    hudBoost.innerText = Math.round(boost.val);
   }
 
   renderer.render(scene, camera);
 }
 
-// joystick implementation (left stick): velocity.z (forward), steer is based on x
+// Input handling: joystick & boost
 const joy = document.getElementById('joy');
 const stick = document.getElementById('stick');
-let active=false, start={x:0,y:0}, maxR=50;
+let active=false, start={x:0,y:0}, maxR=48;
 stick.style.transform = 'translate(0px,0px)';
 
 function joyDown(ev){
@@ -186,7 +275,11 @@ function joyMove(ev){
   moveStick(p.clientX, p.clientY);
 }
 function joyUp(ev){
-  active=false; stick.style.transform='translate(0px,0px)'; velocity.set(0,0,0); steer = 0; document.getElementById('speed').innerText = '0';
+  active=false;
+  stick.style.transform='translate(0px,0px)';
+  // stop movement gradually
+  targetSpeed = 0;
+  steer = 0;
 }
 function moveStick(cx, cy){
   const dx = cx - start.x; const dy = cy - start.y;
@@ -194,43 +287,79 @@ function moveStick(cx, cy){
   const nx = Math.max(-1, Math.min(1, dx / maxR));
   const ny = Math.max(-1, Math.min(1, dy / maxR));
   stick.style.transform = `translate(${nx*maxR}px, ${ny*maxR}px)`;
-  // map to forward/backward and steer
-  // forward is negative y on screen (up), so use -ny
-  const f = -ny; // -1..1
-  const s = nx; // -1..1
-  // set desired velocity.z in units/sec
-  velocity.z = f * maxSpeed;
-  steer = -s * 1.5; // invert to intuitive steering
-  document.getElementById('speed').innerText = Math.abs(Math.round(f*100))/10;
+  // forward/backward: -ny (up is negative)
+  const forward = -ny;
+  // map forward to target speed (-1..1) * maxSpeed
+  targetSpeed = Math.max(-maxSpeed*0.6, Math.min(maxSpeed, forward * maxSpeed));
+  // steering based on nx (-1..1)
+  steer = nx * 0.95;
 }
 
+// pointer & touch events
 joy.addEventListener('pointerdown', joyDown, {passive:false});
 joy.addEventListener('pointermove', joyMove, {passive:false});
 window.addEventListener('pointerup', joyUp);
-// support touch events fallback
 joy.addEventListener('touchstart', joyDown, {passive:false});
 joy.addEventListener('touchmove', joyMove, {passive:false});
 window.addEventListener('touchend', joyUp);
 
-// HUD and controls
-const startBtn = document.getElementById('startBtn');
-startBtn.addEventListener('click', ()=>{ playing = true; reset(); startBtn.innerText = 'Reset'; });
+// Boost button
+const boostBtn = document.getElementById('boostBtn');
+boostBtn.addEventListener('click', ()=>{
+  if(!playing) return;
+  if(boost.val > 20 && !boost.active){
+    enableBoost();
+  }
+});
+boostBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); if(!playing) return; if(boost.val > 20 && !boost.active) enableBoost(); });
 
-// simple tilt to drive (optional) on mobile using deviceorientation
+// Boost helpers
+boost.active = false;
+function enableBoost(){
+  if(boost.val <= 0) return;
+  boost.active = true;
+  // temporarily increase speed
+  // set a timeout to turn off after 1.2s or when boost drained
+  setTimeout(()=>{ disableBoost(); }, 1200);
+}
+function disableBoost(){
+  boost.active = false;
+}
+
+// camera toggle
+document.getElementById('cameraBtn').addEventListener('click', ()=>{
+  cameraFollow = !cameraFollow;
+  document.getElementById('cameraBtn').innerText = cameraFollow? 'Kamera: Follow' : 'Kamera: Free';
+});
+
+// start/reset
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  playing = true;
+  resetState();
+  document.getElementById('startBtn').innerText = 'Reset';
+});
+
+// optional gyroscope steering (improves mobile control; non-invasive)
 if(window.DeviceOrientationEvent){
   window.addEventListener('deviceorientation', (e)=>{
-    // gamma (left-right tilt) -> steer, beta (front-back) -> throttle
+    // small deadzone, only if playing
     if(!playing) return;
-    const gamma = e.gamma || 0; const beta = e.beta || 0;
-    // small deadzone
-    const steerVal = Math.max(-1, Math.min(1, gamma/30));
-    const fVal = Math.max(-1, Math.min(1, (beta-45)/25));
-    steer = -steerVal * 1.4;
-    velocity.z = (fVal) * maxSpeed;
+    const gamma = e.gamma || 0; // left-right tilt
+    const beta = e.beta || 0;   // forward-back tilt
+    // map gamma to steer (-1..1)
+    const s = Math.max(-1, Math.min(1, gamma / 30));
+    steer = s * 0.9;
+    // map beta to throttle (approx)
+    const f = Math.max(-1, Math.min(1, (beta - 40) / 25));
+    targetSpeed = f * maxSpeed;
   });
 }
 
 // init
 init();
-</script></body>
+resetState();
+animate();
+
+</script>
+</body>
 </html>
