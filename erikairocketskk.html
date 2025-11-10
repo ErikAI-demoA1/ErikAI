@@ -137,9 +137,7 @@ html, body {
 #startBtn {
     position: fixed;
     top: 12px;
-    left: auto;
     right: 12px;
-    transform: none;
     padding: 10px 18px;
     border-radius: 10px;
     border: none;
@@ -153,10 +151,6 @@ html, body {
 }
 
 #startBtn:hover { background: #ff6b6b; }
-
-/* Goals: dve farby */
-.goal-left { background: #ffb86b; emissive: #220800; }
-.goal-right { background: #6bd1ff; emissive: #002222; }
 
 /* Canvas */
 canvas { display: block; }
@@ -182,14 +176,14 @@ canvas { display: block; }
     <div id="stick" class="stick"></div>
   </div>
 </div>
+
 <div id="controlsRight">
   <button id="boostBtn" class="btn">BOOST</button>
+  <button id="jumpBtn" class="btn">JUMP</button>
   <button id="cameraBtn" class="btn ghost">Kamera: Follow</button>
 </div>
 
-<!-- three.js -->
 <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
-
 <script>
 // --- Scene / Objects ---
 let scene, camera, renderer;
@@ -300,13 +294,16 @@ function init(){
   scene.add(new THREE.Mesh(wallGeoV, wallMat).position.set(-w,1,0));
   scene.add(new THREE.Mesh(wallGeoV, wallMat).position.set(w,1,0));
 
-  // Goals
+  // Goals with colors
   half = arena/2;
   const goalWidth = arena*goalWidthRatio;
-  const goalMat = new THREE.MeshStandardMaterial({color:0xffb86b, emissive:0x220800});
-  const gLeft = new THREE.Mesh(new THREE.BoxGeometry(goalWidth,1.6,goalDepth), goalMat);
+  // Left red goal
+  const goalLeftMat = new THREE.MeshStandardMaterial({color:0xff4b4b, emissive:0x220000});
+  const gLeft = new THREE.Mesh(new THREE.BoxGeometry(goalWidth,1.6,goalDepth), goalLeftMat);
   gLeft.position.set(0,0.8,-half+goalDepth/2+0.2); scene.add(gLeft);
-  const gRight = new THREE.Mesh(new THREE.BoxGeometry(goalWidth,1.6,goalDepth), goalMat);
+  // Right blue goal
+  const goalRightMat = new THREE.MeshStandardMaterial({color:0x4b9eff, emissive:0x002255});
+  const gRight = new THREE.Mesh(new THREE.BoxGeometry(goalWidth,1.6,goalDepth), goalRightMat);
   gRight.position.set(0,0.8,half-goalDepth/2-0.2); scene.add(gRight);
 
   initAI();
@@ -365,7 +362,6 @@ function animate(){
   const dt = Math.min(0.05, clock.getDelta());
 
   if(playing){
-    // Car physics
     if(targetSpeed>carSpeed){ carSpeed+=accel*dt; if(carSpeed>targetSpeed) carSpeed=targetSpeed; }
     else if(targetSpeed<carSpeed){ carSpeed-=brake*dt; if(carSpeed<targetSpeed) carSpeed=targetSpeed; }
 
@@ -390,18 +386,15 @@ function animate(){
       car.position.addScaledVector(n,-0.02*Math.min(carSpeed,3.2));
     }
 
-    // Ball-wall bounce
     const halfArena = arena/2-0.7;
     if(ball.position.x<-halfArena){ ball.position.x=-halfArena; ballVel.x*=-0.72; }
     if(ball.position.x>halfArena){ ball.position.x=halfArena; ballVel.x*=-0.72; }
     if(ball.position.z<-halfArena){ ball.position.z=-halfArena; ballVel.z*=-0.72; }
     if(ball.position.z>halfArena){ ball.position.z=halfArena; ballVel.z*=-0.72; }
 
-    // Car clamp
     car.position.x = Math.max(-halfArena, Math.min(halfArena, car.position.x));
     car.position.z = Math.max(-halfArena, Math.min(halfArena, car.position.z));
 
-    // Camera
     if(cameraFollow){
       const camOffset = new THREE.Vector3(0,6.2,13.2).applyAxisAngle(new THREE.Vector3(0,1,0),car.rotation.y);
       const camTarget = new THREE.Vector3().copy(car.position).add(camOffset);
@@ -413,8 +406,8 @@ function animate(){
     if(boost.active){ boost.val-=boostDrainRate*dt; if(boost.val<=0){ boost.val=0; boost.active=false; } }
     else{ boost.val = Math.min(boost.max, boost.val+boostRechargeRate*dt); }
 
-    updateJump(dt);   // --- jump update
-    updateAI(dt);     // --- AI update
+    updateJump(dt);   // jump update
+    updateAI(dt);     // AI update
     updateHUD();
     checkGoal();
   }
@@ -425,12 +418,30 @@ function animate(){
 // --- Joystick Input ---
 const joy = document.getElementById('joy'); const stick = document.getElementById('stick');
 let active=false, start={x:0,y:0}, maxR=48;
-function joyDown(ev){ ev.preventDefault(); active=true; const p=ev.touches?ev.touches[0]:ev; const rect=joy.getBoundingClientRect(); start.x=rect.left+rect.width/2; start.y=rect.top+rect.height/2; moveStick(p.clientX,p.clientY); }
+function joyDown(ev){ 
+  ev.preventDefault(); 
+  active=true; 
+  const p=ev.touches?ev.touches[0]:ev; 
+  const rect=joy.getBoundingClientRect(); 
+  start.x=rect.left+rect.width/2; 
+  start.y=rect.top+rect.height/2; 
+  moveStick(p.clientX,p.clientY); 
+}
 function joyMove(ev){ if(!active) return; ev.preventDefault(); const p=ev.touches?ev.touches[0]:ev; moveStick(p.clientX,p.clientY);}
 function joyUp(ev){ active=false; stick.style.transform='translate(0,0)'; targetSpeed=0; steer=0; }
-function moveStick(cx,cy){ const dx=cx-start.x, dy=cy-start.y; const nx=Math.max(-1,Math.min(1,dx/maxR)), ny=Math.max(-1,Math.min(1,dy/maxR)); stick.style.transform=`translate(${nx*maxR}px,${ny*maxR}px)`; targetSpeed=Math.max(-maxSpeed*0.5, Math.min(maxSpeed,-ny*maxSpeed)); steer=nx*0.98; }
-joy.addEventListener('pointerdown',joyDown,{passive:false}); joy.addEventListener('pointermove',joyMove,{passive:false}); window.addEventListener('pointerup',joyUp);
-joy.addEventListener('touchstart',joyDown,{passive:false}); joy.addEventListener('touchmove',joyMove,{passive:false}); window.addEventListener('touchend',joyUp);
+function moveStick(cx,cy){ 
+  const dx=cx-start.x, dy=cy-start.y; 
+  const nx=Math.max(-1, Math.min(1,dx/maxR)), ny=Math.max(-1, Math.min(1,dy/maxR)); 
+  stick.style.transform=`translate(${nx*maxR}px,${ny*maxR}px)`; 
+  targetSpeed=Math.max(-maxSpeed*0.5, Math.min(maxSpeed,-ny*maxSpeed)); 
+  steer=nx*0.98; 
+}
+joy.addEventListener('pointerdown',joyDown,{passive:false}); 
+joy.addEventListener('pointermove',joyMove,{passive:false}); 
+window.addEventListener('pointerup',joyUp);
+joy.addEventListener('touchstart',joyDown,{passive:false}); 
+joy.addEventListener('touchmove',joyMove,{passive:false}); 
+window.addEventListener('touchend',joyUp);
 
 // --- Boost Button ---
 const boostBtn = document.getElementById('boostBtn');
@@ -438,11 +449,19 @@ boostBtn.addEventListener('click',()=>{ if(!playing) return; if(boost.val>18&&!b
 boostBtn.addEventListener('touchstart',(e)=>{ e.preventDefault(); if(!playing) return; if(boost.val>18&&!boost.active) enableBoost(); });
 function enableBoost(){ if(boost.val<=0) return; boost.active=true; setTimeout(()=>{boost.active=false;}, boostDuration); }
 
+// --- Jump Button ---
+const jumpBtn = document.getElementById('jumpBtn');
+jumpBtn.addEventListener('click',()=>{ jumpPlayer(); });
+jumpBtn.addEventListener('touchstart',(e)=>{ e.preventDefault(); jumpPlayer(); });
+
 // --- Camera Toggle ---
 let cameraFollow=true;
-document.getElementById('cameraBtn').addEventListener('click',()=>{ cameraFollow=!cameraFollow; document.getElementById('cameraBtn').innerText=cameraFollow?'Kamera: Follow':'Kamera: Free'; });
+document.getElementById('cameraBtn').addEventListener('click',()=>{ 
+    cameraFollow=!cameraFollow; 
+    document.getElementById('cameraBtn').innerText=cameraFollow?'Kamera: Follow':'Kamera: Free'; 
+});
 
-// --- Jump Button (Space for desktop) ---
+// --- Jump Key ---
 window.addEventListener('keydown', (e)=>{ if(e.code==='Space'){ jumpPlayer(); } });
 
 // --- Start / Reset ---
@@ -452,7 +471,7 @@ document.getElementById('startBtn').addEventListener('click', () => {
     document.getElementById('startBtn').innerText = 'Reset';
 });
 
-// --- Optional: Device Tilt Steering ---
+// --- Device Tilt Steering ---
 if (window.DeviceOrientationEvent) {
     window.addEventListener('deviceorientation', (e) => {
         if (!playing) return;
