@@ -416,33 +416,61 @@ function animate(){
 }
 
 // --- Joystick Input ---
-const joy = document.getElementById('joy'); const stick = document.getElementById('stick');
-let active=false, start={x:0,y:0}, maxR=48;
-function joyDown(ev){ 
-  ev.preventDefault(); 
-  active=true; 
-  const p=ev.touches?ev.touches[0]:ev; 
-  const rect=joy.getBoundingClientRect(); 
-  start.x=rect.left+rect.width/2; 
-  start.y=rect.top+rect.height/2; 
-  moveStick(p.clientX,p.clientY); 
-}
-function joyMove(ev){ if(!active) return; ev.preventDefault(); const p=ev.touches?ev.touches[0]:ev; moveStick(p.clientX,p.clientY);}
-function joyUp(ev){ active=false; stick.style.transform='translate(0,0)'; targetSpeed=0; steer=0; }
-function moveStick(cx,cy){ 
-  const dx=cx-start.x, dy=cy-start.y; 
-  const nx=Math.max(-1, Math.min(1,dx/maxR)), ny=Math.max(-1, Math.min(1,dy/maxR)); 
-  stick.style.transform=`translate(${nx*maxR}px,${ny*maxR}px)`; 
-  targetSpeed=Math.max(-maxSpeed*0.5, Math.min(maxSpeed,-ny*maxSpeed)); 
-  steer=nx*0.98; 
-}
-joy.addEventListener('pointerdown',joyDown,{passive:false}); 
-joy.addEventListener('pointermove',joyMove,{passive:false}); 
-window.addEventListener('pointerup',joyUp);
-joy.addEventListener('touchstart',joyDown,{passive:false}); 
-joy.addEventListener('touchmove',joyMove,{passive:false}); 
-window.addEventListener('touchend',joyUp);
+const joy = document.getElementById('joy');
+const stick = document.getElementById('stick');
+let active = false;
+let start = {x: 0, y: 0};
+const maxR = 48; // polomer joysticku
 
+function joyDown(ev) {
+    ev.preventDefault();
+    active = true;
+    const p = ev.touches ? ev.touches[0] : ev;
+    const rect = joy.getBoundingClientRect();
+    start.x = rect.left + rect.width / 2;
+    start.y = rect.top + rect.height / 2;
+    moveStick(p.clientX, p.clientY);
+}
+
+function joyMove(ev) {
+    if (!active) return;
+    ev.preventDefault();
+    const p = ev.touches ? ev.touches[0] : ev;
+    moveStick(p.clientX, p.clientY);
+}
+
+function joyUp(ev) {
+    active = false;
+    stick.style.transform = 'translate(0,0)';
+    targetSpeed = 0;
+    steer = 0;
+}
+
+function moveStick(cx, cy) {
+    const dx = cx - start.x;
+    const dy = cy - start.y;
+
+    // obmedz stick v kruhu
+    const distance = Math.min(Math.sqrt(dx*dx + dy*dy), maxR);
+    const angle = Math.atan2(dy, dx);
+    const xPos = distance * Math.cos(angle);
+    const yPos = distance * Math.sin(angle);
+
+    stick.style.transform = `translate(${xPos}px, ${yPos}px)`;
+
+    // mapovanie na auto: Y = dopredu/dozadu, X = doľava/doprava
+    targetSpeed = - (yPos / maxR) * maxSpeed;  // dopredu = +Y na auto
+    steer = xPos / maxR;                        // doľava = -1, doprava = +1
+}
+
+// eventy
+joy.addEventListener('pointerdown', joyDown, {passive:false});
+joy.addEventListener('pointermove', joyMove, {passive:false});
+window.addEventListener('pointerup', joyUp);
+
+joy.addEventListener('touchstart', joyDown, {passive:false});
+joy.addEventListener('touchmove', joyMove, {passive:false});
+window.addEventListener('touchend', joyUp);
 // --- Boost Button ---
 const boostBtn = document.getElementById('boostBtn');
 boostBtn.addEventListener('click',()=>{ if(!playing) return; if(boost.val>18&&!boost.active) enableBoost(); });
