@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ErikAI Game Engine — Real Scene Mode</title>
+<title>ErikAI Game Engine — Real Scene Mode (Full)</title>
 <style>
   :root{
     --bg:#0f1221; --card:#111420; --accent:#ff4b4b; --muted:#98a0b3; --panel:#0b0e16;
@@ -38,7 +38,6 @@
   .subtitle{color:var(--muted); font-size:13px}
   .status{font-size:16px; color:#fff; margin-top:6px}
   .effect-flash{position:absolute; inset:0; background:var(--accent); mix-blend-mode:screen; opacity:0; pointer-events:none}
-  /* responsive */
   @media (max-width:980px){ .wrap{grid-template-columns:1fr; padding:12px} .stage-inner{width:92vw} .cell{width:48px;height:48px;font-size:20px} }
 </style>
 </head>
@@ -131,7 +130,7 @@
 </audio>
 
 <script>
-/* CORE ENGINE LOGIC */
+/* FULL CORE ENGINE LOGIC (všetko definované) */
 const previewWrap = document.getElementById('previewWrap');
 const btnGenerate = document.getElementById('btnGenerate');
 const btnPlay = document.getElementById('btnPlay');
@@ -188,9 +187,11 @@ function buildPreview(){
   statusLine.innerText = `Náhľad pripravený — ${state.size}×${state.size}, ${state.players} hráčov, výhra: ${state.winLen}`;
 }
 
+/* helper defaults */
 function defaultSymbols(n){ return ['X','O','△','□','☆','♢','⚡','♥'].slice(0,n); }
 function defaultNames(n){ return ['Alice','Bob','Caro','Dan','Eve','Fay','Gus','Hal'].slice(0,n); }
 
+/* UI hooks */
 btnGenerate.addEventListener('click', buildPreview);
 btnPlay.addEventListener('click', startGameScene);
 btnReset.addEventListener('click', ()=>{ state.running ? resetGame() : buildPreview(); });
@@ -198,9 +199,213 @@ btnPause.addEventListener('click', togglePause);
 btnFull.addEventListener('click', toggleFullscreen);
 btnExport.addEventListener('click', exportGameHTML);
 
-document.addEventListener('DOMContentLoaded', buildPreview); // <-- TU sa inicializuje default preview
+// init preview on load
+document.addEventListener('DOMContentLoaded', buildPreview);
 
-// ... (zvyšok funkcií startGameScene, renderBoard, onCellClick, updateHUD, checkWinFor, export atď. ostáva nezmenené)
+/* Game lifecycle */
+function initState(){
+  state.grid = Array(state.size*state.size).fill('');
+  state.current = 0;
+  state.scores = {};
+  for(let i=0;i<state.players;i++) state.scores[state.symbols[i]] = 0;
+  state.running = false; state.paused=false;
+}
+
+function startGameScene(){
+  const conf = readControls();
+  state.size = conf.size; state.players = conf.players; state.winLen = conf.winLen;
+  state.symbols = conf.symbols.length ? conf.symbols.slice(0,conf.players) : defaultSymbols(conf.players);
+  state.names = conf.names.length ? conf.names.slice(0,conf.players) : defaultNames(conf.players);
+  state.color = conf.color;
+  initState();
+  state.running = true;
+  renderBoard();
+  updateHUD();
+  statusLine.innerText = `Hra spustená — ${state.players} hráčov.`;
+  btnExport.classList.remove('ghost');
+}
+
+function renderBoard(){
+  boardContainer.innerHTML = '';
+  const gridWrap = document.createElement('div');
+  gridWrap.style.display='grid';
+  gridWrap.style.gridTemplateColumns = `repeat(${state.size}, 1fr)`;
+  gridWrap.style.gap='8px';
+  const cellSize = Math.max(44, Math.min(86, Math.floor((Math.min(window.innerWidth,960)-80) / state.size)));
+  for(let i=0;i<state.size*state.size;i++){
+    const el = document.createElement('div');
+    el.className='cell';
+    el.style.width = cellSize+'px';
+    el.style.height = cellSize+'px';
+    el.style.background = state.color;
+    el.dataset.idx = i;
+    el.innerText = state.grid[i] || '';
+    el.style.fontSize = Math.max(14, Math.floor(cellSize*0.45)) + 'px';
+    el.addEventListener('click', onCellClick);
+    gridWrap.appendChild(el);
+  }
+  boardContainer.appendChild(gridWrap);
+}
+
+function onCellClick(e){
+  if(!state.running || state.paused) return;
+  const idx = parseInt(e.currentTarget.dataset.idx,10);
+  if(state.grid[idx]) return;
+  const symbol = state.symbols[state.current];
+  state.grid[idx] = symbol;
+  playPlaceEffect(e.currentTarget);
+  sndPlace.play().catch(()=>{});
+  renderBoard();
+  if(checkWinFor(symbol)){
+    state.scores[symbol] = (state.scores[symbol]||0)+1;
+    announceWin(symbol);
+    sndWin.play().catch(()=>{});
+    return;
+  }
+  state.current = (state.current + 1) % state.players;
+  updateHUD();
+}
+
+function updateHUD(){
+  turnBadge.innerText = `Na rade: ${state.names[state.current] || state.symbols[state.current]} (${state.symbols[state.current]})`;
+  document.getElementById('gameTitle').innerText = `Hra • ${state.size}×${state.size}`;
+  const scoreText = Object.keys(state.scores).map(s => `${s}: ${state.scores[s]}`).join(' • ');
+  statusLine.innerText = scoreText ? `Skóre — ${scoreText}` : `Hrajte — ${state.players} hráčov`;
+}
+
+function playPlaceEffect(cellEl){
+  cellEl.animate([{transform:'scale(0.92)'},{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:260, easing:'ease-out'});
+  flash.style.opacity = '0.08';
+  flash.animate([{opacity:0.08},{opacity:0}],{duration:280}).onfinish = ()=> flash.style.opacity='0';
+}
+
+function announceWin(symbol){
+  const winnerName = state.names[state.symbols.indexOf(symbol)] || symbol;
+  statusLine.innerText = `🎉 ${winnerName} (${symbol}) vyhral!`;
+  turnBadge.innerText = `Vyhral: ${winnerName}`;
+  state.running = false;
+  // small celebration
+  const confetti = document.createElement('div');
+  confetti.textContent = '✨';
+  confetti.style.position='absolute'; confetti.style.left='50%'; confetti.style.top='20%';
+  confetti.style.fontSize='40px'; confetti.style.transform='translateX(-50%)'; confetti.style.opacity='0';
+  document.body.appendChild(confetti);
+  confetti.animate([{opacity:0, transform:'translateY(-20px) scale(.6)'},{opacity:1, transform:'translateY(0) scale(1)'}],{duration:600}).onfinish = ()=> setTimeout(()=>confetti.remove(),900);
+}
+
+/* Win checking: rows, cols, diagonals */
+function checkWinFor(symbol){
+  const n = state.size, L = state.winLen;
+  const g = state.grid;
+  // rows
+  for(let r=0;r<n;r++){
+    for(let c=0;c<=n-L;c++){
+      let ok=true;
+      for(let k=0;k<L;k++) if(g[r*n + c+k] !== symbol) { ok=false; break; }
+      if(ok) return true;
+    }
+  }
+  // cols
+  for(let c=0;c<n;c++){
+    for(let r=0;r<=n-L;r++){
+      let ok=true;
+      for(let k=0;k<L;k++) if(g[(r+k)*n + c] !== symbol) { ok=false; break; }
+      if(ok) return true;
+    }
+  }
+  // diag down-right
+  for(let r=0;r<=n-L;r++){
+    for(let c=0;c<=n-L;c++){
+      let ok=true;
+      for(let k=0;k<L;k++) if(g[(r+k)*n + (c+k)] !== symbol) { ok=false; break; }
+      if(ok) return true;
+    }
+  }
+  // diag down-left
+  for(let r=0;r<=n-L;r++){
+    for(let c=L-1;c<n;c++){
+      let ok=true;
+      for(let k=0;k<L;k++) if(g[(r+k)*n + (c-k)] !== symbol) { ok=false; break; }
+      if(ok) return true;
+    }
+  }
+  return false;
+}
+
+/* Pause / Reset / Fullscreen */
+function togglePause(){
+  if(!state.running) return;
+  state.paused = !state.paused;
+  btnPause.innerText = state.paused ? 'Pokračovať' : 'Pauza';
+  statusLine.innerText = state.paused ? 'Hra pozastavená' : 'Pokračuj v hre';
+}
+
+function resetGame(){
+  initState();
+  renderBoard();
+  updateHUD();
+  statusLine.innerText = 'Hra resetnutá';
+}
+
+function toggleFullscreen(){
+  const el = document.documentElement;
+  if(!document.fullscreenElement) el.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen().catch(()=>{});
+}
+
+/* EXPORT: generuje .html súbor a stiahne ho */
+function exportGameHTML(){
+  const config = {
+    size: state.size, players: state.players, winLen: state.winLen,
+    symbols: state.symbols, names: state.names, color: state.color
+  };
+  const exported = generateExportHTML(config);
+  const blob = new Blob([exported], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `erikai_game_${Date.now()}.html`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* builds exported HTML (standalone) */
+function generateExportHTML(cfg){
+  const esc = (s)=> String(s).replace(/<\/script>/g, '<\\/script>').replace(/`/g,'\\`');
+  return `<!doctype html>
+<html lang="sk"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ErikAI Game — exported</title>
+<style>
+  body{font-family:Inter,system-ui,Arial;background:#070814;color:#fff;margin:0;display:flex;align-items:center;justify-content:center;height:100vh}
+  #grid{display:grid;grid-template-columns:repeat(${cfg.size},64px);gap:8px}
+  .cell{width:64px;height:64px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:${cfg.color};cursor:pointer;font-size:24px}
+  .hud{position:fixed;top:12px;left:12px;color:#aaa}
+</style>
+</head><body>
+<div class="hud">Exported ErikAI • ${cfg.size}×${cfg.size} • players:${cfg.players}</div>
+<div id="grid"></div>
+<script>
+  const size=${cfg.size}, players=${cfg.players}, winLen=${cfg.winLen};
+  const symbols=${JSON.stringify(cfg.symbols)};
+  const names=${JSON.stringify(cfg.names)};
+  let grid=Array(size*size).fill(''), cur=0;
+  const container=document.getElementById('grid');
+  for(let i=0;i<size*size;i++){
+    const d=document.createElement('div'); d.className='cell'; d.dataset.i=i;
+    d.addEventListener('click',()=>{ if(grid[i]) return; grid[i]=symbols[cur]; d.innerText=symbols[cur]; cur=(cur+1)%players; checkWin(symbols[(cur+players-1)%players]); });
+    container.appendChild(d);
+  }
+  function checkWin(sym){
+    const n=size,L=winLen,g=grid;
+    for(let r=0;r<n;r++){ for(let c=0;c<=n-L;c++){ let ok=true; for(let k=0;k<L;k++) if(g[r*n + c+k] !== sym) { ok=false; break; } if(ok) return alert('Vyhral '+sym); } }
+    for(let c=0;c<n;c++){ for(let r=0;r<=n-L;r++){ let ok=true; for(let k=0;k<L;k++) if(g[(r+k)*n + c] !== sym) { ok=false; break; } if(ok) return alert('Vyhral '+sym); } }
+    for(let r=0;r<=n-L;r++){ for(let c=0;c<=n-L;c++){ let ok=true; for(let k=0;k<L;k++) if(g[(r+k)*n + (c+k)] !== sym) { ok=false; break; } if(ok) return alert('Vyhral '+sym); } }
+    for(let r=0;r<=n-L;r++){ for(let c=L-1;c<n;c++){ let ok=true; for(let k=0;k<L;k++) if(g[(r+k)*n + (c-k)] !== sym) { ok=false; break; } if(ok) return alert('Vyhral '+sym); } }
+  }
+</script>
+</body></html>`;
+}
 </script>
 </body>
 </html>
