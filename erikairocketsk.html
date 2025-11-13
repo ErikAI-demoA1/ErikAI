@@ -255,33 +255,52 @@ function initAI(){
 
 function updateAI(dt){
   if(!playing) return;
-  const dirToBall = new THREE.Vector3().subVectors(ball.position, aiCar.position);
+
+  // --- Predikcia lopty ---
+  const futureBall = ball.position.clone().add(ballVel.clone().multiplyScalar(0.5)); // predpovedá pohyb lopty
+
+  // --- Vektor od auta k lopte ---
+  const dirToBall = new THREE.Vector3().subVectors(futureBall, aiCar.position);
   const dist = dirToBall.length();
-  const desiredSpeed = Math.min(maxSpeed, dist*2);
-  const forward = new THREE.Vector3(Math.sin(aiCar.rotation.y),0,Math.cos(aiCar.rotation.y));
 
-  const targetAngle = Math.atan2(dirToBall.x, dirToBall.z);
-  let angleDiff = targetAngle - aiCar.rotation.y;
-  angleDiff = ((angleDiff+Math.PI) % (Math.PI*2)) - Math.PI;
-  aiCar.rotation.y += Math.max(-1, Math.min(1, angleDiff*2))*dt;
+  // --- Dynamická rýchlosť ---
+  let desiredSpeed = maxSpeed * 0.6 + Math.min(maxSpeed*0.4, dist*2); // základ + prispôsobenie podľa vzdialenosti
 
-  aiCar.position.addScaledVector(forward, desiredSpeed*dt);
-
-  const carToBall = new THREE.Vector3().subVectors(ball.position,aiCar.position);
-  const rCar=1.42, rBall=0.95, minDist=rCar+rBall;
-  if(carToBall.length()<minDist){
-    const n = carToBall.clone().normalize();
-    ball.position.addScaledVector(n,(minDist-carToBall.length())+0.01);
-    const impulse = n.clone().multiplyScalar(Math.max(1,desiredSpeed)+1.2);
-    impulse.y = Math.min(2.6,0.9+Math.abs(desiredSpeed)*0.18);
-    ballVel.add(impulse);
-    aiCar.position.addScaledVector(n,-0.02*Math.min(desiredSpeed,3.2));
+  // --- Obranné správanie ---
+  const halfArena = arena/2-0.7;
+  if(futureBall.z < 0){ // lopta je blízko AI brány
+    const defenseOffset = new THREE.Vector3(0,0,halfArena-6);
+    dirToBall.add(defenseOffset.sub(aiCar.position).multiplyScalar(0.6));
+    desiredSpeed = maxSpeed*0.9; // rýchlejší návrat na obranu
   }
 
-  const halfArena = arena/2-0.7;
+  // --- Otáčanie auta smerom k lopte ---
+  const targetAngle = Math.atan2(dirToBall.x, dirToBall.z);
+  let angleDiff = targetAngle - aiCar.rotation.y;
+  angleDiff = ((angleDiff + Math.PI) % (2*Math.PI)) - Math.PI;
+  const turnSpeed = Math.min(3, Math.max(1.5, dist*0.5)); // adaptívna rýchlosť otáčania
+  aiCar.rotation.y += angleDiff * turnSpeed * dt;
+
+  // --- Pohyb dopredu ---
+  const forward = new THREE.Vector3(Math.sin(aiCar.rotation.y),0,Math.cos(aiCar.rotation.y));
+  aiCar.position.addScaledVector(forward, desiredSpeed*dt);
+
+  // --- Kolízia s loptou ---
+  const rCar=1.42, rBall=0.95, minDist=rCar+rBall;
+  const carToBall = new THREE.Vector3().subVectors(ball.position, aiCar.position);
+  if(carToBall.length() < minDist){
+    const n = carToBall.clone().normalize();
+    ball.position.addScaledVector(n, (minDist-carToBall.length())+0.01);
+    const impulse = n.clone().multiplyScalar(Math.max(1, desiredSpeed)+1.5);
+    impulse.y = Math.min(3, 0.9 + Math.abs(desiredSpeed)*0.25); // vyšší odraz lopty
+    ballVel.add(impulse);
+    aiCar.position.addScaledVector(n, -0.03*Math.min(desiredSpeed,4));
+  }
+
+  // --- Ochrana pred opustením arény ---
   aiCar.position.x = Math.max(-halfArena, Math.min(halfArena, aiCar.position.x));
   aiCar.position.z = Math.max(-halfArena, Math.min(halfArena, aiCar.position.z));
-}
+    }
 
 // --- Init Scene ---
 function init(){
