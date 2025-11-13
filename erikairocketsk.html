@@ -247,38 +247,50 @@ function updateJump(dt){
 
 // --- AI ---
 function initAI(){
-  // --- Profesionálny materiál ---
-  const aiMat = new THREE.MeshStandardMaterial({
-    color: 0x1e90ff,      // luxusná modrá farba
-    roughness: 0.2,       // hladký lesklý povrch
-    metalness: 0.7,       // viac metalický pre reálny efekt
-    emissive: 0x001a33,   // jemný odlesk svetla
+  aiCar = new THREE.Group(); // skupina pre celé auto
+
+  // --- Karoséria auta ---
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: 0x1e90ff,       // luxusná modrá
+    roughness: 0.2,        // hladký lesklý povrch
+    metalness: 0.7,        // kovový efekt
+    emissive: 0x001a33,
     emissiveIntensity: 0.2
   });
+  const bodyGeo = new THREE.BoxGeometry(1.9, 0.6, 2.6);
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 0.5;
+  aiCar.add(body);
 
-  // --- Geometria auta: zaoblený box (viac realistický tvar) ---
-  const carBodyGeo = new THREE.BoxGeometry(1.9, 0.6, 2.6);
-  const carBody = new THREE.Mesh(carBodyGeo, aiMat);
+  // --- Kolesá ---
+  const wheelMat = new THREE.MeshStandardMaterial({color:0x222222, roughness:0.5, metalness:0.3});
+  const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.2, 24);
+  const wheelPositions = [
+    [-0.9, 0.15, 1.1], [0.9, 0.15, 1.1],   // predné
+    [-0.9, 0.15, -1.1], [0.9, 0.15, -1.1]  // zadné
+  ];
+  wheelPositions.forEach(pos=>{
+    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+    wheel.rotation.z = Math.PI / 2; // otočenie do správnej osi
+    wheel.position.set(...pos);
+    aiCar.add(wheel);
+  });
 
-  // --- Pridanie detailov (napr. svetlá) ---
-  const headlightMat = new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1});
-  const leftHeadlight = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.05), headlightMat);
-  const rightHeadlight = leftHeadlight.clone();
-
-  leftHeadlight.position.set(-0.6, 0.3, 1.3);
-  rightHeadlight.position.set(0.6, 0.3, 1.3);
-
-  carBody.add(leftHeadlight);
-  carBody.add(rightHeadlight);
+  // --- Svetlá ---
+  const lightMat = new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1});
+  const headLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.1,0.05), lightMat);
+  const headRight = headLeft.clone();
+  headLeft.position.set(-0.6, 0.35, 1.3);
+  headRight.position.set(0.6, 0.35, 1.3);
+  aiCar.add(headLeft, headRight);
 
   // --- Poloha auta ---
-  carBody.position.set(0, 0.5, 10);
+  aiCar.position.set(0, 0, 10);
 
   // --- Pridanie do scény ---
-  aiCar = carBody;
   scene.add(aiCar);
     }
-
+    
 function updateAI(dt){
   if(!playing) return;
 
