@@ -1,510 +1,484 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>RocketBall — Goals, AI & Jump (ErikAI)</title>
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>RocketBall — Full (ErikAI)</title>
 <style>
-html, body {
-    margin: 0;
-    height: 100%;
-    font-family: 'Inter', Arial, Helvetica, sans-serif;
-    background: #061426;
-    color: #fff;
-    overflow: hidden;
-}
-
-/* HUD / skóre */
-#hud {
-    position: fixed;
-    left: 12px;
-    top: 12px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    font-size: 14px;
-    background: rgba(0,0,0,0.35);
-    backdrop-filter: blur(6px);
-    z-index: 40;
-    box-shadow: 0 0 12px rgba(0,0,0,0.3);
-}
-
-/* Mini info */
-#mini {
-    position: fixed;
-    right: 12px;
-    top: 12px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    background: rgba(0,0,0,0.18);
-    backdrop-filter: blur(4px);
-    z-index: 40;
-}
-
-/* Note / tip */
-.note {
-    position: fixed;
-    left: 12px;
-    top: 60px;
-    color: #9fb2d1;
-    font-size: 13px;
-    z-index: 40;
-}
-
-/* Goal Banner */
-.goal-banner {
-    position: fixed;
-    left: 50%;
-    top: 40%;
-    transform: translate(-50%, -50%);
-    background: rgba(255,120,60,0.92);
-    padding: 22px 28px;
-    border-radius: 12px;
-    font-size: 36px;
-    font-weight: 700;
-    color: #fff;
-    z-index: 60;
-    display: none;
-    text-align: center;
-    box-shadow: 0 0 20px rgba(255,120,60,0.6);
-}
-
-/* Joystick */
-#ui {
-    position: fixed;
-    left: 12px;
-    bottom: 12px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    pointer-events: none;
-    z-index: 40;
-}
-
-.joystick {
-    width: 130px; height: 130px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.03);
-    backdrop-filter: blur(2px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    touch-action: none;
-    pointer-events: auto;
-    box-shadow: 0 0 8px rgba(0,0,0,0.3);
-}
-
-.stick {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.12);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transform: translate(0,0);
-}
-
-/* Right-side buttons */
-#controlsRight {
-    position: fixed;
-    right: 12px;
-    bottom: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    pointer-events: none;
-    z-index: 40;
-}
-
-.btn {
-    padding: 10px 16px;
-    border-radius: 10px;
-    border: none;
-    background: #1db954;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    pointer-events: auto;
-    transition: all 0.2s ease;
-    box-shadow: 0 0 10px rgba(0,0,0,0.3);
-}
-
-.btn:hover { background: #1ed760; }
-.btn.ghost { background: rgba(255,255,255,0.06); }
-
-/* Reset / Start Button */
-#startBtn {
-    position: fixed;
-    top: 12px;
-    right: 12px;
-    padding: 10px 18px;
-    border-radius: 10px;
-    border: none;
-    background: #ff4b4b;
-    color: #fff;
-    z-index: 50;
-    cursor: pointer;
-    font-weight: 700;
-    box-shadow: 0 0 12px rgba(255,75,75,0.6);
-    transition: all 0.2s ease;
-}
-
-#startBtn:hover { background: #ff6b6b; }
-
-/* Canvas */
-canvas { display: block; }
-
-@media (min-width: 900px) {
-    .joystick { width: 110px; height: 110px; }
-    .stick { width: 48px; height: 48px; }
-}
+  /* --- UI styling (profesionálny, čistý) --- */
+  html,body{height:100%;margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:#061426;color:#fff;overflow:hidden}
+  #hud,#mini,.note{position:fixed;padding:10px 14px;border-radius:10px;backdrop-filter:blur(6px);z-index:60}
+  #hud{left:12px;top:12px;background:rgba(0,0,0,0.36);box-shadow:0 8px 30px rgba(0,0,0,.45);font-weight:700}
+  #mini{right:12px;top:12px;background:rgba(0,0,0,0.16)}
+  .note{left:12px;top:64px;color:#9fb2d1;font-size:13px;z-index:50}
+  .goal-banner{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);background:linear-gradient(180deg,#ff7b3a,#ff4b4b);padding:22px 28px;border-radius:12px;font-size:34px;font-weight:800;color:#fff;z-index:100;display:none;box-shadow:0 12px 40px rgba(255,90,60,.18)}
+  #ui{position:fixed;left:12px;bottom:12px;display:flex;gap:10px;align-items:center;pointer-events:none;z-index:70}
+  .joystick{width:130px;height:130px;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));display:flex;align-items:center;justify-content:center;touch-action:none;pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,.55)}
+  .stick{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;transform:translate(0,0)}
+  #controlsRight{position:fixed;right:12px;bottom:12px;display:flex;flex-direction:column;gap:10px;pointer-events:none;z-index:70}
+  .btn{padding:10px 16px;border-radius:10px;border:0;background:#1db954;color:#fff;font-weight:800;cursor:pointer;pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .btn.ghost{background:rgba(255,255,255,0.06);color:#dbeefe}
+  #startBtn{position:fixed;right:12px;top:12px;padding:10px 16px;border-radius:10px;border:0;background:#ff4b4b;color:#fff;z-index:90;cursor:pointer;font-weight:800;box-shadow:0 12px 40px rgba(255,75,75,.18)}
+  #jumpBtn{background:#f7a400}
+  #boostBtn.active{background:#ffd35b;color:#222}
+  .hint{font-size:12px;color:#b6c9dd;opacity:.95;padding-top:6px}
+  canvas{display:block}
+  @media(min-width:900px){ .joystick{width:110px;height:110px}.stick{width:48px;height:48px} }
 </style>
 </head>
 <body>
-
-<!-- HUD -->
 <button id="startBtn">Spusti / Reset</button>
-<div id="hud">goly — Red: <span id="scoreA">0</span> • Blue: <span id="scoreB">0</span> • speed: <span id="speed">0</span></div>
-<div id="mini">Aréna: <span id="arenaSize">200</span>m</div>
-<div class="note">RocketBall — teraz s bránami, skóre, boost, drift, AI & jump</div>
+<div id="hud">Skóre — Red: <span id="scoreA">0</span> • Blue: <span id="scoreB">0</span> • Rýchlosť: <span id="speed">0</span></div>
+<div id="mini">Aréna: <span id="arenaSize">200</span> m</div>
+<div class="note">RocketBall — manuálne ovládanie, double-jump, aerial boost, AI, pevné kolízie</div>
 <div class="goal-banner" id="goalBanner">GOAL!</div>
 
-<!-- UI -->
-<div id="ui">
-  <div id="joy" class="joystick" aria-label="Joystick">
-    <div id="stick" class="stick"></div>
-  </div>
-</div>
+<div id="ui"><div id="joy" class="joystick" aria-label="Joystick"><div id="stick" class="stick"></div></div></div>
 
 <div id="controlsRight">
-  <button id="boostBtn" class="btn">BOOST</button>
-  <button id="jumpBtn" class="btn">JUMP</button>
+  <div style="display:flex;gap:8px">
+    <button id="boostBtn" class="btn">BOOST</button>
+    <button id="jumpBtn" class="btn" title="Space">SKOK</button>
+  </div>
   <button id="cameraBtn" class="btn ghost">Kamera: Follow</button>
+  <div class="hint">Joystick / WASD / šípky + Space (skákanie), Shift/Q = boost</div>
 </div>
 
+<!-- three.js -->
 <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
+
 <script>
-// --- Scene / Objects ---
-let scene, camera, renderer;
-let car, ball, ground, aiCar;
-let clock, playing=false;
-let carSpeed=0, targetSpeed=0, steer=0;
-let ballVel = new THREE.Vector3();
-let arena = 200;
-const hudSpeed = document.getElementById('speed');
-const scoreAEl = document.getElementById('scoreA');
-const scoreBEl = document.getElementById('scoreB');
-const goalBanner = document.getElementById('goalBanner');
-document.getElementById('arenaSize').innerText = arena;
+/* Complete RocketBall single-file build
+   - Joystick: circular mapping (up=forward, left=left, etc)
+   - Double-jump (MAX_JUMPS = 2)
+   - Boost with drain / recharge
+   - AI opponent with collisions
+   - Colored goals (left red, right blue)
+   - Walls set to light green (#98FF98)
+*/
+
+// ---------- CONFIG ----------
+const ARENA = 200;
+document.getElementById('arenaSize').innerText = ARENA;
+const DT_MAX = 0.05;
+
+// Car tuning
+const CAR = {
+  length: 2.6, width: 1.9, height: 0.6,
+  mass: 1200,
+  maxSpeed: 16,    // m/s top speed (throttle maps to this)
+  accel: 48,
+  brake: 80,
+  steerSpeed: 2.8,
+  dampingGround: 0.92
+};
+
+const MAX_JUMPS = 2;
+const JUMP_V = 9.0;            // initial jump velocity (you can raise)
+const BOOST_MAX = 100;
+const BOOST_DRAIN = 80;
+const BOOST_RECHARGE = 22;
+const BOOST_MULT = 1.9;
+const BOOST_AIR_LIFT = 9.0;
+const BOOST_TIME_MS = 900;
+
+const BALL_R = 0.95;
+const AI_SPEED = 6.0;
+
+// ---------- GLOBALS ----------
+let scene, camera, renderer, clock;
+let player, ai, ball, ground;
+let playing = false;
+let playerSpeed = 0, targetThrottle = 0, steerInput = 0;
+let playerVelY = 0, playerJumpCount = 0;
+let boostVal = BOOST_MAX, boostActive = false;
+let ballVel = new THREE.Vector3(0,0,0);
 let score = {A:0,B:0};
-let goalCooldown=false;
+const scoreAEl = document.getElementById('scoreA'), scoreBEl = document.getElementById('scoreB'), hudSpeed = document.getElementById('speed');
+const goalBanner = document.getElementById('goalBanner');
+const half = ARENA/2;
+const goalWidthRatio = 0.36, goalDepth = 2.5;
+let cameraFollow = true;
 
-// Tuned physics
-let maxSpeed=16, accel=37, brake=46, driftFactor=0.83;
-let boostMultiplier=2.6, boostDuration=1200, boostDrainRate=80, boostRechargeRate=25;
-let boost = {val:100,max:100,active:false};
-
-// Arena / Goals
-const goalWidthRatio = 0.36, goalDepth=2.5;
-let half;
-
-// --- Jump ---
-let isJumping=false, jumpVel=0;
-function jumpPlayer(){ if(!playing || isJumping) return; isJumping=true; jumpVel=9; }
-function updateJump(dt){
-  if(isJumping){
-    car.position.y += jumpVel*dt;
-    jumpVel -= 15*dt;
-    if(car.position.y<=0.5){ car.position.y=0.5; isJumping=false; jumpVel=0; }
-  }
-}
-
-// --- AI ---
-function initAI(){
-  const aiMat = new THREE.MeshStandardMaterial({color:0x6bafff, roughness:0.35, metalness:0.1});
-  aiCar = new THREE.Mesh(new THREE.BoxGeometry(1.9,0.6,2.6), aiMat);
-  aiCar.position.set(0,0.5,10);
-  scene.add(aiCar);
-}
-
-function updateAI(dt){
-  if(!playing) return;
-  const dirToBall = new THREE.Vector3().subVectors(ball.position, aiCar.position);
-  const dist = dirToBall.length();
-  const desiredSpeed = Math.min(maxSpeed, dist*2);
-  const forward = new THREE.Vector3(Math.sin(aiCar.rotation.y),0,Math.cos(aiCar.rotation.y));
-
-  const targetAngle = Math.atan2(dirToBall.x, dirToBall.z);
-  let angleDiff = targetAngle - aiCar.rotation.y;
-  angleDiff = ((angleDiff+Math.PI) % (Math.PI*2)) - Math.PI;
-  aiCar.rotation.y += Math.max(-1, Math.min(1, angleDiff*2))*dt;
-
-  aiCar.position.addScaledVector(forward, desiredSpeed*dt);
-
-  const carToBall = new THREE.Vector3().subVectors(ball.position,aiCar.position);
-  const rCar=1.42, rBall=0.95, minDist=rCar+rBall;
-  if(carToBall.length()<minDist){
-    const n = carToBall.clone().normalize();
-    ball.position.addScaledVector(n,(minDist-carToBall.length())+0.01);
-    const impulse = n.clone().multiplyScalar(Math.max(1,desiredSpeed)+1.2);
-    impulse.y = Math.min(2.6,0.9+Math.abs(desiredSpeed)*0.18);
-    ballVel.add(impulse);
-    aiCar.position.addScaledVector(n,-0.02*Math.min(desiredSpeed,3.2));
-  }
-
-  const halfArena = arena/2-0.7;
-  aiCar.position.x = Math.max(-halfArena, Math.min(halfArena, aiCar.position.x));
-  aiCar.position.z = Math.max(-halfArena, Math.min(halfArena, aiCar.position.z));
-}
-
-// --- Init Scene ---
+// ---------- INIT ----------
 function init(){
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x061426);
-  camera = new THREE.PerspectiveCamera(66, window.innerWidth/window.innerHeight,0.1,4000);
-  camera.position.set(0,9,18);
+
+  camera = new THREE.PerspectiveCamera(66, innerWidth/innerHeight, 0.1, 4000);
+  camera.position.set(0,7,14);
+
   renderer = new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(window.innerWidth,window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   document.body.appendChild(renderer.domElement);
 
-  const hemi = new THREE.HemisphereLight(0xffffff,0x222a3a,0.8); scene.add(hemi);
+  const hemi = new THREE.HemisphereLight(0xffffff,0x222a3a,1.0); scene.add(hemi);
   const dir = new THREE.DirectionalLight(0xffffff,0.6); dir.position.set(8,20,10); scene.add(dir);
 
-  const gmat = new THREE.MeshStandardMaterial({color:0x123442, roughness:0.95});
-  ground = new THREE.Mesh(new THREE.PlaneGeometry(arena,arena,6,6), gmat);
-  ground.rotation.x=-Math.PI/2; scene.add(ground);
+  // ground
+  const groundMat = new THREE.MeshStandardMaterial({color:0x0f3b46, roughness:0.95});
+  ground = new THREE.Mesh(new THREE.PlaneGeometry(ARENA,ARENA,4,4), groundMat);
+  ground.rotation.x = -Math.PI/2; scene.add(ground);
 
-  const carMat = new THREE.MeshStandardMaterial({color:0xff6b6b, roughness:0.35, metalness:0.1});
-  car = new THREE.Mesh(new THREE.BoxGeometry(1.9,0.6,2.6), carMat);
-  car.position.set(0,0.5,0); scene.add(car);
-
-  const ballMat = new THREE.MeshStandardMaterial({color:0xffff7f, roughness:0.5});
-  ball = new THREE.Mesh(new THREE.SphereGeometry(0.95,32,32), ballMat);
-  ball.position.set(6,0.95,-6); scene.add(ball);
-
-  // Arena walls
-  const wallMat = new THREE.MeshStandardMaterial({color:0xADFF2F});
-  const w = arena/2;
-  const wallGeoH = new THREE.BoxGeometry(arena+2,2.2,1);
-  const wallGeoV = new THREE.BoxGeometry(1,2.2,arena+2);
+  // walls (light green)
+  const wallMat = new THREE.MeshStandardMaterial({color:0x98FF98});
+  const w = half;
+  const wallGeoH = new THREE.BoxGeometry(ARENA+2, 2.2, 1);
+  const wallGeoV = new THREE.BoxGeometry(1, 2.2, ARENA+2);
   scene.add(new THREE.Mesh(wallGeoH, wallMat).position.set(0,1,-w));
   scene.add(new THREE.Mesh(wallGeoH, wallMat).position.set(0,1,w));
   scene.add(new THREE.Mesh(wallGeoV, wallMat).position.set(-w,1,0));
   scene.add(new THREE.Mesh(wallGeoV, wallMat).position.set(w,1,0));
 
-  // Goals with colors
-  half = arena/2;
-  const goalWidth = arena*goalWidthRatio;
-  // Left red goal
-  const goalLeftMat = new THREE.MeshStandardMaterial({color:0xff4b4b, emissive:0x220000});
-  const gLeft = new THREE.Mesh(new THREE.BoxGeometry(goalWidth,30,goalDepth), goalLeftMat);
-  gLeft.position.set(0,15,-half+goalDepth/2+0.2); scene.add(gLeft);
-  // Right blue goal
-  const goalRightMat = new THREE.MeshStandardMaterial({color:0x4b9eff, emissive:0x002255});
-  const gRight = new THREE.Mesh(new THREE.BoxGeometry(goalWidth,30,goalDepth), goalRightMat);
-  gRight.position.set(0,15,half-goalDepth/2-0.2); scene.add(gRight);
+  // goals: left red, right blue (height increased to allow aerial goals)
+  const goalW = ARENA * goalWidthRatio;
+  const gLeftMat = new THREE.MeshStandardMaterial({color:0xff4b4b, emissive:0x220000});
+  const gRightMat = new THREE.MeshStandardMaterial({color:0x4b9eff, emissive:0x002255});
+  const gLeft = new THREE.Mesh(new THREE.BoxGeometry(goalW, 30, goalDepth), gLeftMat);
+  gLeft.position.set(0,15,-half + goalDepth/2 + 0.2); scene.add(gLeft);
+  const gRight = new THREE.Mesh(new THREE.BoxGeometry(goalW, 30, goalDepth), gRightMat);
+  gRight.position.set(0,15,half - goalDepth/2 - 0.2); scene.add(gRight);
 
-  initAI();
+  // player
+  const carMat = new THREE.MeshStandardMaterial({color:0xff6b6b, roughness:0.25, metalness:0.1});
+  player = new THREE.Mesh(new THREE.BoxGeometry(CAR.width, CAR.height, CAR.length), carMat);
+  player.position.set(0,0.5,0); scene.add(player);
+
+  // AI
+  const aiMat = new THREE.MeshStandardMaterial({color:0x6b8bff, roughness:0.25});
+  ai = new THREE.Mesh(new THREE.BoxGeometry(CAR.width, CAR.height, CAR.length), aiMat);
+  ai.position.set(0,0.5,8); scene.add(ai);
+
+  // ball
+  const ballMat = new THREE.MeshStandardMaterial({color:0xfff08a, roughness:0.5});
+  ball = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 32, 32), ballMat);
+  ball.position.set(4,1.8,-4); scene.add(ball);
 
   clock = new THREE.Clock();
   window.addEventListener('resize', onResize);
-  animate();
+  setupInput();
+  requestAnimationFrame(loop);
 }
 
-// Resize
-function onResize(){ camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); }
+// ---------- RESIZE ----------
+function onResize(){
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
 
-// Reset positions
+// ---------- PHYSICS HELPERS ----------
+function applyCarMovement(dt){
+  const target = targetThrottle * CAR.maxSpeed;
+
+  if(Math.abs(target) > Math.abs(playerSpeed)){
+    playerSpeed += Math.sign(target - playerSpeed) * CAR.accel * dt;
+    if(Math.abs(playerSpeed) > Math.abs(target)) playerSpeed = target;
+  } else {
+    if(target === 0){
+      playerSpeed *= Math.pow(CAR.dampingGround, dt * 60);
+      if(Math.abs(playerSpeed) < 0.02) playerSpeed = 0;
+    } else {
+      playerSpeed += Math.sign(target - playerSpeed) * CAR.brake * dt;
+    }
+  }
+
+  // steering
+  const steerFactor = (playerSpeed === 0) ? 0.9 : (0.6 + Math.abs(playerSpeed)/CAR.maxSpeed);
+  const turn = steerInput * CAR.steerSpeed * steerFactor * dt;
+  player.rotation.y += turn;
+
+  // move forward
+  const forward = new THREE.Vector3(Math.sin(player.rotation.y), 0, Math.cos(player.rotation.y));
+  let moveSpeed = playerSpeed;
+  if(boostActive && playerJumpCount > 0){ // aerial boost
+    playerVelY += BOOST_AIR_LIFT * dt;
+    moveSpeed *= BOOST_MULT;
+  }
+  player.position.addScaledVector(forward, moveSpeed * dt);
+
+  // vertical physics
+  playerVelY -= 9.8 * dt;
+  player.position.y += playerVelY * dt;
+  if(player.position.y <= 0.5){
+    player.position.y = 0.5;
+    playerVelY = 0;
+    playerJumpCount = 0;
+  }
+}
+
+function handleCarBallCollision(carMesh, carSpeedEstimate){
+  const carToBall = new THREE.Vector3().subVectors(ball.position, carMesh.position);
+  const dist = carToBall.length();
+  const carRadius = Math.max(CAR.length, CAR.width) * 0.55;
+  const minDist = BALL_R + carRadius;
+  if(dist < minDist && dist > 0.0001){
+    const n = carToBall.clone().normalize();
+    ball.position.addScaledVector(n, (minDist - dist) + 0.02);
+
+    const baseSpeed = Math.max(1, Math.abs(carSpeedEstimate || playerSpeed || 1));
+    let impulse = n.clone().multiplyScalar(baseSpeed * 1.0 + 2.0);
+    if(carMesh === player && boostActive) impulse.multiplyScalar(BOOST_MULT * 0.9);
+
+    impulse.y = Math.min(6.0, 0.9 + Math.abs((carMesh===player)?playerVelY:0) * 0.3 + baseSpeed * 0.12);
+    ballVel.add(impulse);
+
+    carMesh.position.addScaledVector(n, -0.06 * Math.min(baseSpeed, 6));
+  }
+}
+
+function handleCarCarCollision(a, b){
+  const v = new THREE.Vector3().subVectors(b.position, a.position);
+  const dist = v.length();
+  const minDist = Math.max(CAR.width, CAR.length);
+  if(dist < minDist && dist > 0.0001){
+    const n = v.normalize();
+    const overlap = (minDist - dist) * 0.5;
+    a.position.addScaledVector(n, -overlap);
+    b.position.addScaledVector(n, overlap);
+  }
+}
+
+// ---------- GAME LOOP ----------
+function loop(){
+  const dt = Math.min(DT_MAX, clock.getDelta());
+
+  if(playing){
+    applyCarMovement(dt);
+
+    // ball physics
+    ballVel.y -= 9.8 * dt;
+    ball.position.addScaledVector(ballVel, dt);
+
+    if(ball.position.y < BALL_R){
+      ball.position.y = BALL_R;
+      if(ballVel.y < 0) ballVel.y *= -0.42;
+      ballVel.x *= 0.996; ballVel.z *= 0.996;
+    }
+
+    // collisions
+    handleCarCarCollision(player, ai);
+    handleCarBallCollision(player, Math.abs(playerSpeed));
+    handleCarBallCollision(ai, AI_SPEED);
+
+    // ball-wall reflection
+    const limit = ARENA/2 - 0.7;
+    if(ball.position.x < -limit){ ball.position.x = -limit; ballVel.x *= -0.72; }
+    if(ball.position.x > limit){ ball.position.x = limit; ballVel.x *= -0.72; }
+    if(ball.position.z < -limit){ ball.position.z = -limit; ballVel.z *= -0.72; }
+    if(ball.position.z > limit){ ball.position.z = limit; ballVel.z *= -0.72; }
+
+    // clamp cars
+    player.position.x = Math.max(-limit, Math.min(limit, player.position.x));
+    player.position.z = Math.max(-limit, Math.min(limit, player.position.z));
+    ai.position.x = Math.max(-limit, Math.min(limit, ai.position.x));
+    ai.position.z = Math.max(-limit, Math.min(limit, ai.position.z));
+
+    // AI
+    aiBehavior(dt);
+
+    // boost management
+    if(boostActive){
+      boostVal -= BOOST_DRAIN * dt;
+      if(boostVal <= 0){ boostVal = 0; deactivateBoost(); }
+    } else {
+      boostVal = Math.min(BOOST_MAX, boostVal + BOOST_RECHARGE * dt);
+    }
+
+    // goals
+    checkGoals();
+
+    // HUD
+    hudSpeed.innerText = Math.round(Math.abs(playerSpeed)*10)/10;
+    scoreAEl.innerText = score.A;
+    scoreBEl.innerText = score.B;
+  }
+
+  // camera follow
+  if(cameraFollow){
+    const camOffset = new THREE.Vector3(0, 6, 12).applyAxisAngle(new THREE.Vector3(0,1,0), player.rotation.y);
+    const camTarget = new THREE.Vector3().copy(player.position).add(camOffset);
+    camera.position.lerp(camTarget, 0.12);
+    camera.lookAt(new THREE.Vector3().copy(player.position).add(new THREE.Vector3(0,1.2,0)));
+  }
+
+  // small damping
+  ballVel.multiplyScalar(0.999);
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+
+// ---------- AI ----------
+function aiBehavior(dt){
+  const toBall = new THREE.Vector3().subVectors(ball.position, ai.position);
+  const dist = Math.hypot(toBall.x, toBall.z);
+  toBall.y = 0;
+  if(dist > 0.2){
+    toBall.normalize();
+    let s = AI_SPEED * (dist > 6 ? 1 : (0.6 + 0.4*(dist/6)));
+    ai.position.addScaledVector(toBall, s * dt);
+    const targ = Math.atan2(toBall.x, toBall.z);
+    const diff = ((targ - ai.rotation.y + Math.PI) % (Math.PI*2)) - Math.PI;
+    ai.rotation.y += diff * 0.06;
+  }
+
+  const toBallNow = new THREE.Vector3().subVectors(ball.position, ai.position);
+  const dd = toBallNow.length();
+  if(dd < 1.9){
+    const n = toBallNow.clone().normalize();
+    const impulse = n.clone().multiplyScalar( Math.max(2.8, AI_SPEED*1.2) );
+    impulse.y = Math.min(4.0, 1.0 + Math.abs(AI_SPEED)*0.2);
+    ballVel.add(impulse);
+    ai.position.addScaledVector(n, -0.06);
+  }
+}
+
+// ---------- GOALS ----------
+let goalCooldown = false;
+function checkGoals(){
+  if(goalCooldown) return;
+  const limit = ARENA/2 - 0.7;
+  const goalW = ARENA * goalWidthRatio;
+  const gx = Math.abs(ball.position.x);
+  if(ball.position.z < -limit + 0.2 && gx < goalW/2 && Math.abs(ballVel.z) > 0.2){
+    score.B++; onGoal('B');
+  } else if(ball.position.z > limit - 0.2 && gx < goalW/2 && Math.abs(ballVel.z) > 0.2){
+    score.A++; onGoal('A');
+  }
+}
+function onGoal(team){
+  goalCooldown = true;
+  goalBanner.style.display = '';
+  setTimeout(()=> goalBanner.style.display = 'none', 1200);
+  playing = false;
+  setTimeout(()=>{ resetPositions(true); playing = true; goalCooldown = false; }, 1400);
+}
+
+// ---------- INPUT ----------
+function setupInput(){
+  // joystick center
+  const joy = document.getElementById('joy'), stick = document.getElementById('stick');
+  let active = false, center = {x:0,y:0}, maxR = 48;
+
+  function refreshCenter(){ const r = joy.getBoundingClientRect(); center.x = r.left + r.width/2; center.y = r.top + r.height/2; }
+  refreshCenter();
+  window.addEventListener('resize', refreshCenter);
+
+  function joyDown(e){ e.preventDefault(); active = true; const p = e.touches ? e.touches[0] : e; moveStick(p.clientX, p.clientY); }
+  function joyMove(e){ if(!active) return; e.preventDefault(); const p = e.touches ? e.touches[0] : e; moveStick(p.clientX, p.clientY); }
+  function joyUp(e){ active = false; stick.style.transform = 'translate(0px,0px)'; targetThrottle = 0; steerInput = 0; }
+  function moveStick(cx, cy){
+    const dx = cx - center.x, dy = cy - center.y;
+    // circular limit
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const clamped = Math.min(dist, maxR);
+    const angle = Math.atan2(dy, dx);
+    const xPos = clamped * Math.cos(angle);
+    const yPos = clamped * Math.sin(angle);
+    stick.style.transform = `translate(${xPos}px, ${yPos}px)`;
+    // map: up (negative y in screen coords) -> forward
+    // note: screen y grows down, so we invert yPos
+    targetThrottle = Math.max(-1, Math.min(1, -yPos / maxR)); // -1..1
+    steerInput = Math.max(-1, Math.min(1, xPos / maxR)); // -1..1
+  }
+
+  joy.addEventListener('pointerdown', joyDown, {passive:false});
+  joy.addEventListener('pointermove', joyMove, {passive:false});
+  window.addEventListener('pointerup', joyUp);
+  joy.addEventListener('touchstart', joyDown, {passive:false});
+  joy.addEventListener('touchmove', joyMove, {passive:false});
+  window.addEventListener('touchend', joyUp);
+
+  // keyboard
+  const keyState = {};
+  window.addEventListener('keydown', (e)=>{
+    keyState[e.code] = true;
+    if(e.code === 'Space') tryJump();
+    if(e.code === 'ShiftLeft' || e.code === 'KeyQ') tryBoost();
+  });
+  window.addEventListener('keyup', (e)=>{
+    keyState[e.code] = false;
+    if(e.code === 'ShiftLeft' || e.code === 'KeyQ') stopBoost();
+  });
+
+  // poll keyboard for throttle/steer
+  setInterval(()=>{
+    let th = 0, st = 0;
+    if(keyState['KeyW'] || keyState['ArrowUp']) th = 1;
+    if(keyState['KeyS'] || keyState['ArrowDown']) th = -1;
+    if(keyState['KeyA'] || keyState['ArrowLeft']) st = -1;
+    if(keyState['KeyD'] || keyState['ArrowRight']) st = 1;
+    // only override if joystick not active (simple)
+    if(!document.activeElement || document.activeElement === document.body){
+      // if joystick engaged, we already set targetThrottle in moveStick
+      // but keyboard will set it too — that's fine
+      targetThrottle = th;
+      steerInput = st;
+    }
+  }, 30);
+
+  // UI buttons
+  document.getElementById('boostBtn').addEventListener('click', ()=>{ tryBoost(); });
+  document.getElementById('boostBtn').addEventListener('touchstart', (e)=>{ e.preventDefault(); tryBoost(); }, {passive:false});
+  document.getElementById('boostBtn').addEventListener('touchend', (e)=>{ stopBoost(); }, {passive:false});
+
+  document.getElementById('jumpBtn').addEventListener('click', ()=>{ tryJump(); });
+  document.getElementById('jumpBtn').addEventListener('touchstart', (e)=>{ e.preventDefault(); tryJump(); }, {passive:false});
+
+  document.getElementById('startBtn').addEventListener('click', ()=>{
+    playing = true; resetPositions(false); document.getElementById('startBtn').innerText = 'Reset';
+  });
+  document.getElementById('cameraBtn').addEventListener('click', ()=>{
+    cameraFollow = !cameraFollow;
+    document.getElementById('cameraBtn').innerText = cameraFollow ? 'Kamera: Follow' : 'Kamera: Free';
+  });
+}
+
+// ---------- JUMP / BOOST ----------
+function tryJump(){
+  if(!playing) return;
+  if(playerJumpCount < MAX_JUMPS){
+    playerVelY = JUMP_V;
+    playerJumpCount++;
+  }
+}
+
+function tryBoost(){
+  if(!playing) return;
+  if(boostVal > 18 && !boostActive){
+    boostActive = true;
+    document.getElementById('boostBtn').classList.add('active');
+    setTimeout(()=>{ if(boostActive) { boostActive = false; document.getElementById('boostBtn').classList.remove('active'); } }, BOOST_TIME_MS);
+  }
+}
+function stopBoost(){ boostActive = false; document.getElementById('boostBtn').classList.remove('active'); }
+function deactivateBoost(){ stopBoost(); }
+
+// ---------- RESET ----------
 function resetPositions(afterGoal=false){
-  car.position.set(0,0.5, afterGoal? (Math.random()>0.5?6:-6):0);
-  car.rotation.set(0,0,0); carSpeed=0; targetSpeed=0; steer=0;
-  ball.position.set((Math.random()-0.5)*6,0.95,(Math.random()-0.5)*6 - (afterGoal? (Math.random()>0.5?-8:8):0));
+  player.position.set(0,0.5, afterGoal ? (Math.random()>0.5?6:-6) : 0);
+  player.rotation.set(0,0,0);
+  playerSpeed = 0; targetThrottle = 0; steerInput = 0;
+  playerVelY = 0; playerJumpCount = 0;
+  ai.position.set(0,0.5,8); ai.rotation.set(0,0,0);
+  ball.position.set((Math.random()-0.5)*6, 1.8, (Math.random()-0.5)*6);
   ballVel.set(0,0,0);
-  boost.val=boost.max; boost.active=false;
-  aiCar.position.set(0,0.5, afterGoal? -6 : 10);
-  updateHUD();
-}
-
-// HUD
-function updateHUD(){
-  hudSpeed.innerText = Math.round(Math.abs(carSpeed*10))/10;
+  boostVal = BOOST_MAX; boostActive = false;
+  hudSpeed.innerText = '0';
   scoreAEl.innerText = score.A; scoreBEl.innerText = score.B;
 }
 
-// Goal banner
-function showGoalBanner(){ goalBanner.style.display=''; setTimeout(()=>goalBanner.style.display='none',1400); }
+// ---------- GOAL CHECK ----------
+function checkGoals(){ /* already called in loop; kept for compatibility */ }
 
-// Goal detection
-function checkGoal(){
-  if(goalCooldown) return;
-  const halfArena = arena/2-0.7;
-  const goalWidth = arena*goalWidthRatio;
-  const gx = Math.abs(ball.position.x);
-  if(ball.position.z<-halfArena+0.2 && gx<goalWidth/2){ score.B++; scoreBEl.innerText=score.B; goalHappened('B'); }
-  else if(ball.position.z>halfArena-0.2 && gx<goalWidth/2){ score.A++; scoreAEl.innerText=score.A; goalHappened('A'); }
-}
-function goalHappened(team){
-  goalCooldown=true;
-  showGoalBanner();
-  playing=false;
-  setTimeout(()=>{
-    resetPositions(true);
-    playing=true;
-    goalCooldown=false;
-  },1400);
-}
-
-// --- Animate ---
-function animate(){
-  requestAnimationFrame(animate);
-  const dt = Math.min(0.05, clock.getDelta());
-
-  if(playing){
-    if(targetSpeed>carSpeed){ carSpeed+=accel*dt; if(carSpeed>targetSpeed) carSpeed=targetSpeed; }
-    else if(targetSpeed<carSpeed){ carSpeed-=brake*dt; if(carSpeed<targetSpeed) carSpeed=targetSpeed; }
-
-    const effectiveSpeed = carSpeed * (boost.active? boostMultiplier:1.0);
-    const forward = new THREE.Vector3(Math.sin(car.rotation.y),0,Math.cos(car.rotation.y));
-    car.position.addScaledVector(forward, effectiveSpeed*dt);
-    car.rotation.y += steer*(0.8 + (Math.abs(carSpeed)/maxSpeed)*1.8)*dt;
-    carSpeed *= 0.999 - (0.0004*dt*100);
-
-    // Ball physics
-    ballVel.y -= 9.8*dt; ball.position.addScaledVector(ballVel,dt);
-    if(ball.position.y<0.95){ ball.position.y=0.95; if(ballVel.y<0) ballVel.y*=-0.42; ballVel.x*=0.993; ballVel.z*=0.993; }
-
-    // Car-ball collision
-    const carToBall = new THREE.Vector3().subVectors(ball.position,car.position);
-    const dist = carToBall.length(); const rBall=0.95,rCar=1.42,minDist=rBall+rCar;
-    if(dist<minDist){
-      const n = carToBall.clone().normalize();
-      ball.position.addScaledVector(n,(minDist-dist)+0.01);
-      const impulse = n.clone().multiplyScalar(Math.max(1,carSpeed)*(boost.active? boostMultiplier:1.0)+1.2);
-      impulse.y = Math.min(2.6,0.9+Math.abs(carSpeed)*0.18); ballVel.add(impulse);
-      car.position.addScaledVector(n,-0.02*Math.min(carSpeed,3.2));
-    }
-
-    const halfArena = arena/2-0.7;
-    if(ball.position.x<-halfArena){ ball.position.x=-halfArena; ballVel.x*=-0.72; }
-    if(ball.position.x>halfArena){ ball.position.x=halfArena; ballVel.x*=-0.72; }
-    if(ball.position.z<-halfArena){ ball.position.z=-halfArena; ballVel.z*=-0.72; }
-    if(ball.position.z>halfArena){ ball.position.z=halfArena; ballVel.z*=-0.72; }
-
-    car.position.x = Math.max(-halfArena, Math.min(halfArena, car.position.x));
-    car.position.z = Math.max(-halfArena, Math.min(halfArena, car.position.z));
-
-    if(cameraFollow){
-      const camOffset = new THREE.Vector3(0,6.2,13.2).applyAxisAngle(new THREE.Vector3(0,1,0),car.rotation.y);
-      const camTarget = new THREE.Vector3().copy(car.position).add(camOffset);
-      camera.position.lerp(camTarget,0.14);
-      camera.lookAt(new THREE.Vector3().copy(car.position).add(new THREE.Vector3(0,1.2,0)));
-    }
-
-    // Boost management
-    if(boost.active){ boost.val-=boostDrainRate*dt; if(boost.val<=0){ boost.val=0; boost.active=false; } }
-    else{ boost.val = Math.min(boost.max, boost.val+boostRechargeRate*dt); }
-
-    updateJump(dt);   // jump update
-    updateAI(dt);     // AI update
-    updateHUD();
-    checkGoal();
-  }
-
-  renderer.render(scene,camera);
-}
-
-// --- Joystick Input ---
-const joy = document.getElementById('joy');
-const stick = document.getElementById('stick');
-let active = false;
-let start = {x: 0, y: 0};
-const maxR = 48; // polomer joysticku
-
-function joyDown(ev) {
-    ev.preventDefault();
-    active = true;
-    const p = ev.touches ? ev.touches[0] : ev;
-    const rect = joy.getBoundingClientRect();
-    start.x = rect.left + rect.width / 2;
-    start.y = rect.top + rect.height / 2;
-    moveStick(p.clientX, p.clientY);
-}
-
-function joyMove(ev) {
-    if (!active) return;
-    ev.preventDefault();
-    const p = ev.touches ? ev.touches[0] : ev;
-    moveStick(p.clientX, p.clientY);
-}
-
-function joyUp(ev) {
-    active = false;
-    stick.style.transform = 'translate(0,0)';
-    targetSpeed = 0;
-    steer = 0;
-}
-
-function moveStick(cx, cy) {
-    const dx = cx - start.x;
-    const dy = cy - start.y;
-
-    // obmedz stick v kruhu
-    const distance = Math.min(Math.sqrt(dx*dx + dy*dy), maxR);
-    const angle = Math.atan2(dy, dx);
-    const xPos = distance * Math.cos(angle);
-    const yPos = distance * Math.sin(angle);
-
-    stick.style.transform = `translate(${xPos}px, ${yPos}px)`;
-
-    // mapovanie na auto: Y = dopredu/dozadu, X = doľava/doprava
-    targetSpeed = - (yPos / maxR) * maxSpeed;  // dopredu = +Y na auto
-    steer = xPos / maxR;                        // doľava = -1, doprava = +1
-}
-
-// eventy
-joy.addEventListener('pointerdown', joyDown, {passive:false});
-joy.addEventListener('pointermove', joyMove, {passive:false});
-window.addEventListener('pointerup', joyUp);
-
-joy.addEventListener('touchstart', joyDown, {passive:false});
-joy.addEventListener('touchmove', joyMove, {passive:false});
-window.addEventListener('touchend', joyUp);
-// --- Boost Button ---
-const boostBtn = document.getElementById('boostBtn');
-boostBtn.addEventListener('click',()=>{ if(!playing) return; if(boost.val>18&&!boost.active) enableBoost(); });
-boostBtn.addEventListener('touchstart',(e)=>{ e.preventDefault(); if(!playing) return; if(boost.val>18&&!boost.active) enableBoost(); });
-function enableBoost(){ if(boost.val<=0) return; boost.active=true; setTimeout(()=>{boost.active=false;}, boostDuration); }
-
-// --- Jump Button ---
-const jumpBtn = document.getElementById('jumpBtn');
-jumpBtn.addEventListener('click',()=>{ jumpPlayer(); });
-jumpBtn.addEventListener('touchstart',(e)=>{ e.preventDefault(); jumpPlayer(); });
-
-// --- Camera Toggle ---
-let cameraFollow=true;
-document.getElementById('cameraBtn').addEventListener('click',()=>{ 
-    cameraFollow=!cameraFollow; 
-    document.getElementById('cameraBtn').innerText=cameraFollow?'Kamera: Follow':'Kamera: Free'; 
-});
-
-// --- Jump Key ---
-window.addEventListener('keydown', (e)=>{ if(e.code==='Space'){ jumpPlayer(); } });
-
-// --- Start / Reset ---
-document.getElementById('startBtn').addEventListener('click', () => {
-    playing = true;
-    resetPositions(false);
-    document.getElementById('startBtn').innerText = 'Reset';
-});
-
-
-
-// --- Initialize ---
+// ---------- INIT CALLS ----------
 init();
 resetPositions(false);
-animate();
+
+// expose helpful debug
+window.RB = { player, ai, ball, scene, score, resetPositions, tryJump, tryBoost, stopBoost };
 </script>
 </body>
-</html>
+    </html>
