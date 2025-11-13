@@ -108,7 +108,14 @@ const FILES_TO_CACHE = [
   'eriktvv.html',
   'erikvyh.html',
   'minicoc.html',
-  'pdfob.html'
+  'pdfob.html',
+  'erikai_enginepro.html',
+'erikaienginecss.html',
+'erikairocketsk.html',
+'index4.html',
+'kvantovy.html',
+'komplet_os.html',
+'univerzal.html'
 ];
 
 // Inštalácia SW a ukladanie súborov
