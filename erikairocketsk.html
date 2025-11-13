@@ -343,65 +343,28 @@ function updateAI(dt){
 // --- Init Scene ---
 function init(){
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x061426); // tmavé pozadie
-  camera = new THREE.PerspectiveCamera(66, window.innerWidth/window.innerHeight, 0.1, 4000);
-  camera.position.set(0, 9, 18);
-
+  scene.background = new THREE.Color(0x061426);
+  camera = new THREE.PerspectiveCamera(66, window.innerWidth/window.innerHeight,0.1,4000);
+  camera.position.set(0,9,18);
   renderer = new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;         // zapnutie tieňov
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
   document.body.appendChild(renderer.domElement);
 
-  // --- Svetlá ---
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x222a3a, 0.8); 
-  scene.add(hemi);
+  const hemi = new THREE.HemisphereLight(0xffffff,0x222a3a,0.8); scene.add(hemi);
+  const dir = new THREE.DirectionalLight(0xffffff,0.6); dir.position.set(8,20,10); scene.add(dir);
 
-  const dir = new THREE.DirectionalLight(0xffffff, 0.6); 
-  dir.position.set(8, 20, 10); 
-  dir.castShadow = true;
-  dir.shadow.mapSize.width = 2048;
-  dir.shadow.mapSize.height = 2048;
-  scene.add(dir);
+  const gmat = new THREE.MeshStandardMaterial({color:0x123442, roughness:0.95});
+  ground = new THREE.Mesh(new THREE.PlaneGeometry(arena,arena,6,6), gmat);
+  ground.rotation.x=-Math.PI/2; scene.add(ground);
 
-  // --- Zem ---
-  const gmat = new THREE.MeshStandardMaterial({
-    color: 0x123442,
-    roughness: 0.85,
-    metalness: 0.05
-  });
-  ground = new THREE.Mesh(new THREE.PlaneGeometry(arena, arena, 6, 6), gmat);
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
+  const carMat = new THREE.MeshStandardMaterial({color:0xff6b6b, roughness:0.35, metalness:0.1});
+  car = new THREE.Mesh(new THREE.BoxGeometry(1.9,0.6,2.6), carMat);
+  car.position.set(0,0.5,0); scene.add(car);
 
-  // --- Hráčove auto (realistický lak) ---
-  const carMat = new THREE.MeshStandardMaterial({
-    color: 0xff6b6b,
-    roughness: 0.2,     // hladší a lesklejší
-    metalness: 0.7,     // kovový efekt
-    envMapIntensity: 0.6
-  });
-  car = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.6, 2.6), carMat);
-  car.position.set(0, 0.5, 0);
-  car.castShadow = true;
-  car.receiveShadow = true;
-  scene.add(car);
-
-  // --- Lopta (realistická, lesklá) ---
-  const ballMat = new THREE.MeshStandardMaterial({
-    color: 0xffff7f,
-    roughness: 0.15,
-    metalness: 0.3,
-    envMapIntensity: 0.8
-  });
-  ball = new THREE.Mesh(new THREE.SphereGeometry(0.95, 64, 64), ballMat);
-  ball.position.set(6, 0.95, -6);
-  ball.castShadow = true;
-  ball.receiveShadow = true;
-  scene.add(ball);
-}
+  const ballMat = new THREE.MeshStandardMaterial({color:0xffff7f, roughness:0.5});
+  ball = new THREE.Mesh(new THREE.SphereGeometry(0.95,32,32), ballMat);
+  ball.position.set(6,0.95,-6); scene.add(ball);
   // Arena walls
   const wallMat = new THREE.MeshStandardMaterial({color:0xADFF2F});
   const w = arena/2;
