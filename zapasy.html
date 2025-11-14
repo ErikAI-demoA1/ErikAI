@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ErikAI — Turnajový generátor (Liga, Skupiny, Vyraďovačka)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#061426; --bg2:#0a1a36; --accent1:#06b6d4; --accent2:#8b5cf6;
+    --card:#071228; --muted: #9fb2d1;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 100%);color:#e6eef8}
+  .wrap{max-width:1200px;margin:18px auto;padding:18px}
+  header{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+  .logo{font-weight:800;font-size:20px;letter-spacing:1px;color:#fff}
+  .sub{color:var(--muted);font-size:13px}
+  .grid{display:grid;grid-template-columns:360px 1fr;gap:14px}
+
+  /* panel */
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.03)}
+  label{font-size:13px;color:var(--muted);display:block;margin-top:8px}
+  input[type=text], select, textarea, input[type=number]{
+    width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:#e6eef8
+  }
+  textarea{min-height:80px;resize:vertical}
+  button{background:linear-gradient(90deg,var(--accent2),var(--accent1));color:#041021;border:0;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700}
+  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);font-weight:600}
+  .row{display:flex;gap:8px;margin-top:8px;align-items:center}
+  .small{font-size:13px;color:var(--muted)}
+  .teams-list{max-height:240px;overflow:auto;margin-top:8px;padding:6px;background:rgba(0,0,0,0.08);border-radius:8px}
+  .team-item{display:flex;justify-content:space-between;padding:6px 8px;border-radius:6px;margin-bottom:6px;background:rgba(255,255,255,0.01)}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+
+  /* main area */
+  .main-grid{display:grid;grid-template-columns:1fr 420px;gap:12px}
+  .stage{min-height:420px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03)}
+  .tabs{display:flex;gap:8px;margin-bottom:12px}
+  .tab{padding:8px 10px;border-radius:8px;cursor:pointer;background:rgba(255,255,255,0.02);font-weight:600}
+  .tab.active{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#041021}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:6px 8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03)}
+  th.small, td.small{font-size:12px;color:var(--muted)}
+
+  .bracket{display:flex;gap:12px;overflow:auto;padding:6px}
+  .round{min-width:160px}
+  .match{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;margin-bottom:8px}
+
+  .footer{margin-top:12px;color:var(--muted);font-size:13px}
+
+  @media (max-width:980px){
+    .grid{grid-template-columns:1fr;}; .main-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="logo">ErikAI — Tournament Builder</div>
+      <div class="sub">Liga • Skupiny • Vyraďovačka — Single file, save/restore, export JSON</div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: controls -->
+    <div class="panel">
+      <h3 style="margin:0">Nastavenia & Tímy</h3>
+      <label>Formát súťaže</label>
+      <select id="format">
+        <option value="league">Liga (round-robin)</option>
+        <option value="groups">Skupiny → Playoff</option>
+        <option value="knockout">Vyraďovačka (bracket)</option>
+      </select>
+
+      <label>Počet tímov / názvy</label>
+      <textarea id="teamInput" placeholder="Jedna línia = 1 tím (napr. FC Erik)"></textarea>
+      <div class="row">
+        <input id="teamName" type="text" placeholder="Pridať tím ručne">
+        <button id="addTeamBtn" style="flex:0 0 auto">Pridať</button>
+      </div>
+      <div class="teams-list" id="teamsList" aria-live="polite"></div>
+
+      <label>Nastavenia formátu</label>
+      <div class="small">Skupiny: počet skupín</div>
+      <div class="row">
+        <input id="groupCount" type="number" value="4" min="2" max="16" style="width:100px">
+        <div style="flex:1"></div>
+      </div>
+
+      <div style="margin-top:8px" class="small">Vyraďovačka: počet postupujúcich (musí byť 2ⁿ)</div>
+      <div class="row">
+        <input id="knockSlots" type="number" value="8" min="2" step="1" style="width:100px">
+        <div style="flex:1"></div>
+      </div>
+
+      <div class="controls">
+        <button id="generateBtn">Generovať rozpis</button>
+        <button id="saveBtn" class="btn-ghost">Uložiť (local)</button>
+        <button id="loadBtn" class="btn-ghost">Načítať (local)</button>
+        <button id="exportJsonBtn" class="btn-ghost">Export JSON</button>
+        <button id="importJsonBtn" class="btn-ghost">Import JSON</button>
+      </div>
+
+      <div style="margin-top:10px">
+        <label>Rýchle akcie</label>
+        <div class="row">
+          <button id="autoNames">Auto: vygenerovať názvy (8)</button>
+          <button id="clearAll" class="btn-ghost">Vymazať všetko</button>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div><strong>Uložené projekty:</strong></div>
+        <div class="small">App používa localStorage (kľúč: <code>erikai_tournament</code>).</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: main area -->
+    <div>
+      <div class="main-grid">
+        <div class="stage panel">
+          <div class="tabs">
+            <div class="tab active" data-tab="matches">Zápasy</div>
+            <div class="tab" data-tab="table">Tabuľka</div>
+            <div class="tab" data-tab="bracket">Pavúk</div>
+            <div class="tab" data-tab="settings">Info</div>
+          </div>
+
+          <div id="viewMatches" class="view">
+            <div id="matchesArea"></div>
+          </div>
+
+          <div id="viewTable" class="view" style="display:none">
+            <div id="tableArea"></div>
+          </div>
+
+          <div id="viewBracket" class="view" style="display:none">
+            <div id="bracketArea"></div>
+          </div>
+
+          <div id="viewInfo" class="view" style="display:none">
+            <h4>Info</h4>
+            <p class="small">Formát a nastavenia — uprav výsledky kliknutím na zápas. Exportuj/ulož projekt pre neskoršie úpravy.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h4 style="margin:0">Detail zápasu / Edit</h4>
+          <div style="margin-top:8px">
+            <label>Zobraziť všetky zápasy</label>
+            <select id="matchSelector" style="width:100%;"></select>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <input id="scoreA" type="number" min="0" value="0" style="width:70px">
+              <input id="scoreB" type="number" min="0" value="0" style="width:70px">
+              <button id="applyScore">Aplikovať</button>
+            </div>
+            <div style="margin-top:8px" class="small">Vyber zápas, zadaj skóre a ulož — skóre sa prejaví v tabuľkách a pavúku.</div>
+            <hr style="margin:10px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)">
+            <div class="small"><strong>Export / Import</strong></div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button id="downloadHtml">Export (stiahnuť HTML)</button>
+              <button id="downloadJson">Stiahnuť JSON</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======================
+  Data model
+======================*/
+let state = {
+  teams: [],        // ["A","B",...]
+  format: 'league', // league | groups | knockout
+  groups: [],       // [{name:'A', teams: [...], matches: [...]}, ...]
+  matches: [],      // [{id, aIdx, bIdx, aName, bName, scoreA:null, scoreB:null, round?, group?}]
+  bracket: [],      // array of rounds -> array of matches
+  options: { groupCount:4, knockSlots:8 }
+};
+
+/* ----------------------
+ DOM refs
+-----------------------*/
+const teamsList = document.getElementById('teamsList');
+const teamInput = document.getElementById('teamInput');
+const addTeamBtn = document.getElementById('addTeamBtn');
+const teamNameInput = document.getElementById('teamName');
+const formatSel = document.getElementById('format');
+const groupCountInp = document.getElementById('groupCount');
+const knockSlotsInp = document.getElementById('knockSlots');
+const generateBtn = document.getElementById('generateBtn');
+const matchesArea = document.getElementById('matchesArea');
+const tableArea = document.getElementById('tableArea');
+const bracketArea = document.getElementById('bracketArea');
+const matchSelector = document.getElementById('matchSelector');
+const scoreAInput = document.getElementById('scoreA');
+const scoreBInput = document.getElementById('scoreB');
+const applyScoreBtn = document.getElementById('applyScore');
+const saveBtn = document.getElementById('saveBtn');
+const loadBtn = document.getElementById('loadBtn');
+const exportJsonBtn = document.getElementById('exportJsonBtn');
+const importJsonBtn = document.getElementById('importJsonBtn');
+const autoNamesBtn = document.getElementById('autoNames');
+const clearAllBtn = document.getElementById('clearAll');
+const downloadJsonBtn = document.getElementById('downloadJson');
+const downloadHtmlBtn = document.getElementById('downloadHtml');
+const exportJsonLocal = 'erikai_tournament';
+const tabs = document.querySelectorAll('.tab');
+const viewMatches = document.getElementById('viewMatches');
+const viewTable = document.getElementById('viewTable');
+const viewBracket = document.getElementById('viewBracket');
+const viewInfo = document.getElementById('viewInfo');
+
+/* ======================
+  Helpers
+======================*/
+function uid(prefix='m'){ return prefix + Math.random().toString(36).slice(2,9); }
+function saveLocal(){ localStorage.setItem(exportJsonLocal, JSON.stringify(state)); alert('Uložené lokálne'); }
+function loadLocal(){ const v = localStorage.getItem(exportJsonLocal); if(!v) return alert('Nič v localStorage'); state = JSON.parse(v); rebuildUI(); alert('Načítané z localStorage'); }
+
+function exportJSON(){ const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download = 'erikai_tournament.json'; a.click(); URL.revokeObjectURL(url); }
+function importJSON(file){
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{ state = JSON.parse(e.target.result); rebuildUI(); alert('Import hotový'); } catch(er){ alert('Neplatný JSON'); }
+  };
+  reader.readAsText(file);
+}
+
+function downloadCurrentJSON(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='erikai_tournament.json'; a.click(); URL.revokeObjectURL(url);
+}
+
+function downloadHtmlExport(){ const html = generateExportHTML(); const blob = new Blob([html], {type:'text/html'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='erikai_tournament_export.html'; a.click(); URL.revokeObjectURL(url); }
+function generateExportHTML(){
+  // minimal self-contained HTML with schedule and table
+  const safe = (s)=>String(s||'').replace(/</g,'&lt;');
+  let body = `<h2>ErikAI Tournament Export</h2>`;
+  body += `<h3>Tímy</h3><ul>${state.teams.map(t=>`<li>${safe(t)}</li>`).join('')}</ul>`;
+  body += `<h3>Zápasy</h3><ol>${state.matches.map(m=>`<li>${safe(m.aName)} ${m.scoreA==null?'vs':m.scoreA+':'+m.scoreB} ${safe(m.bName)}</li>`).join('')}</ol>`;
+  return `<!doctype html><html lang="sk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ErikAI Export</title></head><body style="font-family:Arial;padding:20px">${body}</body></html>`;
+}
+
+/* ======================
+  UI: Teams list
+======================*/
+function renderTeams(){
+  teamsList.innerHTML = '';
+  state.teams.forEach((t, i)=>{
+    const div = document.createElement('div'); div.className='team-item';
+    div.innerHTML = `<div>${i+1}. ${t}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-ghost" data-act="up" data-idx="${i}">↑</button>
+        <button class="btn-ghost" data-act="down" data-idx="${i}">↓</button>
+        <button class="btn-ghost" data-act="del" data-idx="${i}">✖</button>
+      </div>`;
+    teamsList.appendChild(div);
+  });
+  // attach controls
+  teamsList.querySelectorAll('button').forEach(b=>{
+    b.onclick = (ev)=>{
+      const act = b.dataset.act; const i = +b.dataset.idx;
+      if(act==='up' && i>0){ const a=state.teams[i-1]; state.teams[i-1]=state.teams[i]; state.teams[i]=a; renderTeams(); }
+      if(act==='down' && i<state.teams.length-1){ const a=state.teams[i+1]; state.teams[i+1]=state.teams[i]; state.teams[i]=a; renderTeams(); }
+      if(act==='del'){ if(confirm('Vymazať tím '+state.teams[i]+'?')){ state.teams.splice(i,1); renderTeams(); } }
+    };
+  });
+}
+
+/* ======================
+  Generate fixtures
+======================*/
+function buildRoundRobin(teams){
+  // returns matches array for round-robin (each pair once)
+  const n = teams.length;
+  if(n<2) return [];
+  const arr = teams.slice();
+  let extra = null;
+  if(n%2===1){ arr.push(null); extra = true; } // bye
+  const rounds = arr.length - 1;
+  const half = arr.length/2;
+  const matches = [];
+  for(let r=0;r<rounds;r++){
+    for(let i=0;i<half;i++){
+      const a = arr[i];
+      const b = arr[arr.length-1 - i];
+      if(a!=null && b!=null){
+        matches.push({id:uid('m'), aName:a, bName:b, aIdx:teams.indexOf(a), bIdx:teams.indexOf(b), scoreA:null, scoreB:null, round:r+1});
+      }
+    }
+    // rotate
+    arr.splice(1,0,arr.pop());
+  }
+  return matches;
+}
+
+function buildGroups(teams, groupCount){
+  // distribute teams evenly (snake style)
+  const groups = Array.from({length:groupCount}, (_,i)=>({name: String.fromCharCode(65+i), teams:[]}));
+  // basic round robin distribution
+  teams.forEach((t, idx)=>{
+    const g = idx % groupCount;
+    groups[g].teams.push(t);
+  });
+  // ensure roughly even: if groups too unbalanced, do snake distribution
+  // (simple approach fine)
+  // Build matches per group
+  groups.forEach(g=>{
+    g.matches = buildRoundRobin(g.teams).map(m=>{ m.group=g.name; return m; });
+  });
+  return groups;
+}
+
+function buildKnockoutFromTop(teams, slots){
+  // teams is array ordered by seed (best first). slots must be power of two.
+  // create bracket rounds
+  const rounds = Math.log2(slots);
+  const bracket = [];
+  // first round pairings: seed vs seed reversed (1 vs N, 2 vs N-1)
+  const first = [];
+  for(let i=0;i<slots/2;i++){
+    const a = teams[i] || 'TBD'; 
+    const b = teams[slots-1 - i] || 'TBD';
+    first.push({id:uid('k'), aName:a, bName:b, scoreA:null, scoreB:null});
+  }
+  bracket.push(first);
+  for(let r=1;r<rounds;r++){
+    const matches = Array.from({length: Math.pow(2, rounds-r-0)}, ()=>({id:uid('k'), aName:'TBD', bName:'TBD', scoreA:null, scoreB:null}));
+    bracket.push(matches);
+  }
+  return bracket;
+}
+
+/* ======================
+  Build overall state (generate)
+======================*/
+function generateAll(){
+  state.format = formatSel.value;
+  state.options.groupCount = Math.max(2, Math.min(16, parseInt(groupCountInp.value)||4));
+  state.options.knockSlots = Math.max(2, parseInt(knockSlotsInp.value)||8);
+
+  // parse teams input if provided
+  const raw = teamInput.value.trim();
+  if(raw){
+    const lines = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    state.teams = lines;
+  }
+  if(state.teams.length<2){ return alert('Potrebujete aspoň 2 týmy'); }
+
+  state.matches = [];
+  state.groups = [];
+  state.bracket = [];
+
+  if(state.format === 'league'){
+    state.matches = buildRoundRobin(state.teams).map(m=>{
+      m.aIdx = state.teams.indexOf(m.aName);
+      m.bIdx = state.teams.indexOf(m.bName);
+      m.group = null;
+      return m;
+    });
+  } else if(state.format === 'groups'){
+    const groups = buildGroups(state.teams, state.options.groupCount);
+    state.groups = groups;
+    // flatten matches
+    state.matches = [];
+    groups.forEach(g=>{
+      g.matches.forEach(m=>{
+        m.aIdx = state.teams.indexOf(m.aName);
+        m.bIdx = state.teams.indexOf(m.bName);
+        state.matches.push(m);
+      });
+    });
+  } else if(state.format === 'knockout'){
+    // create seeded bracket from entered order; if fewer teams than slots, fill with TBD
+    const slots = state.options.knockSlots;
+    const seeds = state.teams.slice(); while(seeds.length < slots) seeds.push('TBD');
+    state.bracket = buildKnockoutFromTop(seeds, slots);
+    // also create a matches list (for editing first round)
+    state.matches = [];
+    state.bracket[0].forEach(m=>{
+      state.matches.push(Object.assign({},m, {round:1}));
+    });
+  }
+
+  rebuildUI();
+}
+
+/* ======================
+  Compute table/standings
+======================*/
+function computeStandingsForLeague(){
+  const teams = state.teams;
+  const table = teams.map(t=>({
+    name:t, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0
+  }));
+  state.matches.forEach(m=>{
+    if(m.scoreA==null || m.scoreB==null) return;
+    const a = m.aIdx, b = m.bIdx;
+    const sA = +m.scoreA, sB = +m.scoreB;
+    const A = table[a], B = table[b];
+    A.P++; B.P++;
+    A.GF += sA; A.GA += sB; A.GD = A.GF - A.GA;
+    B.GF += sB; B.GA += sA; B.GD = B.GF - B.GA;
+    if(sA>sB){ A.W++; B.L++; A.Pts+=3; }
+    else if(sA<sB){ B.W++; A.L++; B.Pts+=3; }
+    else { A.D++; B.D++; A.Pts+=1; B.Pts+=1; }
+  });
+  table.forEach(row=>row.GD = row.GF - row.GA);
+  table.sort((a,b)=> b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || a.name.localeCompare(b.name));
+  return table;
+}
+
+function computeStandingsForGroup(groupName){
+  const group = state.groups.find(g=>g.name===groupName);
+  if(!group) return [];
+  const teams = group.teams;
+  const table = teams.map(t=>({name:t,P:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0}));
+  group.matches.forEach(m=>{
+    if(m.scoreA==null || m.scoreB==null) return;
+    const a = m.aName, b = m.bName;
+    const ia = teams.indexOf(a), ib = teams.indexOf(b);
+    if(ia<0||ib<0) return;
+    const sA=+m.scoreA, sB=+m.scoreB;
+    const A = table[ia], B = table[ib];
+    A.P++; B.P++;
+    A.GF += sA; A.GA += sB; B.GF += sB; B.GA += sA;
+    if(sA>sB){A.W++;B.L++;A.Pts+=3;}
+    else if(sA<sB){B.W++;A.L++;B.Pts+=3;}
+    else {A.D++;B.D++;A.Pts+=1;B.Pts+=1;}
+  });
+  table.forEach(r=>r.GD = r.GF - r.GA);
+  table.sort((a,b)=> b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || a.name.localeCompare(b.name));
+  return table;
+}
+
+/* ======================
+  Render views
+======================*/
+function renderMatches(){
+  matchesArea.innerHTML = '';
+  if(state.format === 'groups' && state.groups.length){
+    state.groups.forEach(g=>{
+      const h = document.createElement('h4'); h.textContent = 'Skupina ' + g.name; matchesArea.appendChild(h);
+      const tbl = document.createElement('div');
+      g.matches.forEach(m=>{
+        const div = document.createElement('div'); div.className='match';
+        div.innerHTML = `<div style="display:flex;justify-content:space-between"><strong>${m.aName}</strong> <small class="small">vs</small> <strong>${m.bName}</strong></div>
+                         <div style="margin-top:6px"><span>${m.scoreA==null?'-':m.scoreA}</span> : <span>${m.scoreB==null?'-':m.scoreB}</span></div>
+                         <div style="margin-top:6px" class="small">id:${m.id}</div>`;
+        div.onclick = ()=>{ selectMatchById(m.id); };
+        tbl.appendChild(div);
+      });
+      matchesArea.appendChild(tbl);
+    });
+  } else if(state.format === 'knockout' && state.bracket.length){
+    matchesArea.innerHTML = '<h4>Vyraďovačka - prvé kolo</h4>';
+    const frag = document.createElement('div');
+    state.bracket[0].forEach(m=>{
+      const div = document.createElement('div'); div.className='match';
+      div.innerHTML = `<div style="display:flex;justify-content:space-between"><strong>${m.aName}</strong> <small>vs</small> <strong>${m.bName}</strong></div>
+                       <div style="margin-top:6px">${m.scoreA==null?'-':m.scoreA} : ${m.scoreB==null?'-':m.scoreB}</div>`;
+      div.onclick = ()=> selectMatchById(m.id);
+      frag.appendChild(div);
+    });
+    matchesArea.appendChild(frag);
+  } else {
+    // simple list of matches
+    const list = document.createElement('div');
+    state.matches.forEach((m, i)=>{
+      const div = document.createElement('div'); div.className='match';
+      div.innerHTML = `<div style="display:flex;justify-content:space-between"><strong>${m.aName}</strong> <small>vs</small> <strong>${m.bName}</strong></div>
+                       <div style="margin-top:6px">${m.scoreA==null?'-':m.scoreA} : ${m.scoreB==null?'-':m.scoreB}</div>
+                       <div style="margin-top:6px" class="small">r:${m.round || '-'}, id:${m.id}</div>`;
+      div.onclick = ()=> selectMatchById(m.id);
+      list.appendChild(div);
+    });
+    matchesArea.appendChild(list);
+  }
+  // populate match selector
+  matchSelector.innerHTML = '<option value="">-- vyber zápas --</option>';
+  state.matches.concat((state.bracket[0]||[])).forEach(m=>{
+    const tA = m.aName||m.a || 'TBD'; const tB = m.bName||m.b || 'TBD';
+    const opt = document.createElement('option'); opt.value = m.id; opt.textContent = `${tA} vs ${tB} ${m.round? '(r:'+m.round+')':''}`;
+    matchSelector.appendChild(opt);
+  });
+}
+
+function renderTable(){
+  tableArea.innerHTML = '';
+  if(state.format === 'groups' && state.groups.length){
+    state.groups.forEach(g=>{
+      const h = document.createElement('h4'); h.textContent = 'Skupina ' + g.name;
+      tableArea.appendChild(h);
+      const tbl = buildGroupTableElement(g.name);
+      tableArea.appendChild(tbl);
+    });
+  } else {
+    const tbl = buildLeagueTableElement();
+    tableArea.appendChild(tbl);
+  }
+}
+
+function buildLeagueTableElement(){
+  const table = computeStandingsForLeague();
+  const tbl = document.createElement('table');
+  tbl.innerHTML = `<thead><tr><th>Tím</th><th class="small">P</th><th class="small">W</th><th class="small">D</th><th class="small">L</th><th class="small">GF</th><th class="small">GA</th><th class="small">GD</th><th class="small">Pts</th></tr></thead>`;
+  const body = document.createElement('tbody');
+  table.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.name}</td><td class="small">${r.P}</td><td class="small">${r.W}</td><td class="small">${r.D}</td><td class="small">${r.L}</td><td class="small">${r.GF}</td><td class="small">${r.GA}</td><td class="small">${r.GD}</td><td class="small">${r.Pts}</td>`;
+    body.appendChild(tr);
+  });
+  tbl.appendChild(body);
+  return tbl;
+}
+
+function buildGroupTableElement(groupName){
+  const table = computeStandingsForGroup(groupName);
+  const tbl = document.createElement('table');
+  tbl.innerHTML = `<thead><tr><th>Tím</th><th class="small">P</th><th class="small">W</th><th class="small">D</th><th class="small">L</th><th class="small">GF</th><th class="small">GA</th><th class="small">GD</th><th class="small">Pts</th></tr></thead>`;
+  const body = document.createElement('tbody');
+  table.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.name}</td><td class="small">${r.P}</td><td class="small">${r.W}</td><td class="small">${r.D}</td><td class="small">${r.L}</td><td class="small">${r.GF}</td><td class="small">${r.GA}</td><td class="small">${r.GD}</td><td class="small">${r.Pts}</td>`;
+    body.appendChild(tr);
+  });
+  tbl.appendChild(body);
+  return tbl;
+}
+
+function renderBracket(){
+  bracketArea.innerHTML = '';
+  if(!state.bracket || state.bracket.length===0){ bracketArea.textContent = 'Žiadny pavúk'; return; }
+  const container = document.createElement('div'); container.className='bracket';
+  state.bracket.forEach((rnd, idx)=>{
+    const col = document.createElement('div'); col.className='round';
+    col.innerHTML = `<h4>Round ${idx+1}</h4>`;
+    rnd.forEach(m=>{
+      const d = document.createElement('div'); d.className='match';
+      d.innerHTML = `<div>${m.aName} <strong>${m.scoreA==null?'-':m.scoreA}</strong> : <strong>${m.scoreB==null?'-':m.scoreB}</strong> ${m.bName}</div>`;
+      d.onclick = ()=> { selectMatchById(m.id); };
+      col.appendChild(d);
+    });
+    container.appendChild(col);
+  });
+  bracketArea.appendChild(container);
+}
+
+function selectMatchById(id){
+  // find in matches or bracket
+  const m = state.matches.find(x=>x.id===id) || state.bracket.flat().find(x=>x.id===id);
+  if(!m) return alert('Zápas nenájdený');
+  matchSelector.value = id;
+  scoreAInput.value = m.scoreA==null?0:m.scoreA;
+  scoreBInput.value = m.scoreB==null?0:m.scoreB;
+}
+
+/* ======================
+  Edit match score
+======================*/
+applyScoreBtn.onclick = ()=>{
+  const id = matchSelector.value; if(!id) return alert('Vyber zápas');
+  const sA = parseInt(scoreAInput.value||0), sB = parseInt(scoreBInput.value||0);
+  // find in matches
+  let m = state.matches.find(x=>x.id===id);
+  if(m){ m.scoreA = sA; m.scoreB = sB; rebuildUI(); return; }
+  // bracket
+  for(let r=0;r<state.bracket.length;r++){
+    for(let i=0;i<state.bracket[r].length;i++){
+      if(state.bracket[r][i].id===id){
+        state.bracket[r][i].scoreA = sA; state.bracket[r][i].scoreB = sB;
+        // propagate winner to next round automatically
+        const winner = sA>sB ? state.bracket[r][i].aName : (sB>sA ? state.bracket[r][i].bName : null);
+        if(winner && state.bracket[r+1]){
+          // find first empty slot in next round and place
+          // simple approach: pair index -> nextIndex = Math.floor(i/2)
+          const nextIndex = Math.floor(i/2);
+          const nextMatch = state.bracket[r+1][nextIndex];
+          if(!nextMatch) continue;
+          if(i%2===0){
+            nextMatch.aName = winner;
+          } else {
+            nextMatch.bName = winner;
+          }
+        }
+        rebuildUI(); return;
+      }
+    }
+  }
+  alert('Zápas nenájdený');
+};
+
+/* ======================
+  Tabs
+======================*/
+tabs.forEach(t=>{
+  t.onclick = ()=>{
+    tabs.forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const tab = t.dataset.tab;
+    viewMatches.style.display = tab==='matches' ? '' : 'none';
+    viewTable.style.display = tab==='table' ? '' : 'none';
+    viewBracket.style.display = tab==='bracket' ? '' : 'none';
+    viewInfo.style.display = tab==='settings' ? '' : 'none';
+  };
+});
+
+/* ======================
+  Rebuild UI / render
+======================*/
+function rebuildUI(){
+  renderTeams();
+  renderMatches();
+  renderTable();
+  renderBracket();
+}
+
+/* ======================
+  Events
+======================*/
+addTeamBtn.onclick = ()=>{
+  const name = (teamNameInput.value||'').trim();
+  if(!name) return alert('Zadaj názov tímu');
+  state.teams.push(name);
+  teamNameInput.value='';
+  renderTeams();
+};
+
+formatSel.onchange = ()=> state.format = formatSel.value;
+groupCountInp.onchange = ()=> state.options.groupCount = parseInt(groupCountInp.value)||4;
+knockSlotsInp.onchange = ()=> state.options.knockSlots = parseInt(knockSlotsInp.value)||8;
+
+generateBtn.onclick = ()=> {
+  // if text area contains lines, parse them
+  const txt = teamInput.value.trim();
+  if(txt && state.teams.length===0){
+    state.teams = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  }
+  generateAll();
+};
+
+saveBtn.onclick = saveLocal;
+loadBtn.onclick = loadLocal;
+exportJsonBtn.onclick = exportJSON;
+importJsonBtn.onclick = ()=>{
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='.json';
+  inp.onchange = (e)=> { const f = e.target.files[0]; if(f) importJSON(f); };
+  inp.click();
+};
+
+autoNamesBtn.onclick = ()=>{
+  const n = 8; const arr=[];
+  for(let i=1;i<=n;i++) arr.push('Team '+i);
+  state.teams = arr; teamInput.value = arr.join('\n'); renderTeams();
+};
+clearAllBtn.onclick = ()=>{
+  if(!confirm('Vymazať celý projekt?')) return;
+  state = {teams:[], format:'league', groups:[], matches:[], bracket:[], options:{groupCount:4, knockSlots:8}};
+  teamInput.value=''; renderTeams(); rebuildUI();
+};
+
+exportJsonBtn.onclick = exportJSON;
+downloadJsonBtn.onclick = downloadCurrentJSON;
+downloadHtmlBtn.onclick = downloadHtmlExport;
+
+document.getElementById('addTeamBtn').addEventListener('click', ()=>{}); // exists
+
+/* ======================
+  Init: load local if present
+======================*/
+(function init(){
+  const v = localStorage.getItem(exportJsonLocal);
+  if(v){
+    // try parse but not overwrite automatically; ask user
+    if(confirm('Nájdený uložený projekt. Načítať ho?')){ loadLocal(); return; }
+  }
+  // default: empty UI
+  renderTeams();
+  rebuildUI();
+})();
+
+</script>
+</body>
+</html>
