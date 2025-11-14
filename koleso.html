@@ -5,420 +5,345 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Koleso šťastia — ErikAI Tool</title>
 <style>
-  :root{
-    --bg:#061426;
-    --card:#071529;
-    --accent:#06b6d4;
-    --glass: rgba(255,255,255,0.03);
-    --text:#e6f6ff;
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;
-    font-family:Inter, system-ui, Arial;
-    background:linear-gradient(160deg,var(--bg),#041426 120%);
-    color:var(--text);
-    padding:18px;
-    min-height:100vh;
-  }
-
-  .wrap{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
-  .panel{
-    background:linear-gradient(180deg,var(--card), #081020);
-    border:1px solid rgba(255,255,255,0.03);
-    padding:14px;border-radius:12px;
-    box-shadow:0 8px 26px rgba(2,6,23,0.6);
-  }
-
-  .left{width:360px;max-width:100%}
-  .right{flex:1;min-width:320px;display:flex;flex-direction:column;gap:12px}
-
-  h2{margin:0 0 10px 0;font-size:18px}
-  label{font-size:13px;color:#9fb2d1;display:block;margin-top:8px}
-  textarea,input,button,select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);
-    background:transparent;color:var(--text);font-size:14px}
-  textarea{min-height:90px;resize:vertical}
-  .row{display:flex;gap:8px}
-  .row > *{flex:1}
-  button{cursor:pointer;background:linear-gradient(90deg,var(--accent),#8b5cf6);border:none;color:#021; font-weight:700}
-  .muted{color:#9fb2d1;font-size:13px}
-  .small{font-size:13px;padding:6px}
-  .items{margin-top:8px;max-height:170px;overflow:auto;border-radius:8px;padding:8px;background:var(--glass)}
-  .item{display:flex;align-items:center;gap:8px;padding:6px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,0.02)}
-  .item input[type="text"]{flex:1;background:transparent;border:none;color:var(--text);padding:4px}
-  .color{width:36px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);padding:2px}
-  .controls{display:flex;gap:8px;margin-top:8px}
-  .controls button{flex:1}
-  .wheel-wrap{display:flex;gap:12px;align-items:center;justify-content:center;padding:8px}
-  .canvas-wrap{width:min(540px,72vw);height:min(540px,72vw);display:flex;align-items:center;justify-content:center;position:relative}
-  svg{width:100%;height:100%;display:block}
-  .pointer{
-    position:absolute;top:6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:28px solid #ffcf66;
-    filter:drop-shadow(0 2px 6px rgba(0,0,0,0.6));
-    z-index:30;
-  }
-  .spin-btn{font-size:18px;padding:10px 14px;border-radius:10px}
-  .result{padding:10px;border-radius:10px;background:linear-gradient(90deg,#121e2a,#0a1120);font-weight:700;text-align:center}
-  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-  .preset-btn{padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.02);cursor:pointer}
-  .footer{margin-top:8px;font-size:13px;color:#9fb2d1}
-  @media (max-width:900px){ .wrap{flex-direction:column} .left{order:2} .right{order:1} }
+:root{
+  --bg:#061426;
+  --card:#071529;
+  --accent:#06b6d4;
+  --glass: rgba(255,255,255,0.03);
+  --text:#e6f6ff;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;font-family:Inter, system-ui, Arial;
+  background:linear-gradient(160deg,var(--bg),#041426 120%);
+  color:var(--text);
+  padding:18px;
+  min-height:100vh;
+}
+.wrap{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.panel{
+  background:linear-gradient(180deg,var(--card), #081020);
+  border:1px solid rgba(255,255,255,0.03);
+  padding:14px;border-radius:12px;
+  box-shadow:0 8px 26px rgba(2,6,23,0.6);
+}
+.left{width:360px;max-width:100%}
+.right{flex:1;min-width:320px;display:flex;flex-direction:column;gap:12px}
+h2{margin:0 0 10px 0;font-size:18px}
+label{font-size:13px;color:#9fb2d1;display:block;margin-top:8px}
+textarea,input,button,select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text);font-size:14px}
+textarea{min-height:90px;resize:vertical}
+.row{display:flex;gap:8px}
+.row > *{flex:1}
+button{cursor:pointer;background:linear-gradient(90deg,var(--accent),#8b5cf6);border:none;color:#021; font-weight:700}
+.muted{color:#9fb2d1;font-size:13px}
+.small{font-size:13px;padding:6px}
+.items{margin-top:8px;max-height:170px;overflow:auto;border-radius:8px;padding:8px;background:var(--glass)}
+.item{display:flex;align-items:center;gap:8px;padding:6px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,0.02)}
+.item input[type="text"]{flex:1;background:transparent;border:none;color:var(--text);padding:4px}
+.color{width:36px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);padding:2px}
+.controls{display:flex;gap:8px;margin-top:8px}
+.controls button{flex:1}
+.wheel-wrap{display:flex;gap:12px;align-items:center;justify-content:center;padding:8px}
+.canvas-wrap{width:min(540px,72vw);height:min(540px,72vw);display:flex;align-items:center;justify-content:center;position:relative}
+svg{width:100%;height:100%;display:block}
+.pointer{
+  position:absolute;
+  top:50%;
+  right:-10px;
+  transform:translateY(-50%) rotate(90deg);
+  width:0;
+  height:0;
+  border-top:14px solid transparent;
+  border-bottom:14px solid transparent;
+  border-left:28px solid #ffcf66;
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+  z-index:30;
+}
+.spin-btn{font-size:18px;padding:10px 14px;border-radius:10px}
+.result{padding:10px;border-radius:10px;background:linear-gradient(90deg,#121e2a,#0a1120);font-weight:700;text-align:center}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.preset-btn{padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.02);cursor:pointer}
+.footer{margin-top:8px;font-size:13px;color:#9fb2d1}
+@media (max-width:900px){ .wrap{flex-direction:column} .left{order:2} .right{order:1} }
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="left panel">
-      <h2>Editor položiek</h2>
-      <label>Zadaj položky — každý riadok = jedna položka</label>
-      <textarea id="itemsInput" placeholder="Napr.: Výhra 10€, Skús znova, Bod +2"></textarea>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <input id="colorSeed" class="color" type="color" value="#1e90ff" title="Počiatočná farba segmentov"/>
-        <input id="pointerColor" class="color" type="color" value="#ffcf66" title="Farba ukazovateľa"/>
-        <button id="applyItems" class="small">Načítať položky</button>
+
+<!-- AUDIO -->
+<audio id="tickSound"><source src="data:audio/mp3;base64,//uQZAAAAAA..." type="audio/mp3"></audio>
+<audio id="winSound"><source src="data:audio/mp3;base64,//uQZAAAAAA..." type="audio/mp3"></audio>
+
+<div class="wrap">
+  <div class="left panel">
+    <h2>Editor položiek</h2>
+    <label>Zadaj položky — každý riadok = jedna položka</label>
+    <textarea id="itemsInput" placeholder="Napr.: Výhra 10€, Skús znova, Bod +2"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="colorSeed" class="color" type="color" value="#1e90ff"/>
+      <input id="pointerColor" class="color" type="color" value="#ffcf66"/>
+      <button id="applyItems" class="small">Načítať položky</button>
+    </div>
+    <label class="muted">Aktuálne položky</label>
+    <div class="items" id="itemsList"></div>
+    <div class="controls">
+      <button id="addRandom" class="small">Pridať demo 6</button>
+      <button id="clearAll" class="small">Vymazať všetko</button>
+    </div>
+    <label class="muted">Uloženie / načítanie sád</label>
+    <div class="row" style="margin-top:6px">
+      <input id="presetName" placeholder="Meno sady"/>
+      <button id="savePreset" class="small">Uložiť</button>
+    </div>
+    <div class="presets" id="presets"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="exportJson" class="small">Export JSON</button>
+      <button id="importJson" class="small">Import JSON</button>
+      <input id="fileInput" type="file" accept=".json" style="display:none"/>
+    </div>
+    <div class="footer">Uložené lokálne v prehliadači (localStorage). Dá sa exportovať/naimportovať.</div>
+  </div>
+
+  <div class="right">
+    <div class="panel wheel-wrap">
+      <div class="canvas-wrap">
+        <div class="pointer" id="pointerEl"></div>
+        <svg id="wheelSvg" viewBox="-250 -250 500 500" xmlns="http://www.w3.org/2000/svg">
+          <g id="wheelGroup" transform="rotate(0)"></g>
+          <circle cx="0" cy="0" r="60" fill="#07121a" stroke="rgba(255,255,255,0.03)"></circle>
+          <text id="centerText" x="0" y="6" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">Točiť</text>
+        </svg>
       </div>
-
-      <label class="muted">Aktuálne položky</label>
-      <div class="items" id="itemsList"></div>
-
-      <div class="controls">
-        <button id="addRandom" class="small">Pridať demo 6</button>
-        <button id="clearAll" class="small">Vymazať všetko</button>
-      </div>
-
-      <label class="muted">Uloženie / načítanie sád</label>
-      <div class="row" style="margin-top:6px">
-        <input id="presetName" placeholder="Meno sady (napr. Turnaj)"/>
-        <button id="savePreset" class="small">Uložiť</button>
-      </div>
-      <div class="presets" id="presets"></div>
-
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button id="exportJson" class="small">Export JSON</button>
-        <button id="importJson" class="small">Import JSON</button>
-        <input id="fileInput" type="file" accept=".json" style="display:none"/>
-      </div>
-
-      <div class="footer">Uložené lokálne v prehliadači (localStorage). Dá sa exportovať/naimportovať.</div>
     </div>
 
-    <div class="right">
-      <div class="panel wheel-wrap">
-        <div class="canvas-wrap">
-          <div class="pointer" id="pointerEl"></div>
-          <svg id="wheelSvg" viewBox="-250 -250 500 500" xmlns="http://www.w3.org/2000/svg">
-            <g id="wheelGroup" transform="rotate(0)"></g>
-            <circle cx="0" cy="0" r="60" fill="#07121a" stroke="rgba(255,255,255,0.03)"></circle>
-            <text id="centerText" x="0" y="6" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">Točiť</text>
-          </svg>
+    <div class="panel" style="display:flex;gap:12px;align-items:center;">
+      <div style="flex:1">
+        <div class="muted">Náhodnosť & prejazd</div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <input id="minSpins" type="number" value="4" style="width:72px"/>
+          <input id="maxSpins" type="number" value="6" style="width:72px"/>
+          <select id="easeType" style="width:140px">
+            <option value="expo">Exponential decay (real)</option>
+            <option value="quad">Quadratic</option>
+            <option value="linear">Linear</option>
+          </select>
         </div>
       </div>
+      <div style="width:160px">
+        <button id="spinBtn" class="spin-btn">🎯 TOČIŤ</button>
+      </div>
+    </div>
 
-      <div class="panel" style="display:flex;gap:12px;align-items:center;">
-        <div style="flex:1">
-          <div class="muted">Náhodnosť & prejazd</div>
-          <div style="display:flex;gap:8px;margin-top:6px">
-            <input id="minSpins" type="number" value="4" style="width:72px" title="min otočení"/>
-            <input id="maxSpins" type="number" value="6" style="width:72px" title="max otočení"/>
-            <select id="easeType" style="width:140px">
-              <option value="expo">Exponential decay (real)</option>
-              <option value="quad">Quadratic</option>
-              <option value="linear">Linear</option>
-            </select>
-          </div>
-        </div>
-        <div style="width:160px">
-          <button id="spinBtn" class="spin-btn">🎯 TOČIŤ</button>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="result" id="result">Výsledok: —</div>
-      </div>
+    <div class="panel">
+      <div class="result" id="result">Výsledok: —</div>
     </div>
   </div>
+</div>
 
 <script>
 /* ---------- Stav ---------------- */
-let items = []; // {text, color}
-const lsKey = 'erikai_wheel_presets_v1';
-const currentPresetKey = 'erikai_wheel_current';
-const wheelGroup = document.getElementById('wheelGroup');
-const wheelSvg = document.getElementById('wheelSvg');
-const resultEl = document.getElementById('result');
-const pointerEl = document.getElementById('pointerEl');
-let animating = false;
-let currentAngle = 0;
+let items = [];
+const lsKey='erikai_wheel_presets_v1';
+const currentPresetKey='erikai_wheel_current';
+const wheelGroup=document.getElementById('wheelGroup');
+const wheelSvg=document.getElementById('wheelSvg');
+const resultEl=document.getElementById('result');
+const pointerEl=document.getElementById('pointerEl');
+let animating=false;
+let currentAngle=0;
+let lastTickSegment=-1;
 
-/* ---------- Pomocné funkcie ------------- */
+/* ---------- Pomocné ---------------- */
 function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
-function hsv(h,s,v){
-  // vracia #rrggbb
-  const f = (n,k=(n+ h/60)%6)=> v - v*s*Math.max(Math.min(k,4-k,1),0);
-  const r=Math.round(f(5)*255), g=Math.round(f(3)*255), b=Math.round(f(1)*255);
-  return '#'+[r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
-}
-function colorForIndex(idx,seedHex){
-  // seedHex ako hex pôvodnej farby -> odtiaňuj
-  const seed = seedHex || '#1e90ff';
-  // jednoduché: rotuj H podľa idx
-  const baseHue = (idx*47) % 360;
-  return hsv(baseHue, 0.45, 0.95);
-}
+function hsv(h,s,v){ const f=(n,k=(n+h/60)%6)=>v-v*s*Math.max(Math.min(k,4-k,1),0); const r=Math.round(f(5)*255),g=Math.round(f(3)*255),b=Math.round(f(1)*255); return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}
+function colorForIndex(idx,seedHex){const baseHue=(idx*47)%360; return hsv(baseHue,0.45,0.95);}
 
-/* ---------- Render kolesa (SVG) ---------- */
+/* ---------- Render kolesa ---------- */
 function renderWheel(){
-  wheelGroup.innerHTML = '';
-  const n = items.length;
-  if(n===0){
-    // prázdne
-    const t = document.getElementById('centerText');
-    t.textContent = 'Pridaj položky';
-    return;
-  }
-  const radius = 230;
-  const slice = 360 / n;
-  const seedColor = document.getElementById('colorSeed').value;
+  wheelGroup.innerHTML='';
+  const n=items.length;
+  if(n===0){document.getElementById('centerText').textContent='Pridaj položky'; return;}
+  const radius=230;
+  const slice=360/n;
+  const seedColor=document.getElementById('colorSeed').value;
   for(let i=0;i<n;i++){
-    const start = (i * slice) - 90; // -90 => pointer hore
-    const end = start + slice;
-    const large = slice>180 ? 1:0;
-    // path segment
-    const x1 = radius*Math.cos(start * Math.PI/180);
-    const y1 = radius*Math.sin(start * Math.PI/180);
-    const x2 = radius*Math.cos(end * Math.PI/180);
-    const y2 = radius*Math.sin(end * Math.PI/180);
-    const d = `M 0 0 L ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2} Z`;
-    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
-    path.setAttribute('d', d);
-    const col = items[i].color || colorForIndex(i, seedColor);
-    path.setAttribute('fill', col);
-    path.setAttribute('stroke', 'rgba(0,0,0,0.15)');
+    const start=(i*slice)-90;
+    const end=start+slice;
+    const large=slice>180?1:0;
+    const x1=radius*Math.cos(start*Math.PI/180);
+    const y1=radius*Math.sin(start*Math.PI/180);
+    const x2=radius*Math.cos(end*Math.PI/180);
+    const y2=radius*Math.sin(end*Math.PI/180);
+    const d=`M 0 0 L ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2} Z`;
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',d);
+    const col=items[i].color||colorForIndex(i,seedColor);
+    path.setAttribute('fill',col);
+    path.setAttribute('stroke','rgba(0,0,0,0.15)');
     wheelGroup.appendChild(path);
 
-    // text label (placed at middle angle)
-    const mid = start + slice/2;
-    const tx = (radius-60) * Math.cos(mid * Math.PI/180);
-    const ty = (radius-60) * Math.sin(mid * Math.PI/180);
-    const text = document.createElementNS('http://www.w3.org/2000/svg','text');
-    text.setAttribute('x', tx);
-    text.setAttribute('y', ty+6);
-    text.setAttribute('fill', '#021521');
-    text.setAttribute('font-size', Math.min(14, Math.max(10, 160/n)));
+    const mid=start+slice/2;
+    const tx=(radius-60)*Math.cos(mid*Math.PI/180);
+    const ty=(radius-60)*Math.sin(mid*Math.PI/180);
+    const text=document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x',tx);
+    text.setAttribute('y',ty+6);
+    text.setAttribute('fill','#021521');
+    text.setAttribute('font-size',Math.min(14,Math.max(10,160/n)));
     text.setAttribute('text-anchor','middle');
-    text.setAttribute('transform', `rotate(${mid}, ${tx}, ${ty})`);
-    text.textContent = items[i].text;
+    text.setAttribute('transform',`rotate(${mid}, ${tx}, ${ty})`);
+    text.textContent=items[i].text;
     wheelGroup.appendChild(text);
   }
 }
 
-/* ---------- UI list edit ---------- */
+/* ---------- UI List ---------- */
 function refreshItemsList(){
-  const wrap = document.getElementById('itemsList');
-  wrap.innerHTML = '';
-  items.forEach((it, idx) => {
-    const div = document.createElement('div');
-    div.className = 'item';
-    const input = document.createElement('input');
-    input.type='text'; input.value = it.text;
-    input.addEventListener('input', e => { items[idx].text = e.target.value; syncFromList(); });
-    const color = document.createElement('input'); color.type='color'; color.value = it.color || colorForIndex(idx);
-    color.addEventListener('input', e => { items[idx].color = e.target.value; syncFromList(); });
-    const del = document.createElement('button'); del.textContent='✖'; del.style.width='42px';
-    del.addEventListener('click', ()=>{ items.splice(idx,1); syncFromList(); });
+  const wrap=document.getElementById('itemsList');
+  wrap.innerHTML='';
+  items.forEach((it,idx)=>{
+    const div=document.createElement('div');
+    div.className='item';
+    const input=document.createElement('input'); input.type='text'; input.value=it.text;
+    input.addEventListener('input', e=>{items[idx].text=e.target.value; syncFromList();});
+    const color=document.createElement('input'); color.type='color'; color.value=it.color||colorForIndex(idx);
+    color.addEventListener('input',e=>{items[idx].color=e.target.value; syncFromList();});
+    const del=document.createElement('button'); del.textContent='✖'; del.style.width='42px';
+    del.addEventListener('click',()=>{items.splice(idx,1); syncFromList();});
     div.appendChild(input); div.appendChild(color); div.appendChild(del);
     wrap.appendChild(div);
   });
-  renderWheel();
-  saveCurrentDraft();
+  renderWheel(); saveCurrentDraft();
 }
+function syncFromList(){ renderWheel(); refreshItemsList();}
 
-function syncFromList(){
-  renderWheel();
-  refreshItemsList();
-}
-
-/* ---------- Load / Save presets (localStorage) ---------- */
-function loadPresets(){
-  try{
-    const raw = localStorage.getItem(lsKey);
-    if(!raw) return {};
-    return JSON.parse(raw);
-  }catch(e){ return {}; }
-}
-function savePresets(obj){
-  localStorage.setItem(lsKey, JSON.stringify(obj));
-  renderPresets();
-}
+/* ---------- Presets ---------- */
+function loadPresets(){try{const raw=localStorage.getItem(lsKey);if(!raw)return {}; return JSON.parse(raw);}catch(e){return {};}}
+function savePresets(obj){localStorage.setItem(lsKey,JSON.stringify(obj)); renderPresets();}
 function renderPresets(){
-  const box = document.getElementById('presets'); box.innerHTML='';
-  const presets = loadPresets();
+  const box=document.getElementById('presets'); box.innerHTML='';
+  const presets=loadPresets();
   for(const name in presets){
-    const btn = document.createElement('button');
-    btn.className='preset-btn';
-    btn.textContent = name;
-    btn.addEventListener('click', ()=>{ items = presets[name]; refreshItemsList(); });
+    const btn=document.createElement('button');
+    btn.className='preset-btn'; btn.textContent=name;
+    btn.addEventListener('click',()=>{items=presets[name]; refreshItemsList();});
     box.appendChild(btn);
-    const del = document.createElement('button');
+    const del=document.createElement('button');
     del.className='preset-btn'; del.textContent='✖'; del.style.marginLeft='6px';
-    del.addEventListener('click', ()=>{ if(confirm('Vymazať sadu "'+name+'"?')){ delete presets[name]; savePresets(presets); }});
+    del.addEventListener('click',()=>{if(confirm('Vymazať sadu "'+name+'"?')){delete presets[name]; savePresets(presets);}});
     box.appendChild(del);
   }
 }
 
-/* ---------- current draft save (autosave) ---------- */
-function saveCurrentDraft(){
-  localStorage.setItem(currentPresetKey, JSON.stringify({items, seed: document.getElementById('colorSeed').value, pointer: document.getElementById('pointerColor').value}));
-}
-function loadCurrentDraft(){
-  const raw = localStorage.getItem(currentPresetKey);
-  if(!raw) return;
-  try{
-    const obj = JSON.parse(raw);
-    if(obj.items) items = obj.items;
-    if(obj.seed) document.getElementById('colorSeed').value = obj.seed;
-    if(obj.pointer) document.getElementById('pointerColor').value = obj.pointer;
-    refreshItemsList();
-  }catch(e){}
-}
+/* ---------- Draft ---------- */
+function saveCurrentDraft(){localStorage.setItem(currentPresetKey,JSON.stringify({items,seed:document.getElementById('colorSeed').value,pointer:document.getElementById('pointerColor').value}));}
+function loadCurrentDraft(){const raw=localStorage.getItem(currentPresetKey); if(!raw) return; try{const obj=JSON.parse(raw); if(obj.items) items=obj.items; if(obj.seed) document.getElementById('colorSeed').value=obj.seed; if(obj.pointer) document.getElementById('pointerColor').value=obj.pointer; refreshItemsList();}catch(e){}}
 
-/* ---------- Controls hookup ---------- */
-document.getElementById('applyItems').addEventListener('click', ()=>{
-  const txt = document.getElementById('itemsInput').value.trim();
-  if(!txt){ alert('Zadaj aspoň jednu položku.'); return; }
-  const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  const seed = document.getElementById('colorSeed').value;
-  items = lines.map((t,i) => ({text:t, color: colorForIndex(i, seed)}));
+/* ---------- Controls ---------- */
+document.getElementById('applyItems').addEventListener('click',()=>{
+  const txt=document.getElementById('itemsInput').value.trim();
+  if(!txt){alert('Zadaj aspoň jednu položku.'); return;}
+  const lines=txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const seed=document.getElementById('colorSeed').value;
+  items=lines.map((t,i)=>({text:t,color:colorForIndex(i,seed)}));
   refreshItemsList();
 });
-document.getElementById('addRandom').addEventListener('click', ()=>{
-  const demo = ['Výhra', 'Strata', 'Bod +3', 'Druhá šanca', 'Bonus', 'Skús znova'];
-  const seed = document.getElementById('colorSeed').value;
-  demo.forEach((t,i)=> items.push({text:t, color: colorForIndex(items.length+i, seed)}));
+document.getElementById('addRandom').addEventListener('click',()=>{
+  const demo=['Výhra','Strata','Bod +3','Druhá šanca','Bonus','Skús znova'];
+  const seed=document.getElementById('colorSeed').value;
+  demo.forEach((t,i)=>items.push({text:t,color:colorForIndex(items.length+i,seed)}));
   refreshItemsList();
 });
-document.getElementById('clearAll').addEventListener('click', ()=>{
-  if(!confirm('Naozaj vymazať všetky položky?')) return;
-  items=[]; refreshItemsList();
+document.getElementById('clearAll').addEventListener('click',()=>{if(!confirm('Naozaj vymazať všetky položky?')) return; items=[]; refreshItemsList();});
+document.getElementById('savePreset').addEventListener('click',()=>{const name=(document.getElementById('presetName').value||'').trim(); if(!name) return alert('Zadaj meno sady.'); const presets=loadPresets(); presets[name]=items.slice(); savePresets(presets); document.getElementById('presetName').value='';});
+document.getElementById('exportJson').addEventListener('click',()=>{
+  const data=JSON.stringify(items,null,2); const blob=new Blob([data],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='wheel_items.json'; a.click(); URL.revokeObjectURL(url);
 });
-document.getElementById('savePreset').addEventListener('click', ()=>{
-  const name = (document.getElementById('presetName').value || '').trim();
-  if(!name) return alert('Zadaj meno sady.');
-  const presets = loadPresets();
-  presets[name] = items.slice();
-  savePresets(presets);
-  document.getElementById('presetName').value='';
-});
-document.getElementById('exportJson').addEventListener('click', ()=>{
-  const data = JSON.stringify(items, null, 2);
-  const blob = new Blob([data], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download='wheel_items.json'; a.click();
-  URL.revokeObjectURL(url);
-});
-document.getElementById('importJson').addEventListener('click', ()=> document.getElementById('fileInput').click());
-document.getElementById('fileInput').addEventListener('change', (e)=>{
-  const f = e.target.files[0];
-  if(!f) return;
-  const r = new FileReader();
-  r.onload = ()=> {
-    try{
-      const arr = JSON.parse(r.result);
-      if(Array.isArray(arr)) { items = arr; refreshItemsList(); } else alert('Neplatný formát JSON.');
-    }catch(err){ alert('Chyba pri čítaní JSON.'); }
-  };
+document.getElementById('importJson').addEventListener('click',()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{try{const arr=JSON.parse(r.result); if(Array.isArray(arr)) { items=arr; refreshItemsList(); } else alert('Neplatný formát JSON.');}catch(err){alert('Chyba pri čítaní JSON.');}};
   r.readAsText(f);
 });
 
-/* ---------- Spin logic (férové) ---------- */
-function easeOutExpo(t){
-  return t===1 ? 1 : 1 - Math.pow(2, -10 * t);
-}
-function easeOutQuad(t){ return 1 - (1-t)*(1-t); }
-
+/* ---------- Spin ---------- */
+function easeOutExpo(t){return t===1?1:1-Math.pow(2,-10*t);}
+function easeOutQuad(t){return 1-(1-t)*(1-t);}
+function playTickSound(){if(animating){const n=items.length; if(n===0) return; const slice=360/n; const angle360=currentAngle%360; const currentSeg=Math.floor(((360-angle360+90)%360)/slice); if(currentSeg!==lastTickSegment){lastTickSegment=currentSeg; const tick=document.getElementById('tickSound'); tick.currentTime=0; tick.play();}}}
 function spinWheel(){
-  if(animating) return;
-  const n = items.length;
-  if(n===0){ alert('Žiadne položky.'); return; }
+  if(animating) return; const n=items.length; if(n===0){alert('Žiadne položky.'); return;}
+  const minS=Math.max(1,parseInt(document.getElementById('minSpins').value)||4);
+  const maxS=Math.max(minS,parseInt(document.getElementById('maxSpins').value)||minS+2);
+  const spins=randInt(minS,maxS);
 
-  const minS = Math.max(1,parseInt(document.getElementById('minSpins').value) || 4);
-  const maxS = Math.max(minS,parseInt(document.getElementById('maxSpins').value) || minS+2);
-  const spins = randInt(minS, maxS);
+  const chosenIndex=Math.floor(Math.random()*n);
+  const slice=360/n;
+  const targetSectorCenter=(chosenIndex*slice)+slice/2;
+  const desired=spins*360 + (360 - targetSectorCenter);
 
-  // férový výber index
-  const chosenIndex = Math.floor(Math.random() * n);
+  const startTime=performance.now();
+  const duration=4000 + spins*300;
+  const easeType=document.getElementById('easeType').value;
 
-  const slice = 360 / n;
-  // target angle so that chosenIndex's center is at pointer (top)
-  const targetSectorCenter = (chosenIndex * slice) + slice/2;
-  // wheel rotation is clockwise positive in our transform (SVG rotate uses degrees positive clockwise),
-  // we keep currentAngle and animate to newAngle = spins*360 + (360 - targetSectorCenter) to align center at top.
-  const desired = spins*360 + (360 - targetSectorCenter);
-
-  const start = performance.now();
-  const duration = 4000 + spins*300; // base duration depends on spins
-  const easeType = document.getElementById('easeType').value;
-
-  animating = true;
-  resultEl.textContent = 'Otáčam...';
-
-  const from = currentAngle % 360;
-  const to = currentAngle + desired;
+  animating=true;
+  resultEl.textContent='Otáčam...';
+  lastTickSegment=-1;
+  const from=currentAngle%360;
+  const to=currentAngle + desired;
 
   function step(now){
-    const t = Math.min(1, (now - start) / duration);
+    const t=Math.min(1,(now-startTime)/duration);
     let p;
-    if(easeType === 'expo') p = easeOutExpo(t);
-    else if(easeType === 'quad') p = easeOutQuad(t);
-    else p = t;
-    const angle = from + (to - from) * p;
-    currentAngle = angle;
-    wheelGroup.setAttribute('transform', 'rotate(' + (angle) + ')');
-    // update pointer color
-    pointerEl.style.borderBottomColor = document.getElementById('pointerColor').value;
-    if(t < 1) requestAnimationFrame(step);
-    else {
-      animating = false;
-      // final index compute (safety)
-      const finalAngle = (360 - (currentAngle % 360) + 90) % 360; // corrected
-      const idx = Math.floor(finalAngle / slice) % n;
-      resultEl.textContent = 'Výsledok: ' + items[idx].text;
-      // flash selected segment
-      flashSegment(idx);
+    if(easeType==='expo') p=easeOutExpo(t);
+    else if(easeType==='quad') p=easeOutQuad(t);
+    else p=t;
+    const angle=from + (to-from)*p;
+    currentAngle=angle;
+    wheelGroup.setAttribute('transform','rotate('+angle+')');
+    pointerEl.style.borderLeftColor=document.getElementById('pointerColor').value;
+
+    playTickSound();
+
+    if(t<1) requestAnimationFrame(step);
+    else{
+      animating=false;
+      const finalAngle=(360-(currentAngle%360)+90)%360;
+      const idx=Math.floor(finalAngle/slice)%n;
+      resultEl.textContent='Výsledok: '+items[idx].text;
+
+      // flash a zvuk výhry
+      const paths=wheelGroup.querySelectorAll('path');
+      const orig=paths[idx].getAttribute('fill');
+      paths[idx].setAttribute('fill','#fff9c9');
+      const winSound=document.getElementById('winSound');
+      winSound.currentTime=0; winSound.play();
+      setTimeout(()=>{ if(paths[idx]) paths[idx].setAttribute('fill',orig); },1200);
+
       saveCurrentDraft();
     }
   }
   requestAnimationFrame(step);
 }
 
-/* highlight segment for a moment */
-function flashSegment(idx){
-  const paths = wheelGroup.querySelectorAll('path');
-  if(!paths[idx]) return;
-  const orig = paths[idx].getAttribute('fill');
-  paths[idx].setAttribute('fill', '#fff9c9');
-  setTimeout(()=>{ if(paths[idx]) paths[idx].setAttribute('fill', orig); }, 1200);
-}
-
 /* ---------- Init ---------- */
-document.getElementById('spinBtn').addEventListener('click', spinWheel);
-document.getElementById('pointerColor').addEventListener('input', e => { pointerEl.style.borderBottomColor = e.target.value; saveCurrentDraft(); });
-document.getElementById('colorSeed').addEventListener('input', ()=> { renderWheel(); saveCurrentDraft(); });
+document.getElementById('spinBtn').addEventListener('click',spinWheel);
+document.getElementById('pointerColor').addEventListener('input',e=>{pointerEl.style.borderLeftColor=e.target.value; saveCurrentDraft();});
+document.getElementById('colorSeed').addEventListener('input',()=>{renderWheel(); saveCurrentDraft();});
 
-document.getElementById('itemsInput').addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key==='Enter'){ document.getElementById('applyItems').click(); }});
-document.getElementById('applyItems').addEventListener('dblclick', ()=> { alert('Double-click: rýchle načítanie'); });
+document.getElementById('itemsInput').addEventListener('keydown',e=>{if(e.ctrlKey && e.key==='Enter'){document.getElementById('applyItems').click();}});
+document.getElementById('applyItems').addEventListener('dblclick',()=>{alert('Double-click: rýchle načítanie');});
 
-document.addEventListener('visibilitychange', () => { if(document.hidden) saveCurrentDraft(); });
+document.addEventListener('visibilitychange',()=>{if(document.hidden) saveCurrentDraft();});
 
 renderPresets();
 loadCurrentDraft();
-loadCurrentDraft(); // try twice to be safe
 renderWheel();
 
-/* load autosaved if empty */
+/* ---------- Auto-load if empty ---------- */
 (function tryLoadAuto(){
   if(items.length===0){
-    const raw = localStorage.getItem(currentPresetKey);
-    if(raw){ try{ const obj = JSON.parse(raw); if(obj.items) { items = obj.items; refreshItemsList(); } }catch(e){} }
+    const raw=localStorage.getItem(currentPresetKey);
+    if(raw){ try{ const obj=JSON.parse(raw); if(obj.items){ items=obj.items; refreshItemsList(); } }catch(e){} }
   }
 })();
 </script>
