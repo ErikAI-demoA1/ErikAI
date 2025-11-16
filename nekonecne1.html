@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ErikAI OS 2026 - Nekonečné čísla</title>
+<title>ErikAI OS 2026 - Nekonečné čísla a text</title>
 <style>
   body{
     margin:0;
@@ -27,6 +27,7 @@
     width: 90vw;
     height: 200px;
     background: #041426;
+    border:1px solid rgba(255,255,255,0.1);
   }
   button{
     padding:10px 20px;
@@ -54,19 +55,13 @@ canvas.width = canvas.clientWidth;
 canvas.height = canvas.clientHeight;
 
 let value = parseInt(localStorage.getItem('lastValue') || '0');
-let interval = 1000; // počiatočný interval v ms
+let interval = 1000;
 let running = false;
-let dots = [];
-const text = "ErikAI OS 2026";
-const textLength = text.length;
 
-// inicializácia čiarkových bodov
-for(let i=0;i<textLength;i++){
-  dots.push({
-    x: 20 + i*40,
-    y: canvas.height/2,
-    progress: Math.random()*0.8 // efekt “takmer hotové”
-  });
+const text = "ErikAI OS 2026";
+let letters = []; // každé písmeno má svoje body
+for(let i=0;i<text.length;i++){
+  letters.push({dots: [], done:false});
 }
 
 function getRandomColor(){
@@ -75,14 +70,27 @@ function getRandomColor(){
 
 function drawTextEffect(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = '#fff9c9';
   ctx.font = '32px monospace';
-  for(let i=0;i<dots.length;i++){
-    const d = dots[i];
-    const offset = d.progress * 50; // čiara rastie
-    ctx.fillText(text[i], d.x, d.y - 50 + offset);
-    d.progress += 0.01;
-    if(d.progress>1) d.progress = Math.random()*0.7; // nikdy úplne nedokončí
+  for(let i=0;i<letters.length;i++){
+    const letter = letters[i];
+    const x = 20 + i*40;
+    const y = canvas.height/2;
+    // vykresli všetky čiarky pre toto písmeno
+    letter.dots.forEach(d=>{
+      ctx.fillStyle = d.color;
+      ctx.fillText(d.char, x, y - 50 + d.offset);
+    });
+  }
+}
+
+function addDotToLetter(idx){
+  if(idx >= letters.length) return;
+  const letter = letters[idx];
+  if(letter.done) return;
+  const offset = Math.random()*50; // náhodný posun čiarky
+  letter.dots.push({char: text[idx], offset:offset, color:getRandomColor()});
+  if(letter.dots.length > 20 && idx < letters.length-1){ // až 20 čiark pre jedno písmeno
+    letter.done = true;
   }
 }
 
@@ -93,8 +101,14 @@ function step(){
   numberEl.style.color = getRandomColor();
   localStorage.setItem('lastValue', value);
 
-  interval = Math.max(50, interval * 0.9); // zrýchlenie o 0,1s
+  // pridaj čiarky postupne
+  for(let i=0;i<letters.length-1;i++){ // posledné písmeno nikdy nebude dokončené
+    if(Math.random()<0.3) addDotToLetter(i);
+  }
+
   drawTextEffect();
+
+  interval = Math.max(50, interval * 0.95); // zrýchlenie
   setTimeout(step, interval);
 }
 
