@@ -59,7 +59,8 @@ const numberEl = document.getElementById('number');
 const wordsEl = document.getElementById('words');
 
 let value = parseInt(localStorage.getItem('lastValue') || '0');
-let interval = 1000;
+let interval = 1000;   // počiatočný interval 1 sekunda
+const speedUp = 5;     // zrýchlenie v milisekundách (0.005 sekúnd = 5 ms)
 let running = false;
 let words = localStorage.getItem('words') || '';
 
@@ -71,23 +72,23 @@ function getRandomLetter(){
 function step(){
   if(!running) return;
 
-  // zvýš číslo a zrýchli interval
+  // zvýš číslo
   value++;
   numberEl.textContent = value;
   numberEl.style.color = `hsl(${Math.random()*360},70%,60%)`;
   localStorage.setItem('lastValue', value);
 
-  // pridaj písmená podľa hodnoty čísla (čím vyššie číslo, tým viac písmen)
-  const lettersToAdd = Math.floor(Math.log10(value+1)) + 1; // rast s číslom
+  // pridaj písmená podľa hodnoty čísla
+  const lettersToAdd = Math.floor(Math.log10(value+1)) + 1;
   for(let i=0;i<lettersToAdd;i++){
     words += getRandomLetter();
   }
 
-  // pridaj medzery a bodky pre väčší efekt viet
+  // pridaj medzery a bodky
   if(Math.random() < 0.05) words += '. ';
   if(Math.random() < 0.1) words += ' ';
 
-  // obmedz dĺžku zobrazenia, posúvanie textu
+  // obmedz dĺžku textu
   if(words.length > 5000){
     words = words.slice(-5000);
   }
@@ -97,8 +98,9 @@ function step(){
 
   localStorage.setItem('words', words);
 
-  // zrýchľovanie
-  interval = Math.max(10, interval * 0.995);
+  // presné zrýchlenie o 0,005 sekúnd = 5 ms
+  interval = Math.max(5, interval - speedUp);
+
   setTimeout(step, interval);
 }
 
