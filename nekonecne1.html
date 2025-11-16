@@ -1,71 +1,110 @@
-<!DOCTYPE html><html lang="sk">
+<!doctype html>
+<html lang="sk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nekonečné Počítadlo</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background: #111;
-      color: white;
-    }
-    #number {
-      font-size: 5rem;
-      font-weight: bold;
-      transition: color 0.3s ease;
-    }
-    button {
-      padding: 12px 24px;
-      margin-top: 20px;
-      font-size: 1.2rem;
-      cursor: pointer;
-      border-radius: 10px;
-      border: none;
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ErikAI OS 2026 - Nekonečné čísla</title>
+<style>
+  body{
+    margin:0;
+    font-family: monospace;
+    background: #061426;
+    color: #e6f6ff;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+    overflow:hidden;
+  }
+  #number{
+    font-size: 64px;
+    font-weight: bold;
+    margin-bottom: 40px;
+    transition: color 0.2s;
+  }
+  #canvas{
+    width: 90vw;
+    height: 200px;
+    background: #041426;
+  }
+  button{
+    padding:10px 20px;
+    font-size:16px;
+    border:none;
+    border-radius:8px;
+    background: #06b6d4;
+    color:#021;
+    cursor:pointer;
+    margin-top:20px;
+  }
+</style>
 </head>
 <body>
-  <div id="number">0</div>
-  <button id="startBtn">START</button><script>
-let count = 0;
-let delay = 1000; // 1 sekunda
+
+<div id="number">0</div>
+<canvas id="canvas"></canvas>
+<button id="startBtn">Štart</button>
+
+<script>
+const numberEl = document.getElementById('number');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = canvas.clientWidth;
+canvas.height = canvas.clientHeight;
+
+let value = parseInt(localStorage.getItem('lastValue') || '0');
+let interval = 1000; // počiatočný interval v ms
 let running = false;
-let timer;
+let dots = [];
+const text = "ErikAI OS 2026";
+const textLength = text.length;
 
-// Obnova posledného čísla z uloženia
-if(localStorage.getItem("counterValue")){
-  count = parseInt(localStorage.getItem("counterValue"));
-  document.getElementById("number").textContent = count;
+// inicializácia čiarkových bodov
+for(let i=0;i<textLength;i++){
+  dots.push({
+    x: 20 + i*40,
+    y: canvas.height/2,
+    progress: Math.random()*0.8 // efekt “takmer hotové”
+  });
 }
 
-function randomColor(){
-  return `hsl(${Math.random()*360}, 80%, 60%)`;
+function getRandomColor(){
+  return 'hsl(' + Math.floor(Math.random()*360) + ',70%,60%)';
 }
 
-function loop(){
-  timer = setTimeout(()=>{
-    count++;
-    delay = Math.max(50, delay - 100); // zrýchľovanie o 0,1s (100ms)
-
-    document.getElementById("number").textContent = count;
-    document.getElementById("number").style.color = randomColor();
-
-    localStorage.setItem("counterValue", count);
-
-    loop();
-  }, delay);
+function drawTextEffect(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#fff9c9';
+  ctx.font = '32px monospace';
+  for(let i=0;i<dots.length;i++){
+    const d = dots[i];
+    const offset = d.progress * 50; // čiara rastie
+    ctx.fillText(text[i], d.x, d.y - 50 + offset);
+    d.progress += 0.01;
+    if(d.progress>1) d.progress = Math.random()*0.7; // nikdy úplne nedokončí
+  }
 }
 
-document.getElementById("startBtn").onclick = ()=>{
+function step(){
+  if(!running) return;
+  value++;
+  numberEl.textContent = value;
+  numberEl.style.color = getRandomColor();
+  localStorage.setItem('lastValue', value);
+
+  interval = Math.max(50, interval * 0.9); // zrýchlenie o 0,1s
+  drawTextEffect();
+  setTimeout(step, interval);
+}
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
   if(!running){
     running = true;
-    loop();
+    step();
   }
-};
-</script></body>
+});
+</script>
+
+</body>
 </html>
