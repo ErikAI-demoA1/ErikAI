@@ -95,7 +95,7 @@ body {
 <div id="msg"></div>
 
 <!-- SEM DAJ SVOJ ZVUK -->
-<audio id="tickSound" preload="auto">
+<audio id="tickSound" preload="auto" loop>
     <source src="Zvuk1.wav" type="audio/wav">
 </audio>
 
@@ -103,27 +103,25 @@ body {
 let currentYear = new Date().getFullYear();
 const tick = document.getElementById("tickSound");
 
-// FUNKCIA PRE HODINY 3D A ZVUK
+// SPUSTENIE ZVUKU PO KLIKNUTÍ (nutné pre prehliadače)
+document.body.addEventListener("click", ()=>{
+    tick.play().catch(()=>{});
+}, {once:true});
+
+// FUNKCIA PRE HODINY 3D A TIKANIE
 function updateClock3D() {
     const now = new Date();
     const h = now.getHours().toString().padStart(2,"0");
     const m = now.getMinutes().toString().padStart(2,"0");
     const s = now.getSeconds().toString().padStart(2,"0");
     document.getElementById("clock3d").textContent = `${h}:${m}:${s}`;
-
-    if(tick.src) {
-        tick.currentTime = 0;
-        tick.play().catch(()=>{});
-    }
 }
 
 // ODPOČET ROKU
 function updateDisplay() {
     const now = new Date();
     const target = new Date(currentYear,0,1);
-
     document.getElementById("year").textContent = "Rok: " + currentYear;
-
     const diff = target - now;
 
     if(diff>0){
@@ -131,10 +129,8 @@ function updateDisplay() {
         const h=Math.floor((diff/(1000*60*60))%24);
         const m=Math.floor((diff/(1000*60))%60);
         const s=Math.floor((diff/1000)%60);
-
         document.getElementById("countdown").textContent =
             `${d} dní • ${h} hod • ${m} min • ${s} sek`;
-
         document.getElementById("msg").textContent =
             "Brzo sa dočkáš — ErikAI OS Premium • by Erik Mohylák";
     } else {
@@ -149,14 +145,16 @@ function changeYear(direction){
     updateDisplay();
 }
 
-// ZOOM IN/OUT každých 10 sekúnd
+// JEDNODUCHÉ JEMNÉ PRIBLIŽENIE (NEODCHÁDZA)
 setInterval(()=>{
-    document.body.style.transform = "scale(1.06)";
-    setTimeout(()=>{ document.body.style.transform="scale(1)"; },1300);
+    document.body.style.transform = "scale(1.02)";
 },10000);
 
-// Spustenie funkcií každú sekundu
-setInterval(()=>{ updateClock3D(); updateDisplay(); },1000);
+// SPUSTENIE HODÍN A ODPOČTU
+setInterval(()=>{
+    updateClock3D();
+    updateDisplay();
+},1000);
 
 updateClock3D();
 updateDisplay();
