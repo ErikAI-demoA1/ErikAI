@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ErikAI OS 2026 - Nekonečné čísla a text</title>
+<title>ErikAI - Nekonečné čísla a písmená</title>
 <style>
   body{
     margin:0;
@@ -18,7 +18,7 @@
     overflow:hidden;
   }
   #number{
-    font-size: 64px;
+    font-size: 48px;
     font-weight: bold;
     margin-bottom: 40px;
     transition: color 0.2s;
@@ -58,40 +58,49 @@ let value = parseInt(localStorage.getItem('lastValue') || '0');
 let interval = 1000;
 let running = false;
 
-const text = "ErikAI OS 2026";
-let letters = []; // každé písmeno má svoje body
-for(let i=0;i<text.length;i++){
-  letters.push({dots: [], done:false});
-}
+// ErikAI písmená a počet bodiek pre dokončenie
+const letters = [
+  {char:'E', needed:1000, dots:[]},
+  {char:'r', needed:10000, dots:[]},
+  {char:'i', needed:100000, dots:[]},
+  {char:'k', needed:1000000, dots:[]},
+  {char:'A', needed:1000000, dots:[]},
+  {char:'I', needed:Infinity, dots:[]}
+];
 
 function getRandomColor(){
   return 'hsl(' + Math.floor(Math.random()*360) + ',70%,60%)';
 }
 
-function drawTextEffect(){
+// vykreslenie všetkých bodiek a písmen
+function drawLetters(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.font = '32px monospace';
-  for(let i=0;i<letters.length;i++){
-    const letter = letters[i];
-    const x = 20 + i*40;
-    const y = canvas.height/2;
-    // vykresli všetky čiarky pre toto písmeno
+  const baseY = canvas.height/2;
+  let xOffset = 20;
+  letters.forEach(letter=>{
     letter.dots.forEach(d=>{
       ctx.fillStyle = d.color;
-      ctx.fillText(d.char, x, y - 50 + d.offset);
+      ctx.fillText('.', xOffset + d.x, baseY + d.y);
     });
-  }
+    // ak dosiahli počet bodiek -> vykresli písmeno
+    if(letter.dots.length >= letter.needed && letter.needed !== Infinity){
+      ctx.fillStyle = '#06b6d4';
+      ctx.fillText(letter.char, xOffset, baseY);
+    }
+    xOffset += 40;
+  });
 }
 
-function addDotToLetter(idx){
-  if(idx >= letters.length) return;
-  const letter = letters[idx];
-  if(letter.done) return;
-  const offset = Math.random()*50; // náhodný posun čiarky
-  letter.dots.push({char: text[idx], offset:offset, color:getRandomColor()});
-  if(letter.dots.length > 20 && idx < letters.length-1){ // až 20 čiark pre jedno písmeno
-    letter.done = true;
-  }
+// pridanie novej bodky pre písmená
+function addDot(){
+  letters.forEach(letter=>{
+    // ak písmeno ešte nie je dokončené alebo nekonečné
+    if(letter.dots.length < letter.needed){
+      const x = Math.random()*20;
+      const y = Math.random()*20 - 10;
+      letter.dots.push({x:x, y:y, color:getRandomColor()});
+    }
+  });
 }
 
 function step(){
@@ -101,14 +110,10 @@ function step(){
   numberEl.style.color = getRandomColor();
   localStorage.setItem('lastValue', value);
 
-  // pridaj čiarky postupne
-  for(let i=0;i<letters.length-1;i++){ // posledné písmeno nikdy nebude dokončené
-    if(Math.random()<0.3) addDotToLetter(i);
-  }
+  addDot();
+  drawLetters();
 
-  drawTextEffect();
-
-  interval = Math.max(50, interval * 0.95); // zrýchlenie
+  interval = Math.max(10, interval * 0.995); // zrýchľovanie
   setTimeout(step, interval);
 }
 
