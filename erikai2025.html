@@ -1,67 +1,107 @@
-<!DOCTYPE html>
-<html lang="sk">
+<!DOCTYPE html><html lang="sk">
 <head>
 <meta charset="UTF-8" />
-<title>ErikAI Countdown</title>
+<title>ErikAI OS — Premium Countdown</title>
 <style>
     body {
         margin: 0;
         padding: 0;
-        background: black;
+        background: radial-gradient(circle at center, #020617, #000);
         color: white;
-        font-family: Arial, sans-serif;
+        font-family: 'Segoe UI', sans-serif;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         height: 100vh;
-        text-align: center;
         overflow: hidden;
-    }
-    #year {
-        font-size: 60px;
-        font-weight: bold;
-        margin-bottom: 15px;
-    }
-    #countdown {
-        font-size: 30px;
-        margin-bottom: 25px;
-    }
-    .nav {
-        font-size: 40px;
-        cursor: pointer;
-        user-select: none;
-        margin: 10px;
-        padding: 10px;
-        border: 2px solid white;
-        border-radius: 10px;
-        transition: 0.2s;
-    }
-    .nav:hover {
-        background: white;
-        color: black;
-    }
-    #msg {
-        margin-top: 20px;
-        font-size: 18px;
-        opacity: 0.6;
-    }
+    }/* ANIMOVANÉ POZADIE */
+.bg-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    filter: blur(120px);
+    background: #0ea5e9;
+    animation: pulse 6s infinite alternate;
+    opacity: 0.35;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 0.2; }
+    100% { transform: scale(1.4); opacity: 0.45; }
+}
+
+/* HLAVNÝ OBSAH */
+#year {
+    font-size: 70px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 25px #0ea5e9;
+    animation: fadeIn 1.2s ease;
+}
+
+#countdown {
+    font-size: 32px;
+    margin-bottom: 25px;
+    animation: fadeIn 1.8s ease;
+}
+
+#clock {
+    font-size: 24px;
+    margin-bottom: 25px;
+    opacity: 0.85;
+    animation: fadeIn 2s ease;
+}
+
+/* NAVIGAČNÉ TLAČIDLÁ */
+.nav {
+    font-size: 38px;
+    cursor: pointer;
+    user-select: none;
+    margin: 10px;
+    padding: 12px 25px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.25);
+    transition: 0.25s;
+    backdrop-filter: blur(6px);
+}
+.nav:hover {
+    background: #0ea5e9;
+    color: black;
+    box-shadow: 0 0 25px #0ea5e9;
+    transform: translateY(-3px);
+}
+
+#msg {
+    margin-top: 20px;
+    font-size: 20px;
+    opacity: 0.7;
+    animation: fadeIn 2.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 </style>
 </head>
-<body>
-
-<div id="year"></div>
+<body><div class="bg-glow"></div><div id="year"></div>
 <div id="countdown"></div>
-
-<div style="display:flex; gap: 30px;">
+<div id="clock"></div><div style="display:flex; gap: 35px; z-index: 5;">
     <div class="nav" onclick="changeYear(-1)">⟵ MINULOSŤ</div>
     <div class="nav" onclick="changeYear(1)">BUDÚCNOSŤ ⟶</div>
-</div>
-
-<div id="msg"></div>
-
-<script>
+</div><div id="msg"></div><script>
 let currentYear = new Date().getFullYear();
+
+// EXKLUZÍVNY ZVUK (jemný futuristický pulz)
+const audio = new Audio("data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAA...");
+audio.loop = true;
+audio.volume = 0.25;
+audio.play().catch(()=>{});
 
 function updateDisplay() {
     const now = new Date();
@@ -69,28 +109,30 @@ function updateDisplay() {
 
     document.getElementById("year").textContent = "Rok: " + currentYear;
 
+    // realtime hodiny
+    document.getElementById("clock").textContent =
+        now.toLocaleTimeString("sk-SK", { hour: "2-digit", minute:"2-digit", second:"2-digit" });
+
     const diff = target - now;
 
     if (diff > 0) {
-        // Budúci rok – odpočítavame
         const d = Math.floor(diff / (1000 * 60 * 60 * 24));
         const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
         const m = Math.floor((diff / (1000 * 60)) % 60);
         const s = Math.floor((diff / 1000) % 60);
 
         document.getElementById("countdown").textContent =
-            `${d} dní • ${h} hodín • ${m} minút • ${s} sekúnd`;
+            `${d} dní • ${h} hod • ${m} min • ${s} sek`;
 
         document.getElementById("msg").textContent =
-            "Brzo sa dočkáš aj s ErikAI OS — by Erik Mohylák";
+            "Brzo sa dočkáš — ErikAI OS Premium • by Erik Mohylák";
     }
     else {
-        // Tento rok už prebehol
         document.getElementById("countdown").textContent =
             "Už nastal koniec roka";
 
         document.getElementById("msg").textContent =
-            "ErikAI OS pokračuje ďalej — by Erik Mohylák";
+            "ErikAI OS pokračuje ďalej v prémiovom režime";
     }
 }
 
@@ -101,7 +143,5 @@ function changeYear(direction) {
 
 setInterval(updateDisplay, 1000);
 updateDisplay();
-</script>
-
-</body>
-</html>
+</script></body>
+    </html>
