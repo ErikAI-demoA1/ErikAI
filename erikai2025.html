@@ -1,0 +1,172 @@
+<!DOCTYPE html><html lang="sk">
+<head>
+<meta charset="UTF-8" />
+<title>ErikAI OS — Premium Countdown</title>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: radial-gradient(circle at center, #020617, #000);
+        color: white;
+        font-family: 'Segoe UI', sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+    }/* HOLOGRAFICKÉ LASEROVÉ POZADIE */
+.laser {
+    position: absolute;
+    width: 140%;
+    height: 140%;
+    background: conic-gradient(from 0deg, #0ea5e9, #14b8a6, #3b82f6, #0ea5e9);
+    filter: blur(160px);
+    animation: spin 18s linear infinite;
+    opacity: 0.15;
+    z-index: -2;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 3D HOLOGRAFICKÉ HODINY */
+#clock3d {
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    border: 6px solid rgba(255,255,255,0.15);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 30px;
+    box-shadow: 0 0 35px #0ea5e9 inset, 0 0 45px #0ea5e9;
+    animation: glowPulse 4s ease-in-out infinite alternate;
+    font-size: 42px;
+    font-weight: 700;
+    backdrop-filter: blur(12px);
+}
+
+@keyframes glowPulse {
+    0% { box-shadow: 0 0 20px #0ea5e9 inset, 0 0 25px #0ea5e9; }
+    100% { box-shadow: 0 0 45px #0ea5e9 inset, 0 0 70px #0ea5e9; }
+}
+
+/* TITUL ERIKAI OS — AI ANIMÁCIA */
+#titleAI {
+    font-size: 64px;
+    font-weight: 900;
+    margin-bottom: 10px;
+    letter-spacing: 4px;
+    background: linear-gradient(90deg, #0ea5e9, #38bdf8, #e0f2fe);
+    -webkit-background-clip: text;
+    color: transparent;
+    animation: shine 4s infinite linear;
+    text-shadow: 0 0 25px #0ea5e9;
+}
+
+@keyframes shine {
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+}
+
+/* ROK */
+#year {
+    font-size: 52px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+/* ODPOČET */
+#countdown {
+    font-size: 30px;
+    margin-bottom: 20px;
+}
+
+/* NAVIGAČNÉ TLAČIDLÁ */
+.nav {
+    font-size: 34px;
+    cursor: pointer;
+    user-select: none;
+    margin: 10px;
+    padding: 12px 30px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.25);
+    transition: 0.3s;
+    backdrop-filter: blur(6px);
+}
+.nav:hover {
+    background: #0ea5e9;
+    color: black;
+    box-shadow: 0 0 25px #0ea5e9;
+    transform: translateY(-4px) scale(1.05);
+}
+
+#msg {
+    margin-top: 25px;
+    font-size: 22px;
+    opacity: 0.8;
+}
+
+</style>
+</head>
+<body><div class="laser"></div><div id="titleAI">ERIKAI OS</div><div id="clock3d">00:00:00</div><div id="year"></div>
+<div id="countdown"></div><div style="display:flex; gap: 35px; z-index: 5; margin-top: 10px;">
+    <div class="nav" onclick="changeYear(-1)">⟵ MINULOSŤ</div>
+    <div class="nav" onclick="changeYear(1)">BUDÚCNOSŤ ⟶</div>
+</div><div id="msg"></div><script>
+let currentYear = new Date().getFullYear();
+
+// TIKANIE — každá sekunda
+const tick = new Audio("data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAA...");
+tick.volume = 0.45;
+
+function updateClock3D() {
+    const now = new Date();
+    const h = now.getHours().toString().padStart(2, "0");
+    const m = now.getMinutes().toString().padStart(2, "0");
+    const s = now.getSeconds().toString().padStart(2, "0");
+    document.getElementById("clock3d").textContent = `${h}:${m}:${s}`;
+    tick.play().catch(()=>{});
+}
+
+function updateDisplay() {
+    const now = new Date();
+    const target = new Date(currentYear, 0, 1);
+
+    document.getElementById("year").textContent = "Rok: " + currentYear;
+
+    const diff = target - now;
+
+    if (diff > 0) {
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((diff / (1000 * 60)) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+
+        document.getElementById("countdown").textContent =
+            `${d} dní • ${h} hod • ${m} min • ${s} sek`;
+
+        document.getElementById("msg").textContent =
+            "Brzo sa dočkáš — ErikAI OS Premium • by Erik Mohylák";
+    }
+    else {
+        document.getElementById("countdown").textContent = "Už nastal koniec roka";
+        document.getElementById("msg").textContent = "ErikAI OS pokračuje ďalej v prémiovom režime";
+    }
+}
+
+function changeYear(direction) {
+    currentYear += direction;
+    updateDisplay();
+}
+
+setInterval(updateClock3D, 1000);
+setInterval(updateDisplay, 1000);
+updateClock3D();
+updateDisplay();
+</script></body>
+</html>
