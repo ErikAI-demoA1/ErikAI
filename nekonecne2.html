@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nekonečné vety</title>
+<style>
+  body{
+    margin:0;
+    font-family: monospace;
+    background: #061426;
+    color: #e6f6ff;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+    overflow:hidden;
+  }
+  #number{
+    font-size: 48px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    transition: color 0.2s;
+  }
+  #words{
+    font-size: 18px;
+    white-space: pre-wrap;
+    max-width: 90vw;
+    max-height: 60vh;
+    overflow-y: auto;
+    text-align: center;
+    line-height: 1.4;
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    background: rgba(0,0,0,0.2);
+  }
+  button{
+    padding:10px 20px;
+    font-size:16px;
+    border:none;
+    border-radius:8px;
+    background: #06b6d4;
+    color:#021;
+    cursor:pointer;
+    margin-top:20px;
+  }
+</style>
+</head>
+<body>
+
+<div id="number">0</div>
+<div id="words"></div>
+<button id="startBtn">Štart</button>
+
+<script>
+const numberEl = document.getElementById('number');
+const wordsEl = document.getElementById('words');
+
+let value = parseInt(localStorage.getItem('lastValue') || '0');
+let interval = 1000;
+let running = false;
+let words = localStorage.getItem('words') || '';
+
+function getRandomLetter(){
+  const letters = 'abcdefghijklmnopqrstuvwxyz ';
+  return letters.charAt(Math.floor(Math.random() * letters.length));
+}
+
+function step(){
+  if(!running) return;
+
+  // zvýš číslo a zrýchli interval
+  value++;
+  numberEl.textContent = value;
+  numberEl.style.color = `hsl(${Math.random()*360},70%,60%)`;
+  localStorage.setItem('lastValue', value);
+
+  // pridaj písmená podľa hodnoty čísla (čím vyššie číslo, tým viac písmen)
+  const lettersToAdd = Math.floor(Math.log10(value+1)) + 1; // rast s číslom
+  for(let i=0;i<lettersToAdd;i++){
+    words += getRandomLetter();
+  }
+
+  // pridaj medzery a bodky pre väčší efekt viet
+  if(Math.random() < 0.05) words += '. ';
+  if(Math.random() < 0.1) words += ' ';
+
+  // obmedz dĺžku zobrazenia, posúvanie textu
+  if(words.length > 5000){
+    words = words.slice(-5000);
+  }
+
+  wordsEl.textContent = words;
+  wordsEl.scrollTop = wordsEl.scrollHeight;
+
+  localStorage.setItem('words', words);
+
+  // zrýchľovanie
+  interval = Math.max(10, interval * 0.995);
+  setTimeout(step, interval);
+}
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  if(!running){
+    running = true;
+    step();
+  }
+});
+
+// načítanie z uloženia pri štarte
+numberEl.textContent = value;
+wordsEl.textContent = words;
+</script>
+
+</body>
+</html>
