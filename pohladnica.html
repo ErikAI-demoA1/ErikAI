@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Univerzálna pohľadnica — ErikAI</title>
+<style>
+  :root{
+    --bg:#071021; --card:#072034; --accent:#06b6d4; --muted:#9fb2d1;
+    --text:#f3fcff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter, system-ui, Arial; background:linear-gradient(180deg,#02061a,var(--bg)); color:var(--text);
+    display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;padding:18px;}
+  .panel{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));
+    border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.03);width:360px;}
+  h2{margin:6px 0 10px 0;font-size:16px}
+  label{font-size:13px;color:var(--muted);display:block;margin-top:8px}
+  select,textarea,input,button{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);
+    background:transparent;color:var(--text);font-size:14px}
+  textarea{min-height:88px;resize:vertical}
+  .row{display:flex;gap:8px}
+  .row > *{flex:1}
+  button{cursor:pointer;background:linear-gradient(90deg,var(--accent),#8b5cf6);border:none;color:#021;font-weight:700}
+  .previewWrap{flex:1;min-width:360px;display:flex;align-items:center;justify-content:center;padding:12px}
+  /* Card canvas size will reflect chosen print size; we design at 1500x1050 px */
+  .card {
+    width:900px; height:600px; border-radius:12px; overflow:hidden; position:relative;
+    background:linear-gradient(180deg,#072034,#051225); box-shadow:0 20px 60px rgba(2,6,23,0.7);
+    display:block;
+  }
+  /* content inside card: front side design */
+  .front { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px;text-align:center }
+  .headline{font-size:48px;font-weight:900;margin:6px 0; letter-spacing:1px}
+  .sub{font-size:20px;opacity:0.95;margin-top:6px}
+  .decor { position:absolute;inset:0;pointer-events:none; }
+  /* back-side layout for print (simple) */
+  .back { display:none;position:absolute;inset:0;padding:30px;color:#021;background:white; }
+  /* control small */
+  .small{font-size:13px;padding:6px}
+  .controlsRow{display:flex;gap:8px;margin-top:8px}
+  .muted{color:var(--muted);font-size:13px}
+  footer{width:100%;text-align:center;color:var(--muted);font-size:13px;margin-top:6px}
+
+  /* Animations for snow / lights / fireworks (simple) */
+  .snow, .lights, .fireworkCanvas { position:absolute;inset:0;pointer-events:none; }
+  .lights .bulb{position:absolute;border-radius:50%;box-shadow:0 0 18px rgba(255,255,255,0.06);}
+  /* print rules for sizes */
+  @media print{
+    body{background:white;padding:0}
+    .panel,.previewWrap{display:none}
+    .card{box-shadow:none;border-radius:0}
+    /* use selected CSS size via inline style on .card for print size */
+  }
+  /* make controls responsive */
+  @media (max-width:980px){
+    body{flex-direction:column;align-items:stretch}
+    .panel{width:100%}
+    .previewWrap{width:100%}
+    .card{width:95vw;height:63.333vw;max-height:95vh}
+  }
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <h2>Univerzálna pohľadnica — nastavenia</h2>
+
+  <label>Sviatok / štýl</label>
+  <select id="holiday">
+    <option value="universal">Univerzálne</option>
+    <option value="christmas">Vianoce (sneh + svetielka)</option>
+    <option value="newyear">Nový rok (ohňostroj)</option>
+    <option value="birthday">Narodeniny (confetti)</option>
+    <option value="custom">Vlastné (bez efektov)</option>
+  </select>
+
+  <label>Predný text (veľký nadpis)</label>
+  <input id="headline" value="Veselé sviatky" />
+
+  <label>Podnadpis / krátka správa</label>
+  <textarea id="subtitle">Nech je tvoj rok naplnený radosťou a úsmevom.</textarea>
+
+  <label>Rozmery tlače (rozumné štandardy)</label>
+  <select id="size">
+    <option value="A6">A6 (105 × 148 mm) — pohľadnica</option>
+    <option value="5x7">5 × 7 in (127 × 178 mm) — populárna karta</option>
+    <option value="A5fold">A5 (148 × 210 mm) — zložená na A6</option>
+    <option value="DL">DL (99 × 210 mm) — obálka / banner</option>
+  </select>
+
+  <label>Farba textu</label>
+  <input id="txtColor" type="color" value="#e6f6ff" />
+
+  <div class="controlsRow">
+    <button id="apply" class="small">Aktualizovať náhľad</button>
+    <button id="downloadPng" class="small">Stiahnuť PNG (predná)</button>
+  </div>
+
+  <div class="controlsRow" style="margin-top:8px">
+    <button id="downloadSvg" class="small">Stiahnuť SVG (vysoká kvalita)</button>
+    <button id="printBtn" class="small">Tlačiť (nastav 100% / bez okrajov)</button>
+  </div>
+
+  <label class="muted">Tip: pri tlači vyber rozlíšenie 300dpi a škálovanie 100% pre reálne rozmery.</label>
+  <footer>ErikAI — Univerzálna pohľadnica</footer>
+</div>
+
+<div class="previewWrap">
+  <!-- Card element to preview and export -->
+  <div id="card" class="card" role="img" aria-label="Pohľadnica náhľad">
+    <!-- animated decor layers -->
+    <div class="decor snow" id="snowLayer"></div>
+    <div class="decor lights" id="lightsLayer"></div>
+    <canvas class="decor fireworkCanvas" id="fwCanvas"></canvas>
+
+    <!-- front face -->
+    <div class="front" id="frontFace">
+      <div class="headline" id="headlineEl">Veselé sviatky</div>
+      <div class="sub" id="subtitleEl">Nech je tvoj rok naplnený radosťou a úsmevom.</div>
+    </div>
+
+    <!-- optional back for print: simple layout (hidden in preview) -->
+    <div class="back" id="backFace">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="width:60%">
+          <h3 style="color:#021;margin:0 0 6px 0">Tvoje prianie</h3>
+          <p style="color:#021;opacity:0.8" id="backMessage">Tu napíš svoje prianie pred tlačou.</p>
+        </div>
+        <div style="width:36%;text-align:right;color:#021;font-size:12px">
+          <div>Od: ____________________</div><div style="margin-top:12px">Adresa príjemcu:</div><div style="margin-top:8px">____________________</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const holiday = document.getElementById('holiday');
+const headline = document.getElementById('headline');
+const subtitle = document.getElementById('subtitle');
+const txtColor = document.getElementById('txtColor');
+const applyBtn = document.getElementById('apply');
+const card = document.getElementById('card');
+const headlineEl = document.getElementById('headlineEl');
+const subtitleEl = document.getElementById('subtitleEl');
+const snowLayer = document.getElementById('snowLayer');
+const lightsLayer = document.getElementById('lightsLayer');
+const fwCanvas = document.getElementById('fwCanvas');
+const sizeSel = document.getElementById('size');
+const downloadPng = document.getElementById('downloadPng');
+const downloadSvg = document.getElementById('downloadSvg');
+const printBtn = document.getElementById('printBtn');
+
+/* set card "real" CSS size for print according selected size (in px at 300dpi reference)
+   We'll set card CSS transform scale for screen preview but inline style for print indicated by real physical sizes in mm via CSS @page can't be reliably injected,
+   so we offer: for print we set the card element size in mm via style attribute when printing. */
+function applySizeToCardForPrint() {
+  const sz = sizeSel.value;
+  // map to mm
+  const map = {
+    'A6': {w:105, h:148},
+    '5x7': {w:127, h:178},
+    'A5fold': {w:148, h:210},
+    'DL': {w:99, h:210}
+  };
+  const mm = map[sz] || map['A6'];
+  // apply inline style for print: create or update style element
+  card.setAttribute('data-print-w-mm', mm.w);
+  card.setAttribute('data-print-h-mm', mm.h);
+  // Also scale preview nicely: design baseline 127x178 -> scale based on width
+  const baseW = 127; // baseline for preview scaling
+  const scale = mm.w / baseW;
+  // but keep preview within available; so adjust to fit card element initial px 900x600 - we'll simply apply css transform for screen preview
+  card.style.transform = `scale(${Math.min(1.0, 0.95 * scale)})`;
+}
+applySizeToCardForPrint();
+
+/* ---------- animations: snow, lights, fireworks ---------- */
+/* snow: small floating circles using CSS + JS */
+function makeSnow() {
+  snowLayer.innerHTML = '';
+  const N = 40;
+  for(let i=0;i<N;i++){
+    const s = document.createElement('div');
+    const size = 4 + Math.random()*8;
+    s.style.position='absolute';
+    s.style.left = (Math.random()*100) + '%';
+    s.style.top = (-Math.random()*40) + '%';
+    s.style.width = size+'px';
+    s.style.height = size+'px';
+    s.style.background = 'rgba(255,255,255,'+(0.7*Math.random()+0.15)+')';
+    s.style.borderRadius='50%';
+    s.style.filter = 'blur('+ (Math.random()*1.3) +'px)';
+    s.style.opacity = 0.9;
+    s.style.transform = `translateY(0)`;
+    s.dataset.speed = 0.3 + Math.random()*1.2;
+    snowLayer.appendChild(s);
+  }
+  // animate via RAF
+  let last = performance.now();
+  function step(now){
+    const dt = (now-last)/1000; last = now;
+    Array.from(snowLayer.children).forEach(el=>{
+      let top = parseFloat(el.style.top);
+      top += dt * (20 * el.dataset.speed);
+      if(top > 110) top = -10 - Math.random()*20, el.style.left = (Math.random()*100)+'%';
+      el.style.top = top + '%';
+    });
+    snowLayer._r = requestAnimationFrame(step);
+  }
+  cancelAnimationFrame(snowLayer._r||0);
+  snowLayer._r = requestAnimationFrame(step);
+}
+
+/* lights: string of bulbs across top */
+function makeLights(){
+  lightsLayer.innerHTML='';
+  const colors = ['#ffefc2','#ffd1dc','#bde6ff','#c8ffdf','#fff3b0'];
+  const bulbs = 12;
+  for(let i=0;i<bulbs;i++){
+    const b = document.createElement('div');
+    b.className='bulb';
+    const left = (i/(bulbs-1))*100;
+    b.style.left = left + '%';
+    b.style.top = '6%';
+    const size = 12 + Math.random()*8;
+    b.style.width = size+'px';
+    b.style.height = size+'px';
+    b.style.background = colors[i % colors.length];
+    b.style.boxShadow = `0 0 ${8+Math.random()*12}px ${colors[i%colors.length]}`;
+    b.style.opacity = 0.9;
+    b.style.transform = `translateX(-50%)`;
+    lightsLayer.appendChild(b);
+    // twinkle
+    (function(el){
+      let on = true;
+      setInterval(()=>{ el.style.opacity = on?0.18:0.95; on = !on; }, 700 + Math.random()*900);
+    })(b);
+  }
+}
+
+/* fireworks: lightweight canvas points for bursts */
+function makeFireworks(){
+  const c = fwCanvas;
+  const ctx = c.getContext('2d');
+  function resize(){ c.width = card.clientWidth; c.height = card.clientHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+  let particles = [];
+  function launch(){
+    const cx = Math.random() * c.width * 0.6 + c.width*0.2;
+    const cy = Math.random() * c.height * 0.4 + c.height*0.1;
+    const count = 16 + Math.floor(Math.random()*28);
+    const hue = Math.floor(Math.random()*360);
+    for(let i=0;i<count;i++){
+      const angle = Math.random()*Math.PI*2;
+      const speed = 1.6 + Math.random()*4.2;
+      particles.push({
+        x:cx, y:cy,
+        vx:Math.cos(angle)*speed,
+        vy:Math.sin(angle)*speed,
+        life: 100 + Math.random()*80,
+        color: `hsl(${hue + Math.random()*40 -20}, 85%, 60%)`
+      });
+    }
+  }
+  let last = performance.now();
+  function tick(now){
+    const dt = (now-last)/16.666; last = now;
+    ctx.clearRect(0,0,c.width,c.height);
+    ctx.globalCompositeOperation = 'lighter';
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.x += p.vx * dt * 0.8;
+      p.y += p.vy * dt * 0.8 + 0.3 * dt;
+      p.vy += 0.02 * dt;
+      p.life -= dt*1.2;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.8, p.life/30),0,Math.PI*2);
+      ctx.fill();
+      if(p.life <= 0) particles.splice(i,1);
+    }
+    if(Math.random() < 0.02) launch();
+    requestAnimationFrame(tick);
+  }
+  cancelAnimationFrame(fwCanvas._r||0);
+  fwCanvas._r = requestAnimationFrame(tick);
+}
+
+/* ---------- render & interactivity ---------- */
+function applySettings(){
+  headlineEl.textContent = headline.value || '';
+  subtitleEl.textContent = subtitle.value || '';
+  headlineEl.style.color = txtColor.value;
+  subtitleEl.style.color = txtColor.value;
+  // toggle effects
+  const h = holiday.value;
+  // remove all decorations
+  snowLayer.style.display = 'none';
+  lightsLayer.style.display = 'none';
+  fwCanvas.style.display = 'none';
+  cancelAnimationFrame(snowLayer._r||0);
+  cancelAnimationFrame(fwCanvas._r||0);
+  // Based on selection
+  if(h === 'christmas'){
+    snowLayer.style.display = 'block';
+    lightsLayer.style.display = 'block';
+    makeSnow();
+    makeLights();
+  } else if(h === 'newyear'){
+    fwCanvas.style.display = 'block';
+    makeFireworks();
+  } else if(h === 'birthday'){
+    // confetti -> reuse fireworks with different parameters (quick burst)
+    fwCanvas.style.display = 'block';
+    makeFireworks();
+  } else {
+    // custom/universal: no effects
+  }
+  applySizeToCardForPrint();
+}
+
+/* ---------- export functions ---------- */
+/* Download PNG of front face: convert card (SVG-less) by cloning into an SVG then drawing to canvas */
+function downloadCardPNG(){
+  // Create an SVG representation by serializing card HTML as foreignObject (works in modern browsers)
+  const w = card.clientWidth;
+  const h = card.clientHeight;
+  const serializer = new XMLSerializer();
+  // Clone card node and inline styles
+  const clone = card.cloneNode(true);
+  // hide back face
+  const b = clone.querySelector('.back'); if(b) b.style.display='none';
+  // Remove dynamic canvases for reproducible static look: draw current canvas into image elements
+  const canv = clone.querySelector('canvas');
+  if(canv){
+    const data = canv.toDataURL();
+    const img = document.createElement('img');
+    img.src = data;
+    img.style.position='absolute'; img.style.inset='0';
+    canv.parentNode.replaceChild(img, canv);
+  }
+  // inline computed styles for each element (quick approach)
+  function inlineStyles(el){
+    const cs = getComputedStyle(document.querySelector('[data-temp="true"]') || card);
+    // copy computed style not needed for every element (heavy). We'll rely on existing CSS as browser serializes linked styles differently.
+  }
+  const fo = `<foreignObject x="0" y="0" width="${w}" height="${h}">${new XMLSerializer().serializeToString(clone)}</foreignObject>`;
+  // full svg
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${fo}</svg>`;
+  const svg64 = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  const img = new Image();
+  img.onload = function(){
+    const canvas = document.createElement('canvas');
+    canvas.width = w*2; canvas.height = h*2; // increase resolution
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff00';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url; a.download = 'pohladnica.png'; a.click();
+  };
+  img.onerror = ()=>{ alert('Export sa nepodaril v tomto prehliadači. Skús "Stiahnuť SVG" a konvertovať v grafickom programe.'); };
+  img.src = svg64;
+}
+
+/* Download SVG: produce SVG with foreignObject (editable in Inkscape/Illustrator) */
+function downloadSVG(){
+  const w = card.clientWidth;
+  const h = card.clientHeight;
+  const clone = card.cloneNode(true);
+  // remove dynamic animations that rely on scripts to avoid unnecessary complexity: remove canvas, keep decorations as-is
+  const c = clone.querySelector('canvas'); if(c) c.remove();
+  // Serialize clone
+  const html = new XMLSerializer().serializeToString(clone);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject x="0" y="0" width="100%" height="100%">${html}</foreignObject></svg>`;
+  const blob = new Blob([svg], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'pohladnica.svg'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1500);
+}
+
+/* Print: set card element to real mm size then call window.print()
+   We'll create a print-only stylesheet dynamically to size the card element in mm. */
+function printCard(){
+  // compose print dimensions
+  const mmW = card.getAttribute('data-print-w-mm') || 105;
+  const mmH = card.getAttribute('data-print-h-mm') || 148;
+  // create style
+  const style = document.createElement('style');
+  style.id = 'print-size-style';
+  style.textContent = `
+    @page { margin: 0mm; }
+    @media print {
+      body * { visibility: hidden !important; }
+      #card { visibility: visible !important; position: absolute !important; left: 0; top: 0;
+             width: ${mmW}mm !important; height: ${mmH}mm !important; transform:none !important; }
+    }`;
+  document.head.appendChild(style);
+  // new window.print call
+  setTimeout(()=>{ window.print(); setTimeout(()=>{ style.remove(); }, 500); }, 200);
+}
+
+/* ---------- events ---------- */
+applyBtn.addEventListener('click', applySettings);
+holiday.addEventListener('change', applySettings);
+sizeSel.addEventListener('change', applySizeToCardForPrint);
+downloadPng.addEventListener('click', downloadCardPNG);
+downloadSvg.addEventListener('click', downloadSVG);
+printBtn.addEventListener('click', printCard);
+
+/* init */
+applySettings();
+</script>
+</body>
+</html>
