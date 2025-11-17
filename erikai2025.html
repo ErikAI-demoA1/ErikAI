@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ErikAI OS — Premium Countdown (Exkluzívny)</title>
+<style>
+  :root{
+    --bg-1:#020617;
+    --accent-a:#0ea5e9;
+    --accent-b:#7c3aed;
+    --glass: rgba(255,255,255,0.04);
+    --muted: rgba(255,255,255,0.65);
+    --card:#061426;
+  }
+
+  html,body{
+    height:100%;
+    margin:0;
+    background: radial-gradient(1200px 600px at 40% 10%, rgba(14,165,233,0.06), transparent 20%), linear-gradient(180deg,var(--bg-1),#000);
+    font-family: "Segoe UI", Roboto, Inter, system-ui, -apple-system, "Helvetica Neue", Arial;
+    color: #eaf6ff;
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* fixed stage for consistent presentation */
+  #stage{
+    width:1280px;
+    height:720px;
+    border-radius:18px;
+    padding:28px;
+    box-sizing:border-box;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.03);
+    box-shadow: 0 20px 60px rgba(2,6,23,0.7);
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* decorative holographic shapes */
+  .holo{
+    position:absolute;
+    width:900px;
+    height:900px;
+    right:-200px;
+    top:-350px;
+    background: conic-gradient(from 120deg, rgba(124,58,237,0.06), rgba(14,165,233,0.06));
+    filter: blur(120px);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .container{
+    position:relative;
+    z-index:2;
+    width:100%;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:28px;
+  }
+
+  /* left column (clock + title) */
+  .left{
+    width:520px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:18px;
+  }
+
+  #title{
+    font-size:56px;
+    font-weight:900;
+    letter-spacing:5px;
+    background: linear-gradient(90deg,var(--accent-a),var(--accent-b));
+    -webkit-background-clip:text;
+    color:transparent;
+    text-transform:uppercase;
+    text-align:center;
+    text-shadow: 0 6px 28px rgba(14,165,233,0.15);
+  }
+
+  /* analog clock (SVG) */
+  .clock-wrap{
+    width:360px;
+    height:360px;
+    border-radius:50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.015));
+    border: 1px solid rgba(255,255,255,0.03);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow: inset 0 8px 30px rgba(14,165,233,0.02), 0 20px 60px rgba(2,6,23,0.6);
+    position:relative;
+  }
+
+  /* digital in center */
+  #digital{
+    position:absolute;
+    z-index:3;
+    font-weight:800;
+    font-size:24px;
+    padding:8px 14px;
+    border-radius:10px;
+    background: linear-gradient(90deg, rgba(2,6,23,0.6), rgba(2,6,23,0.4));
+    border: 1px solid rgba(255,255,255,0.03);
+    color: #e6f6ff;
+  }
+
+  /* right column (countdown + controls) */
+  .right{
+    width:560px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    align-items:stretch;
+  }
+
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.008));
+    border:1px solid rgba(255,255,255,0.03);
+    border-radius:12px;
+    padding:18px;
+    box-shadow: 0 10px 30px rgba(2,6,23,0.5);
+  }
+
+  #yearTitle{ font-size:24px; font-weight:800; letter-spacing:1px; color:white; }
+  #countdown{ font-size:28px; margin-top:6px; font-weight:700; color:#dff6ff; }
+  #msg{ margin-top:8px; color:var(--muted); font-size:15px; }
+
+  .controls{
+    display:flex;
+    gap:12px;
+    margin-top:12px;
+  }
+
+  .btn{
+    padding:12px 16px;
+    border-radius:12px;
+    background: linear-gradient(90deg,var(--accent-a),var(--accent-b));
+    color:#021;
+    font-weight:800;
+    cursor:pointer;
+    border:0;
+    box-shadow:0 6px 18px rgba(14,165,233,0.14);
+  }
+
+  .btn.ghost{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.06);
+    color:var(--muted);
+    font-weight:700;
+  }
+
+  .row{
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+
+  label.small{ font-size:13px; color:var(--muted); margin-right:8px; }
+
+  /* audio panel */
+  .audio-panel{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    margin-top:8px;
+  }
+  .file-btn{
+    background:linear-gradient(90deg,#f8b4d9,#7dd3fc);
+    padding:8px 12px;border-radius:10px;border:0;font-weight:700;color:#021;cursor:pointer;
+  }
+
+  /* footer small */
+  .meta{ font-size:13px;color:rgba(230,246,255,0.6); margin-top:6px; text-align:center; }
+
+  /* ensure no automatic zoom/scale animations */
+  * { transition: none !important; }
+
+  /* responsive */
+  @media (max-width:1300px){
+    #stage{ transform: scale(0.95); }
+  }
+  @media (max-width:980px){
+    .container{ flex-direction:column; gap:16px; padding:8px; }
+    .left,.right{ width:100%; }
+    .clock-wrap{ width:300px;height:300px; }
+  }
+</style>
+</head>
+<body>
+  <div id="stage" role="main" aria-label="ErikAI Countdown stage">
+    <div class="holo" aria-hidden="true"></div>
+
+    <div class="container">
+      <div class="left">
+        <div id="title">ERIKAI OS</div>
+
+        <div class="clock-wrap card" id="analogCard" aria-hidden="false">
+          <!-- SVG analog clock -->
+          <svg id="analog" viewBox="-180 -180 360 360" width="100%" height="100%" role="img" aria-label="Analogické hodiny">
+            <defs>
+              <radialGradient id="gGlow" cx="50%" cy="40%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.06" />
+                <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+              </radialGradient>
+            </defs>
+
+            <!-- dial background -->
+            <circle cx="0" cy="0" r="160" fill="url(#gGlow)" stroke="rgba(255,255,255,0.02)" stroke-width="1" />
+            <!-- ticks -->
+            <g id="ticks"></g>
+
+            <!-- hands group -->
+            <g id="hands" style="transform-origin: 0px 0px;">
+              <line id="hourHand" x1="0" y1="0" x2="0" y2="-70" stroke="#ffd166" stroke-width="8" stroke-linecap="round" />
+              <line id="minHand" x1="0" y1="0" x2="0" y2="-108" stroke="#7dd3fc" stroke-width="6" stroke-linecap="round" />
+              <line id="secHand" x1="0" y1="16" x2="0" y2="-132" stroke="#ff6b6b" stroke-width="3" stroke-linecap="round" />
+            </g>
+
+            <!-- center dot -->
+            <circle cx="0" cy="0" r="8" fill="#e6f6ff" />
+          </svg>
+
+          <div id="digital" aria-live="polite">00:00:00</div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="card">
+          <div id="yearTitle">Rok: <span id="yearVal"></span></div>
+          <div id="countdown" aria-live="polite"></div>
+          <div id="msg" class="meta"></div>
+
+          <div class="controls">
+            <button class="btn ghost" id="prevYear" aria-label="Predchádzajúci rok">⟵ MINULOSŤ</button>
+            <button class="btn ghost" id="nextYear" aria-label="Budúcnosť">BUDÚCNOSŤ ⟶</button>
+            <button class="btn" id="goNow" aria-label="Reset na súčasný rok">Súčasný rok</button>
+          </div>
+
+          <div style="margin-top:12px;" class="row">
+            <label class="small">Zvuk (nahrať vlastný):</label>
+            <input id="audioFile" type="file" accept="audio/*" style="display:none" />
+            <button class="file-btn" id="pickAudio">Nahrať zvuk</button>
+
+            <label class="small" style="margin-left:12px">Režim:</label>
+            <select id="audioMode" style="border-radius:10px;padding:8px;background:var(--glass);color:#eaf6ff;border:1px solid rgba(255,255,255,0.03)">
+              <option value="tick">Tik každú sekundu</option>
+              <option value="loop">Loop (pozadie)</option>
+            </select>
+          </div>
+
+          <div class="audio-panel" id="audioPanel" style="margin-top:12px">
+            <div id="audioName" class="small" style="flex:1;color:var(--muted)">Žiadny súbor</div>
+            <button id="audioPlay" class="btn ghost">Prehrať / pozastaviť</button>
+          </div>
+
+          <div style="margin-top:10px" class="meta">Klikni kdekoľvek na stránke pre povolenie zvuku (nutné pre mobilné prehliadače).</div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:800">Nastavenia zobrazenia</div>
+            <div style="color:var(--muted)">Stabilné rozlíšenie 1280×720</div>
+          </div>
+          <div style="margin-top:10px;color:var(--muted)">Všetky animácie sú jemné a zachovávajú stabilitu — žiadne nepríjemné zoomovanie.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* -------------------------
+   Skript: hodiny + odpočet + audio
+   ------------------------- */
+
+const yearVal = document.getElementById('yearVal');
+const countdownEl = document.getElementById('countdown');
+const msgEl = document.getElementById('msg');
+
+let currentYear = new Date().getFullYear(); // vybraný rok
+yearVal.textContent = currentYear;
+
+// analog ticks rendering (hour ticks + minute fine ticks)
+(function renderTicks(){
+  const g = document.getElementById('ticks');
+  for(let i=0;i<60;i++){
+    const angle = i * 6;
+    const isHour = i%5===0;
+    const r1 = isHour ? 120 : 132;
+    const r2 = 150;
+    const stroke = isHour ? 2.6 : 1.0;
+    const color = isHour ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.12)';
+    const x1 = r1 * Math.sin(angle * Math.PI/180);
+    const y1 = -r1 * Math.cos(angle * Math.PI/180);
+    const x2 = r2 * Math.sin(angle * Math.PI/180);
+    const y2 = -r2 * Math.cos(angle * Math.PI/180);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x1);
+    line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2);
+    line.setAttribute('y2', y2);
+    line.setAttribute('stroke', color);
+    line.setAttribute('stroke-width', stroke);
+    line.setAttribute('stroke-linecap','round');
+    g.appendChild(line);
+  }
+})();
+
+/* Elements hands */
+const hourHand = document.getElementById('hourHand');
+const minHand = document.getElementById('minHand');
+const secHand = document.getElementById('secHand');
+const digital = document.getElementById('digital');
+
+/* Audio handling */
+let audioUrl = null;
+let audioObj = null;     // Audio element wrapper
+let audioMode = 'tick';  // 'tick' or 'loop'
+let audioPlaying = false;
+
+const pickAudioBtn = document.getElementById('pickAudio');
+const audioFileInput = document.getElementById('audioFile');
+const audioNameEl = document.getElementById('audioName');
+const audioPlayBtn = document.getElementById('audioPlay');
+const audioModeEl = document.getElementById('audioMode');
+
+// user picks file
+pickAudioBtn.addEventListener('click', ()=> audioFileInput.click());
+audioFileInput.addEventListener('change', (ev)=>{
+  const f = ev.target.files && ev.target.files[0];
+  if(!f) return;
+  if(audioObj){
+    // revoke old
+    URL.revokeObjectURL(audioUrl);
+    audioObj.pause();
+    audioObj = null;
+  }
+  audioUrl = URL.createObjectURL(f);
+  audioObj = new Audio(audioUrl);
+  audioObj.preload = 'auto';
+  audioObj.loop = (audioModeEl.value === 'loop');
+  audioNameEl.textContent = f.name + ' (' + Math.round(f.size/1024) + 'kB)';
+  audioPlaying = false;
+});
+
+// play/pause button
+audioPlayBtn.addEventListener('click', ()=>{
+  if(!audioObj){
+    alert('Najprv nahraj zvuk pomocou "Nahrať zvuk".');
+    return;
+  }
+  if(audioModeEl.value === 'tick'){
+    // in tick mode we toggle a small preview
+    audioObj.currentTime = 0;
+    audioObj.play().catch(()=>{});
+    setTimeout(()=>{ audioObj.pause(); audioObj.currentTime = 0; }, 1200);
+  } else {
+    if(audioObj.paused){
+      audioObj.loop = true;
+      audioObj.play().catch(()=>{});
+      audioPlaying = true;
+      audioPlayBtn.textContent = 'Pozastaviť';
+    } else {
+      audioObj.pause();
+      audioPlaying = false;
+      audioPlayBtn.textContent = 'Prehrať / pozastaviť';
+    }
+  }
+});
+// change mode
+audioModeEl.addEventListener('change', ()=>{
+  audioMode = audioModeEl.value;
+  if(audioObj) audioObj.loop = (audioMode === 'loop');
+});
+
+/* ensure audio can start only after user interaction (mobile/autoplay rules) */
+document.body.addEventListener('click', function initAudioOnce(){
+  // If user already loaded a file and selected loop mode -> start background
+  if(audioObj && audioModeEl.value === 'loop'){
+    audioObj.loop = true;
+    audioObj.play().catch(()=>{});
+    audioPlaying = true;
+    audioPlayBtn.textContent = 'Pozastaviť';
+  }
+  document.body.removeEventListener('click', initAudioOnce);
+}, {once:true});
+
+/* update clock and countdown — called every 200ms for smoothness in analog interpolation */
+function updateAll(){
+  const now = new Date();
+
+  // ANALOG HANDS: compute fractional positions
+  const ms = now.getMilliseconds();
+  const s = now.getSeconds() + ms/1000;
+  const m = now.getMinutes() + s/60;
+  const h = (now.getHours() % 12) + m/60;
+
+  const hourDeg = h * 30;       // 360/12 = 30
+  const minDeg  = m * 6;        // 360/60 = 6
+  const secDeg  = s * 6;
+
+  hourHand.setAttribute('transform', `rotate(${hourDeg})`);
+  minHand.setAttribute('transform', `rotate(${minDeg})`);
+  secHand.setAttribute('transform', `rotate(${secDeg})`);
+
+  // digital time
+  const hh = now.getHours().toString().padStart(2,'0');
+  const mm = now.getMinutes().toString().padStart(2,'0');
+  const ss = now.getSeconds().toString().padStart(2,'0');
+  digital.textContent = `${hh}:${mm}:${ss}`;
+
+  // second-tick audio (if mode tick)
+  if(audioObj && audioModeEl.value === 'tick'){
+    // We play once at each new second transition.
+    // track last second to avoid multiple plays inside same second
+    if(typeof updateAll._lastSec === 'undefined') updateAll._lastSec = null;
+    if(updateAll._lastSec !== now.getSeconds()){
+      updateAll._lastSec = now.getSeconds();
+      try {
+        audioObj.currentTime = 0;
+        audioObj.play().catch(()=>{});
+        // if audio is looped accidentally, immediately pause after short preview (safe-guard)
+        if(audioObj.loop && audioModeEl.value === 'tick') { audioObj.loop = false; }
+      } catch(e){}
+    }
+  }
+
+  // countdown to end of *selected* year (end of currentYear)
+  const nowUtc = new Date();
+  // target is start of next year of the selected "currentYear"
+  const target = new Date(currentYear + 1, 0, 1, 0, 0, 0, 0); 
+  let diff = target - nowUtc;
+  if(diff > 0){
+    const days = Math.floor(diff / (1000*60*60*24));
+    diff -= days * (1000*60*60*24);
+    const hours = Math.floor(diff / (1000*60*60));
+    diff -= hours * (1000*60*60);
+    const mins = Math.floor(diff / (1000*60));
+    diff -= mins * (1000*60);
+    const secs = Math.floor(diff / 1000);
+    countdownEl.textContent = `${days} dní • ${hours} hod • ${mins} min • ${secs} sek`;
+
+    const presentMsg = (currentYear === new Date().getFullYear()) ?
+      "Držíme sa prítomného roka — pomalý odchod, ďakujeme za všetko" :
+      "Brzo sa dočkáš — ErikAI OS Premium • by Erik Mohylák";
+    msgEl.textContent = presentMsg;
+  } else {
+    countdownEl.textContent = "Už nastal koniec roka";
+    msgEl.textContent = "ErikAI OS pokračuje ďalej v prémiovom režime";
+  }
+
+  // update displayed year label
+  yearVal.textContent = currentYear;
+}
+
+/* Year control buttons */
+document.getElementById('prevYear').addEventListener('click', ()=> { currentYear--; updateAll(); });
+document.getElementById('nextYear').addEventListener('click', ()=> { currentYear++; updateAll(); });
+document.getElementById('goNow').addEventListener('click', ()=> { currentYear = new Date().getFullYear(); updateAll(); });
+
+/* keep stable, no zooms or pulsing that reposition whole layout -- done in CSS */
+updateAll();
+setInterval(updateAll, 200); // smooth analog movement (5x per sec)
+
+/* Accessibility: keyboard shortcuts for year +/- */
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowLeft') { currentYear--; updateAll(); }
+  if(e.key === 'ArrowRight'){ currentYear++; updateAll(); }
+  if(e.key === 'Home'){ currentYear = new Date().getFullYear(); updateAll(); }
+});
+</script>
+</body>
+    </html>
