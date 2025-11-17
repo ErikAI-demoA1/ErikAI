@@ -13,16 +13,21 @@ html, body {
     background: #020617;
     font-family: 'Segoe UI', sans-serif;
     color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
+/* KONTAJNER VŠETKÉHO */
 #container {
-    width: 1280px;   /* pevná šírka */
-    height: 720px;   /* pevná výška */
+    width: 1280px;
+    height: 720px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     position: relative;
+    text-align: center;
 }
 
 /* HOLOGRAFICKÉ LASEROVÉ POZADIE */
@@ -40,51 +45,63 @@ html, body {
 
 /* 3D HOLOGRAFICKÉ HODINY */
 #clock3d {
-    width: 280px;
-    height: 280px;
+    width: 320px;
+    height: 320px;
     border-radius: 50%;
     border: 6px solid rgba(255,255,255,0.15);
     display: flex;
     justify-content: center;
     align-items: center;
     margin-bottom: 30px;
-    box-shadow: 0 0 35px #0ea5e9 inset, 0 0 45px #0ea5e9;
-    font-size: 42px;
+    box-shadow: 0 0 35px #0ea5e9 inset, 0 0 60px #0ea5e9;
+    font-size: 48px;
     font-weight: 700;
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(14px);
     animation: glowPulse 4s ease-in-out infinite alternate;
 }
-@keyframes glowPulse { 0% { box-shadow:0 0 20px #0ea5e9 inset,0 0 25px #0ea5e9;} 100% { box-shadow:0 0 45px #0ea5e9 inset,0 0 70px #0ea5e9;} }
+@keyframes glowPulse { 0% { box-shadow:0 0 25px #0ea5e9 inset,0 0 40px #0ea5e9;} 100% { box-shadow:0 0 55px #0ea5e9 inset,0 0 90px #0ea5e9;} }
 
 /* TITUL ERIKAI OS */
 #titleAI {
-    font-size: 64px;
+    font-size: 72px;
     font-weight: 900;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
     letter-spacing: 4px;
     background: linear-gradient(90deg, #0ea5e9, #38bdf8, #e0f2fe);
     -webkit-background-clip: text;
     color: transparent;
-    animation: shine 4s infinite linear;
-    text-shadow: 0 0 25px #0ea5e9;
+    animation: shine 6s infinite linear;
+    text-shadow: 0 0 30px #0ea5e9, 0 0 40px #38bdf8;
 }
-@keyframes shine { 0% { filter:hue-rotate(0deg);} 100%{filter:hue-rotate(360deg);} }
+@keyframes shine { 0% { filter:hue-rotate(0deg);} 50% { filter:hue-rotate(180deg);} 100%{filter:hue-rotate(360deg);} }
 
-#year { font-size: 52px; font-weight: 800; margin-bottom:10px; }
-#countdown { font-size: 30px; margin-bottom:20px; }
+#year { font-size: 56px; font-weight: 800; margin-bottom:15px; animation: fadeInUp 2s ease forwards; }
+#countdown { font-size: 32px; margin-bottom:25px; animation: fadeInUp 2s ease 0.5s forwards; }
 
 .nav {
     font-size: 34px; cursor: pointer; user-select: none;
     margin: 10px; padding: 12px 30px; border-radius:18px;
     background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.25);
-    transition:0.3s; backdrop-filter: blur(6px);
+    transition:0.4s; backdrop-filter: blur(6px);
+    animation: fadeInUp 2s ease 1s forwards;
 }
 .nav:hover {
     background: #0ea5e9; color: black;
-    box-shadow:0 0 25px #0ea5e9; transform: translateY(-4px) scale(1.05);
+    box-shadow:0 0 30px #0ea5e9; transform: translateY(-4px) scale(1.05);
 }
 
-#msg { margin-top:25px; font-size:22px; opacity:0.8; }
+#msg {
+    margin-top:25px;
+    font-size:24px;
+    opacity:0.85;
+    animation: fadeInUp 2s ease 1.5s forwards;
+}
+
+/* ANIMÁCIE */
+@keyframes fadeInUp {
+    0% { opacity: 0; transform: translateY(20px);}
+    100% { opacity: 1; transform: translateY(0);}
+}
 </style>
 </head>
 <body>
@@ -94,14 +111,14 @@ html, body {
     <div id="clock3d">00:00:00</div>
     <div id="year"></div>
     <div id="countdown"></div>
-    <div style="display:flex; gap: 35px; z-index:5; margin-top:10px;">
+    <div style="display:flex; gap: 35px; justify-content:center; margin-top:10px;">
         <div class="nav" onclick="changeYear(-1)">⟵ MINULOSŤ</div>
         <div class="nav" onclick="changeYear(1)">BUDÚCNOSŤ ⟶</div>
     </div>
     <div id="msg"></div>
 </div>
 
-<!-- SEM DAJ SVOJ ZVUK -->
+<!-- ZVUK -->
 <audio id="tickSound" preload="auto" loop>
     <source src="Zvuk2.mp3" type="audio/mp3">
 </audio>
@@ -110,12 +127,10 @@ html, body {
 let currentYear = new Date().getFullYear();
 const tick = document.getElementById("tickSound");
 
-// SPUSTENIE ZVUKU PO KLIKNUTÍ (bude sa opakovať v slučke)
-document.body.addEventListener("click", ()=>{
-    tick.play().catch(()=>{});
-}, {once:true});
+// Spustenie zvuku po prvom kliknutí
+document.body.addEventListener("click", ()=>{ tick.play().catch(()=>{}); }, {once:true});
 
-// FUNKCIA PRE HODINY 3D
+// Hodiny
 function updateClock3D() {
     const now = new Date();
     const h = now.getHours().toString().padStart(2,"0");
@@ -124,7 +139,7 @@ function updateClock3D() {
     document.getElementById("clock3d").textContent = `${h}:${m}:${s}`;
 }
 
-// ODPOČET ROKU
+// Odpočet
 function updateDisplay() {
     const now = new Date();
     const target = new Date(currentYear,0,1);
@@ -146,17 +161,14 @@ function updateDisplay() {
     }
 }
 
-// ZMENA ROKU
+// Zmena roku
 function changeYear(direction){
     currentYear += direction;
     updateDisplay();
 }
 
-// SPUSTENIE HODÍN A ODPOČTU
-setInterval(()=>{
-    updateClock3D();
-    updateDisplay();
-},1000);
+// Spustenie hodín a odpočtu
+setInterval(()=>{ updateClock3D(); updateDisplay(); },1000);
 
 updateClock3D();
 updateDisplay();
