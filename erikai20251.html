@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8" />
+<title>ErikAI OS — Premium Countdown (Breathing Neon)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+/* --- Reset & page --- */
+html,body{
+  height:100%;
+  margin:0;
+  background:#020617;
+  font-family: "Segoe UI", system-ui, Arial, sans-serif;
+  color:#fff;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+
+/* --- MAIN CONTAINER fixed size for stable view --- */
+#container{
+  width:1280px;
+  height:720px;
+  max-width:95vw;
+  max-height:95vh;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  border-radius:14px;
+  /* subtle glass panel */
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  box-shadow: 0 20px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.02);
+  overflow:hidden;
+}
+
+/* --- Breathing Neon BACKDROP --- */
+.laser {
+  position:absolute;
+  inset:-20%;
+  background:conic-gradient(from 0deg, #0ea5e9, #7c3aed, #06b6d4, #38bdf8, #0ea5e9);
+  filter:blur(160px) saturate(120%);
+  opacity:0.13;
+  transform:scale(1.05);
+  animation: laserRotate 20s linear infinite, laserPulse 6s ease-in-out infinite;
+  z-index:0;
+}
+@keyframes laserRotate{ from{ transform: rotate(0) scale(1.05);} to{ transform: rotate(360deg) scale(1.05);} }
+@keyframes laserPulse { 0%{opacity:0.10}50%{opacity:0.16}100%{opacity:0.10} }
+
+/* --- Title (BREATHING NEON) --- */
+#titleAI{
+  position:relative;
+  z-index:3;
+  font-size:72px;
+  font-weight:900;
+  letter-spacing:6px;
+  margin:6px 0 8px 0;
+  background: linear-gradient(90deg,#0ea5e9,#7c3aed,#38bdf8);
+  -webkit-background-clip:text;
+  color:transparent;
+  text-transform:uppercase;
+  text-shadow:
+    0 6px 30px rgba(14,165,233,0.08),
+    0 2px 12px rgba(60,40,120,0.06);
+  /* neon aura */
+  filter:drop-shadow(0 0 30px rgba(56,189,248,0.12));
+  animation: titleGlow 3.8s ease-in-out infinite;
+}
+@keyframes titleGlow {
+  0% { transform: translateY(0) scale(1); text-shadow:0 0 12px rgba(14,165,233,0.05); }
+  50% { transform: translateY(-4px) scale(1.01); text-shadow:0 0 36px rgba(56,189,248,0.25); }
+  100% { transform: translateY(0) scale(1); text-shadow:0 0 12px rgba(14,165,233,0.05); }
+}
+
+/* subtle halo bar under title */
+#titleAI::after{
+  content:"";
+  display:block;
+  height:6px;
+  width:160px;
+  margin:14px auto 0;
+  border-radius:999px;
+  background:linear-gradient(90deg,#0ea5e9,#7c3aed,#38bdf8);
+  opacity:0.22;
+  filter:blur(8px);
+  transform-origin:center;
+  animation: haloSlide 6s linear infinite;
+}
+@keyframes haloSlide {
+  0%{ transform:translateX(-6px) }
+  50%{ transform:translateX(6px) }
+  100%{ transform:translateX(-6px) }
+}
+
+/* --- Clock wrapper --- */
+#clockWrap {
+  width:360px;
+  height:360px;
+  position:relative;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin-bottom:18px;
+}
+
+/* --- hybrid analog + numeric clock circle --- */
+#clock3d {
+  width:320px;
+  height:320px;
+  border-radius:50%;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.02), rgba(0,0,0,0.16));
+  box-shadow: inset 0 8px 30px rgba(14,165,233,0.03), 0 10px 40px rgba(2,6,23,0.6);
+  border: 2px solid rgba(255,255,255,0.03);
+}
+
+/* SVG face */
+#clockFace {
+  width:100%;
+  height:100%;
+  display:block;
+  border-radius:50%;
+}
+
+/* center numeric time */
+#numericTime {
+  position:absolute;
+  z-index:3;
+  font-weight:800;
+  font-size:28px;
+  letter-spacing:1px;
+  background:linear-gradient(90deg,#e6faff 0%, #cfeefd 60%);
+  -webkit-background-clip:text;
+  color:transparent;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+
+/* small subtext date */
+#dateText{
+  position:absolute;
+  z-index:3;
+  bottom:18px;
+  font-size:12px;
+  opacity:0.85;
+  color:rgba(230,246,255,0.9);
+}
+
+/* --- year & countdown --- */
+#year{
+  z-index:3;
+  font-size:56px;
+  font-weight:800;
+  margin-top:10px;
+  margin-bottom:6px;
+  opacity:0.98;
+  transition: all 420ms cubic-bezier(.2,.9,.25,1);
+}
+#countdown{
+  z-index:3;
+  font-size:28px;
+  font-weight:600;
+  margin-bottom:6px;
+  color:rgba(230,246,255,0.95);
+  transition: all 420ms cubic-bezier(.2,.9,.25,1);
+}
+
+/* nav buttons */
+.controls{
+  z-index:3;
+  display:flex;
+  gap:20px;
+  margin-top:12px;
+  align-items:center;
+  justify-content:center;
+}
+.nav{
+  cursor:pointer;
+  user-select:none;
+  font-weight:800;
+  padding:10px 26px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+  color:#e6faff;
+  transition: transform .28s ease, box-shadow .28s ease, background .28s ease;
+}
+.nav:hover{
+  transform:translateY(-6px);
+  box-shadow:0 10px 36px rgba(14,165,233,0.12);
+  background: linear-gradient(90deg,#0ea5e9,#7c3aed);
+  color:#051226;
+}
+
+/* message */
+#msg{
+  z-index:3;
+  margin-top:18px;
+  color:rgba(230,246,255,0.95);
+  font-size:20px;
+}
+
+/* subtle toast / flash when year changes */
+.flash {
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg, rgba(14,165,233,0.06), rgba(124,58,237,0.04));
+  pointer-events:none;
+  z-index:5;
+  opacity:0;
+  transition:opacity .45s ease;
+}
+
+/* responsive */
+@media (max-width:900px){
+  #container{ width:95vw; height:85vh; padding:12px; }
+  #titleAI{ font-size:36px }
+  #year{ font-size:34px }
+  #clockWrap{ width:260px; height:260px }
+  #clock3d{ width:240px; height:240px }
+}
+</style>
+</head>
+<body>
+<div id="container">
+  <div class="laser" aria-hidden="true"></div>
+
+  <div id="titleAI">ERIKAI OS</div>
+
+  <div id="clockWrap" aria-hidden="false">
+    <!-- SVG analog clock face + hands -->
+    <svg id="clockFace" viewBox="-160 -160 320 320" role="img" aria-label="Analógové a digitálne hodiny">
+      <!-- outer rings -->
+      <defs>
+        <radialGradient id="g1" cx="30%" cy="20%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.06)"/>
+          <stop offset="60%" stop-color="rgba(255,255,255,0.02)"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0.0)"/>
+        </radialGradient>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <circle cx="0" cy="0" r="150" fill="url(#g1)"/>
+      <circle cx="0" cy="0" r="136" fill="rgba(2,6,23,0.35)" stroke="rgba(255,255,255,0.03)" stroke-width="2"/>
+
+      <!-- hour markers -->
+      <g id="marks" stroke="rgba(255,255,255,0.06)" stroke-width="2">
+        <!-- generate 12 markers by JS fallback, keep some statics -->
+      </g>
+
+      <!-- hands: painted; will rotate via transform on JS -->
+      <g id="hands" transform="rotate(0)">
+        <line id="hourHand" x1="0" y1="18" x2="0" y2="-70" stroke="#7c3aed" stroke-width="8" stroke-linecap="round" filter="url(#glow)"></line>
+        <line id="minHand" x1="0" y1="22" x2="0" y2="-104" stroke="#06b6d4" stroke-width="6" stroke-linecap="round" filter="url(#glow)"></line>
+        <line id="secHand" x1="0" y1="30" x2="0" y2="-120" stroke="#ffcf66" stroke-width="2.6" stroke-linecap="round"></line>
+      </g>
+
+      <!-- center cap -->
+      <circle cx="0" cy="0" r="8" fill="#e6f6ff" stroke="rgba(0,0,0,0.12)" stroke-width="1.5"/>
+
+      <!-- subtle ticks (JS will fill for accessibility) -->
+    </svg>
+
+    <div id="numericTime" aria-live="polite">00:00:00</div>
+    <div id="dateText">—</div>
+  </div>
+
+  <div id="year" aria-live="polite">Rok: 2025</div>
+  <div id="countdown">0 dní • 0 hod • 0 min • 0 sek</div>
+
+  <div class="controls" role="toolbar" aria-label="Prepínač rokov">
+    <div class="nav" onclick="changeYear(-1)" role="button" tabindex="0">⟵ MINULOSŤ</div>
+    <div class="nav" onclick="changeYear(1)" role="button" tabindex="0">BUDÚCNOSŤ ⟶</div>
+  </div>
+
+  <div id="msg">Brzo sa dočkáš — ErikAI OS Premium • by Erik Mohylák</div>
+
+  <div class="flash" id="flash"></div>
+</div>
+
+<!-- AUDIO: vlož sem svoj súbor Zvuk3.mp3 do rovnakého priečinka -->
+<!-- Ak chceš použiť iný názov, uprav src atribút -->
+<audio id="tickSound" preload="auto" loop>
+  <source src="Zvuk3.mp3" type="audio/mpeg">
+  <!-- fallback text -->
+  Your browser does not support the audio element.
+</audio>
+
+<script>
+/* -------------------------
+   Behaviour & animations
+   ------------------------- */
+let currentYear = new Date().getFullYear();
+const yearEl = document.getElementById('year');
+const countdownEl = document.getElementById('countdown');
+const msgEl = document.getElementById('msg');
+const numericTimeEl = document.getElementById('numericTime');
+const dateTextEl = document.getElementById('dateText');
+const flashEl = document.getElementById('flash');
+const tick = document.getElementById('tickSound');
+
+/* Play audio only after user gesture (browser autoplay policy).
+   Clicking anywhere will start the looped audio. */
+document.body.addEventListener('click', () => {
+  if (tick && tick.paused) {
+    tick.play().catch(()=>{ /* ignore if blocked */ });
+  }
+}, { once: true });
+
+/* --- Populate hour marks on SVG for consistent rendering --- */
+(function renderMarks(){
+  const marks = document.getElementById('marks');
+  for(let i=0;i<60;i++){
+    const angle = (i/60) * 360;
+    const len = (i%5===0) ? 14 : 8;
+    const stroke = (i%5===0) ? 'rgba(230,246,255,0.75)' : 'rgba(230,246,255,0.12)';
+    const x1 = Math.sin(angle*Math.PI/180) * (118);
+    const y1 = -Math.cos(angle*Math.PI/180) * (118);
+    const x2 = Math.sin(angle*Math.PI/180) * (118+len);
+    const y2 = -Math.cos(angle*Math.PI/180) * (118+len);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x1);
+    line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2);
+    line.setAttribute('y2', y2);
+    line.setAttribute('stroke', stroke);
+    line.setAttribute('stroke-width', i%5===0?2.6:1.2);
+    marks.appendChild(line);
+
+    // big hour numeric for 12/3/6/9
+    if(i%15===0){
+      const textAngle = angle;
+      const tx = Math.sin(textAngle*Math.PI/180) * (88);
+      const ty = -Math.cos(textAngle*Math.PI/180) * (88);
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      const hourLabel = (i/5===0)?12:(i/5);
+      t.setAttribute('x', tx);
+      t.setAttribute('y', ty+6);
+      t.setAttribute('fill','rgba(230,246,255,0.85)');
+      t.setAttribute('font-size', '14');
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('font-weight','700');
+      t.textContent = hourLabel;
+      marks.appendChild(t);
+    }
+  }
+})();
+
+/* ---- update hands & numeric every second ---- */
+function updateClock(){
+  const now = new Date();
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const s = now.getSeconds();
+
+  // numeric time
+  const hh = String(h).padStart(2,'0');
+  const mm = String(m).padStart(2,'0');
+  const ss = String(s).padStart(2,'0');
+  numericTimeEl.textContent = `${hh}:${mm}:${ss}`;
+  dateTextEl.textContent = now.toLocaleDateString('sk-SK', { weekday:'short', year:'numeric', month:'short', day:'numeric' });
+
+  // analog angles
+  const secAngle = s * 6; // 360 / 60
+  const minAngle = (m + s/60) * 6;
+  const hourAngle = ((h % 12) + m/60 + s/3600) * 30;
+
+  document.getElementById('hands').setAttribute('transform', `rotate(${hourAngle})`);
+  // rotate each hand individually for smoother control
+  document.getElementById('hourHand').setAttribute('transform', `rotate(${hourAngle})`);
+  document.getElementById('minHand').setAttribute('transform', `rotate(${minAngle})`);
+  document.getElementById('secHand').setAttribute('transform', `rotate(${secAngle})`);
+}
+
+/* --- countdown display: until END of currentYear (Dec 31 23:59:59) --- */
+function updateCountdown(){
+  const now = new Date();
+  // target is start of next year (so remaining of current year)
+  const target = new Date(currentYear + 1, 0, 1, 0, 0, 0);
+  const diff = target - now;
+  if(diff > 0){
+    const days = Math.floor(diff / (1000*60*60*24));
+    const hours = Math.floor((diff / (1000*60*60)) % 24);
+    const mins = Math.floor((diff / (1000*60)) % 60);
+    const secs = Math.floor((diff / 1000) % 60);
+    countdownEl.textContent = `${days} dní • ${hours} hod • ${mins} min • ${secs} sek`;
+    // message depends if viewing present year
+    if(currentYear === new Date().getFullYear()){
+      msgEl.textContent = "Držíme sa prítomného roka — pomalý odchod, ďakujeme za všetko";
+    } else {
+      msgEl.textContent = "Brzo sa dočkáš — ErikAI OS Premium • by Erik Mohylák";
+    }
+  } else {
+    countdownEl.textContent = "Už nastal koniec roka";
+    msgEl.textContent = "ErikAI OS pokračuje ďalej v prémiovom režime";
+  }
+  yearEl.textContent = `Rok: ${currentYear}`;
+}
+
+/* --- subtle flash + micro-shake on year change (no zoom) --- */
+function flashAndShake(){
+  flashEl.style.opacity = '1';
+  flashEl.style.transition = 'opacity 140ms ease';
+  setTimeout(()=>{ flashEl.style.opacity = '0'; }, 180);
+  // micro-shake on container
+  const c = document.getElementById('container');
+  c.style.transition = 'transform 220ms cubic-bezier(.2,.9,.25,1)';
+  c.style.transform = 'translateY(-6px)';
+  setTimeout(()=>{ c.style.transform = 'translateY(0)'; }, 220);
+}
+
+/* --- change year handler --- */
+function changeYear(delta){
+  currentYear += delta;
+  // flash & micro-shake & audio flair
+  flashAndShake();
+  // brief sound tick if audio available
+  if(tick && !tick.paused){
+    // play a short volume bump (we can't change file here), we will briefly set volume
+    const prev = tick.volume;
+    tick.volume = Math.min(1, prev + 0.15);
+    setTimeout(()=>{ tick.volume = prev; }, 300);
+  }
+  // update immediately
+  updateCountdown();
+}
+
+/* --- tick every second --- */
+updateClock();
+updateCountdown();
+setInterval(()=>{ updateClock(); updateCountdown(); }, 1000);
+
+/* accessibility: allow keyboard nav for year change */
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowLeft') changeYear(-1);
+  if(e.key === 'ArrowRight') changeYear(1);
+});
+
+/* Ensure container stable (no auto-scaling) and preserve layout */
+/* Nothing in code will do automatic zooming — you disabled zoom effect earlier */
+/* If user previously had any scale transforms, they are not used here */
+
+</script>
+</body>
+            </html>
