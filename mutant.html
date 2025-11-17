@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ErikAI — Mutant Panel (All-in-1)</title>
+<style>
+  :root{
+    --bg:#081226; --card:#071122; --accent:#06b6d4; --muted:#9fb2d1; --panel:#0b1722;
+    --glass: rgba(255,255,255,0.03);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:system-ui,Segoe UI,Roboto,Arial; background:linear-gradient(180deg,#020617,var(--bg));
+    color:#e6f6ff; padding:18px;
+  }
+  header{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  header h1{font-size:20px;margin:0}
+  #app{
+    display:grid;
+    grid-template-columns: 360px 1fr 360px;
+    grid-auto-rows: minmax(120px, auto);
+    gap:12px;
+  }
+  .panel{
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.12));
+    border-radius:12px;padding:12px;border:1px solid var(--glass);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  }
+  h3{margin:0 0 8px 0;font-size:15px}
+  .small{font-size:13px}
+  /* big central display */
+  #display {
+    grid-column: 2 / 3;
+    min-height: 420px;
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .row{display:flex;gap:8px}
+  button{background:linear-gradient(90deg,var(--accent),#7c3aed);border:none;color:#031;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:700}
+  input,select,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+  textarea{min-height:80px}
+  .clockBig{font-size:36px;font-weight:800;letter-spacing:1px}
+  .analog{width:140px;height:140px}
+  .widget-scroll{max-height:340px;overflow:auto;padding-right:6px}
+  footer {grid-column:1 / 4; text-align:center; opacity:0.7; font-size:13px;margin-top:12px}
+  .muted{color:var(--muted)}
+  .btn-ghost{background:transparent;border:1px solid var(--glass);color:var(--muted)}
+  .key{font-weight:800;color:#fff;font-size:13px}
+  .flex{display:flex;gap:8px;align-items:center}
+  .calculator {display:grid;grid-template-columns: repeat(4,1fr);gap:6px}
+  .calculator button{padding:14px;font-size:16px}
+  .todo-list li{margin:6px 0;display:flex;justify-content:space-between;align-items:center}
+  .badge{background:rgba(255,255,255,0.04);padding:4px 8px;border-radius:999px;font-size:13px}
+  @media (max-width:1100px){
+    #app{grid-template-columns:1fr;align-items:start}
+    #display{grid-column:1}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div style="width:52px;height:52px;border-radius:10px;background:linear-gradient(135deg,#062033,#07314a);display:flex;align-items:center;justify-content:center;font-weight:900">
+    EAI
+  </div>
+  <div>
+    <h1>ErikAI — Mutant Panel</h1>
+    <div class="muted small">Kombinácia užitočných widgetov na jednom paneli — offline, lokálne, okamžite</div>
+  </div>
+  <div style="margin-left:auto" class="flex">
+    <label class="muted small">Theme</label>
+    <select id="themeToggle" style="width:110px">
+      <option value="dark">Dark</option>
+      <option value="light">Light</option>
+    </select>
+  </div>
+</header>
+
+<div id="app">
+
+  <!-- LEFT COLUMN: Clocks, Countdown, Timer/Stopwatch -->
+  <div class="panel">
+    <h3>Čas & odpočty</h3>
+    <div class="row" style="align-items:center;gap:14px">
+      <div>
+        <div class="clockBig" id="digitalClock">--:--:--</div>
+        <div class="muted small" id="dateLocal">—</div>
+      </div>
+      <svg class="analog" viewBox="-50 -50 100 100" id="analogSVG" aria-hidden="true">
+        <circle cx="0" cy="0" r="48" fill="#051425" stroke="rgba(255,255,255,0.04)"/>
+        <g id="ticks"></g>
+        <line id="hHand" x1="0" y1="6" x2="0" y2="-20" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>
+        <line id="mHand" x1="0" y1="8" x2="0" y2="-30" stroke="#06b6d4" stroke-width="2.2" stroke-linecap="round"/>
+        <line id="sHand" x1="0" y1="14" x2="0" y2="-36" stroke="#ffcf66" stroke-width="1" stroke-linecap="round"/>
+        <circle cx="0" cy="0" r="2.8" fill="#e6f6ff"/>
+      </svg>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--glass);margin:10px 0"/>
+
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="countTarget" placeholder="Cieľ (YYYY-MM-DD HH:MM) - prázdne = next year" />
+      <button id="setCount" class="btn-ghost">Nastaviť</button>
+    </div>
+    <div style="margin-top:8px" class="muted">Countdown:</div>
+    <div id="countdownBig" style="font-weight:800;font-size:18px;margin-top:6px">— dní • — hod • — min • — sek</div>
+
+    <hr style="border:none;border-top:1px solid var(--glass);margin:10px 0"/>
+
+    <div style="display:flex;gap:8px">
+      <div style="flex:1">
+        <div class="muted small">Stopky</div>
+        <div id="stopDisp" style="font-weight:700">00:00.000</div>
+        <div class="row" style="margin-top:6px">
+          <button id="swStart">Štart</button>
+          <button id="swLap" class="btn-ghost">Lap</button>
+          <button id="swReset" class="btn-ghost">Reset</button>
+        </div>
+        <ul id="laps" style="margin-top:8px;font-size:13px"></ul>
+      </div>
+      <div style="width:1px;background:var(--glass)"></div>
+      <div style="flex:1">
+        <div class="muted small">Časovač (s)</div>
+        <input id="timerInput" placeholder="Sekúnd" />
+        <div class="row" style="margin-top:6px">
+          <button id="timerStart">Štart</button>
+          <button id="timerStop" class="btn-ghost">Stop</button>
+        </div>
+        <div id="timerDisp" style="font-weight:700;margin-top:6px">00:00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: main multifunction area -->
+  <div id="display" class="panel">
+    <div style="display:flex;gap:12px">
+      <!-- Calculator -->
+      <div style="flex:1" class="panel" id="calcPanel">
+        <h3>Kalkulačka</h3>
+        <input id="calcDisplay" readonly style="font-size:18px;margin-bottom:8px" />
+        <div class="calculator">
+          <button data-val="7">7</button><button data-val="8">8</button><button data-val="9">9</button><button data-op="/">÷</button>
+          <button data-val="4">4</button><button data-val="5">5</button><button data-val="6">6</button><button data-op="*">×</button>
+          <button data-val="1">1</button><button data-val="2">2</button><button data-val="3">3</button><button data-op="-">−</button>
+          <button data-val="0">0</button><button data-val=".">.</button><button id="calcEq">=</button><button data-op="+">+</button>
+          <button id="calcC" class="btn-ghost" style="grid-column:span 4">Vymazať</button>
+        </div>
+      </div>
+
+      <!-- Notes / ToDo -->
+      <div style="flex:1.1" class="panel">
+        <h3>Poznámky & To-Do</h3>
+        <div style="display:flex;gap:8px">
+          <textarea id="noteText" placeholder="Rýchla poznámka..."></textarea>
+          <div style="width:120px;display:flex;flex-direction:column;gap:8px">
+            <button id="saveNote">Uložiť</button>
+            <button id="clearNotes" class="btn-ghost">Vymazať všetko</button>
+            <button id="exportNotes" class="btn-ghost">Export .txt</button>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--glass);margin:8px 0"/>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="todoInput" placeholder="Nová položka" />
+          <button id="addTodo">Pridať</button>
+        </div>
+        <ul id="todoList" class="todo-list" style="margin-top:8px"></ul>
+      </div>
+    </div>
+
+    <!-- second row: converters, color, quick links -->
+    <div style="display:flex;gap:12px">
+      <div style="flex:1" class="panel">
+        <h3>Prevody & Utility</h3>
+        <div class="row">
+          <input id="lenIn" placeholder="Metre" />
+          <select id="lenFrom"><option value="m">m</option><option value="km">km</option><option value="ft">ft</option></select>
+          <select id="lenTo"><option value="m">m</option><option value="km">km</option><option value="ft">ft</option></select>
+        </div>
+        <div style="margin-top:8px" class="row">
+          <button id="convertLen">Prepočítať</button>
+          <div id="lenResult" class="badge">—</div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--glass);margin:8px 0"/>
+
+        <div class="muted small">Farba / preview</div>
+        <div class="row" style="margin-top:6px">
+          <input type="color" id="colorPick" value="#e6f6ff"/>
+          <div id="colorBox" style="width:60px;height:36px;border-radius:6px;border:1px solid var(--glass)"></div>
+          <button id="applyColor" class="btn-ghost">Použiť</button>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--glass);margin:8px 0"/>
+        <h4 class="small muted">Rýchle skratky</h4>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn-ghost" onclick="window.open('https://mail.google.com','_blank')">Email</button>
+          <button class="btn-ghost" onclick="window.open('https://calendar.google.com','_blank')">Kalendár</button>
+          <button class="btn-ghost" onclick="window.open('https://www.google.com','_blank')">Vyhľadávač</button>
+        </div>
+      </div>
+
+      <div style="width:340px" class="panel">
+        <h3>Media & Device</h3>
+        <div class="muted small">Kamera (vzorka)</div>
+        <video id="camPreview" autoplay playsinline style="width:100%;border-radius:8px;background:#000"></video>
+        <div class="row" style="margin-top:6px">
+          <button id="camStart">Spustiť</button>
+          <button id="camSnap" class="btn-ghost">Snapshot</button>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--glass);margin:8px 0"/>
+        <div class="muted small">Audio — nahrávaj</div>
+        <div class="row">
+          <button id="recStart">Nahrávať</button>
+          <button id="recStop" class="btn-ghost">Stop</button>
+        </div>
+        <audio id="audioPlayback" controls style="width:100%;margin-top:6px"></audio>
+
+        <hr style="border:none;border-top:1px solid var(--glass);margin:8px 0"/>
+        <div class="muted small">Polohu ukáž</div>
+        <div class="row">
+          <button id="locBtn">Získať polohu</button>
+          <div id="locOut" class="muted small">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- third row: accessibility / speech / summarizer -->
+    <div style="display:flex;gap:12px">
+      <div style="flex:1" class="panel">
+        <h3>Text tools</h3>
+        <textarea id="bigText" placeholder="Vlož text ..."></textarea>
+        <div class="row" style="margin-top:8px">
+          <button id="summBtn">Zhrnúť (1 vetou)</button>
+          <button id="ttsBtn" class="btn-ghost">Prečítať</button>
+          <button id="sttBtn" class="btn-ghost">Hlas do textu</button>
+        </div>
+        <div id="summOut" style="margin-top:8px;font-weight:700"></div>
+      </div>
+
+      <div style="width:340px" class="panel">
+        <h3>Export / Print</h3>
+        <div class="muted small">Export snapshot (PNG)</div>
+        <div class="row" style="margin-top:8px">
+          <button id="exportPNG">Export PNG</button>
+          <button id="printView" class="btn-ghost">Tlač</button>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--glass);margin:8px 0"/>
+        <h3>Time helpers</h3>
+        <div class="row small">
+          <input id="tzOffset" placeholder="UTC offset hrs (e.g. +2)" />
+          <button id="tzBtn" class="btn-ghost">Prepočítať</button>
+        </div>
+        <div id="tzOut" style="margin-top:8px" class="muted small">—</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN: Info, QR/text tools, settings -->
+  <div class="panel">
+    <h3>Rýchle</h3>
+    <div class="muted small">Vložený text → QR-text (kopírovať)</div>
+    <input id="qrText" placeholder="Text pre QR / zdieľanie" />
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="copyQR">Kopírovať text</button>
+      <button id="genQR" class="btn-ghost">Vygenerovať (externé)</button>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--glass);margin:10px 0"/>
+
+    <h3>Ukladanie</h3>
+    <div class="muted small">Uložiť panel stav</div>
+    <div class="row" style="margin-top:8px">
+      <button id="saveState">Uložiť</button>
+      <button id="loadState" class="btn-ghost">Načítať</button>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--glass);margin:10px 0"/>
+    <h3>Info</h3>
+    <div class="muted small">Verzia: <span class="key">1.0</span></div>
+    <div class="muted small" style="margin-top:8px">Autor: Erik Mohylák — ErikAI</div>
+    <div style="margin-top:12px" class="muted small">Poznámka: niektoré web-APIs (mikrofón, kamera, speech) vyžadujú HTTPS alebo localhost.</div>
+  </div>
+
+</div>
+
+<footer>ErikAI Mutant Panel — lokálne demo (kopíruj & rozširuj)</footer>
+
+<script>
+/* ---------- Utilities & state ---------- */
+const digitalClock = document.getElementById('digitalClock');
+const dateLocal = document.getElementById('dateLocal');
+const analogTicks = document.getElementById('ticks');
+
+function pad(n,d=2){ return String(n).padStart(d,'0'); }
+
+/* populate ticks */
+for(let i=0;i<60;i++){
+  const angle = i*6;
+  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+  const r1 = 42, r2 = (i%5===0?34:38);
+  const x1 = Math.sin(angle*Math.PI/180)*r1;
+  const y1 = -Math.cos(angle*Math.PI/180)*r1;
+  const x2 = Math.sin(angle*Math.PI/180)*r2;
+  const y2 = -Math.cos(angle*Math.PI/180)*r2;
+  line.setAttribute('x1',x1);line.setAttribute('y1',y1);line.setAttribute('x2',x2);line.setAttribute('y2',y2);
+  line.setAttribute('stroke', i%5===0?'rgba(230,246,255,0.9)':'rgba(230,246,255,0.12)');
+  line.setAttribute('stroke-width', i%5===0?1.8:0.9);
+  analogTicks.appendChild(line);
+}
+
+/* real-time updates */
+function updateTime(){
+  const now=new Date();
+  digitalClock.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  dateLocal.textContent = now.toLocaleString();
+  // analog smooth:
+  const ms = now.getMilliseconds();
+  const s = now.getSeconds() + ms/1000;
+  const m = now.getMinutes() + s/60;
+  const h = (now.getHours()%12) + m/60;
+  document.getElementById('hHand').setAttribute('transform',`rotate(${h*30})`);
+  document.getElementById('mHand').setAttribute('transform',`rotate(${m*6})`);
+  document.getElementById('sHand').setAttribute('transform',`rotate(${s*6})`);
+}
+setInterval(updateTime, 50); updateTime();
+
+/* ---------- Countdown ---------- */
+const setCount = document.getElementById('setCount');
+const countdownBig = document.getElementById('countdownBig');
+setCount.addEventListener('click', ()=>{
+  const v = document.getElementById('countTarget').value.trim();
+  if(!v){ localCountTarget = new Date(new Date().getFullYear()+1,0,1,0,0,0); }
+  else { localCountTarget = new Date(v); if(isNaN(localCountTarget)) { alert('Neplatný formát'); return; } }
+});
+let localCountTarget = new Date(new Date().getFullYear()+1,0,1,0,0,0);
+function tickCount(){
+  const diff = localCountTarget - new Date();
+  if(diff<=0){ countdownBig.textContent = 'Už nastal koniec roka'; return; }
+  const days = Math.floor(diff / (1000*60*60*24));
+  const hours = Math.floor((diff/(1000*60*60))%24);
+  const mins = Math.floor((diff/(1000*60))%60);
+  const secs = Math.floor((diff/1000)%60);
+  countdownBig.textContent = `${days} dní • ${hours} hod • ${mins} min • ${secs} sek`;
+}
+setInterval(tickCount, 500);
+tickCount();
+
+/* ---------- Stopwatch ---------- */
+let swStart=0, swRunning=false, swTimer=0;
+const swDisp = document.getElementById('stopDisp'), lapsUL = document.getElementById('laps');
+document.getElementById('swStart').addEventListener('click', ()=>{
+  if(!swRunning){ swStart = performance.now() - swTimer; swRunning=true; this.textContent='Pauza'; }
+  else{ swRunning=false; this.textContent='Štart'; }
+});
+document.getElementById('swReset').addEventListener('click', ()=>{ swRunning=false; swTimer=0; swDisp.textContent='00:00.000'; lapsUL.innerHTML=''; document.getElementById('swStart').textContent='Štart'; });
+document.getElementById('swLap').addEventListener('click', ()=>{ if(swTimer>0){ const li=document.createElement('li'); li.textContent = swDisp.textContent; lapsUL.prepend(li); }});
+function swTick(){
+  if(swRunning){ swTimer = performance.now() - swStart; }
+  const ms = Math.floor(swTimer%1000);
+  const s = Math.floor((swTimer/1000)%60);
+  const m = Math.floor((swTimer/60000)%60);
+  swDisp.textContent = `${pad(m)}:${pad(s)}.${String(ms).padStart(3,'0')}`;
+  requestAnimationFrame(swTick);
+}
+swTick();
+
+/* ---------- Timer ---------- */
+let timerRemaining = 0, timerInterval=null;
+document.getElementById('timerStart').addEventListener('click', ()=>{
+  const secs = parseInt(document.getElementById('timerInput').value)||0;
+  if(secs<=0) return alert('Zadaj sekundy');
+  timerRemaining = secs;
+  document.getElementById('timerDisp').textContent = formatTimer(timerRemaining);
+  if(timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{
+    timerRemaining--; document.getElementById('timerDisp').textContent = formatTimer(timerRemaining);
+    if(timerRemaining<=0){ clearInterval(timerInterval); timerInterval=null; alert('Časovač skončil'); }
+  },1000);
+});
+document.getElementById('timerStop').addEventListener('click', ()=>{ clearInterval(timerInterval); timerInterval=null; });
+function formatTimer(s){ return `${pad(Math.floor(s/60))}:${pad(s%60)}`; }
+
+/* ---------- Calculator ---------- */
+const calcDisplay = document.getElementById('calcDisplay');
+let calcExpr = '';
+document.querySelectorAll('.calculator button[data-val]').forEach(b=>{
+  b.addEventListener('click', ()=>{ calcExpr += b.dataset.val; calcDisplay.value = calcExpr; });
+});
+document.querySelectorAll('.calculator button[data-op]').forEach(b=>{
+  b.addEventListener('click', ()=>{ calcExpr += b.dataset.op; calcDisplay.value = calcExpr; });
+});
+document.getElementById('calcEq').addEventListener('click', ()=>{ try{ calcExpr = String(eval(calcExpr)); calcDisplay.value = calcExpr; }catch(e){ alert('Chyba'); }});
+document.getElementById('calcC').addEventListener('click', ()=>{ calcExpr=''; calcDisplay.value=''; });
+
+/* ---------- Notes & ToDo (localStorage) ---------- */
+const noteText = document.getElementById('noteText'), saveNote = document.getElementById('saveNote'), clearNotes = document.getElementById('clearNotes'), exportNotes = document.getElementById('exportNotes');
+const todoInput = document.getElementById('todoInput'), addTodo = document.getElementById('addTodo'), todoList = document.getElementById('todoList');
+function loadNotes(){ const n = localStorage.getItem('eai_notes')||''; noteText.value = n; }
+function saveNotes(){ localStorage.setItem('eai_notes', noteText.value); alert('Uložené'); }
+saveNote.addEventListener('click', saveNotes);
+clearNotes.addEventListener('click', ()=>{ if(confirm('Vymazať všetko?')){ localStorage.removeItem('eai_notes'); noteText.value=''; }});
+exportNotes.addEventListener('click', ()=>{ const blob = new Blob([noteText.value],{type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='notes.txt'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500); });
+
+function saveTodoList(){ const items = Array.from(todoList.querySelectorAll('li')).map(li=>li.dataset.text); localStorage.setItem('eai_todo', JSON.stringify(items)); }
+function loadTodo(){ todoList.innerHTML=''; const raw = localStorage.getItem('eai_todo'); if(!raw) return; JSON.parse(raw).forEach(t => addTodoItem(t)); }
+function addTodoItem(text){ const li = document.createElement('li'); li.dataset.text=text; li.innerHTML = `<span>${text}</span><div><button class="btn-ghost doneBtn">✓</button><button class="btn-ghost delBtn">✕</button></div>`; todoList.appendChild(li);
+  li.querySelector('.delBtn').addEventListener('click', ()=>{ li.remove(); saveTodoList(); });
+  li.querySelector('.doneBtn').addEventListener('click', ()=>{ li.querySelector('span').style.textDecoration='line-through'; saveTodoList(); });
+}
+addTodo.addEventListener('click', ()=>{ const v=todoInput.value.trim(); if(!v) return; addTodoItem(v); todoInput.value=''; saveTodoList(); });
+loadNotes(); loadTodo();
+
+/* ---------- Unit converter (length) ---------- */
+document.getElementById('convertLen').addEventListener('click', ()=>{
+  const v = parseFloat(document.getElementById('lenIn').value)||0;
+  const from = document.getElementById('lenFrom').value;
+  const to = document.getElementById('lenTo').value;
+  const meters = (from==='m')?v:(from==='km')?v*1000:(from==='ft')?v*0.3048: v;
+  const out = (to==='m')?meters:(to==='km')?meters/1000:(to==='ft')?meters/0.3048:meters;
+  document.getElementById('lenResult').textContent = `${+out.toFixed(4)} ${to}`;
+});
+
+/* ---------- Color picker ---------- */
+document.getElementById('colorPick').addEventListener('input', (e)=> document.getElementById('colorBox').style.background = e.target.value);
+document.getElementById('applyColor').addEventListener('click', ()=>{ document.querySelectorAll('h3').forEach(h=>h.style.color=document.getElementById('colorPick').value); });
+
+/* ---------- Camera snapshot ---------- */
+let camStream=null;
+const camPreview = document.getElementById('camPreview');
+document.getElementById('camStart').addEventListener('click', async ()=>{
+  try{
+    camStream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+    camPreview.srcObject = camStream;
+  }catch(e){ alert('Kamera nie dostupná: '+e.message); }
+});
+document.getElementById('camSnap').addEventListener('click', ()=>{
+  if(!camStream){ alert('Najprv spusti kameru'); return; }
+  const track = camStream.getVideoTracks()[0];
+  const imageCapture = new ImageCapture(track);
+  imageCapture.takePhoto().then(blob=>{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='snapshot.jpg'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }).catch(()=>{ // fallback: draw from video
+    const v = camPreview;
+    const c = document.createElement('canvas'); c.width=v.videoWidth; c.height=v.videoHeight;
+    c.getContext('2d').drawImage(v,0,0);
+    const url = c.toDataURL('image/jpeg');
+    const a = document.createElement('a'); a.href=url; a.download='snapshot.jpg'; a.click();
+  });
+});
+/* ---------- Audio recorder (MediaRecorder) ---------- */
+let recorder, audioChunks=[];
+document.getElementById('recStart').addEventListener('click', async ()=>{
+  try{
+    const s = await navigator.mediaDevices.getUserMedia({audio:true});
+    recorder = new MediaRecorder(s);
+    audioChunks=[];
+    recorder.ondataavailable = e => audioChunks.push(e.data);
+    recorder.onstop = ()=> {
+      const blob = new Blob(audioChunks,{type:'audio/webm'});
+      document.getElementById('audioPlayback').src = URL.createObjectURL(blob);
+    };
+    recorder.start();
+  }catch(e){ alert('Mikrofón nie dostupný: '+e.message); }
+});
+document.getElementById('recStop').addEventListener('click', ()=>{ if(recorder && recorder.state!='inactive') recorder.stop(); });
+
+/* ---------- Geolocation ---------- */
+document.getElementById('locBtn').addEventListener('click', ()=>{
+  if(!navigator.geolocation) return alert('Geolocation nie je podporované');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat=pos.coords.latitude.toFixed(6), lon=pos.coords.longitude.toFixed(6);
+    document.getElementById('locOut').textContent = `${lat}, ${lon}`;
+    // provide OSM link
+    const link = document.createElement('a'); link.href=`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`; link.target='_blank';
+    link.textContent = ' Zobraziť na mape'; link.style.marginLeft='6px'; link.className='muted small';
+    const out = document.getElementById('locOut'); out.innerHTML=''; out.append(`${lat}, ${lon}`); out.append(link);
+  }, err => alert('Chyba polohy: '+err.message));
+});
+
+/* ---------- Text tools: summarizer (naive), TTS, STT ---------- */
+document.getElementById('summBtn').addEventListener('click', ()=>{
+  const txt = document.getElementById('bigText').value.trim();
+  if(!txt) return alert('Vlož text');
+  // naive: return first sentence or first 20 words
+  const sent = txt.split(/(?<=[.!?])\s+/)[0];
+  const out = sent.length>5?sent: txt.split(/\s+/).slice(0,20).join(' ') + (txt.split(/\s+/).length>20?'…':'');
+  document.getElementById('summOut').textContent = out;
+});
+document.getElementById('ttsBtn').addEventListener('click', ()=>{
+  const t = document.getElementById('bigText').value || 'Žiadny text';
+  if('speechSynthesis' in window){
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = 'sk-SK';
+    window.speechSynthesis.speak(u);
+  } else alert('TTS nie podporované');
+});
+let recognition=null;
+document.getElementById('sttBtn').addEventListener('click', ()=>{
+  if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return alert('Speech-to-text nie je dostupné v tomto prehliadači');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'sk-SK';
+  recognition.interimResults = false;
+  recognition.onresult = e => { document.getElementById('bigText').value += '\n' + e.results[0][0].transcript; };
+  recognition.onerror = e => alert('STT error: '+e.error);
+  recognition.start();
+});
+
+/* ---------- Export PNG & Print ---------- */
+document.getElementById('exportPNG').addEventListener('click', async ()=>{
+  // take snapshot of central display area
+  const el = document.getElementById('display');
+  // use html2canvas-like approach: simple: draw to canvas by drawing text and some elements (full fidelity needs library)
+  try{
+    // quick hack: use SVG foreignObject to capture innerHTML
+    const rect = el.getBoundingClientRect();
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${rect.width}' height='${rect.height}'>
+      <foreignObject width='100%' height='100%'>${new XMLSerializer().serializeToString(el)}</foreignObject></svg>`;
+    const img = new Image();
+    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    img.onload = ()=> {
+      const c = document.createElement('canvas'); c.width = rect.width*2; c.height = rect.height*2;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#020617'; ctx.fillRect(0,0,c.width,c.height);
+      ctx.drawImage(img,0,0,c.width,c.height);
+      const png = c.toDataURL('image/png');
+      const a = document.createElement('a'); a.href=png; a.download='mutant-panel.png'; a.click();
+    };
+    img.src = url;
+  }catch(e){ alert('Export PNG môže byť obmedzený v tomto prehliadači'); }
+});
+document.getElementById('printView').addEventListener('click', ()=> window.print());
+
+/* ---------- Timezone helper ---------- */
+document.getElementById('tzBtn').addEventListener('click', ()=>{
+  const v = document.getElementById('tzOffset').value.trim();
+  const num = Number(v);
+  if(isNaN(num)) return alert('Neplatný offset');
+  const now = new Date();
+  const target = new Date(now.getTime() + num*3600*1000);
+  document.getElementById('tzOut').textContent = `Lokálny čas +${num}: ${target.toLocaleString()}`;
+});
+
+/* ---------- QR text copy ---------- */
+document.getElementById('copyQR').addEventListener('click', ()=>{
+  const t = document.getElementById('qrText').value || '';
+  navigator.clipboard.writeText(t).then(()=>alert('Skopírované'));
+});
+document.getElementById('genQR').addEventListener('click', ()=> alert('Pre generovanie QR odporúčam externú knižnicu (qrcode) alebo online API — tu je placeholder.'));
+
+/* ---------- Save / Load panel state ---------- */
+document.getElementById('saveState').addEventListener('click', ()=>{
+  const state = {
+    notes: noteText.value,
+    todos: Array.from(document.querySelectorAll('#todoList li')).map(li=>li.dataset.text),
+    color: document.getElementById('colorPick').value
+  };
+  localStorage.setItem('eai_panel_state', JSON.stringify(state));
+  alert('Stav uložený');
+});
+document.getElementById('loadState').addEventListener('click', ()=>{
+  const raw = localStorage.getItem('eai_panel_state'); if(!raw) return alert('Žiadny uložený stav');
+  const s = JSON.parse(raw);
+  noteText.value = s.notes || '';
+  document.querySelectorAll('#todoList li').forEach(n=>n.remove());
+  (s.todos||[]).forEach(t => { addTodoItem(t); });
+  document.getElementById('colorPick').value = s.color || '#e6f6ff';
+  document.getElementById('colorBox').style.background = s.color || '#e6f6ff';
+  alert('Stav načítaný');
+});
+/* ---------- Theme toggle ---------- */
+document.getElementById('themeToggle').addEventListener('change', (e)=>{
+  if(e.target.value==='light'){
+    document.body.style.background = 'linear-gradient(180deg,#f7fafc,#fff)';
+    document.body.style.color = '#071124';
+  } else {
+    document.body.style.background = 'linear-gradient(180deg,#020617,var(--bg))';
+    document.body.style.color = '#e6f6ff';
+  }
+});
+
+/* ---------- Init small UI handlers ---------- */
+document.getElementById('apply').addEventListener('click', applySettings);
+function applySettings(){
+  // apply headings from panel to main
+  document.getElementById('headlineEl')?.remove?.(); // keep minimal; placeholder
+}
+</script>
+</body>
+</html>
