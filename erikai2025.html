@@ -362,32 +362,34 @@ function updateClockSmooth(){
   const s = now.getSeconds();
   const ms = now.getMilliseconds();
 
-  // Numeric display (seconds integer)
+  // Digitálny čas a dátum aktualizujeme každý frame
   const hh = String(h).padStart(2,'0');
   const mm = String(m).padStart(2,'0');
   const ss = String(s).padStart(2,'0');
   numericTimeEl.textContent = `${hh}:${mm}:${ss}`;
   dateTextEl.textContent = now.toLocaleDateString('sk-SK', { weekday:'short', year:'numeric', month:'short', day:'numeric' });
 
-  // Precise angles including milliseconds for smooth movement
+  // Analógové ručičky plynulo
   const totalSeconds = s + ms/1000;
-  const secAngle = totalSeconds * 6; // 360/60
+  const secAngle = totalSeconds * 6;
   const totalMinutes = m + totalSeconds/60;
-  const minAngle = totalMinutes * 6;  // 360/60
+  const minAngle = totalMinutes * 6;
   const totalHours = (h % 12) + totalMinutes/60;
-  const hourAngle = totalHours * 30;  // 360/12
+  const hourAngle = totalHours * 30;
 
-  // Apply transforms to hands (rotate around center)
   document.getElementById('hourHand').setAttribute('transform', `rotate(${hourAngle})`);
   document.getElementById('minHand').setAttribute('transform', `rotate(${minAngle})`);
   document.getElementById('secHand').setAttribute('transform', `rotate(${secAngle})`);
 
-  // update countdown occasionally (we update every second inside raf when second changes)
-  updateCountdownIfNeeded(now);
+  // Countdown iba každú sekundu
+  const secNow = Math.floor(now.getTime() / 1000);
+  if(secNow !== lastCountdownSecond){
+    lastCountdownSecond = secNow;
+    updateCountdown();
+  }
 
-  // request next frame
   requestAnimationFrame(updateClockSmooth);
-}
+  }
 
 /* --- countdown: we update when seconds change to avoid extra work --- */
 let lastCountdownSecond = null;
