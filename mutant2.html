@@ -1,15 +1,16 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="sk">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI OS – Supermutant panel</title>
+<title>ErikAI OS – Supermutant Chaos Panel</title>
 <style>
   body {
     font-family: Inter, Arial, sans-serif;
     margin: 0;
     background: linear-gradient(180deg, #071021, #02061a);
     color: #f3fcff;
+    transition: background 2s;
   }
   .panel { display: flex; flex-wrap: wrap; padding: 12px; gap:12px; }
   .module {
@@ -19,23 +20,30 @@
     flex: 1 1 300px;
     min-width: 300px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    transition: transform 0.5s, background 0.5s;
   }
-  h3 { margin-top:0; color: #06b6d4; }
-  button { padding: 6px 12px; margin: 4px 0; border-radius: 6px; border:none; cursor:pointer; background:#06b6d4; color:#021; font-weight:700; }
+  .module:hover {
+    transform: rotate(-2deg) scale(1.02);
+    background: linear-gradient(45deg, #072034, #1b0a2e, #072034);
+  }
+  h3 { margin-top:0; color: #06b6d4; text-shadow: 0 0 8px #0ff; }
+  button { padding: 6px 12px; margin: 4px 0; border-radius: 6px; border:none; cursor:pointer; background:#06b6d4; color:#021; font-weight:700; transition: 0.3s; }
+  button:hover { background:#8b5cf6; color:#fff; }
   input, textarea, select { width:100%; padding:6px; margin:4px 0; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#f3fcff; }
-  .like-btn.liked { background:#8b5cf6; color:#fff; }
-  .card { background:#051225; border-radius:12px; padding:8px; margin-top:8px; }
+  .like-btn.liked { background:#ff0; color:#021; }
+  .card { background:#051225; border-radius:12px; padding:8px; margin-top:8px; overflow:auto; max-height:150px; }
+  .file-preview img, .file-preview video, .file-preview audio { max-width:100%; margin-top:6px; border-radius:6px; }
 </style>
 </head>
 <body>
 
-<h1 style="text-align:center;">ErikAI OS – Supermutant Panel</h1>
+<h1 style="text-align:center; text-shadow: 0 0 12px #06b6d4;">ErikAI OS – Supermutant Chaos Panel</h1>
 <div class="panel">
 
   <!-- Chat -->
   <div class="module">
     <h3>Chat / Emoji</h3>
-    <div id="chatBox" class="card" style="height:150px; overflow:auto;"></div>
+    <div id="chatBox" class="card"></div>
     <input type="text" id="chatInput" placeholder="Napíš správu...">
     <button onclick="sendMessage()">Odoslať</button>
     <div>
@@ -51,199 +59,79 @@
     <h3>Sociálne – Lokálne</h3>
     <input id="postInput" placeholder="Napíš nový príspevok">
     <button onclick="addPost()">Pridať príspevok</button>
-    <div id="postContainer" class="card" style="height:150px; overflow:auto;"></div>
+    <div id="postContainer" class="card"></div>
     <button onclick="clearPosts()">Vymazať príspevky</button>
   </div>
 
   <!-- Video -->
   <div class="module">
     <h3>Video prehrávač</h3>
-    <video id="videoPlayer" width="100%" controls>
-      <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
-      Váš prehliadač nepodporuje video.
-    </video>
-    <input id="videoInput" placeholder="Názov videa do playlistu">
-    <button onclick="addVideoToPlaylist()">Pridať do playlistu</button>
-    <div id="videoPlaylist" class="card" style="height:100px; overflow:auto;"></div>
+    <video id="videoPlayer" width="100%" controls></video>
+    <input type="file" id="videoFileInput" accept="video/*">
+    <button onclick="uploadVideo()">Nahrať video</button>
+    <div id="videoPlaylist" class="card file-preview"></div>
     <button onclick="clearVideoPlaylist()">Vymazať playlist</button>
   </div>
 
   <!-- Hudba -->
   <div class="module">
     <h3>Hudba</h3>
-    <audio id="audioPlayer" controls>
-      <source src="https://www.w3schools.com/html/horse.mp3" type="audio/mp3">
-      Váš prehliadač nepodporuje audio.
-    </audio>
-    <input id="songInput" placeholder="Názov pesničky do playlistu">
-    <button onclick="addSongToPlaylist()">Pridať do playlistu</button>
-    <div id="musicPlaylist" class="card" style="height:100px; overflow:auto;"></div>
+    <audio id="audioPlayer" controls></audio>
+    <input type="file" id="audioFileInput" accept="audio/*">
+    <button onclick="uploadAudio()">Nahrať hudbu</button>
+    <div id="musicPlaylist" class="card file-preview"></div>
     <button onclick="clearMusicPlaylist()">Vymazať playlist</button>
   </div>
 
-  <!-- Košík / Wishlist -->
+  <!-- Obrázky / Galéria -->
   <div class="module">
-    <h3>Košík / Wishlist</h3>
-    <input id="itemInput" placeholder="Názov produktu">
-    <button onclick="addToCart()">Pridať do košíka</button>
-    <button onclick="addToWishlist()">Pridať do wishlistu</button>
-    <div id="cart" class="card" style="height:80px; overflow:auto;"></div>
-    <div id="wishlist" class="card" style="height:80px; overflow:auto;"></div>
-    <button onclick="clearCartWishlist()">Vymazať košík a wishlist</button>
-  </div>
-
-  <!-- Zdravie / fitness -->
-  <div class="module">
-    <h3>Krokomer / Progres</h3>
-    <div>Kroky: <span id="steps">0</span></div>
-    <button onclick="addStep()">+1 krok</button>
-    <div>Progres cvičenia:</div>
-    <progress id="workoutProgress" value="0" max="100" style="width:100%;"></progress>
-    <button onclick="addWorkout()">+10%</button>
-    <button onclick="resetFitness()">Resetovať</button>
+    <h3>Obrázky / Galéria</h3>
+    <input type="file" id="imageFileInput" accept="image/*" multiple>
+    <button onclick="uploadImages()">Nahrať obrázky</button>
+    <div id="imageGallery" class="card file-preview"></div>
+    <button onclick="clearImageGallery()">Vymazať galériu</button>
   </div>
 
 </div>
 
 <script>
-/* --- Pomocné funkcie pre localStorage --- */
-function saveState(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
-function loadState(key){ const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
+/* --- LocalStorage helpers --- */
+function saveState(key,value){ localStorage.setItem(key, JSON.stringify(value)); }
+function loadState(key){ const v = localStorage.getItem(key); return v ? JSON.parse(v) : []; }
 
 /* --- Chat --- */
 function renderChat(){
-  const box = document.getElementById('chatBox');
-  box.innerHTML = '';
-  const messages = loadState('chat')||[];
-  messages.forEach(msg => box.appendChild(document.createTextNode(msg+' ')));
+  const box = document.getElementById('chatBox'); box.innerHTML='';
+  loadState('chat').forEach(msg=>box.appendChild(document.createTextNode(msg+' ')));
 }
-function sendMessage(){
-  const input = document.getElementById('chatInput');
-  const val = input.value.trim();
-  if(!val) return;
-  const messages = loadState('chat')||[];
-  messages.push(val);
-  saveState('chat', messages);
-  renderChat();
-  input.value='';
-}
-function addEmoji(e){
-  const messages = loadState('chat')||[];
-  messages.push(e);
-  saveState('chat', messages);
-  renderChat();
-}
-function clearChat(){ saveState('chat', []); renderChat(); }
+function sendMessage(){ const input=document.getElementById('chatInput'); const val=input.value.trim(); if(!val) return; const chat=loadState('chat'); chat.push(val); saveState('chat',chat); renderChat(); input.value=''; }
+function addEmoji(e){ const chat=loadState('chat'); chat.push(e); saveState('chat',chat); renderChat(); }
+function clearChat(){ saveState('chat',[]); renderChat(); }
 
 /* --- Sociálne --- */
-function renderPosts(){
-  const container = document.getElementById('postContainer');
-  container.innerHTML='';
-  const posts = loadState('posts')||[];
-  posts.forEach(p=>{
-    const div=document.createElement('div'); div.textContent=p; container.appendChild(div);
-  });
-}
-function addPost(){
-  const val=document.getElementById('postInput').value.trim();
-  if(!val) return;
-  const posts=loadState('posts')||[];
-  posts.push(val);
-  saveState('posts',posts);
-  renderPosts();
-  document.getElementById('postInput').value='';
-}
+function renderPosts(){ const cont=document.getElementById('postContainer'); cont.innerHTML=''; loadState('posts').forEach(p=>{const d=document.createElement('div'); d.textContent=p; cont.appendChild(d);}); }
+function addPost(){ const val=document.getElementById('postInput').value.trim(); if(!val) return; const posts=loadState('posts'); posts.push(val); saveState('posts',posts); renderPosts(); document.getElementById('postInput').value=''; }
 function clearPosts(){ saveState('posts',[]); renderPosts(); }
 
 /* --- Video --- */
-function renderVideos(){
-  const container=document.getElementById('videoPlaylist');
-  container.innerHTML='';
-  const videos=loadState('videos')||[];
-  videos.forEach(v=>{const div=document.createElement('div'); div.textContent=v; container.appendChild(div);});
-}
-function addVideoToPlaylist(){
-  const val=document.getElementById('videoInput').value.trim();
-  if(!val) return;
-  const videos=loadState('videos')||[];
-  videos.push(val);
-  saveState('videos',videos);
-  renderVideos();
-  document.getElementById('videoInput').value='';
-}
-function clearVideoPlaylist(){ saveState('videos',[]); renderVideos(); }
+function renderVideos(){ const cont=document.getElementById('videoPlaylist'); cont.innerHTML=''; loadState('videos').forEach(url=>{ const vid=document.createElement('video'); vid.src=url; vid.controls=true; cont.appendChild(vid); }); }
+function uploadVideo(){ const f=document.getElementById('videoFileInput').files[0]; if(!f) return; const url=URL.createObjectURL(f); const videos=loadState('videos'); videos.push(url); saveState('videos',videos); renderVideos(); }
 
 /* --- Hudba --- */
-function renderMusic(){
-  const container=document.getElementById('musicPlaylist');
-  container.innerHTML='';
-  const songs=loadState('songs')||[];
-  songs.forEach(s=>{const div=document.createElement('div'); div.textContent=s; container.appendChild(div);});
-}
-function addSongToPlaylist(){
-  const val=document.getElementById('songInput').value.trim();
-  if(!val) return;
-  const songs=loadState('songs')||[];
-  songs.push(val);
-  saveState('songs',songs);
-  renderMusic();
-  document.getElementById('songInput').value='';
-}
+function renderMusic(){ const cont=document.getElementById('musicPlaylist'); cont.innerHTML=''; loadState('songs').forEach(url=>{ const aud=document.createElement('audio'); aud.src=url; aud.controls=true; cont.appendChild(aud); }); }
+function uploadAudio(){ const f=document.getElementById('audioFileInput').files[0]; if(!f) return; const url=URL.createObjectURL(f); const songs=loadState('songs'); songs.push(url); saveState('songs',songs); renderMusic(); }
+function clearVideoPlaylist(){ saveState('videos',[]); renderVideos(); }
 function clearMusicPlaylist(){ saveState('songs',[]); renderMusic(); }
-function likeSong(){ alert('Pesnička lajknutá lokálne!'); }
 
-/* --- Košík / Wishlist --- */
-function renderCartWishlist(){
-  const cart=document.getElementById('cart'); cart.innerHTML='';
-  const wishlist=document.getElementById('wishlist'); wishlist.innerHTML='';
-  const c=loadState('cart')||[], w=loadState('wishlist')||[];
-  c.forEach(i=>{const d=document.createElement('div'); d.textContent=i; cart.appendChild(d);});
-  w.forEach(i=>{const d=document.createElement('div'); d.textContent=i; wishlist.appendChild(d);});
-}
-function addToCart(){
-  const val=document.getElementById('itemInput').value.trim();
-  if(!val) return;
-  const c=loadState('cart')||[];
-  c.push(val); saveState('cart',c); renderCartWishlist(); document.getElementById('itemInput').value='';
-}
-function addToWishlist(){
-  const val=document.getElementById('itemInput').value.trim();
-  if(!val) return;
-  const w=loadState('wishlist')||[];
-  w.push(val); saveState('wishlist',w); renderCartWishlist(); document.getElementById('itemInput').value='';
-}
-function clearCartWishlist(){ saveState('cart',[]); saveState('wishlist',[]); renderCartWishlist(); }
+/* --- Obrázky --- */
+function renderImages(){ const cont=document.getElementById('imageGallery'); cont.innerHTML=''; loadState('images').forEach(url=>{ const img=document.createElement('img'); img.src=url; cont.appendChild(img); }); }
+function uploadImages(){ const files=document.getElementById('imageFileInput').files; if(!files.length) return; const imgs=loadState('images'); for(let f of files){ imgs.push(URL.createObjectURL(f)); } saveState('images',imgs); renderImages(); }
+function clearImageGallery(){ saveState('images',[]); renderImages(); }
 
-/* --- Fitness --- */
-function addStep(){ 
-  const el=document.getElementById('steps');
-  el.textContent=parseInt(el.textContent)+1;
-  saveState('steps', parseInt(el.textContent));
-}
-function addWorkout(){
-  const el=document.getElementById('workoutProgress');
-  el.value=Math.min(el.value+10,100);
-  saveState('workout', el.value);
-}
-function resetFitness(){ saveState('steps',0); saveState('workout',0); loadFitness(); }
-function loadFitness(){
-  const steps=loadState('steps')||0;
-  const workout=loadState('workout')||0;
-  document.getElementById('steps').textContent=steps;
-  document.getElementById('workoutProgress').value=workout;
-}
-
-/* --- Init: načítanie uloženého --- */
-function init(){
-  renderChat();
-  renderPosts();
-  renderVideos();
-  renderMusic();
-  renderCartWishlist();
-  loadFitness();
-}
+/* --- Init --- */
+function init(){ renderChat(); renderPosts(); renderVideos(); renderMusic(); renderImages(); }
 init();
 </script>
 
 </body>
-</html>
+  </html>
