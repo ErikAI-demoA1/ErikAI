@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI – Čistá kódová animácia</title>
+<style>
+  body { margin:0; background:#071021; display:flex; justify-content:center; align-items:center; height:100vh; overflow:hidden; }
+  canvas { border-radius:12px; background:linear-gradient(180deg,#02061a,#072034); }
+</style>
+</head>
+<body>
+
+<canvas id="erikCanvas" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById('erikCanvas');
+const ctx = canvas.getContext('2d');
+
+let t = 0;
+
+// --- jednoduchá animácia poločloveka/polorobota ---
+function drawErikAI() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // pozadie
+    ctx.fillStyle = '#02061a';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // podlaha
+    ctx.fillStyle = '#072034';
+    ctx.fillRect(0,500,canvas.width,100);
+
+    // hlava
+    ctx.save();
+    ctx.translate(400,300);
+    ctx.rotate(Math.sin(t/60)*0.05); // mierny pohyb hlavy
+    ctx.fillStyle = '#06b6d4';
+    ctx.beginPath();
+    ctx.arc(0,0,50,0,Math.PI*2);
+    ctx.fill();
+
+    // oči (ľavé)
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(-20 + Math.sin(t/20)*2, -10, 10,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#021';
+    ctx.beginPath();
+    ctx.arc(-20 + Math.sin(t/20)*2, -10,5,0,Math.PI*2);
+    ctx.fill();
+
+    // oči (pravé)
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(20 + Math.sin(t/25)*2, -10, 10,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#021';
+    ctx.beginPath();
+    ctx.arc(20 + Math.sin(t/25)*2, -10,5,0,Math.PI*2);
+    ctx.fill();
+
+    // polorobotické detaily (ľavá časť)
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-50,0); ctx.lineTo(0,50); ctx.stroke();
+
+    // polorobotické detaily (pravá časť)
+    ctx.strokeStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(50,0); ctx.lineTo(0,50); ctx.stroke();
+
+    ctx.restore();
+
+    t++;
+    requestAnimationFrame(drawErikAI);
+}
+drawErikAI();
+
+// --- generovaný zvuk pomocou Web Speech API ---
+function speakErikAI(text){
+    if('speechSynthesis' in window){
+        const msg = new SpeechSynthesisUtterance();
+        msg.text = text;
+        msg.lang = 'sk-SK';
+        msg.pitch = 1.2;
+        msg.rate = 0.9;
+        msg.volume = 1;
+        speechSynthesis.speak(msg);
+    } else {
+        alert("Váš prehliadač nepodporuje syntézu hlasu.");
+    }
+}
+
+// automaticky hovorí po 2 sekundách
+setTimeout(()=>{ speakErikAI("Ahoj! Ja som ErikAI. Čas na rozlúčku."); },2000);
+
+</script>
+</body>
+</html>
