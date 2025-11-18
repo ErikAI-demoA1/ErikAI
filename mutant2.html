@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="sk">
 <head>
 <meta charset="utf-8">
@@ -43,17 +43,16 @@
       <button onclick="addEmoji('😂')">😂</button>
       <button onclick="addEmoji('👍')">👍</button>
     </div>
+    <button onclick="clearChat()">Vymazať chat</button>
   </div>
 
   <!-- Sociálne siete -->
   <div class="module">
     <h3>Sociálne – Lokálne</h3>
-    <div class="card" id="post1">Toto je demo príspevok</div>
-    <button class="like-btn" onclick="toggleLike(this)">Lajk</button>
-    <button onclick="savePost()">Uložiť</button>
-    <textarea id="commentInput" placeholder="Napíš komentár"></textarea>
-    <button onclick="addComment()">Pridať komentár</button>
-    <div id="commentsBox" class="card" style="height:80px; overflow:auto;"></div>
+    <input id="postInput" placeholder="Napíš nový príspevok">
+    <button onclick="addPost()">Pridať príspevok</button>
+    <div id="postContainer" class="card" style="height:150px; overflow:auto;"></div>
+    <button onclick="clearPosts()">Vymazať príspevky</button>
   </div>
 
   <!-- Video -->
@@ -63,8 +62,10 @@
       <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
       Váš prehliadač nepodporuje video.
     </video>
-    <button onclick="addToPlaylist('Demo video')">Pridať do playlistu</button>
-    <div id="videoPlaylist" class="card" style="height:80px; overflow:auto;"></div>
+    <input id="videoInput" placeholder="Názov videa do playlistu">
+    <button onclick="addVideoToPlaylist()">Pridať do playlistu</button>
+    <div id="videoPlaylist" class="card" style="height:100px; overflow:auto;"></div>
+    <button onclick="clearVideoPlaylist()">Vymazať playlist</button>
   </div>
 
   <!-- Hudba -->
@@ -74,19 +75,21 @@
       <source src="https://www.w3schools.com/html/horse.mp3" type="audio/mp3">
       Váš prehliadač nepodporuje audio.
     </audio>
-    <button onclick="likeSong()">Like</button>
-    <button onclick="addSongToPlaylist('Demo song')">Pridať do playlistu</button>
-    <div id="musicPlaylist" class="card" style="height:80px; overflow:auto;"></div>
+    <input id="songInput" placeholder="Názov pesničky do playlistu">
+    <button onclick="addSongToPlaylist()">Pridať do playlistu</button>
+    <div id="musicPlaylist" class="card" style="height:100px; overflow:auto;"></div>
+    <button onclick="clearMusicPlaylist()">Vymazať playlist</button>
   </div>
 
-  <!-- Nakupovanie -->
+  <!-- Košík / Wishlist -->
   <div class="module">
     <h3>Košík / Wishlist</h3>
-    <div class="card">Produkt: ErikAI T-shirt</div>
-    <button onclick="addToCart('ErikAI T-shirt')">Pridať do košíka</button>
-    <button onclick="addToWishlist('ErikAI T-shirt')">Pridať do wishlistu</button>
+    <input id="itemInput" placeholder="Názov produktu">
+    <button onclick="addToCart()">Pridať do košíka</button>
+    <button onclick="addToWishlist()">Pridať do wishlistu</button>
     <div id="cart" class="card" style="height:80px; overflow:auto;"></div>
     <div id="wishlist" class="card" style="height:80px; overflow:auto;"></div>
+    <button onclick="clearCartWishlist()">Vymazať košík a wishlist</button>
   </div>
 
   <!-- Zdravie / fitness -->
@@ -97,58 +100,149 @@
     <div>Progres cvičenia:</div>
     <progress id="workoutProgress" value="0" max="100" style="width:100%;"></progress>
     <button onclick="addWorkout()">+10%</button>
+    <button onclick="resetFitness()">Resetovať</button>
   </div>
 
 </div>
 
 <script>
-  // --- Chat ---
-  function sendMessage(){
-    const txt = document.getElementById('chatInput').value;
-    if(!txt) return;
-    const div = document.createElement('div'); div.textContent = txt; document.getElementById('chatBox').appendChild(div);
-    document.getElementById('chatInput').value = '';
-  }
-  function addEmoji(e){ document.getElementById('chatBox').appendChild(document.createTextNode(e)); }
+/* --- Pomocné funkcie pre localStorage --- */
+function saveState(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
+function loadState(key){ const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
 
-  // --- Sociálne ---
-  function toggleLike(btn){ btn.classList.toggle('liked'); }
-  function savePost(){ alert('Príspevok uložený lokálne!'); }
-  function addComment(){
-    const txt = document.getElementById('commentInput').value;
-    if(!txt) return;
-    const div = document.createElement('div'); div.textContent = txt; document.getElementById('commentsBox').appendChild(div);
-    document.getElementById('commentInput').value = '';
-  }
+/* --- Chat --- */
+function renderChat(){
+  const box = document.getElementById('chatBox');
+  box.innerHTML = '';
+  const messages = loadState('chat')||[];
+  messages.forEach(msg => box.appendChild(document.createTextNode(msg+' ')));
+}
+function sendMessage(){
+  const input = document.getElementById('chatInput');
+  const val = input.value.trim();
+  if(!val) return;
+  const messages = loadState('chat')||[];
+  messages.push(val);
+  saveState('chat', messages);
+  renderChat();
+  input.value='';
+}
+function addEmoji(e){
+  const messages = loadState('chat')||[];
+  messages.push(e);
+  saveState('chat', messages);
+  renderChat();
+}
+function clearChat(){ saveState('chat', []); renderChat(); }
 
-  // --- Video ---
-  function addToPlaylist(name){
-    const div = document.createElement('div'); div.textContent = name; document.getElementById('videoPlaylist').appendChild(div);
-  }
+/* --- Sociálne --- */
+function renderPosts(){
+  const container = document.getElementById('postContainer');
+  container.innerHTML='';
+  const posts = loadState('posts')||[];
+  posts.forEach(p=>{
+    const div=document.createElement('div'); div.textContent=p; container.appendChild(div);
+  });
+}
+function addPost(){
+  const val=document.getElementById('postInput').value.trim();
+  if(!val) return;
+  const posts=loadState('posts')||[];
+  posts.push(val);
+  saveState('posts',posts);
+  renderPosts();
+  document.getElementById('postInput').value='';
+}
+function clearPosts(){ saveState('posts',[]); renderPosts(); }
 
-  // --- Hudba ---
-  function likeSong(){ alert('Pieseň lajknutá lokálne!'); }
-  function addSongToPlaylist(name){
-    const div = document.createElement('div'); div.textContent = name; document.getElementById('musicPlaylist').appendChild(div);
-  }
+/* --- Video --- */
+function renderVideos(){
+  const container=document.getElementById('videoPlaylist');
+  container.innerHTML='';
+  const videos=loadState('videos')||[];
+  videos.forEach(v=>{const div=document.createElement('div'); div.textContent=v; container.appendChild(div);});
+}
+function addVideoToPlaylist(){
+  const val=document.getElementById('videoInput').value.trim();
+  if(!val) return;
+  const videos=loadState('videos')||[];
+  videos.push(val);
+  saveState('videos',videos);
+  renderVideos();
+  document.getElementById('videoInput').value='';
+}
+function clearVideoPlaylist(){ saveState('videos',[]); renderVideos(); }
 
-  // --- Nakupovanie ---
-  function addToCart(item){
-    const div = document.createElement('div'); div.textContent = item; document.getElementById('cart').appendChild(div);
-  }
-  function addToWishlist(item){
-    const div = document.createElement('div'); div.textContent = item; document.getElementById('wishlist').appendChild(div);
-  }
+/* --- Hudba --- */
+function renderMusic(){
+  const container=document.getElementById('musicPlaylist');
+  container.innerHTML='';
+  const songs=loadState('songs')||[];
+  songs.forEach(s=>{const div=document.createElement('div'); div.textContent=s; container.appendChild(div);});
+}
+function addSongToPlaylist(){
+  const val=document.getElementById('songInput').value.trim();
+  if(!val) return;
+  const songs=loadState('songs')||[];
+  songs.push(val);
+  saveState('songs',songs);
+  renderMusic();
+  document.getElementById('songInput').value='';
+}
+function clearMusicPlaylist(){ saveState('songs',[]); renderMusic(); }
+function likeSong(){ alert('Pesnička lajknutá lokálne!'); }
 
-  // --- Zdravie / fitness ---
-  function addStep(){ 
-    const el = document.getElementById('steps'); 
-    el.textContent = parseInt(el.textContent)+1; 
-  }
-  function addWorkout(){
-    const el = document.getElementById('workoutProgress'); 
-    el.value = Math.min(el.value+10,100);
-  }
+/* --- Košík / Wishlist --- */
+function renderCartWishlist(){
+  const cart=document.getElementById('cart'); cart.innerHTML='';
+  const wishlist=document.getElementById('wishlist'); wishlist.innerHTML='';
+  const c=loadState('cart')||[], w=loadState('wishlist')||[];
+  c.forEach(i=>{const d=document.createElement('div'); d.textContent=i; cart.appendChild(d);});
+  w.forEach(i=>{const d=document.createElement('div'); d.textContent=i; wishlist.appendChild(d);});
+}
+function addToCart(){
+  const val=document.getElementById('itemInput').value.trim();
+  if(!val) return;
+  const c=loadState('cart')||[];
+  c.push(val); saveState('cart',c); renderCartWishlist(); document.getElementById('itemInput').value='';
+}
+function addToWishlist(){
+  const val=document.getElementById('itemInput').value.trim();
+  if(!val) return;
+  const w=loadState('wishlist')||[];
+  w.push(val); saveState('wishlist',w); renderCartWishlist(); document.getElementById('itemInput').value='';
+}
+function clearCartWishlist(){ saveState('cart',[]); saveState('wishlist',[]); renderCartWishlist(); }
+
+/* --- Fitness --- */
+function addStep(){ 
+  const el=document.getElementById('steps');
+  el.textContent=parseInt(el.textContent)+1;
+  saveState('steps', parseInt(el.textContent));
+}
+function addWorkout(){
+  const el=document.getElementById('workoutProgress');
+  el.value=Math.min(el.value+10,100);
+  saveState('workout', el.value);
+}
+function resetFitness(){ saveState('steps',0); saveState('workout',0); loadFitness(); }
+function loadFitness(){
+  const steps=loadState('steps')||0;
+  const workout=loadState('workout')||0;
+  document.getElementById('steps').textContent=steps;
+  document.getElementById('workoutProgress').value=workout;
+}
+
+/* --- Init: načítanie uloženého --- */
+function init(){
+  renderChat();
+  renderPosts();
+  renderVideos();
+  renderMusic();
+  renderCartWishlist();
+  loadFitness();
+}
+init();
 </script>
 
 </body>
