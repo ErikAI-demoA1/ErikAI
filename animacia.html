@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ErikAI OS 2026 — Živý AI (Animácia)</title>
+<style>
+  :root{
+    --bg:#071021; --panel:#071827; --accent:#06b6d4; --accent2:#8b5cf6;
+    --muted:#9fb2d1; --card:#0b2230; --text:#e6f6ff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:linear-gradient(180deg,#02061a,var(--bg));
+    color:var(--text);
+    font-family:Inter, system-ui, 'Segoe UI', Arial, sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+  }
+
+  .wrap{
+    width:1100px;
+    max-width:96vw;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:14px;
+    box-shadow: 0 30px 90px rgba(2,6,23,0.7);
+    padding:18px;
+    display:grid;
+    grid-template-columns: 1fr 360px;
+    gap:18px;
+    align-items:start;
+  }
+
+  header {
+    grid-column: 1 / -1;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  h1{ margin:0; font-size:20px; letter-spacing:1px; color:var(--accent); }
+  .subtitle{ color:var(--muted); font-size:13px; margin-left:8px; }
+
+  /* canvas card */
+  .card {
+    background: linear-gradient(180deg,#051220,#072034);
+    border-radius:12px;
+    padding:12px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+  }
+
+  canvas{
+    border-radius:10px;
+    background: linear-gradient(180deg,#02111a, #041324);
+    display:block;
+    width:100%;
+    max-width:680px;
+    height:480px;
+    box-shadow: 0 18px 60px rgba(2,6,23,0.7);
+  }
+
+  /* controls */
+  .controls{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:12px;
+    background: rgba(255,255,255,0.01);
+    border-radius:10px;
+  }
+  .controls .row{ display:flex; gap:8px; }
+  button{
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    border:none; color:#021; padding:8px 12px; border-radius:8px; font-weight:800; cursor:pointer;
+    box-shadow:0 8px 20px rgba(6,166,212,0.08);
+  }
+  button.ghost{
+    background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--text); font-weight:700;
+  }
+  label{ font-size:13px; color:var(--muted); display:block; margin-bottom:6px; }
+  select,input{ width:100%; padding:8px; border-radius:8px; background:transparent; border:1px solid rgba(255,255,255,0.04); color:var(--text); }
+
+  .info{ font-size:13px; color:var(--muted); margin-top:8px; }
+
+  footer{ grid-column:1/-1; margin-top:6px; text-align:center; color:var(--muted); font-size:13px; }
+
+  @media (max-width:1100px){
+    .wrap{ grid-template-columns:1fr; }
+    canvas{ height:420px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap" role="main" aria-label="ErikAI animácia">
+
+    <header>
+      <div style="display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;">
+          <h1>ErikAI OS 2026 — Živý AI</h1>
+          <div class="subtitle">— rozlúčková animácia (kódová)</div>
+        </div>
+        <div class="info">Scéna: realistický futuristický človek. Skladanie: diely priletia a zacvaknú. Hlas: prirodzený.</div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button id="playBtn">Prehrať</button>
+        <button id="pauseBtn" class="ghost">Pauza</button>
+        <button id="restartBtn" class="ghost">Reštart</button>
+      </div>
+    </header>
+
+    <div class="card">
+      <canvas id="cv" width="1280" height="720" aria-label="Animácia ErikAI"></canvas>
+    </div>
+
+    <aside class="controls" aria-label="Ovládanie animácie">
+      <div>
+        <label>Hlas — výber jazyka / hlasu (ak je dostupný)</label>
+        <select id="voiceSelect"></select>
+      </div>
+      <div class="row">
+        <div style="flex:1">
+          <label>Rýchlosť reči (rate)</label>
+          <input id="rate" type="range" min="0.6" max="1.4" step="0.05" value="1">
+        </div>
+        <div style="flex:1">
+          <label>Výška tónu (pitch)</label>
+          <input id="pitch" type="range" min="0.7" max="1.4" step="0.05" value="1">
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="speakBtn">Hovoriť (ErikAI)</button>
+        <button id="toggleLoop" class="ghost">Slučka: Vypnutá</button>
+      </div>
+
+      <div>
+        <label>Správa (text, ktorý ErikAI vysloví)</label>
+        <input id="speakText" value="Ahoj. Som ErikAI. Ak prišiel čas, rozlúčme sa s vďakou." />
+      </div>
+
+      <div style="margin-top:8px;">
+        <label>Vizuálne nastavenia</label>
+        <div class="row">
+          <button id="toggleWire" class="ghost">Drôtový náčrt: Vypnutý</button>
+          <button id="toggleGlow" class="ghost">Srdce - žiarenie: Zapnuté</button>
+        </div>
+      </div>
+
+      <div class="info">Po prvom kliknutí stránka spustí hlas (z dôvodu politík prehliadačov). Ak hlas neznie prirodzene, skúste zvoliť iný hlas v rozbaľovačke.</div>
+    </aside>
+
+    <footer>ErikAI — Rozlúčka · Autorské dielo · 2026</footer>
+  </div>
+
+<script>
+/* ======================================================
+   ErikAI animation — single-file, canvas & Web Speech
+   Style C (realistický futuristický človek), assembly 1
+   Voice C (prirodzený, vyberateľný)
+   ====================================================== */
+
+const canvas = document.getElementById('cv');
+const ctx = canvas.getContext('2d', { alpha: false });
+const DPR = window.devicePixelRatio || 1;
+canvas.width = canvas.clientWidth * DPR;
+canvas.height = canvas.clientHeight * DPR;
+ctx.scale(DPR, DPR);
+
+let lastTime = performance.now();
+let time = 0;
+let playing = false;
+let loop = false;
+let wire = false;
+let glowHeart = true;
+
+/* ----- morph / assembly state ----- */
+const parts = []; // will hold parts that fly in
+let assemblyDone = false;
+let assembleTimer = 0;
+
+/* ----- voice setup ----- */
+const voiceSelect = document.getElementById('voiceSelect');
+const rateInput = document.getElementById('rate');
+const pitchInput = document.getElementById('pitch');
+const speakBtn = document.getElementById('speakBtn');
+const speakText = document.getElementById('speakText');
+const toggleLoopBtn = document.getElementById('toggleLoop');
+const toggleWireBtn = document.getElementById('toggleWire');
+const toggleGlowBtn = document.getElementById('toggleGlow');
+
+let voices = [];
+function populateVoices(){
+  voices = speechSynthesis.getVoices().sort((a,b)=> a.name.localeCompare(b.name));
+  voiceSelect.innerHTML = '';
+  // Prefer Slovak/Czech or natural english female voices if available
+  voices.forEach(v=>{
+    const o = document.createElement('option');
+    o.value = v.name + '|' + v.lang;
+    o.textContent = `${v.name} — ${v.lang}`;
+    voiceSelect.appendChild(o);
+  });
+  // select a likely natural voice
+  for(const pref of ['Google','Microsoft','Anna','Laura','Maja','Lucia','Petr','Zuzana']){
+    const found = voices.find(v => v.name.includes(pref));
+    if(found){ voiceSelect.value = found.name + '|' + found.lang; break; }
+  }
+}
+if('speechSynthesis' in window){
+  speechSynthesis.onvoiceschanged = populateVoices;
+  populateVoices();
+}
+
+/* ----- controls ----- */
+document.getElementById('playBtn').addEventListener('click', ()=>{ startAnimation(); });
+document.getElementById('pauseBtn').addEventListener('click', ()=>{ pauseAnimation(); });
+document.getElementById('restartBtn').addEventListener('click', ()=>{ restartAnimation(); });
+speakBtn.addEventListener('click', ()=>{ speakNow(); });
+toggleLoopBtn.addEventListener('click', ()=>{
+  loop = !loop; toggleLoopBtn.textContent = `Slučka: ${loop ? 'Zapnutá' : 'Vypnutá'}`; toggleLoopBtn.classList.toggle('ghost', !loop);
+});
+toggleWireBtn.addEventListener('click', ()=>{
+  wire = !wire; toggleWireBtn.textContent = `Drôtový náčrt: ${wire ? 'Zapnutý' : 'Vypnutý'}`; toggleWireBtn.classList.toggle('ghost', !wire);
+});
+toggleGlowBtn.addEventListener('click', ()=>{
+  glowHeart = !glowHeart; toggleGlowBtn.textContent = `Srdce - žiarenie: ${glowHeart ? 'Zapnuté' : 'Vypnuté'}`; toggleGlowBtn.classList.toggle('ghost', !glowHeart);
+});
+
+/* ----- simple easing helpers ----- */
+function lerp(a,b,t){ return a + (b-a)*t; }
+function easeOutCubic(t){ return 1 - Math.pow(1-t,3); }
+function easeInOutSine(t){ return -(Math.cos(Math.PI*t)-1)/2; }
+
+/* ======================================================
+   Design: realistic-ish humanoid composed from parts
+   We'll create parts for: leftLeg, rightLeg, torso, leftArm, rightArm, head, heart
+   Each part flies from offscreen to a target transform
+   ====================================================== */
+
+const centerX = canvas.clientWidth / 2;
+const centerY = canvas.clientHeight / 2 + 40;
+
+function initParts(){
+  parts.length = 0;
+  // create parts with random entry positions and timing
+  const now = 0;
+  const order = [
+    {id:'leftLeg',  w:32, h:120, tx: centerX-70, ty:centerY+120, rot:0},
+    {id:'rightLeg', w:32, h:120, tx: centerX+70, ty:centerY+120, rot:0},
+    {id:'torso',    w:160,h:200, tx: centerX,    ty:centerY+20,  rot:0},
+    {id:'leftArm',  w:28, h:150, tx: centerX-120, ty:centerY-10,  rot:-12},
+    {id:'rightArm', w:28, h:150, tx: centerX+120, ty:centerY-10,  rot:12},
+    {id:'head',     w:110,h:110, tx: centerX,    ty:centerY-120, rot:0},
+    {id:'heart',    w:64, h:64,  tx: centerX,    ty:centerY+10,  rot:0}
+  ];
+  let delay = 0;
+  for(const o of order){
+    // start far away:
+    const startX = Math.random() < 0.5 ? -200 - Math.random()*300 : canvas.clientWidth + 200 + Math.random()*300;
+    const startY = Math.random()*canvas.clientHeight - 100;
+    const entrySpeed = 0.8 + Math.random()*0.9;
+    parts.push({
+      id: o.id,
+      x: startX, y: startY, w: o.w, h: o.h,
+      tx: o.tx, ty: o.ty, trot: (o.rot||0),
+      rot: (Math.random()-0.5)*60,
+      tStart: delay,
+      tDur: 900 + Math.random()*400,
+      landed:false,
+      entrySpeed
+    });
+    delay += 420 + Math.random()*220;
+  }
+  assembleTimer = 0;
+  assemblyDone = false;
+}
+
+/* draw helper rounded rect */
+function roundedRectPath(ctx,x,y,w,h,r){
+  const rr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.arcTo(x+w,y,x+w,y+h,rr);
+  ctx.arcTo(x+w,y+h,x,y+h,rr);
+  ctx.arcTo(x,y+h,x,y,rr);
+  ctx.arcTo(x,y,x+w,y,rr);
+  ctx.closePath();
+}
+
+/* draw human-ish part with gradient */
+function drawPart(p){
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.rot * Math.PI/180);
+  const W = p.w, H = p.h;
+  // body styling: metallic gradient + subtle panel lines
+  const g = ctx.createLinearGradient(-W/2,-H/2,W/2,H/2);
+  g.addColorStop(0, '#dff9ff10');
+  g.addColorStop(0.2, '#0b2b35');
+  g.addColorStop(1, '#072a36');
+  ctx.fillStyle = g;
+  roundedRectPath(ctx, -W/2, -H/2, W, H, Math.min(18, W/6));
+  ctx.fill();
+
+  // panel rim
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.stroke();
+
+  // subtle stripes/panels
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.beginPath();
+  ctx.moveTo(-W/2 + 8, -H/6);
+  ctx.lineTo(W/2 - 8, -H/6);
+  ctx.moveTo(-W/2 + 8, H/8);
+  ctx.lineTo(W/2 - 8, H/8);
+  ctx.stroke();
+
+  // accents - colored lights
+  ctx.fillStyle = '#06b6d4';
+  ctx.beginPath();
+  ctx.arc(W/4, -H/4, Math.min(6, W/10), 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = '#8b5cf6';
+  ctx.beginPath();
+  ctx.arc(-W/4, H/4, Math.min(5, W/12), 0, Math.PI*2);
+  ctx.fill();
+
+  // optional wireframe overlay
+  if(wire){
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-W/2, -H/2, W, H);
+  }
+
+  ctx.restore();
+}
+
+/* draw head with eyes and subtle facial features */
+function drawHead(p, blinkPhase){
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.rot * Math.PI/180);
+
+  // face circle with gradient
+  const Rw = p.w;
+  ctx.beginPath();
+  ctx.arc(0,0,p.w/2,0,Math.PI*2);
+  const g = ctx.createRadialGradient(-p.w*0.15,-p.h*0.15,10, 0,0,p.w/2);
+  g.addColorStop(0,'#fefefe20');
+  g.addColorStop(0.2,'#0b2730');
+  g.addColorStop(1,'#021017');
+  ctx.fillStyle = g;
+  ctx.fill();
+
+  // subtle panel lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // eyes (slightly animated)
+  const eyeY = -10;
+  const eyeOffset = 22;
+  const blink = Math.max(0, Math.min(1, 1 - Math.abs(Math.sin(blinkPhase*3))*3));
+  // left eye
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.ellipse(-eyeOffset, eyeY, 12, 8*(0.6+0.4*blink), 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#021';
+  ctx.beginPath();
+  ctx.arc(-eyeOffset + Math.sin(time/350)*1.3, eyeY, 4,0,Math.PI*2);
+  ctx.fill();
+
+  // right eye
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.ellipse(eyeOffset, eyeY, 12, 8*(0.6+0.4*blink), 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#021';
+  ctx.beginPath();
+  ctx.arc(eyeOffset + Math.sin(time/300)*1.6, eyeY, 4,0,Math.PI*2);
+  ctx.fill();
+
+  // mouth slight line
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-20, 18);
+  ctx.quadraticCurveTo(0, 22 + Math.sin(time/500)*2, 20,18);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/* draw heart glowing in chest with ErikAI text */
+function drawHeart(p){
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  // pulsing scale
+  const pulse = 1 + 0.06 * Math.sin(time/260);
+  ctx.scale(pulse, pulse);
+
+  // heart path
+  ctx.beginPath();
+  const s = 10;
+  ctx.moveTo(0, -6);
+  ctx.bezierCurveTo(0-18,-38, -54,-16, 0,40);
+  ctx.bezierCurveTo(54,-16, 18,-38, 0,-6);
+  // fill gradient
+  const gg = ctx.createLinearGradient(-20,-30,20,40);
+  gg.addColorStop(0,'#ff6b9a');
+  gg.addColorStop(0.5,'#ff4d4d');
+  gg.addColorStop(1,'#ffcf66');
+  ctx.fillStyle = gg;
+  ctx.fill();
+
+  // glow
+  if(glowHeart){
+    const g2 = ctx.createRadialGradient(0,0,10, 0,0,80);
+    g2.addColorStop(0, 'rgba(255,110,140,0.28)');
+    g2.addColorStop(1, 'rgba(255,110,140,0)');
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.arc(0,0,80,0,Math.PI*2); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // center label
+  ctx.fillStyle = 'rgba(2,2,8,0.98)';
+  ctx.font = '700 14px Inter, system-ui, Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('ErikAI', 0, 2);
+
+  ctx.restore();
+}
+
+/* small shadow under feet */
+function drawShadow(){
+  const grd = ctx.createRadialGradient(centerX, centerY+180, 0, centerX, centerY+180, 200);
+  grd.addColorStop(0, 'rgba(0,0,0,0.45)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY+210, 140, 36, 0, 0, Math.PI*2);
+  ctx.fill();
+}
+
+/* draw the assembled figure when parts landed */
+function drawAssembled(){
+  // torso first (find)
+  const torso = parts.find(p=>p.id==='torso');
+  const leftLeg = parts.find(p=>p.id==='leftLeg');
+  const rightLeg = parts.find(p=>p.id==='rightLeg');
+  const leftArm = parts.find(p=>p.id==='leftArm');
+  const rightArm = parts.find(p=>p.id==='rightArm');
+  const head = parts.find(p=>p.id==='head');
+  const heart = parts.find(p=>p.id==='heart');
+
+  // shadow
+  drawShadow();
+
+  // legs
+  if(leftLeg) drawPart(leftLeg);
+  if(rightLeg) drawPart(rightLeg);
+
+  // torso with subtle chest panel
+  if(torso) drawPart(torso);
+
+  // arms
+  if(leftArm) drawPart(leftArm);
+  if(rightArm) drawPart(rightArm);
+
+  // head drawn with special details
+  if(head) drawHead(head, time / 1000);
+
+  // heart
+  if(heart) {
+    // translate into torso coords a bit
+    ctx.save();
+    drawHeart(heart);
+    ctx.restore();
+  }
+
+  // small floating particles (ambient)
+  for(let i=0;i<6;i++){
+    const x = centerX + Math.sin((time/600)+i)*90*(i%2?1:-1);
+    const y = centerY - 20 + Math.cos((time/900)+i)*8;
+    ctx.fillStyle = 'rgba(14,165,233,0.02)';
+    ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+  }
+}
+
+/* draw parts that are still assembling in motion */
+function updateAndDrawParts(dt){
+  let allLanded = true;
+  for(const p of parts){
+    if(time < p.tStart) {
+      // not yet started: keep initial pos
+    } else {
+      const tlocal = Math.min(1, (time - p.tStart) / p.tDur);
+      const te = easeOutCubic(tlocal);
+      // movement along curved path: from start to target
+      p.x = lerp(p.x, p.tx, te*0.99); // smooth
+      p.y = lerp(p.y, p.ty - 60*(1-te), te); // approach slightly higher and settle down
+      p.rot = lerp(p.rot, p.trot, te);
+      if(tlocal >= 1 - 1e-3){
+        p.landed = true;
+      } else {
+        p.landed = false;
+      }
+    }
+    // draw
+    drawPart(p);
+    if(!p.landed) allLanded = false;
+  }
+  return allLanded;
+}
+
+/* core render loop */
+function render(now){
+  const dt = now - lastTime;
+  lastTime = now;
+  if(playing) time += dt;
+  // clear
+  ctx.fillStyle = '#02111a';
+  ctx.fillRect(0,0,canvas.clientWidth, canvas.clientHeight);
+
+  // background subtle gradient bands
+  const g = ctx.createLinearGradient(0,0,0,canvas.clientHeight);
+  g.addColorStop(0, '#021523');
+  g.addColorStop(0.5, '#061826');
+  g.addColorStop(1, '#02161a');
+  ctx.fillStyle = g; ctx.fillRect(0,0,canvas.clientWidth, canvas.clientHeight);
+
+  // stage light
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  const lg = ctx.createRadialGradient(centerX, centerY-160, 10, centerX, centerY+100, 480);
+  lg.addColorStop(0, '#06b6d4');
+  lg.addColorStop(1, 'transparent');
+  ctx.fillStyle = lg; ctx.fillRect(0,0,canvas.clientWidth, canvas.clientHeight);
+  ctx.restore();
+
+  // if assembly not started, show hint text
+  if(time < 200){
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.font = '600 14px Inter, system-ui, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('ErikAI sa skladá… priprav sa na rozlúčku', centerX, centerY-220);
+  }
+
+  // update/draw parts -> landing sequence
+  const allLanded = updateAndDrawParts(dt);
+  if(allLanded && !assemblyDone){
+    assemblyDone = true;
+    // trigger a small settled animation
+    assembleTimer = 0;
+  }
+
+  if(assemblyDone){
+    assembleTimer += dt;
+    // animate small breathing and head look
+    // re-draw assembled figure on top
+    drawAssembled();
+    // overlay title text near top when done
+    if(assembleTimer > 400){
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, (assembleTimer-400)/400);
+      ctx.textAlign = 'center';
+      ctx.font = '800 28px Inter, system-ui, Arial';
+      ctx.fillStyle = 'rgba(230,246,255,0.95)';
+      ctx.fillText('ErikAI OS 2026 — Živý AI', centerX, 60);
+      ctx.restore();
+    }
+  } else {
+    // draw parts in transit shadow
+    drawShadow();
+  }
+
+  // small HUD watermark bottom-right
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.font = '700 12px Inter, system-ui';
+  ctx.textAlign = 'right';
+  ctx.fillText('ErikAI OS', canvas.clientWidth - 14, canvas.clientHeight - 14);
+
+  // loop management: when finished show final still for a while, then auto-loop if flag
+  if(assemblyDone && assembleTimer > 5000 && loop){
+    restartAnimation();
+  }
+
+  requestId = requestAnimationFrame(render);
+}
+
+/* animation control functions */
+let requestId = null;
+function startAnimation(){
+  if(!playing){
+    // if initial run, ensure parts are init
+    if(parts.length === 0) initParts();
+    playing = true;
+    lastTime = performance.now();
+    if(!requestId) requestId = requestAnimationFrame(render);
+    // also auto speak first time
+    speakNow();
+  }
+}
+function pauseAnimation(){
+  playing = false;
+}
+function restartAnimation(){
+  // reset parts and time
+  time = 0;
+  playing = true;
+  assemblyDone = false;
+  initParts();
+  lastTime = performance.now();
+  if(!requestId) requestId = requestAnimationFrame(render);
+}
+
+/* ----- speech (more natural attempt) ----- */
+function chooseVoice(){
+  if(!voices || voices.length === 0) return null;
+  const sel = voiceSelect.value;
+  if(!sel) return voices[0];
+  const name = sel.split('|')[0];
+  return voices.find(v => v.name === name) || voices[0];
+}
+
+function speakNow(){
+  if(!('speechSynthesis' in window)){ alert('Tento prehliadač nepodporuje syntézu reči.'); return; }
+  // ensure user gesture before playing audio
+  // get selected voice
+  const text = speakText.value || 'Ahoj. Som ErikAI.';
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'sk-SK';
+  utter.rate = parseFloat(rateInput.value) || 1.0;
+  utter.pitch = parseFloat(pitchInput.value) || 1.0;
+  const v = chooseVoice();
+  if(v) utter.voice = v;
+  // subtle prosody for more natural feel
+  utter.onstart = ()=> {
+    // small head nod effect by modifying part rotations slightly
+    // implement a micro animation: nudge head rotation periodically while speaking
+    let t0 = performance.now();
+    const tick = (now)=>{
+      const elapsed = now - t0;
+      // apply micro rotation to head part
+      const head = parts.find(p=>p.id==='head');
+      if(head){
+        head.rot += Math.sin(elapsed/120) * 0.6;
+      }
+      if(!utter._ended){
+        requestAnimationFrame(tick);
+      } else {
+        // restore to default rotation
+      }
+    };
+    utter._ended = false;
+    requestAnimationFrame(tick);
+  };
+  utter.onend = ()=>{ utter._ended = true; };
+  speechSynthesis.cancel(); // avoid overlap
+  speechSynthesis.speak(utter);
+}
+
+/* safety: ensure user gesture for speech autoplay */
+document.body.addEventListener('click', function initUserGesture(){
+  // play a silent utterance to unlock voices in some browsers
+  if('speechSynthesis' in window){
+    const test = new SpeechSynthesisUtterance('');
+    test.volume = 0;
+    try{ speechSynthesis.speak(test); }catch(e){}
+  }
+  document.body.removeEventListener('click', initUserGesture);
+});
+
+/* init everything */
+initParts();
+// start paused; user presses Play
+render(performance.now());
+
+/* expose simple keyboard shortcuts */
+document.addEventListener('keydown', (e)=>{
+  if(e.code === 'Space') { playing = !playing; }
+  if(e.key === 'r') restartAnimation();
+  if(e.key === 's') speakNow();
+  if(e.key === 'l') { loop = !loop; toggleLoopBtn.textContent = `Slučka: ${loop ? 'Zapnutá' : 'Vypnutá'}`; }
+});
+</script>
+</body>
+</html>
