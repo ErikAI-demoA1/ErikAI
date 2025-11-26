@@ -1,93 +1,165 @@
-🧠 ErikAI OS – Vývojový ekosystém umelej inteligencie (2025)
+ErikAI Web OS
 
-Autor: Erik Mohylak
-Doba vývoja: 3+1 mesiace (z toho 2 mesiac čistá práca)
-Rok vzniku: 2025
+A modular, lightweight web-based operating system built using HTML, CSS, and JavaScript.
+Designed for customizability, simplicity, and expansion through standalone HTML modules.
 
-ErikAI OS je aj PWA Aplikácia (je úplne offline aplikácia)
-
-
----
-
-🔷 Stručná charakteristika
-
-> ErikAI OS je kompletný operačný AI systém pre web a Android, vytvorený z minimálne 65 navzájom prepojených stránok, ktoré fungujú ako inteligentné príkazy, aplikácie, nástroje a platformy. Nevyžaduje programovanie zo strany používateľa – všetko funguje cez jednoduché značky alebo kliknutia.
-
-
+Modulárny a ľahký webový operačný systém vytvorený pomocou HTML, CSS a JavaScriptu.
+Navrhnutý pre jednoduchosť, prispôsobenie a rozširovanie pomocou samostatných HTML modulov.
 
 
 ---
 
-🧩 Štruktúra ErikAI OS
+🇬🇧 English Version
 
-📄 minimálne 65 stránok (modulov)
+📦 Features
 
-ErikAI OS – hlavná AI platforma
+Modular architecture (independent HTML modules)
 
-ErikAI Tube – video platforma(základ pripravení, ked sa zabuduje neskôr server)
+Lightweight, clean UI
 
-ErikAI Store – platforma na sťahovanie .apk (Android AI aplikácie)
+Works directly in the browser
 
+No backend required
 
-🧠 4 modely umelej inteligencie
+Easy customization
 
-ErikAI Chat Web
-
-ErikAI Open APK Web
-
-ErikAI Prehliadač (AI pomocník cez 115 platforiem)
-
-ErikAI Mobilná aplikácia (.apk)
-
-
-💬 2 programovacie jazyky
-
-1. ErikAI CoreLang (oficiálny jazyk systému) – silný, intuitívny, podporuje značky ako <calendar>, <vyhladaj>, <hodiny>, ...
-
-
-2. Základný jazyk ErikAI light – jednoduchý štartér pre PWA a tvorcov
-
+Expandable structure
 
 
 
 ---
 
-🚀 Funkcionalita a schopnosti
+📁 Project Structure
 
-Automatické odpovede cez AI na viac než 1210 otázok ( má ErikAI chat web)
+/modules/          → Independent HTML modules  
+/core/             → Main system files (HTML/CSS/JS)  
+/assets/           → Icons, images, UI elements  
+README.md          → Documentation  
+LICENSE.md         → Commercial license
 
-API príkazy ako vyhladaj, zobraz, spusti, ...
 
-Podpora otvárania aplikácií, generovania, výpočtov, správ
+---
 
-Bezpečnostná licencia – žiadne úpravy kódu tretími stranami
+🔧 How to Use
 
-Jednoduché použitie bez učenia – prehľadné, okamžité spustenie
+1. Download or clone the repository
+
+
+2. Open index.html
+
+
+3. Add/modify modules inside /modules/
+
+
+4. Edit UI styles in /core/styles.css
+
 
 
 
 ---
 
-📊 Výkon projektu
+🧩 Modular System
 
-2410 riadkov kódu (jadro jazyka)
+Each module is a standalone HTML file.
+You can add, remove, or replace modules freely.
 
-Celkovo cca minimálne 23000 riadkov na celý OS
 
-Spustiteľný na akomkoľvek zariadení s prehliadačom (aj offline PWA)
+---
 
-ErikAI OS je ľahko rozšíriteľný o nové AI nástroje
+💼 License (Copyright Notice)
+
+Copyright © 2025 Erik
+
+The owner retains all rights to the original code.
+
+The purchaser receives a non-exclusive license to:
+- use the code,
+- modify it,
+- integrate it into projects,
+- deploy it commercially.
+
+The purchaser may NOT:
+- resell the source code as-is,
+- claim authorship,
+- distribute the code publicly.
+
+The owner may continue to use, modify, and sell licenses to this code indefinitely.
+
+
+---
+
+🇸🇰 Slovenská Verzia
+
+📦 Funkcie
+
+Modulárna architektúra (samostatné HTML moduly)
+
+Ľahké a čisté rozhranie
+
+Funguje priamo v prehliadači
+
+Bez potreby backendu
+
+Jednoduchá úprava
+
+Možnosť rozširovania
 
 
 
 ---
 
-ErikAI CoreLang je intuitívny značkovací a príkazový jazyk navrhnutý špeciálne pre ErikAI OS.
-Podporuje inteligentné komponenty ako <vyhladaj>, <hodiny>, <calendar>, <openApp> a viac než 126+ značiek.
-Vytvorený pre jednoduchosť, rýchlosť a maximálnu použiteľnosť bez nutnosti tradičného programovania.
+📁 Štruktúra Projektu
+
+/modules/          → Samostatné HTML moduly  
+/core/             → Hlavné systémové súbory (HTML/CSS/JS)  
+/assets/           → Ikony, obrázky, UI prvky  
+README.md          → Dokumentácia  
+LICENSE.md         → Komerčná licencia
+
 
 ---
 
-🏆 Hodnotenie úrovne
+🔧 Ako používať
 
-> Erik Mohylák dosiahol Level 9 – tvorca vlastného AI operačného systému s vlastným jazykom, nástrojmi, príkazmi, platformami a aplikáciami.
+1. Stiahni alebo naklonuj repozitár
+
+
+2. Otvor index.html
+
+
+3. Moduly pridávaj alebo upravuj v /modules/
+
+
+4. Vzhľad meníš v /core/styles.css
+
+
+
+
+---
+
+🧩 Modulárny Systém
+
+Každý modul je samostatný HTML súbor.
+Môžeš ich ľubovoľne pridávať, mazať alebo nahrádzať.
+
+
+---
+
+💼 Licencia (Autorské práva)
+
+Copyright © 2025 Erik
+
+Majiteľ si ponecháva všetky práva k pôvodnému zdrojovému kódu.
+
+Kupujúci získava neexkluzívnu licenciu na:
+- používanie kódu,
+- jeho úpravu,
+- integráciu do projektov,
+- komerčné nasadenie.
+
+Kupujúci NESMIE:
+- ďalej predávať pôvodný zdrojový kód ako celok,
+- vydávať sa za autora,
+- zverejniť zdrojový kód verejne.
+
+Majiteľ môže naďalej používať, upravovať a predávať licencie k tomuto kódu neobmedzene.
