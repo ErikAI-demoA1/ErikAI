@@ -5,35 +5,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NEON FLOW PRO</title>
 <style>
-*{box-sizing:border-box;user-select:none}
-body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial,sans-serif}
+*{box-sizing:border-box;user-select:none;margin:0;padding:0}
+body{background:#000;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial,sans-serif}
 #game{position:relative;width:92vw;max-width:900px;height:340px;border-radius:20px;overflow:hidden;border:3px solid #5fdfff;box-shadow:0 0 40px rgba(95,223,255,.4);transition:background 4s linear}
+
 .theme1{background:linear-gradient(#0f2027,#203a43)}
 .theme2{background:linear-gradient(#141e30,#243b55)}
 .theme3{background:linear-gradient(#134e5e,#1c7c7c)}
 .theme4{background:linear-gradient(#232526,#414345)}
-#player{position:absolute;width:36px;height:36px;left:130px;bottom:0;border-radius:6px;box-shadow:0 0 12px rgba(255,255,255,.7)}
+
+#player{position:absolute;width:36px;height:36px;left:130px;bottom:0;border-radius:6px;box-shadow:0 0 12px rgba(255,255,255,.7);z-index:10}
+
 #ui{position:absolute;top:12px;left:16px;color:#dff9fb;font-size:14px}
 #progressBox{width:120px;height:6px;background:#222;border-radius:4px;margin-top:4px}
 #progress{height:100%;width:0%;background:#5fdfff;border-radius:4px}
+
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:rgba(0,0,0,.65);color:white;text-align:center}
 button{margin:6px;padding:10px 22px;border:none;border-radius:8px;background:#5fdfff;color:#000;font-weight:bold;cursor:pointer}
 input{margin:6px;padding:8px;border-radius:6px;border:none}
-.obstacle{position:absolute;bottom:0;right:-140px;transition:background 1s linear}
+
+.obstacle{position:absolute;bottom:0;right:-140px;transition:background 0.5s linear;z-index:5}
 .spike{width:26px;height:40px;clip-path:polygon(50% 0%,0% 100%,100% 100%)}
 .block{width:28px;height:28px;border-radius:6px}
 .tall{width:28px;height:52px;border-radius:6px}
 .double{width:44px;height:40px;clip-path:polygon(0% 100%,25% 0%,50% 100%,75% 0%,100% 100%)}
 .laneWall{width:60px;height:100%;opacity:.9}
+
+.laneLine{position:absolute;width:100%;height:4px;background:rgba(95,223,255,.3);left:0;z-index:1;border-radius:2px}
 .lane-low{bottom:0}
 .lane-mid{bottom:70px}
 .lane-high{bottom:140px}
+
 </style>
 </head>
 <body>
 
 <div id="game" class="theme1">
   <div id="player"></div>
+  <div class="laneLine lane-low"></div>
+  <div class="laneLine lane-mid"></div>
+  <div class="laneLine lane-high"></div>
+
   <div id="ui">
     Player: <span id="playerName">---</span><br>
     Level: <span id="lvl">1</span><br>
@@ -120,8 +132,10 @@ function saveColor(){
 // ===== GAME VARS =====
 let y=0,vel=0,gravity=1800,jump=640;
 let speed=300,score=0,level=1,last=null,dead=false,mode="endless",goal=0,diffTimer=0;
+let lane=0; // 0=low,1=mid,2=high
+const lanePos=[0,70,140];
 const themes=["theme1","theme2","theme3","theme4"];
-let theme=0,lane=0;
+let theme=0;
 
 // ===== START =====
 function startEndless(){startGame("endless",1)}
@@ -130,26 +144,34 @@ function startGame(m,lvl){
   menu.style.display=levels.style.display=custom.style.display="none";
   mode=m;level=lvl;
   speed=300+lvl*50;goal=lvl*3000+4000;
-  score=0;y=0;vel=0;dead=false;last=null;diffTimer=0;
+  score=0;y=lanePos[lane];vel=0;dead=false;last=null;diffTimer=0;
+  player.style.bottom=y+"px";
   setTimeout(spawn,1500);
   requestAnimationFrame(loop);
   setInterval(()=>game.className=themes[++theme%themes.length],8000);
 }
 
 // ===== INPUT =====
-document.addEventListener("keydown",e=>{if(e.code==="Space")jumpPlayer()});
+document.addEventListener("keydown", e=>{
+  if(dead) return;
+  if(e.code==="Space"){jumpPlayer();}
+  if(e.code==="ArrowUp" && lane>0){lane--; moveToLane();}
+  if(e.code==="ArrowDown" && lane<2){lane++; moveToLane();}
+});
 game.addEventListener("click",jumpPlayer);
 game.addEventListener("touchstart",jumpPlayer);
-function jumpPlayer(){if(y===0&&!dead){vel=jump; if(navigator.vibrate) navigator.vibrate(12);}}
+
+function jumpPlayer(){if(y===lanePos[lane] && !dead){vel=jump; if(navigator.vibrate)navigator.vibrate(12);}}
+function moveToLane(){y=lanePos[lane]; player.style.bottom=y+"px";}
 
 // ===== LOOP =====
 function loop(t){
-  if(dead)return;
-  if(!last)last=t;
-  let dt=(t-last)/1000;last=t;
+  if(dead) return;
+  if(!last) last=t;
+  let dt=(t-last)/1000; last=t;
 
   vel-=gravity*dt; y+=vel*dt;
-  if(y<0){y=0;vel=0}
+  if(y<lanePos[lane]){y=lanePos[lane];vel=0}
 
   player.style.bottom=y+"px";
   player.style.transform=`rotate(${y*1.2}deg)`;
@@ -172,7 +194,7 @@ function loop(t){
 // ===== SPAWN =====
 const obstacleColors=["#ff6b6b","#feca57","#48dbfb","#1dd1a1","#5f27cd"];
 function spawn(){
-  if(dead)return;
+  if(dead) return;
   const obs=document.createElement("div");
   obs.classList.add("obstacle");
   const typeRand=Math.random();
@@ -192,14 +214,14 @@ function spawn(){
     x+=speed/60;
     obs.style.right=x+"px";
 
-    obs.style.background=obstacleColors[(Math.random()*obstacleColors.length)|0];
+    obs.style.background=obstacleColors[Math.random()*obstacleColors.length|0];
 
     const o=obs.getBoundingClientRect(),p=player.getBoundingClientRect();
     if(obs.classList.contains("laneWall")){
-      if(p.right>o.left&&p.left<o.right){if(lane!==obs.safeLane) gameOver();}
+      if(lane!==obs.safeLane) gameOver();
     }else{if(p.right>o.left&&p.left<o.right&&p.bottom>o.top+6) gameOver();}
 
-    if(x>game.offsetWidth+200){clearInterval(move);obs.remove()}
+    if(x>game.offsetWidth+200){clearInterval(move);obs.remove();}
   },16);
 
   setTimeout(spawn,1200);
@@ -220,4 +242,4 @@ function levelComplete(){
 </script>
 
 </body>
-</html>
+  </html>
