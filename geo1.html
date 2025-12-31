@@ -3,175 +3,175 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NEON FLOW PRO</title>
+<title>NEON FLOW</title>
+
 <style>
-*{box-sizing:border-box;user-select:none;margin:0;padding:0}
-body{background:#000;display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial,sans-serif}
-#game{position:relative;width:92vw;max-width:900px;height:340px;border-radius:20px;overflow:hidden;border:3px solid #5fdfff;box-shadow:0 0 40px rgba(95,223,255,.4);transition:background 4s linear}
+*{box-sizing:border-box;user-select:none}
+body{
+  margin:0;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  font-family:Arial,sans-serif;
+}
+
+#game{
+  position:relative;
+  width:92vw;
+  max-width:900px;
+  height:320px;
+  border-radius:20px;
+  overflow:hidden;
+  border:3px solid #5fdfff;
+  box-shadow:0 0 40px rgba(95,223,255,.4);
+}
 
 .theme1{background:linear-gradient(#0f2027,#203a43)}
 .theme2{background:linear-gradient(#141e30,#243b55)}
 .theme3{background:linear-gradient(#134e5e,#1c7c7c)}
 .theme4{background:linear-gradient(#232526,#414345)}
 
-#player{position:absolute;width:36px;height:36px;left:130px;bottom:0;border-radius:6px;box-shadow:0 0 12px rgba(255,255,255,.7);z-index:10}
+#player{
+  position:absolute;
+  width:36px;height:36px;
+  left:130px;
+  bottom:0;
+  border-radius:6px;
+  box-shadow:0 0 12px rgba(255,255,255,.7);
+}
 
-#ui{position:absolute;top:12px;left:16px;color:#dff9fb;font-size:14px}
-#progressBox{width:120px;height:6px;background:#222;border-radius:4px;margin-top:4px}
-#progress{height:100%;width:0%;background:#5fdfff;border-radius:4px}
+#ui{
+  position:absolute;
+  top:12px;left:16px;
+  color:#dff9fb;
+  font-size:14px;
+}
 
-.screen{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:rgba(0,0,0,.65);color:white;text-align:center}
-button{margin:6px;padding:10px 22px;border:none;border-radius:8px;background:#5fdfff;color:#000;font-weight:bold;cursor:pointer}
-input{margin:6px;padding:8px;border-radius:6px;border:none}
+.screen{
+  position:absolute;inset:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  background:rgba(0,0,0,.65);
+  color:white;text-align:center;
+}
 
-.obstacle{position:absolute;bottom:0;right:-140px;transition:background 0.5s linear;z-index:5}
-.spike{width:26px;height:40px;clip-path:polygon(50% 0%,0% 100%,100% 100%)}
-.block{width:28px;height:28px;border-radius:6px}
-.tall{width:28px;height:52px;border-radius:6px}
-.double{width:44px;height:40px;clip-path:polygon(0% 100%,25% 0%,50% 100%,75% 0%,100% 100%)}
-.laneWall{width:60px;height:100%;opacity:.9}
+button{
+  margin:6px;padding:10px 22px;
+  border:none;border-radius:8px;
+  background:#5fdfff;color:#000;
+  font-weight:bold;cursor:pointer;
+}
 
-.laneLine{position:absolute;width:100%;height:4px;background:rgba(95,223,255,.3);left:0;z-index:1;border-radius:2px}
+.obstacle{
+  position:absolute;
+  right:-160px;
+  transition:background 1.5s linear;
+}
+
+/* BASIC SHAPES */
+.spike{
+  width:26px;height:40px;
+  clip-path:polygon(50% 0%,0% 100%,100% 100%);
+}
+.block{
+  width:30px;height:30px;border-radius:6px;
+}
+.tall{
+  width:30px;height:80px;border-radius:6px;
+}
+
+/* LANE WALL – nechá iba jednu dráhu */
+.laneWall{
+  width:60px;
+  height:100%;
+  background:#ff4757;
+  opacity:.9;
+}
+
+/* LANE ZONES (neviditeľné, len pre logiku) */
 .lane-low{bottom:0}
 .lane-mid{bottom:70px}
 .lane-high{bottom:140px}
-
 </style>
 </head>
+
 <body>
 
 <div id="game" class="theme1">
   <div id="player"></div>
-  <div class="laneLine lane-low"></div>
-  <div class="laneLine lane-mid"></div>
-  <div class="laneLine lane-high"></div>
 
   <div id="ui">
-    Player: <span id="playerName">---</span><br>
     Level: <span id="lvl">1</span><br>
     Score: <span id="score">0</span>
-    <div id="progressBox"><div id="progress"></div></div>
   </div>
 
-  <!-- MENU -->
   <div id="menu" class="screen">
-    <h1>NEON FLOW PRO</h1>
-    <input id="nameInput" placeholder="Your name" maxlength="12">
-    <button onclick="startEndless()">Endless Run</button>
-    <button onclick="showLevels()">Select Level</button>
-    <button onclick="showCustomize()">Customize</button>
-    <p id="welcome"></p>
+    <h1>NEON FLOW</h1>
+    <button onclick="startGame()">START</button>
   </div>
 
-  <!-- LEVEL SELECT -->
-  <div id="levels" class="screen" style="display:none">
-    <h2>Select Level</h2>
-    <button onclick="startLevel(1)">Level 1</button>
-    <button onclick="startLevel(3)">Level 3</button>
-    <button onclick="startLevel(5)">Level 5</button>
-    <button onclick="back()">Back</button>
-  </div>
-
-  <!-- CUSTOMIZE -->
-  <div id="custom" class="screen" style="display:none">
-    <h2>Player Color</h2>
-    <input type="color" id="colorPick">
-    <button onclick="saveColor()">Save</button>
-    <button onclick="back()">Back</button>
-  </div>
-
-  <!-- GAME OVER -->
   <div id="over" class="screen" style="display:none"></div>
 </div>
 
 <script>
-// ===== PROFILE =====
-let profile = JSON.parse(localStorage.getItem("neonProfile")) || {name:"", color:"#5fdfff", bestScore:0};
-localStorage.setItem("neonProfile",JSON.stringify(profile));
+/* ===== ELEMENTY ===== */
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const scoreEl = document.getElementById("score");
+const lvlEl = document.getElementById("lvl");
+const menu = document.getElementById("menu");
+const over = document.getElementById("over");
 
-// ===== ELEMENTS =====
-const game=document.getElementById("game");
-const player=document.getElementById("player");
-const scoreEl=document.getElementById("score");
-const lvlEl=document.getElementById("lvl");
-const menu=document.getElementById("menu");
-const levels=document.getElementById("levels");
-const custom=document.getElementById("custom");
-const over=document.getElementById("over");
-const picker=document.getElementById("colorPick");
-const progress=document.getElementById("progress");
-const nameInput=document.getElementById("nameInput");
-const welcome=document.getElementById("welcome");
-const nameUI=document.getElementById("playerName");
+/* ===== PLAYER ===== */
+let y=0, vel=0;
+const gravity=1800, jump=640;
 
-// ===== INIT =====
-player.style.background=profile.color;
-picker.value=profile.color;
-nameInput.value=profile.name;
-nameUI.textContent=profile.name||"---";
-if(profile.name)welcome.innerText="Welcome back, "+profile.name;
+/* ===== GAME ===== */
+let speed=300, score=0, level=1;
+let last=null, dead=false;
+let lane = 0; // 0 low, 1 mid, 2 high
 
-// ===== MENU =====
-function showLevels(){menu.style.display="none";levels.style.display="flex"}
-function showCustomize(){menu.style.display="none";custom.style.display="flex"}
-function back(){menu.style.display="flex";levels.style.display="none";custom.style.display="none"}
+/* ===== COLORS ===== */
+const obstacleColors = [
+  "#ff6b6b","#feca57","#48dbfb","#1dd1a1","#5f27cd"
+];
 
-// ===== SAVE =====
-nameInput.onchange=()=>{
-  profile.name=nameInput.value.trim();
-  localStorage.setItem("neonProfile",JSON.stringify(profile));
-  welcome.innerText="Welcome, "+profile.name;
-  nameUI.textContent=profile.name;
-};
-function saveColor(){
-  profile.color=picker.value;
-  player.style.background=picker.value;
-  localStorage.setItem("neonProfile",JSON.stringify(profile));
-}
-
-// ===== GAME VARS =====
-let y=0,vel=0,gravity=1800,jump=640;
-let speed=300,score=0,level=1,last=null,dead=false,mode="endless",goal=0,diffTimer=0;
-let lane=0; // 0=low,1=mid,2=high
-const lanePos=[0,70,140];
-const themes=["theme1","theme2","theme3","theme4"];
-let theme=0;
-
-// ===== START =====
-function startEndless(){startGame("endless",1)}
-function startLevel(lvl){startGame("level",lvl)}
-function startGame(m,lvl){
-  menu.style.display=levels.style.display=custom.style.display="none";
-  mode=m;level=lvl;
-  speed=300+lvl*50;goal=lvl*3000+4000;
-  score=0;y=lanePos[lane];vel=0;dead=false;last=null;diffTimer=0;
-  player.style.bottom=y+"px";
-  setTimeout(spawn,1500);
+/* ===== START ===== */
+function startGame(){
+  menu.style.display="none";
   requestAnimationFrame(loop);
-  setInterval(()=>game.className=themes[++theme%themes.length],8000);
+  setTimeout(spawnObstacle,1500);
+  setInterval(changeTheme,8000);
 }
 
-// ===== INPUT =====
-document.addEventListener("keydown", e=>{
-  if(dead) return;
-  if(e.code==="Space"){jumpPlayer();}
-  if(e.code==="ArrowUp" && lane>0){lane--; moveToLane();}
-  if(e.code==="ArrowDown" && lane<2){lane++; moveToLane();}
+/* ===== INPUT ===== */
+document.addEventListener("keydown",e=>{
+  if(e.code==="Space") jumpPlayer();
 });
 game.addEventListener("click",jumpPlayer);
 game.addEventListener("touchstart",jumpPlayer);
 
-function jumpPlayer(){if(y===lanePos[lane] && !dead){vel=jump; if(navigator.vibrate)navigator.vibrate(12);}}
-function moveToLane(){y=lanePos[lane]; player.style.bottom=y+"px";}
+function jumpPlayer(){
+  if(y===0&&!dead){
+    vel=jump;
+    lane = Math.min(2, lane+1);
+  }
+}
 
-// ===== LOOP =====
+/* ===== LOOP ===== */
 function loop(t){
-  if(dead) return;
-  if(!last) last=t;
-  let dt=(t-last)/1000; last=t;
+  if(dead)return;
+  if(!last)last=t;
+  const dt=(t-last)/1000; last=t;
 
-  vel-=gravity*dt; y+=vel*dt;
-  if(y<lanePos[lane]){y=lanePos[lane];vel=0}
+  vel-=gravity*dt;
+  y+=vel*dt;
+
+  if(y<=0){y=0;vel=0;lane=0}
 
   player.style.bottom=y+"px";
   player.style.transform=`rotate(${y*1.2}deg)`;
@@ -179,67 +179,85 @@ function loop(t){
   score+=Math.floor(dt*120);
   scoreEl.textContent=score;
 
-  diffTimer+=dt;
-  if(mode==="endless"&&diffTimer>6){level++;speed+=30;diffTimer=0}
-
-  if(mode==="level"){
-    progress.style.width=Math.min(100,(score/goal)*100)+"%";
-    if(score>=goal)return levelComplete();
+  if(score%1200===0){
+    level++;
+    speed+=30;
   }
-
   lvlEl.textContent=level;
+
   requestAnimationFrame(loop);
 }
 
-// ===== SPAWN =====
-const obstacleColors=["#ff6b6b","#feca57","#48dbfb","#1dd1a1","#5f27cd"];
-function spawn(){
-  if(dead) return;
+/* ===== SPAWN PREKÁŽOK ===== */
+function spawnObstacle(){
+  if(dead)return;
+
   const obs=document.createElement("div");
   obs.classList.add("obstacle");
+
   const typeRand=Math.random();
+
   if(typeRand<0.6){
-    obs.classList.add(["spike","block","tall","double"][Math.random()*4|0]);
+    obs.classList.add(["spike","block","tall"][Math.random()*3|0]);
     obs.classList.add(["lane-low","lane-mid","lane-high"][Math.random()*3|0]);
   }else{
     obs.classList.add("laneWall");
-    obs.safeLane=Math.random()*3|0;
+    const safeLane=Math.random()*3|0;
+    obs.safeLane=safeLane;
   }
+
   obs.style.background=obstacleColors[Math.random()*obstacleColors.length|0];
   game.appendChild(obs);
 
-  let x=-140;
+  let x=-160;
   const move=setInterval(()=>{
     if(dead){clearInterval(move);obs.remove();return}
     x+=speed/60;
     obs.style.right=x+"px";
 
-    obs.style.background=obstacleColors[Math.random()*obstacleColors.length|0];
+    // jemná zmena farby
+    obs.style.background=
+      obstacleColors[(Math.random()*obstacleColors.length)|0];
 
-    const o=obs.getBoundingClientRect(),p=player.getBoundingClientRect();
+    const o=obs.getBoundingClientRect();
+    const p=player.getBoundingClientRect();
+
     if(obs.classList.contains("laneWall")){
-      if(lane!==obs.safeLane) gameOver();
-    }else{if(p.right>o.left&&p.left<o.right&&p.bottom>o.top+6) gameOver();}
+      if(p.right>o.left && p.left<o.right){
+        if(lane!==obs.safeLane) gameOver();
+      }
+    }else{
+      if(p.right>o.left&&p.left<o.right&&p.bottom>o.top+6){
+        gameOver();
+      }
+    }
 
-    if(x>game.offsetWidth+200){clearInterval(move);obs.remove();}
+    if(x>game.offsetWidth+200){
+      clearInterval(move);
+      obs.remove();
+    }
   },16);
 
-  setTimeout(spawn,1200);
+  setTimeout(spawnObstacle,1200);
 }
 
-// ===== END =====
+/* ===== THEME ===== */
+let theme=0;
+function changeTheme(){
+  game.className="theme"+((++theme)%4+1);
+}
+
+/* ===== END ===== */
 function gameOver(){
   dead=true;
-  if(score>profile.bestScore){profile.bestScore=score;localStorage.setItem("neonProfile",JSON.stringify(profile));}
   over.style.display="flex";
-  over.innerHTML=`💀 GAME OVER 💀<br>Score: ${score}<br>Best: ${profile.bestScore}<br><button onclick="location.reload()">Menu</button>`;
-}
-function levelComplete(){
-  dead=true;
-  over.style.display="flex";
-  over.innerHTML=`✅ LEVEL COMPLETE<br>Score: ${score}<br><button onclick="location.reload()">Menu</button>`;
+  over.innerHTML=`
+    💀 GAME OVER 💀<br>
+    Score: ${score}<br>
+    <button onclick="location.reload()">Menu</button>
+  `;
 }
 </script>
 
 </body>
-  </html>
+</html>
