@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Geometry Dash PRO</title>
+<title>Geometry Dash PRO+</title>
 
 <style>
 * {
@@ -25,41 +25,40 @@ body {
 #game {
   position: relative;
   width: 90vw;
-  max-width: 700px;
-  height: 250px;
+  max-width: 800px;
+  height: 260px;
   background: linear-gradient(#1a1a1a, #000);
   border: 3px solid cyan;
   overflow: hidden;
-  border-radius: 12px;
-  box-shadow: 0 0 25px cyan;
+  border-radius: 14px;
+  box-shadow: 0 0 30px cyan;
 }
 
 #player {
   position: absolute;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   background: linear-gradient(45deg, cyan, #00ffff);
   bottom: 0;
-  left: 60px;
-  transform: rotate(0deg);
+  left: 100px; /* VIAC DOĽAVA = LEPŠÍ VÝHĽAD */
   border-radius: 6px;
 }
 
 .obstacle {
   position: absolute;
-  width: 32px;
-  height: 60px;
+  width: 34px;
+  height: 65px;
   background: linear-gradient(45deg, red, darkred);
   bottom: 0;
-  right: -40px;
+  right: -80px;
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
 }
 
 #ui {
   position: absolute;
-  top: 8px;
-  left: 10px;
-  font-size: 14px;
+  top: 10px;
+  left: 12px;
+  font-size: 15px;
 }
 
 #centerText {
@@ -68,10 +67,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  background: rgba(0,0,0,0.6);
-  display: none;
   text-align: center;
+  background: rgba(0,0,0,0.65);
+  font-size: 24px;
 }
 </style>
 </head>
@@ -87,7 +85,7 @@ body {
 
   <div id="centerText">
     TAP / SPACE<br>
-    <small>na štart</small>
+    <small>štart hry</small>
   </div>
 </div>
 
@@ -97,26 +95,26 @@ const player = document.getElementById("player");
 const scoreEl = document.getElementById("score");
 const centerText = document.getElementById("centerText");
 
-let position = 0;
+let posY = 0;
 let velocity = 0;
 let gravity = 0.9;
-let jumpPower = 15;
-let isStarted = false;
-let isGameOver = false;
+let jumpPower = 16;
+let started = false;
+let gameOver = false;
 let score = 0;
 let speed = 5;
 
 function startGame() {
-  if (isStarted) return;
-  isStarted = true;
+  if (started) return;
+  started = true;
   centerText.style.display = "none";
   gameLoop();
-  obstacleLoop();
+  setTimeout(obstacleLoop, 2000); // ⏱️ ONESKORENIE PRVEJ PREKÁŽKY
 }
 
 function jump() {
-  if (!isStarted) startGame();
-  if (position === 0) {
+  if (!started) startGame();
+  if (posY === 0) {
     velocity = jumpPower;
   }
 }
@@ -131,73 +129,71 @@ game.addEventListener("click", jump);
 game.addEventListener("touchstart", jump);
 
 function gameLoop() {
-  if (isGameOver) return;
+  if (gameOver) return;
 
   velocity -= gravity;
-  position += velocity;
+  posY += velocity;
 
-  if (position < 0) {
-    position = 0;
+  if (posY < 0) {
+    posY = 0;
     velocity = 0;
   }
 
-  player.style.bottom = position + "px";
-  player.style.transform = `rotate(${position * 2}deg)`;
+  player.style.bottom = posY + "px";
+  player.style.transform = `rotate(${posY * 2}deg)`;
 
   score++;
   scoreEl.textContent = score;
 
-  // zrýchľovanie
-  if (score % 300 === 0) speed += 0.5;
+  if (score % 400 === 0) speed += 0.5;
 
   requestAnimationFrame(gameLoop);
 }
 
 function obstacleLoop() {
-  if (isGameOver) return;
+  if (gameOver) return;
 
   const obs = document.createElement("div");
   obs.className = "obstacle";
   game.appendChild(obs);
 
-  let x = game.offsetWidth + 40;
+  let x = -80; // ide ZPRAVA DOĽAVA
+  obs.style.right = x + "px";
 
   const move = setInterval(() => {
-    if (isGameOver) {
+    if (gameOver) {
       clearInterval(move);
       obs.remove();
       return;
     }
 
-    x -= speed;
+    x += speed;
     obs.style.right = x + "px";
 
-    const obsRect = obs.getBoundingClientRect();
-    const plRect = player.getBoundingClientRect();
+    const o = obs.getBoundingClientRect();
+    const p = player.getBoundingClientRect();
 
-    // kolízia
     if (
-      plRect.right > obsRect.left &&
-      plRect.left < obsRect.right &&
-      plRect.bottom > obsRect.top
+      p.right > o.left &&
+      p.left < o.right &&
+      p.bottom > o.top
     ) {
-      gameOver();
+      endGame();
     }
 
-    if (x < -60) {
+    if (x > game.offsetWidth + 100) {
       clearInterval(move);
       obs.remove();
     }
   }, 16);
 
-  setTimeout(obstacleLoop, 1400);
+  setTimeout(obstacleLoop, 1500);
 }
 
-function gameOver() {
-  isGameOver = true;
+function endGame() {
+  gameOver = true;
   centerText.innerHTML = `💀 GAME OVER 💀<br>Score: ${score}<br><small>Tap pre restart</small>`;
   centerText.style.display = "flex";
-
   game.addEventListener("click", () => location.reload(), { once: true });
 }
 </script>
