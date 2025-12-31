@@ -1,130 +1,205 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <title>Geometry Dash Mini</title>
-  <style>
-    body {
-      background: #111;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      font-family: Arial;
-      color: white;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geometry Dash PRO</title>
 
-    #game {
-      position: relative;
-      width: 600px;
-      height: 200px;
-      background: linear-gradient(#222, #000);
-      overflow: hidden;
-      border: 2px solid #0ff;
-    }
+<style>
+* {
+  box-sizing: border-box;
+  user-select: none;
+}
 
-    #player {
-      position: absolute;
-      width: 30px;
-      height: 30px;
-      background: cyan;
-      bottom: 0;
-      left: 50px;
-    }
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #222, #000);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+  color: white;
+}
 
-    .obstacle {
-      position: absolute;
-      width: 30px;
-      height: 50px;
-      background: red;
-      bottom: 0;
-      right: -30px;
-    }
+#game {
+  position: relative;
+  width: 90vw;
+  max-width: 700px;
+  height: 250px;
+  background: linear-gradient(#1a1a1a, #000);
+  border: 3px solid cyan;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 0 25px cyan;
+}
 
-    #info {
-      position: absolute;
-      top: 5px;
-      left: 10px;
-      font-size: 14px;
-    }
-  </style>
+#player {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(45deg, cyan, #00ffff);
+  bottom: 0;
+  left: 60px;
+  transform: rotate(0deg);
+  border-radius: 6px;
+}
+
+.obstacle {
+  position: absolute;
+  width: 32px;
+  height: 60px;
+  background: linear-gradient(45deg, red, darkred);
+  bottom: 0;
+  right: -40px;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+#ui {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 14px;
+}
+
+#centerText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  text-align: center;
+}
+</style>
 </head>
+
 <body>
 
 <div id="game">
   <div id="player"></div>
-  <div id="info">SPACE = skok</div>
+
+  <div id="ui">
+    Score: <span id="score">0</span>
+  </div>
+
+  <div id="centerText">
+    TAP / SPACE<br>
+    <small>na štart</small>
+  </div>
 </div>
 
 <script>
-  const player = document.getElementById("player");
-  const game = document.getElementById("game");
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const scoreEl = document.getElementById("score");
+const centerText = document.getElementById("centerText");
 
-  let isJumping = false;
-  let gravity = 0.9;
-  let position = 0;
-  let gameOver = false;
+let position = 0;
+let velocity = 0;
+let gravity = 0.9;
+let jumpPower = 15;
+let isStarted = false;
+let isGameOver = false;
+let score = 0;
+let speed = 5;
 
-  function jump() {
-    if (isJumping) return;
-    let upInterval = setInterval(() => {
-      if (position >= 100) {
-        clearInterval(upInterval);
-        let downInterval = setInterval(() => {
-          if (position <= 0) {
-            clearInterval(downInterval);
-            isJumping = false;
-          }
-          position -= 5;
-          position = position * gravity;
-          player.style.bottom = position + "px";
-        }, 20);
-      }
-      isJumping = true;
-      position += 20;
-      player.style.bottom = position + "px";
-    }, 20);
+function startGame() {
+  if (isStarted) return;
+  isStarted = true;
+  centerText.style.display = "none";
+  gameLoop();
+  obstacleLoop();
+}
+
+function jump() {
+  if (!isStarted) startGame();
+  if (position === 0) {
+    velocity = jumpPower;
+  }
+}
+
+// PC
+document.addEventListener("keydown", e => {
+  if (e.code === "Space") jump();
+});
+
+// mobil + myš
+game.addEventListener("click", jump);
+game.addEventListener("touchstart", jump);
+
+function gameLoop() {
+  if (isGameOver) return;
+
+  velocity -= gravity;
+  position += velocity;
+
+  if (position < 0) {
+    position = 0;
+    velocity = 0;
   }
 
-  document.addEventListener("keydown", (e) => {
-    if (e.code === "Space") jump();
-  });
+  player.style.bottom = position + "px";
+  player.style.transform = `rotate(${position * 2}deg)`;
 
-  function createObstacle() {
-    if (gameOver) return;
+  score++;
+  scoreEl.textContent = score;
 
-    const obstacle = document.createElement("div");
-    obstacle.classList.add("obstacle");
-    game.appendChild(obstacle);
+  // zrýchľovanie
+  if (score % 300 === 0) speed += 0.5;
 
-    let obstaclePosition = 600;
-    obstacle.style.right = obstaclePosition + "px";
+  requestAnimationFrame(gameLoop);
+}
 
-    let moveInterval = setInterval(() => {
-      if (obstaclePosition > 600) {
-        game.removeChild(obstacle);
-        clearInterval(moveInterval);
-      }
+function obstacleLoop() {
+  if (isGameOver) return;
 
-      // kolízia
-      if (
-        obstaclePosition > 500 &&
-        obstaclePosition < 530 &&
-        position < 50
-      ) {
-        clearInterval(moveInterval);
-        gameOver = true;
-        alert("💀 GAME OVER 💀");
-        location.reload();
-      }
+  const obs = document.createElement("div");
+  obs.className = "obstacle";
+  game.appendChild(obs);
 
-      obstaclePosition += 5;
-      obstacle.style.right = obstaclePosition + "px";
-    }, 20);
-  }
+  let x = game.offsetWidth + 40;
 
-  setInterval(createObstacle, 2000);
+  const move = setInterval(() => {
+    if (isGameOver) {
+      clearInterval(move);
+      obs.remove();
+      return;
+    }
+
+    x -= speed;
+    obs.style.right = x + "px";
+
+    const obsRect = obs.getBoundingClientRect();
+    const plRect = player.getBoundingClientRect();
+
+    // kolízia
+    if (
+      plRect.right > obsRect.left &&
+      plRect.left < obsRect.right &&
+      plRect.bottom > obsRect.top
+    ) {
+      gameOver();
+    }
+
+    if (x < -60) {
+      clearInterval(move);
+      obs.remove();
+    }
+  }, 16);
+
+  setTimeout(obstacleLoop, 1400);
+}
+
+function gameOver() {
+  isGameOver = true;
+  centerText.innerHTML = `💀 GAME OVER 💀<br>Score: ${score}<br><small>Tap pre restart</small>`;
+  centerText.style.display = "flex";
+
+  game.addEventListener("click", () => location.reload(), { once: true });
+}
 </script>
 
 </body>
