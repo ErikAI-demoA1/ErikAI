@@ -6,102 +6,85 @@
 <title>NEON FLOW</title>
 
 <style>
-* { box-sizing: border-box; user-select: none; }
-
-body {
-  margin: 0;
-  background: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-family: Arial, sans-serif;
+*{box-sizing:border-box;user-select:none}
+body{
+  margin:0;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  font-family:Arial,sans-serif;
 }
 
-#game {
-  position: relative;
-  width: 90vw;
-  max-width: 840px;
-  height: 280px;
-  border-radius: 18px;
-  overflow: hidden;
-  border: 3px solid #5fdfff;
-  transition: background 4s linear;
-  box-shadow: 0 0 40px rgba(95,223,255,0.4);
+#game{
+  position:relative;
+  width:92vw;
+  max-width:880px;
+  height:320px;
+  border-radius:20px;
+  overflow:hidden;
+  border:3px solid #5fdfff;
+  box-shadow:0 0 40px rgba(95,223,255,.4);
+  transition:background 4s linear;
 }
 
-/* SAFE THEMES */
-.theme1 { background: linear-gradient(#0f2027, #203a43); }
-.theme2 { background: linear-gradient(#141e30, #243b55); }
-.theme3 { background: linear-gradient(#134e5e, #1c7c7c); }
-.theme4 { background: linear-gradient(#232526, #414345); }
+.theme1{background:linear-gradient(#0f2027,#203a43)}
+.theme2{background:linear-gradient(#141e30,#243b55)}
+.theme3{background:linear-gradient(#134e5e,#1c7c7c)}
+.theme4{background:linear-gradient(#232526,#414345)}
 
-#player {
-  position: absolute;
-  width: 34px;
-  height: 34px;
-  left: 110px;
-  bottom: 0;
-  background: linear-gradient(45deg, #5fdfff, #9ffcff);
-  border-radius: 6px;
-  box-shadow: 0 0 12px rgba(95,223,255,0.8);
+#player{
+  position:absolute;
+  width:36px;height:36px;
+  left:130px;bottom:0;
+  border-radius:6px;
+  box-shadow:0 0 12px rgba(255,255,255,.7);
 }
 
-/* UI */
-#ui {
-  position: absolute;
-  top: 12px;
-  left: 16px;
-  font-size: 14px;
-  color: #dff9fb;
+#ui{
+  position:absolute;
+  top:12px;left:16px;
+  color:#dff9fb;
+  font-size:14px;
 }
 
-#center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  background: rgba(0,0,0,0.55);
-  font-size: 22px;
-  color: white;
+#progressBox{
+  width:120px;height:6px;
+  background:#222;border-radius:4px;margin-top:4px
+}
+#progress{
+  height:100%;width:0%;
+  background:#5fdfff;border-radius:4px
 }
 
-/* OBSTACLES */
-.obstacle {
-  position: absolute;
-  bottom: 0;
-  right: -100px;
+.screen{
+  position:absolute;inset:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  background:rgba(0,0,0,.65);
+  color:white;text-align:center;
 }
 
-.spike {
-  width: 24px;
-  height: 36px;
-  background: #ff6b6b;
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+button{
+  margin:6px;padding:10px 22px;
+  border:none;border-radius:8px;
+  background:#5fdfff;color:#000;
+  font-weight:bold;cursor:pointer;
 }
 
-.block {
-  width: 26px;
-  height: 26px;
-  background: #ff9f43;
-  border-radius: 5px;
+input{
+  margin:6px;padding:8px;
+  border-radius:6px;border:none;
 }
 
-.tall {
-  width: 26px;
-  height: 50px;
-  background: #ffa502;
-  border-radius: 5px;
-}
-
-.double {
-  width: 40px;
-  height: 36px;
-  background: #ff6b6b;
-  clip-path: polygon(0% 100%,25% 0%,50% 100%,75% 0%,100% 100%);
-}
+.obstacle{position:absolute;bottom:0;right:-140px}
+.spike{width:26px;height:40px;background:#ff6b6b;clip-path:polygon(50% 0%,0% 100%,100% 100%)}
+.block{width:28px;height:28px;background:#ff9f43;border-radius:6px}
+.tall{width:28px;height:52px;background:#ffa502;border-radius:6px}
+.double{width:44px;height:40px;background:#ff6b6b;clip-path:polygon(0% 100%,25% 0%,50% 100%,75% 0%,100% 100%)}
 </style>
 </head>
 
@@ -109,133 +92,210 @@ body {
 
 <div id="game" class="theme1">
   <div id="player"></div>
+
   <div id="ui">
-    NEON FLOW<br>
-    Level: <span id="level">1</span><br>
-    Score: <span id="score">0</span><br>
-    Best: <span id="best">0</span>
+    Player: <span id="playerName">---</span><br>
+    Level: <span id="lvl">1</span><br>
+    Score: <span id="score">0</span>
+    <div id="progressBox"><div id="progress"></div></div>
   </div>
-  <div id="center">TAP / SPACE<br><small>Start Game</small></div>
+
+  <!-- MENU -->
+  <div id="menu" class="screen">
+    <h1>NEON FLOW</h1>
+    <input id="nameInput" placeholder="Your name" maxlength="12">
+    <button onclick="startEndless()">Endless Run</button>
+    <button onclick="showLevels()">Select Level</button>
+    <button onclick="showCustomize()">Customize</button>
+    <p id="welcome"></p>
+  </div>
+
+  <!-- LEVEL SELECT -->
+  <div id="levels" class="screen" style="display:none">
+    <h2>Select Level</h2>
+    <button onclick="startLevel(1)">Level 1</button>
+    <button onclick="startLevel(3)">Level 3</button>
+    <button onclick="startLevel(5)">Level 5</button>
+    <button onclick="back()">Back</button>
+  </div>
+
+  <!-- CUSTOMIZE -->
+  <div id="custom" class="screen" style="display:none">
+    <h2>Player Color</h2>
+    <input type="color" id="colorPick">
+    <button onclick="saveColor()">Save</button>
+    <button onclick="back()">Back</button>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="over" class="screen" style="display:none"></div>
 </div>
 
 <script>
-const game = document.getElementById("game");
-const player = document.getElementById("player");
-const scoreEl = document.getElementById("score");
-const levelEl = document.getElementById("level");
-const bestEl = document.getElementById("best");
-const center = document.getElementById("center");
+// ===== PROFILE =====
+let profile = JSON.parse(localStorage.getItem("neonProfile")) || {
+  name:"",
+  color:"#5fdfff",
+  bestScore:0
+};
+localStorage.setItem("neonProfile",JSON.stringify(profile));
 
-let y=0, vel=0;
-let gravity=1800, jumpPower=620;
-let speed=300;
-let score=0;
-let level=1;
-let started=false, over=false;
-let lastTime=null;
+// ===== ELEMENTS =====
+const game=document.getElementById("game");
+const player=document.getElementById("player");
+const scoreEl=document.getElementById("score");
+const lvlEl=document.getElementById("lvl");
+const menu=document.getElementById("menu");
+const levels=document.getElementById("levels");
+const custom=document.getElementById("custom");
+const over=document.getElementById("over");
+const picker=document.getElementById("colorPick");
+const progress=document.getElementById("progress");
+const nameInput=document.getElementById("nameInput");
+const welcome=document.getElementById("welcome");
+const nameUI=document.getElementById("playerName");
 
-const bestScore = localStorage.getItem("neonBest") || 0;
-bestEl.textContent = bestScore;
+// ===== INIT =====
+player.style.background=profile.color;
+picker.value=profile.color;
+nameInput.value=profile.name;
+nameUI.textContent=profile.name||"---";
+if(profile.name)welcome.innerText="Welcome back, "+profile.name;
 
-const themes=["theme1","theme2","theme3","theme4"];
-let themeIndex=0;
+// ===== MENU =====
+function showLevels(){menu.style.display="none";levels.style.display="flex"}
+function showCustomize(){menu.style.display="none";custom.style.display="flex"}
+function back(){menu.style.display="flex";levels.style.display="none";custom.style.display="none"}
 
-function start(){
-  if(started) return;
-  started=true;
-  center.style.display="none";
-  requestAnimationFrame(loop);
-  setTimeout(spawnObstacle,2000);
-  setInterval(changeTheme,8000);
+// ===== SAVE =====
+nameInput.onchange=()=>{
+  profile.name=nameInput.value.trim();
+  localStorage.setItem("neonProfile",JSON.stringify(profile));
+  welcome.innerText="Welcome, "+profile.name;
+  nameUI.textContent=profile.name;
+};
+
+function saveColor(){
+  profile.color=picker.value;
+  player.style.background=picker.value;
+  localStorage.setItem("neonProfile",JSON.stringify(profile));
 }
 
-function jump(){
-  if(!started) start();
-  if(y===0){
-    vel=jumpPower;
-    if(navigator.vibrate) navigator.vibrate(15); // 📱 mobil
+// ===== GAME VARS =====
+let y=0,vel=0,gravity=1800,jump=640;
+let speed=300,score=0,level=1;
+let last=null,dead=false,mode="endless",goal=0;
+let diffTimer=0;
+const themes=["theme1","theme2","theme3","theme4"];
+let theme=0;
+
+// ===== START =====
+function startEndless(){
+  startGame("endless",1);
+}
+function startLevel(lvl){
+  startGame("level",lvl);
+}
+function startGame(m,lvl){
+  menu.style.display=levels.style.display=custom.style.display="none";
+  mode=m;
+  level=lvl;
+  speed=300+lvl*50;
+  goal=lvl*3000+4000;
+  score=0;y=0;vel=0;dead=false;last=null;
+  setTimeout(spawn,1800);
+  requestAnimationFrame(loop);
+  setInterval(()=>game.className=themes[++theme%themes.length],8000);
+}
+
+// ===== INPUT =====
+document.addEventListener("keydown",e=>{if(e.code==="Space")jumpPlayer()});
+game.addEventListener("click",jumpPlayer);
+game.addEventListener("touchstart",jumpPlayer);
+
+function jumpPlayer(){
+  if(y===0&&!dead){
+    vel=jump;
+    if(navigator.vibrate)navigator.vibrate(12);
   }
 }
 
-document.addEventListener("keydown",e=>{ if(e.code==="Space") jump(); });
-game.addEventListener("click",jump);
-game.addEventListener("touchstart",jump);
-
-function loop(time){
-  if(over) return;
-  if(!lastTime) lastTime=time;
-  const dt=(time-lastTime)/1000;
-  lastTime=time;
+// ===== LOOP =====
+function loop(t){
+  if(dead)return;
+  if(!last)last=t;
+  let dt=(t-last)/1000;last=t;
 
   vel-=gravity*dt;
   y+=vel*dt;
-  if(y<0){ y=0; vel=0; }
+  if(y<0){y=0;vel=0}
 
   player.style.bottom=y+"px";
-  player.style.transform=`rotate(${y*1.1}deg)`;
+  player.style.transform=`rotate(${y*1.2}deg)`;
 
-  score+=Math.floor(dt*100);
+  score+=Math.floor(dt*120);
   scoreEl.textContent=score;
 
-  // LEVEL UP
-  if(score>800 && level===1){ level=2; speed+=60; }
-  if(score>1800 && level===2){ level=3; speed+=80; }
-  levelEl.textContent=level;
+  diffTimer+=dt;
+  if(mode==="endless"&&diffTimer>6){
+    level++;speed+=30;diffTimer=0;
+  }
 
+  if(mode==="level"){
+    progress.style.width=Math.min(100,(score/goal)*100)+"%";
+    if(score>=goal)return levelComplete();
+  }
+
+  lvlEl.textContent=level;
   requestAnimationFrame(loop);
 }
 
-function spawnObstacle(){
-  if(over) return;
-
+// ===== OBSTACLES =====
+function spawn(){
+  if(dead)return;
   const obs=document.createElement("div");
   obs.classList.add("obstacle");
-
-  const types = level < 2
-    ? ["spike","block"]
-    : level < 3
-      ? ["spike","block","tall"]
-      : ["spike","block","tall","double"];
-
-  obs.classList.add(types[Math.floor(Math.random()*types.length)]);
+  const types=level<3?["spike","block"]:level<6?["spike","block","tall"]:["spike","block","tall","double"];
+  obs.classList.add(types[Math.random()*types.length|0]);
   game.appendChild(obs);
 
-  let x=-100;
+  let x=-140;
   const move=setInterval(()=>{
-    if(over){ clearInterval(move); obs.remove(); return; }
+    if(dead){clearInterval(move);obs.remove();return}
+    x+=speed/60;obs.style.right=x+"px";
 
-    x+=speed/60;
-    obs.style.right=x+"px";
-
-    const o=obs.getBoundingClientRect();
-    const p=player.getBoundingClientRect();
-
-    // forgiving hitbox
-    if(p.right-4>o.left && p.left+4<o.right && p.bottom>o.top+6){
-      gameOver();
-    }
-
-    if(x>game.offsetWidth+150){
-      clearInterval(move);
-      obs.remove();
-    }
+    const o=obs.getBoundingClientRect(),p=player.getBoundingClientRect();
+    if(p.right-4>o.left&&p.left+4<o.right&&p.bottom>o.top+6) gameOver();
+    if(x>game.offsetWidth+160){clearInterval(move);obs.remove()}
   },16);
 
-  setTimeout(spawnObstacle,1400);
+  setTimeout(spawn,1300);
 }
 
-function changeTheme(){
-  game.classList.remove(themes[themeIndex]);
-  themeIndex=(themeIndex+1)%themes.length;
-  game.classList.add(themes[themeIndex]);
-}
-
+// ===== END =====
 function gameOver(){
-  over=true;
-  if(score>bestScore) localStorage.setItem("neonBest",score);
-  center.innerHTML=`💀 GAME OVER 💀<br>Score: ${score}<br><small>Tap to restart</small>`;
-  center.style.display="flex";
-  game.addEventListener("click",()=>location.reload(),{once:true});
+  dead=true;
+  if(score>profile.bestScore){
+    profile.bestScore=score;
+    localStorage.setItem("neonProfile",JSON.stringify(profile));
+  }
+  over.style.display="flex";
+  over.innerHTML=`
+    💀 GAME OVER 💀<br>
+    Score: ${score}<br>
+    Best: ${profile.bestScore}<br>
+    <button onclick="location.reload()">Menu</button>
+  `;
+}
+
+function levelComplete(){
+  dead=true;
+  over.style.display="flex";
+  over.innerHTML=`
+    ✅ LEVEL COMPLETE<br>
+    Score: ${score}<br>
+    <button onclick="location.reload()">Menu</button>
+  `;
 }
 </script>
 
