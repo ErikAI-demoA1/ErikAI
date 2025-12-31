@@ -6,102 +6,66 @@
 <title>NEON FLOW</title>
 
 <style>
-* { box-sizing: border-box; user-select: none; }
+*{box-sizing:border-box;user-select:none}
+body{
+  margin:0;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  font-family:Arial,sans-serif;
+}
+#game{
+  position:relative;
+  width:90vw;
+  max-width:860px;
+  height:300px;
+  border-radius:18px;
+  overflow:hidden;
+  border:3px solid #5fdfff;
+  box-shadow:0 0 40px rgba(95,223,255,.4);
+  transition:background 4s linear;
+}
+.theme1{background:linear-gradient(#0f2027,#203a43)}
+.theme2{background:linear-gradient(#141e30,#243b55)}
+.theme3{background:linear-gradient(#134e5e,#1c7c7c)}
+.theme4{background:linear-gradient(#232526,#414345)}
 
-body {
-  margin: 0;
-  background: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-family: Arial, sans-serif;
+#player{
+  position:absolute;
+  width:34px;height:34px;
+  left:120px;bottom:0;
+  border-radius:6px;
+  box-shadow:0 0 12px rgba(255,255,255,.6);
 }
 
-#game {
-  position: relative;
-  width: 90vw;
-  max-width: 840px;
-  height: 280px;
-  border-radius: 18px;
-  overflow: hidden;
-  border: 3px solid #5fdfff;
-  transition: background 4s linear;
-  box-shadow: 0 0 40px rgba(95,223,255,0.4);
+#ui{
+  position:absolute;
+  top:12px;left:16px;
+  font-size:14px;color:#dff9fb;
 }
 
-/* SAFE THEMES */
-.theme1 { background: linear-gradient(#0f2027, #203a43); }
-.theme2 { background: linear-gradient(#141e30, #243b55); }
-.theme3 { background: linear-gradient(#134e5e, #1c7c7c); }
-.theme4 { background: linear-gradient(#232526, #414345); }
-
-#player {
-  position: absolute;
-  width: 34px;
-  height: 34px;
-  left: 110px;
-  bottom: 0;
-  background: linear-gradient(45deg, #5fdfff, #9ffcff);
-  border-radius: 6px;
-  box-shadow: 0 0 12px rgba(95,223,255,0.8);
+.screen{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  justify-content:center;align-items:center;
+  background:rgba(0,0,0,.6);
+  color:white;text-align:center;
 }
-
-/* UI */
-#ui {
-  position: absolute;
-  top: 12px;
-  left: 16px;
-  font-size: 14px;
-  color: #dff9fb;
+button{
+  margin:6px;padding:10px 20px;
+  border:none;border-radius:6px;
+  background:#5fdfff;color:#000;
+  font-weight:bold;cursor:pointer;
 }
+input[type=color]{margin-top:10px}
 
-#center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  background: rgba(0,0,0,0.55);
-  font-size: 22px;
-  color: white;
-}
-
-/* OBSTACLES */
-.obstacle {
-  position: absolute;
-  bottom: 0;
-  right: -100px;
-}
-
-.spike {
-  width: 24px;
-  height: 36px;
-  background: #ff6b6b;
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-}
-
-.block {
-  width: 26px;
-  height: 26px;
-  background: #ff9f43;
-  border-radius: 5px;
-}
-
-.tall {
-  width: 26px;
-  height: 50px;
-  background: #ffa502;
-  border-radius: 5px;
-}
-
-.double {
-  width: 40px;
-  height: 36px;
-  background: #ff6b6b;
-  clip-path: polygon(0% 100%,25% 0%,50% 100%,75% 0%,100% 100%);
-}
+.obstacle{position:absolute;bottom:0;right:-120px}
+.spike{width:24px;height:36px;background:#ff6b6b;clip-path:polygon(50% 0%,0% 100%,100% 100%)}
+.block{width:26px;height:26px;background:#ff9f43;border-radius:5px}
+.tall{width:26px;height:50px;background:#ffa502;border-radius:5px}
+.double{width:40px;height:36px;background:#ff6b6b;clip-path:polygon(0% 100%,25% 0%,50% 100%,75% 0%,100% 100%)}
 </style>
 </head>
 
@@ -110,66 +74,94 @@ body {
 <div id="game" class="theme1">
   <div id="player"></div>
   <div id="ui">
-    NEON FLOW<br>
-    Level: <span id="level">1</span><br>
-    Score: <span id="score">0</span><br>
-    Best: <span id="best">0</span>
+    Level: <span id="lvl">1</span><br>
+    Score: <span id="score">0</span>
   </div>
-  <div id="center">TAP / SPACE<br><small>Start Game</small></div>
+
+  <!-- MENU -->
+  <div id="menu" class="screen">
+    <h1>NEON FLOW</h1>
+    <button onclick="startGame(1)">Free Run</button>
+    <button onclick="showLevels()">Select Level</button>
+    <button onclick="showCustomize()">Customize</button>
+  </div>
+
+  <!-- LEVEL SELECT -->
+  <div id="levels" class="screen" style="display:none">
+    <h2>Select Start Level</h2>
+    <button onclick="startGame(1)">Level 1</button>
+    <button onclick="startGame(3)">Level 3</button>
+    <button onclick="startGame(5)">Level 5</button>
+    <button onclick="back()">Back</button>
+  </div>
+
+  <!-- CUSTOMIZE -->
+  <div id="custom" class="screen" style="display:none">
+    <h2>Player Color</h2>
+    <input type="color" id="colorPick">
+    <button onclick="saveColor()">Save</button>
+    <button onclick="back()">Back</button>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="over" class="screen" style="display:none"></div>
 </div>
 
 <script>
-const game = document.getElementById("game");
-const player = document.getElementById("player");
-const scoreEl = document.getElementById("score");
-const levelEl = document.getElementById("level");
-const bestEl = document.getElementById("best");
-const center = document.getElementById("center");
-
-let y=0, vel=0;
-let gravity=1800, jumpPower=620;
-let speed=300;
-let score=0;
-let level=1;
-let started=false, over=false;
-let lastTime=null;
-
-const bestScore = localStorage.getItem("neonBest") || 0;
-bestEl.textContent = bestScore;
+const game=document.getElementById("game");
+const player=document.getElementById("player");
+const scoreEl=document.getElementById("score");
+const lvlEl=document.getElementById("lvl");
+const menu=document.getElementById("menu");
+const levels=document.getElementById("levels");
+const custom=document.getElementById("custom");
+const over=document.getElementById("over");
+const picker=document.getElementById("colorPick");
 
 const themes=["theme1","theme2","theme3","theme4"];
-let themeIndex=0;
+let theme=0;
 
-function start(){
-  if(started) return;
+let y=0,vel=0,gravity=1800,jump=620;
+let speed=300,score=0,level=1;
+let started=false,dead=false,last=null;
+
+player.style.background=localStorage.getItem("color")||"#5fdfff";
+picker.value=player.style.background;
+
+function showLevels(){menu.style.display="none";levels.style.display="flex"}
+function showCustomize(){menu.style.display="none";custom.style.display="flex"}
+function back(){menu.style.display="flex";levels.style.display="none";custom.style.display="none"}
+
+function saveColor(){
+  localStorage.setItem("color",picker.value);
+  player.style.background=picker.value;
+}
+
+function startGame(lvl){
+  menu.style.display=levels.style.display=custom.style.display="none";
+  level=lvl;speed+=lvl*60;
   started=true;
-  center.style.display="none";
+  setTimeout(spawn,2000);
   requestAnimationFrame(loop);
-  setTimeout(spawnObstacle,2000);
-  setInterval(changeTheme,8000);
+  setInterval(()=>{game.className=themes[++theme%themes.length]},8000);
 }
 
-function jump(){
-  if(!started) start();
-  if(y===0){
-    vel=jumpPower;
-    if(navigator.vibrate) navigator.vibrate(15); // 📱 mobil
-  }
+document.addEventListener("keydown",e=>{if(e.code==="Space") jumpPlayer()});
+game.addEventListener("click",jumpPlayer);
+
+function jumpPlayer(){
+  if(!started)return;
+  if(y===0){vel=jump;if(navigator.vibrate)navigator.vibrate(15)}
 }
 
-document.addEventListener("keydown",e=>{ if(e.code==="Space") jump(); });
-game.addEventListener("click",jump);
-game.addEventListener("touchstart",jump);
-
-function loop(time){
-  if(over) return;
-  if(!lastTime) lastTime=time;
-  const dt=(time-lastTime)/1000;
-  lastTime=time;
+function loop(t){
+  if(dead)return;
+  if(!last)last=t;
+  let dt=(t-last)/1000;last=t;
 
   vel-=gravity*dt;
   y+=vel*dt;
-  if(y<0){ y=0; vel=0; }
+  if(y<0){y=0;vel=0}
 
   player.style.bottom=y+"px";
   player.style.transform=`rotate(${y*1.1}deg)`;
@@ -177,67 +169,39 @@ function loop(time){
   score+=Math.floor(dt*100);
   scoreEl.textContent=score;
 
-  // LEVEL UP
-  if(score>800 && level===1){ level=2; speed+=60; }
-  if(score>1800 && level===2){ level=3; speed+=80; }
-  levelEl.textContent=level;
+  if(score%800===0){level++;speed+=40}
+  lvlEl.textContent=level;
 
   requestAnimationFrame(loop);
 }
 
-function spawnObstacle(){
-  if(over) return;
-
+function spawn(){
+  if(dead)return;
   const obs=document.createElement("div");
   obs.classList.add("obstacle");
-
-  const types = level < 2
-    ? ["spike","block"]
-    : level < 3
-      ? ["spike","block","tall"]
-      : ["spike","block","tall","double"];
-
-  obs.classList.add(types[Math.floor(Math.random()*types.length)]);
+  const types=level<3?["spike","block"]:level<6?["spike","block","tall"]:["spike","block","tall","double"];
+  obs.classList.add(types[Math.random()*types.length|0]);
   game.appendChild(obs);
 
-  let x=-100;
+  let x=-120;
   const move=setInterval(()=>{
-    if(over){ clearInterval(move); obs.remove(); return; }
+    if(dead){clearInterval(move);obs.remove();return}
+    x+=speed/60;obs.style.right=x+"px";
 
-    x+=speed/60;
-    obs.style.right=x+"px";
-
-    const o=obs.getBoundingClientRect();
-    const p=player.getBoundingClientRect();
-
-    // forgiving hitbox
-    if(p.right-4>o.left && p.left+4<o.right && p.bottom>o.top+6){
-      gameOver();
-    }
-
-    if(x>game.offsetWidth+150){
-      clearInterval(move);
-      obs.remove();
-    }
+    const o=obs.getBoundingClientRect(),p=player.getBoundingClientRect();
+    if(p.right-4>o.left&&p.left+4<o.right&&p.bottom>o.top+6) gameOver();
+    if(x>game.offsetWidth+150){clearInterval(move);obs.remove()}
   },16);
 
-  setTimeout(spawnObstacle,1400);
-}
-
-function changeTheme(){
-  game.classList.remove(themes[themeIndex]);
-  themeIndex=(themeIndex+1)%themes.length;
-  game.classList.add(themes[themeIndex]);
+  setTimeout(spawn,1300);
 }
 
 function gameOver(){
-  over=true;
-  if(score>bestScore) localStorage.setItem("neonBest",score);
-  center.innerHTML=`💀 GAME OVER 💀<br>Score: ${score}<br><small>Tap to restart</small>`;
-  center.style.display="flex";
-  game.addEventListener("click",()=>location.reload(),{once:true});
+  dead=true;
+  over.style.display="flex";
+  over.innerHTML=`GAME OVER<br>Score: ${score}<br><button onclick="location.reload()">Restart</button>`;
 }
 </script>
 
 </body>
-</html>
+    </html>
