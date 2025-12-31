@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Geometry Dash PRO+</title>
+<title>Geometry Dash PRO Safe</title>
 
 <style>
 * {
@@ -13,13 +13,12 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #222, #000);
+  background: #000;
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
   font-family: Arial, sans-serif;
-  color: white;
 }
 
 #game {
@@ -27,141 +26,164 @@ body {
   width: 90vw;
   max-width: 800px;
   height: 260px;
-  background: linear-gradient(#1a1a1a, #000);
-  border: 3px solid cyan;
   overflow: hidden;
-  border-radius: 14px;
-  box-shadow: 0 0 30px cyan;
+  border-radius: 16px;
+  border: 3px solid #5fdfff;
+  transition: background 3s linear;
 }
+
+/* jemné farebné témy */
+.theme1 { background: linear-gradient(#0f2027, #203a43); }
+.theme2 { background: linear-gradient(#1a2a6c, #2c5364); }
+.theme3 { background: linear-gradient(#134e5e, #1c7c7c); }
+.theme4 { background: linear-gradient(#232526, #414345); }
 
 #player {
   position: absolute;
   width: 34px;
   height: 34px;
-  background: linear-gradient(45deg, cyan, #00ffff);
+  left: 100px;
   bottom: 0;
-  left: 100px; /* VIAC DOĽAVA = LEPŠÍ VÝHĽAD */
+  background: linear-gradient(45deg, #5fdfff, #9ffcff);
   border-radius: 6px;
 }
 
+/* SPOLOČNÉ */
 .obstacle {
   position: absolute;
-  width: 34px;
-  height: 65px;
-  background: linear-gradient(45deg, red, darkred);
   bottom: 0;
-  right: -80px;
+  right: -60px;
+}
+
+/* TYPY PREKÁŽOK */
+.triangle {
+  width: 26px;
+  height: 40px;
+  background: #ff6b6b;
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.block {
+  width: 26px;
+  height: 26px;
+  background: #ff9f43;
+  border-radius: 4px;
+}
+
+.spike {
+  width: 40px;
+  height: 18px;
+  background: repeating-linear-gradient(
+    90deg,
+    #ff7675,
+    #ff7675 6px,
+    #c0392b 6px,
+    #c0392b 12px
+  );
+  border-radius: 4px;
 }
 
 #ui {
   position: absolute;
   top: 10px;
-  left: 12px;
+  left: 14px;
+  color: #dff9fb;
   font-size: 15px;
 }
 
-#centerText {
+#center {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  background: rgba(0,0,0,0.65);
-  font-size: 24px;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  font-size: 22px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="game">
+<div id="game" class="theme1">
   <div id="player"></div>
-
-  <div id="ui">
-    Score: <span id="score">0</span>
-  </div>
-
-  <div id="centerText">
-    TAP / SPACE<br>
-    <small>štart hry</small>
-  </div>
+  <div id="ui">Score: <span id="score">0</span></div>
+  <div id="center">TAP / SPACE<br><small>štart</small></div>
 </div>
 
 <script>
 const game = document.getElementById("game");
 const player = document.getElementById("player");
 const scoreEl = document.getElementById("score");
-const centerText = document.getElementById("centerText");
+const center = document.getElementById("center");
 
-let posY = 0;
-let velocity = 0;
+let y = 0, vel = 0;
 let gravity = 0.9;
-let jumpPower = 16;
-let started = false;
-let gameOver = false;
+let jumpPower = 15;
+let speed = 4.5;
 let score = 0;
-let speed = 5;
+let started = false;
+let over = false;
 
-function startGame() {
+const themes = ["theme1","theme2","theme3","theme4"];
+let themeIndex = 0;
+
+function start() {
   if (started) return;
   started = true;
-  centerText.style.display = "none";
-  gameLoop();
-  setTimeout(obstacleLoop, 2000); // ⏱️ ONESKORENIE PRVEJ PREKÁŽKY
+  center.style.display = "none";
+  loop();
+  setTimeout(spawnObstacle, 2000);
+  setInterval(changeTheme, 6000);
 }
 
 function jump() {
-  if (!started) startGame();
-  if (posY === 0) {
-    velocity = jumpPower;
+  if (!started) start();
+  if (y === 0) {
+    vel = jumpPower;
+    // jemná zmena farby pri skoku
+    changeTheme();
   }
 }
 
-// PC
 document.addEventListener("keydown", e => {
   if (e.code === "Space") jump();
 });
-
-// mobil + myš
 game.addEventListener("click", jump);
 game.addEventListener("touchstart", jump);
 
-function gameLoop() {
-  if (gameOver) return;
+function loop() {
+  if (over) return;
 
-  velocity -= gravity;
-  posY += velocity;
+  vel -= gravity;
+  y += vel;
+  if (y < 0) { y = 0; vel = 0; }
 
-  if (posY < 0) {
-    posY = 0;
-    velocity = 0;
-  }
-
-  player.style.bottom = posY + "px";
-  player.style.transform = `rotate(${posY * 2}deg)`;
+  player.style.bottom = y + "px";
+  player.style.transform = `rotate(${y * 1.5}deg)`;
 
   score++;
   scoreEl.textContent = score;
 
-  if (score % 400 === 0) speed += 0.5;
-
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(loop);
 }
 
-function obstacleLoop() {
-  if (gameOver) return;
+function spawnObstacle() {
+  if (over) return;
 
   const obs = document.createElement("div");
-  obs.className = "obstacle";
+  obs.classList.add("obstacle");
+
+  const types = ["triangle","block","spike"];
+  obs.classList.add(types[Math.floor(Math.random()*types.length)]);
+
   game.appendChild(obs);
 
-  let x = -80; // ide ZPRAVA DOĽAVA
-  obs.style.right = x + "px";
-
+  let x = -60;
   const move = setInterval(() => {
-    if (gameOver) {
+    if (over) {
       clearInterval(move);
       obs.remove();
       return;
@@ -173,12 +195,8 @@ function obstacleLoop() {
     const o = obs.getBoundingClientRect();
     const p = player.getBoundingClientRect();
 
-    if (
-      p.right > o.left &&
-      p.left < o.right &&
-      p.bottom > o.top
-    ) {
-      endGame();
+    if (p.right > o.left && p.left < o.right && p.bottom > o.top) {
+      gameOver();
     }
 
     if (x > game.offsetWidth + 100) {
@@ -187,13 +205,19 @@ function obstacleLoop() {
     }
   }, 16);
 
-  setTimeout(obstacleLoop, 1500);
+  setTimeout(spawnObstacle, 1400);
 }
 
-function endGame() {
-  gameOver = true;
-  centerText.innerHTML = `💀 GAME OVER 💀<br>Score: ${score}<br><small>Tap pre restart</small>`;
-  centerText.style.display = "flex";
+function changeTheme() {
+  game.classList.remove(themes[themeIndex]);
+  themeIndex = (themeIndex + 1) % themes.length;
+  game.classList.add(themes[themeIndex]);
+}
+
+function gameOver() {
+  over = true;
+  center.innerHTML = `💀 GAME OVER 💀<br>Score: ${score}<br><small>Tap pre reštart</small>`;
+  center.style.display = "flex";
   game.addEventListener("click", () => location.reload(), { once: true });
 }
 </script>
