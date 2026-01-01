@@ -35,28 +35,14 @@ body{
 .theme3{background:linear-gradient(#134e5e,#1c7c7c)}
 .theme4{background:linear-gradient(#232526,#414345)}
 
-/* PLAYER – EXCLUSIVE WOW */
+/* PLAYER */
 #player{
   position:absolute;
-  width:36px;
-  height:36px;
+  width:36px;height:36px;
   left:130px;
   bottom:20px;
-  border-radius:10px;
-
-  background:linear-gradient(135deg,#5fdfff,#9b59b6,#00f2fe);
-  background-size:300% 300%;
-  animation: playerGlow 4s linear infinite;
-
-  box-shadow:
-    0 0 14px rgba(95,223,255,.9),
-    0 0 32px rgba(155,89,182,.7);
-}
-
-@keyframes playerGlow{
-  0%{background-position:0% 50%}
-  50%{background-position:100% 50%}
-  100%{background-position:0% 50%}
+  border-radius:6px;
+  box-shadow:0 0 12px rgba(255,255,255,.7);
 }
 
 /* FLOOR */
@@ -68,12 +54,12 @@ body{
   background:linear-gradient(90deg,#1c7c7c,#5fdfff,#1c7c7c);
 }
 
-/* TRAIL */
+/* MOTION TRAIL */
 .trail{
   position:absolute;
-  width:16px;
+  width:14px;
   height:4px;
-  background:rgba(255,255,255,.7);
+  background:rgba(255,255,255,.6);
   border-radius:4px;
   pointer-events:none;
 }
@@ -124,32 +110,17 @@ input{
   max-height:85%;
   padding-bottom:20px;
 }
-
-/* OBSTACLES – NEON PRO */
-.obstacle{
-  position:absolute;
-  bottom:20px;
-  right:-140px;
-
-  background:linear-gradient(135deg,#ff6b6b,#feca57,#48dbfb);
-  background-size:300% 300%;
-  animation: obstacleShift 3s linear infinite;
-
-  box-shadow:
-    0 0 14px rgba(255,255,255,.6),
-    0 0 28px rgba(255,255,255,.8);
+#levels::-webkit-scrollbar{width:6px}
+#levels::-webkit-scrollbar-thumb{
+  background:#5fdfff;border-radius:4px
 }
 
-@keyframes obstacleShift{
-  0%{background-position:0% 50%}
-  50%{background-position:100% 50%}
-  100%{background-position:0% 50%}
-}
-
-.spike{width:26px;height:40px;clip-path:polygon(50% 0%,0% 100%,100% 100%)}
-.block{width:28px;height:28px;border-radius:8px}
-.tall{width:28px;height:52px;border-radius:8px}
-.double{width:44px;height:40px;clip-path:polygon(0% 100%,25% 0%,50% 100%,75% 0%,100% 100%)}
+/* OBSTACLES */
+.obstacle{position:absolute;bottom:20px;right:-140px}
+.spike{width:26px;height:40px;background:#ff6b6b;clip-path:polygon(50% 0%,0% 100%,100% 100%)}
+.block{width:28px;height:28px;background:#ff9f43;border-radius:6px}
+.tall{width:28px;height:52px;background:#ffa502;border-radius:6px}
+.double{width:44px;height:40px;background:#ff6b6b;clip-path:polygon(0% 100%,25% 0%,50% 100%,75% 0%,100% 100%)}
 </style>
 </head>
 
@@ -172,6 +143,7 @@ input{
     <source src="zvuk6normal.mp3" type="audio/mpeg">
   </audio>
 
+  <!-- MENU -->
   <div id="menu" class="screen">
     <h1>NEON FLOW</h1>
     <input id="nameInput" placeholder="Your name" maxlength="12">
@@ -181,12 +153,14 @@ input{
     <p id="welcome"></p>
   </div>
 
+  <!-- LEVELS -->
   <div id="levels" class="screen" style="display:none">
     <h2>Select Level</h2>
     <div id="levelButtons"></div>
     <button onclick="back()">Back</button>
   </div>
 
+  <!-- CUSTOM -->
   <div id="custom" class="screen" style="display:none">
     <h2>Player Color</h2>
     <input type="color" id="colorPick">
@@ -228,23 +202,88 @@ soundBtn.onclick=()=>{
   soundOn?(tickSound.play(),soundBtn.textContent="🔊 Sound ON")
          :(tickSound.pause(),soundBtn.textContent="🔇 Sound OFF");
 };
-function stopSound(){tickSound.pause();tickSound.currentTime=0;soundOn=false}
+function stopSound(){tickSound.pause();tickSound.currentTime=0;soundOn=false;soundBtn.textContent="🔇 Sound OFF"}
+
+/* INIT */
+player.style.background=profile.color;
+picker.value=profile.color;
+nameInput.value=profile.name;
+nameUI.textContent=profile.name||"---";
+if(profile.name)welcome.textContent="Welcome back, "+profile.name;
+
+/* MENU */
+function showLevels(){menu.style.display="none";levels.style.display="flex"}
+function showCustomize(){menu.style.display="none";custom.style.display="flex"}
+function back(){menu.style.display="flex";levels.style.display="none";custom.style.display="none"}
+
+/* SAVE */
+nameInput.onchange=()=>{
+  profile.name=nameInput.value.trim();
+  localStorage.setItem("neonProfile",JSON.stringify(profile));
+  welcome.textContent="Welcome, "+profile.name;
+  nameUI.textContent=profile.name;
+};
+function saveColor(){
+  profile.color=picker.value;
+  player.style.background=picker.value;
+  localStorage.setItem("neonProfile",JSON.stringify(profile));
+}
+
+/* LEVEL BUTTONS */
+for(let i=1;i<=10;i++){
+  const b=document.createElement("button");
+  b.textContent="Level "+i;
+  b.onclick=()=>startLevel(i);
+  levelButtons.appendChild(b);
+}
 
 /* GAME VARS */
 let y=0,vel=0,gravity=1800,jump=640;
 let speed=300,score=0,level=1,last=null,dead=false,mode="endless",goal=0;
-let rot=0,rotSpeed=0,floorX=0;
 const themes=["theme1","theme2","theme3","theme4"];
+let theme=0,floorX=0;
+
+/* ROTATION */
+let rot=0;
+let rotSpeed=0;
+
+/* START */
+function startEndless(){startGame("endless",1)}
+function startLevel(lvl){startGame("level",lvl)}
+function startGame(m,lvl){
+  menu.style.display=levels.style.display=custom.style.display="none";
+  mode=m;level=lvl;speed=300+lvl*50;goal=lvl*3000+4000;
+  score=0;y=0;vel=0;dead=false;last=null;floorX=0;rot=0;
+  setTimeout(spawn,1500);
+  requestAnimationFrame(loop);
+  setInterval(()=>game.className=themes[++theme%themes.length],8000);
+}
 
 /* INPUT */
 document.addEventListener("keydown",e=>e.code==="Space"&&jumpPlayer());
 game.addEventListener("click",jumpPlayer);
-
 function jumpPlayer(){
   if(y===0&&!dead){
     vel=jump;
     rotSpeed=900;
   }
+}
+
+/* TRAIL */
+function spawnTrail(){
+  if(dead)return;
+  const t=document.createElement("div");
+  t.className="trail";
+  t.style.left=(player.offsetLeft-16)+"px";
+  t.style.bottom=(player.offsetTop+26)+"px";
+  game.appendChild(t);
+  let life=1;
+  const fade=setInterval(()=>{
+    life-=0.1;
+    t.style.opacity=life;
+    t.style.transform="translateX(-12px)";
+    if(life<=0){clearInterval(fade);t.remove();}
+  },16);
 }
 
 /* LOOP */
@@ -259,68 +298,63 @@ function loop(t){
   rot+=rotSpeed*dt;
   rotSpeed*=0.98;
   player.style.transform=`rotate(${rot}deg)`;
+
   player.style.bottom=(y+20)+"px";
 
   floorX-=speed*dt;
   floor.style.transform=`translateX(${floorX}px)`;
   if(floorX<-game.offsetWidth)floorX=0;
 
+  if(y>0)spawnTrail();
+
   score+=Math.floor(dt*120);
   scoreEl.textContent=score;
   lvlEl.textContent=level;
 
+  if(mode==="level"){
+    progress.style.width=Math.min(100,(score/goal)*100)+"%";
+    if(score>=goal)return levelComplete();
+  }
+
   requestAnimationFrame(loop);
 }
 
-/* OBSTACLES + TOP COLLISION */
+/* OBSTACLES */
 function spawn(){
   if(dead)return;
   const obs=document.createElement("div");
-  const types=["spike","block","tall","double"];
+  const types=level<3?["spike","block"]:level<6?["spike","block","tall"]:["spike","block","tall","double"];
   obs.className="obstacle "+types[Math.random()*types.length|0];
-  obs.style.filter=`hue-rotate(${level*35}deg)`;
   game.appendChild(obs);
 
   let x=-140;
   const move=setInterval(()=>{
     if(dead){clearInterval(move);obs.remove();return}
     x+=speed/60;obs.style.right=x+"px";
-
-    const o=obs.getBoundingClientRect();
-    const p=player.getBoundingClientRect();
-
-    const overlapX=p.right>o.left&&p.left<o.right;
-    const hitFromTop=p.bottom<=o.top+14&&vel<=0;
-
-    if(overlapX){
-      if(hitFromTop){
-        y=o.height-2;
-        vel=0;
-      }else{
-        gameOver();
-      }
-    }
-
+    const o=obs.getBoundingClientRect(),p=player.getBoundingClientRect();
+    if(p.right>o.left&&p.left<o.right&&p.bottom>o.top)gameOver();
     if(x>game.offsetWidth+160){clearInterval(move);obs.remove()}
   },16);
 
   setTimeout(spawn,1200);
 }
 
+/* END */
 function gameOver(){
-  stopSound();
-  dead=true;
+  stopSound();dead=true;
+  if(score>profile.bestScore){
+    profile.bestScore=score;
+    localStorage.setItem("neonProfile",JSON.stringify(profile))
+  }
   over.style.display="flex";
-  over.innerHTML=`💀 GAME OVER<br>Score: ${score}<br><button onclick="location.reload()">Menu</button>`;
+  over.innerHTML=`💀 GAME OVER<br>Score: ${score}<br>Best: ${profile.bestScore}<br><button onclick="location.reload()">Menu</button>`;
 }
-
-/* START */
-function startEndless(){
-  menu.style.display="none";
-  dead=false;score=0;y=0;vel=0;
-  spawn();requestAnimationFrame(loop);
+function levelComplete(){
+  stopSound();dead=true;
+  over.style.display="flex";
+  over.innerHTML=`✅ LEVEL COMPLETE<br>Score: ${score}<br><button onclick="location.reload()">Menu</button>`;
 }
 </script>
 
 </body>
-                                                 </html>
+    </html>
