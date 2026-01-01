@@ -42,7 +42,8 @@ body{
   left:130px;
   bottom:20px;
   border-radius:6px;
-  box-shadow:0 0 12px rgba(255,255,255,.7);
+  box-shadow:0 0 18px rgba(255,255,255,.8), inset 0 0 8px rgba(255,255,255,.5);
+  transition: transform 0.1s linear;
 }
 
 /* FLOOR */
@@ -97,8 +98,11 @@ button{
   border:none;border-radius:8px;
   background:#5fdfff;color:#000;
   font-weight:bold;cursor:pointer;
+  transition:0.3s;
 }
+button:hover{transform: scale(1.05);}
 
+/* INPUT */
 input{
   margin:6px;padding:8px;
   border-radius:6px;border:none;
@@ -115,12 +119,39 @@ input{
   background:#5fdfff;border-radius:4px
 }
 
-/* OBSTACLES */
-.obstacle{position:absolute;bottom:20px;right:-140px}
-.spike{width:26px;height:40px;background:#ff6b6b;clip-path:polygon(50% 0%,0% 100%,100% 100%)}
-.block{width:28px;height:28px;background:#ff9f43;border-radius:6px}
-.tall{width:28px;height:52px;background:#ffa502;border-radius:6px}
-.double{width:44px;height:40px;background:#ff6b6b;clip-path:polygon(0% 100%,25% 0%,50% 100%,75% 0%,100% 100%)}
+/* OBSTACLES – Exkluzívne */
+.obstacle{
+  position:absolute;
+  bottom:20px;
+  right:-140px;
+  border-radius:6px;
+  box-shadow:0 0 15px rgba(255,255,255,0.4), inset 0 0 8px rgba(255,255,255,0.2);
+  transition: background 0.5s linear;
+}
+.spike{
+  width:26px;height:40px;
+  clip-path: polygon(50% 0%,0% 100%,100% 100%);
+  background: linear-gradient(45deg,#ff4e50,#f9d423);
+  box-shadow: 0 0 12px #ff4e50, inset 0 0 5px #fff;
+}
+.block{
+  width:28px;height:28px;
+  border-radius:6px;
+  background: linear-gradient(135deg,#6a11cb,#2575fc);
+  box-shadow:0 0 12px #2575fc, inset 0 0 5px #fff;
+}
+.tall{
+  width:28px;height:52px;
+  border-radius:6px;
+  background: linear-gradient(135deg,#ff6b6b,#f06595);
+  box-shadow:0 0 12px #f06595, inset 0 0 5px #fff;
+}
+.double{
+  width:44px;height:40px;
+  clip-path: polygon(0% 100%,25% 0%,50% 100%,75% 0%,100% 100%);
+  background: linear-gradient(45deg,#1de9b6,#00bcd4,#ffeb3b);
+  box-shadow:0 0 12px #00bcd4, inset 0 0 5px #fff;
+}
 </style>
 </head>
 
@@ -242,10 +273,7 @@ let y=0,vel=0,gravity=1800,jump=640;
 let speed=300,score=0,level=1,last=null,dead=false,mode="endless",goal=0;
 const themes=["theme1","theme2","theme3","theme4"];
 let theme=0,floorX=0;
-
-/* ROTATION */
-let rot=0;
-let rotSpeed=0;
+let rot=0,rotSpeed=0;
 
 /* START */
 function startEndless(){startGame("endless",1)}
@@ -298,7 +326,6 @@ function loop(t){
   rot+=rotSpeed*dt;
   rotSpeed*=0.98;
   player.style.transform=`rotate(${rot}deg)`;
-
   player.style.bottom=(y+20)+"px";
 
   floorX-=speed*dt;
@@ -324,16 +351,42 @@ function spawn(){
   if(dead)return;
   const obs=document.createElement("div");
   const types=level<3?["spike","block"]:level<6?["spike","block","tall"]:["spike","block","tall","double"];
-  obs.className="obstacle "+types[Math.random()*types.length|0];
+  const type=types[Math.random()*types.length|0];
+  obs.className="obstacle "+type;
   game.appendChild(obs);
+
+  // Automatické gradienty
+  const gradients = [
+    ['#ff4e50','#f9d423'],
+    ['#6a11cb','#2575fc'],
+    ['#ff6b6b','#f06595'],
+    ['#1de9b6','#00bcd4','#ffeb3b'],
+    ['#ff512f','#dd2476']
+  ];
+  function randomGradient(){ return 'linear-gradient(135deg,'+gradients[Math.floor(Math.random()*gradients.length)].join(',')+')'; }
+  obs.style.background = randomGradient();
+
+  // Mení farbu každých 800ms
+  const colorInterval = setInterval(()=>{
+    if(dead || !obs) return;
+    obs.style.background = randomGradient();
+  },800);
 
   let x=-140;
   const move=setInterval(()=>{
-    if(dead){clearInterval(move);obs.remove();return}
-    x+=speed/60;obs.style.right=x+"px";
+    if(dead){clearInterval(move);clearInterval(colorInterval);obs.remove();return}
+    x+=speed/60;
+    obs.style.right=x+"px";
+
     const o=obs.getBoundingClientRect(),p=player.getBoundingClientRect();
-    if(p.right>o.left&&p.left<o.right&&p.bottom>o.top)gameOver();
-    if(x>game.offsetWidth+160){clearInterval(move);obs.remove()}
+    // Kolízia iba keď hráč dotkne vrchu štvorca/obdĺžnika
+    if(type!=='spike'){
+      if(p.right>o.left+2 && p.left<o.right-2 && p.bottom>o.top && p.bottom<o.top+o.height/2) gameOver();
+    }else{
+      if(p.right>o.left && p.left<o.right && p.bottom>o.top) gameOver();
+    }
+
+    if(x>game.offsetWidth+160){clearInterval(move);clearInterval(colorInterval);obs.remove();}
   },16);
 
   setTimeout(spawn,1200);
@@ -357,4 +410,4 @@ function levelComplete(){
 </script>
 
 </body>
-    </html>
+</html>
