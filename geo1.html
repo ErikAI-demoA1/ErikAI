@@ -100,6 +100,18 @@ input{
     <div id="progressBox"><div id="progress"></div></div>
   </div>
 
+  <!-- SOUND BUTTON + AUDIO -->
+  <button id="soundBtn" style="
+    position:absolute;top:12px;right:16px;
+    padding:6px 10px;background:#5fdfff;color:#000;
+    border:none;border-radius:6px;cursor:pointer;
+    font-weight:bold;">🔇 Sound OFF</button>
+
+  <audio id="tickSound" preload="auto" loop>
+    <source src="zvuk6normal.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+
   <!-- MENU -->
   <div id="menu" class="screen">
     <h1>NEON FLOW</h1>
@@ -154,6 +166,29 @@ const progress=document.getElementById("progress");
 const nameInput=document.getElementById("nameInput");
 const welcome=document.getElementById("welcome");
 const nameUI=document.getElementById("playerName");
+
+// ===== SOUND =====
+const tickSound = document.getElementById("tickSound");
+const soundBtn = document.getElementById("soundBtn");
+let soundOn = false;
+
+soundBtn.addEventListener("click", () => {
+  soundOn = !soundOn;
+  if(soundOn){
+    tickSound.play();
+    soundBtn.textContent = "🔊 Sound ON";
+  } else {
+    tickSound.pause();
+    soundBtn.textContent = "🔇 Sound OFF";
+  }
+});
+
+function stopSound(){
+  tickSound.pause();
+  tickSound.currentTime = 0;
+  soundOn = false;
+  soundBtn.textContent = "🔇 Sound OFF";
+}
 
 // ===== INIT =====
 player.style.background=profile.color;
@@ -274,6 +309,7 @@ function spawn(){
 
 // ===== END =====
 function gameOver(){
+  stopSound(); // zastaví hudbu
   dead=true;
   if(score>profile.bestScore){
     profile.bestScore=score;
@@ -289,6 +325,7 @@ function gameOver(){
 }
 
 function levelComplete(){
+  stopSound(); // zastaví hudbu
   dead=true;
   over.style.display="flex";
   over.innerHTML=`
