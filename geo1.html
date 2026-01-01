@@ -37,17 +37,17 @@ body{
 #player{
   position:absolute;
   width:36px;height:36px;
-  left:130px;bottom:0;
+  left:130px;
+  bottom:0;
   border-radius:6px;
   box-shadow:0 0 12px rgba(255,255,255,.7);
 }
 
-.floor {
+.platform{
   position:absolute;
-  bottom:0;
-  width:100%;
   height:20px;
   background:#1c7c7c;
+  border-radius:6px;
 }
 
 #ui{
@@ -99,7 +99,6 @@ input{
 <body>
 
 <div id="game" class="theme1">
-  <div class="floor"></div>
   <div id="player"></div>
 
   <div id="ui">
@@ -109,19 +108,12 @@ input{
     <div id="progressBox"><div id="progress"></div></div>
   </div>
 
-  <!-- SOUND BUTTON + AUDIO -->
-  <button id="soundBtn" style="
-    position:absolute;top:12px;right:16px;
-    padding:6px 10px;background:#5fdfff;color:#000;
-    border:none;border-radius:6px;cursor:pointer;
-    font-weight:bold;">🔇 Sound OFF</button>
+  <button id="soundBtn" style="position:absolute;top:12px;right:16px;">🔇 Sound OFF</button>
 
   <audio id="tickSound" preload="auto" loop>
     <source src="zvuk6normal.mp3" type="audio/mpeg">
-    Your browser does not support the audio element.
   </audio>
 
-  <!-- MENU -->
   <div id="menu" class="screen">
     <h1>NEON FLOW</h1>
     <input id="nameInput" placeholder="Your name" maxlength="12">
@@ -131,10 +123,8 @@ input{
     <p id="welcome"></p>
   </div>
 
-  <!-- LEVEL SELECT -->
   <div id="levels" class="screen" style="display:none"></div>
 
-  <!-- CUSTOMIZE -->
   <div id="custom" class="screen" style="display:none">
     <h2>Player Color</h2>
     <input type="color" id="colorPick">
@@ -142,20 +132,13 @@ input{
     <button onclick="back()">Back</button>
   </div>
 
-  <!-- GAME OVER -->
   <div id="over" class="screen" style="display:none"></div>
 </div>
 
 <script>
-// ===== PROFILE =====
-let profile = JSON.parse(localStorage.getItem("neonProfile")) || {
-  name:"",
-  color:"#5fdfff",
-  bestScore:0
-};
+let profile=JSON.parse(localStorage.getItem("neonProfile"))||{name:"",color:"#5fdfff",bestScore:0};
 localStorage.setItem("neonProfile",JSON.stringify(profile));
 
-// ===== ELEMENTS =====
 const game=document.getElementById("game");
 const player=document.getElementById("player");
 const scoreEl=document.getElementById("score");
@@ -170,128 +153,74 @@ const nameInput=document.getElementById("nameInput");
 const welcome=document.getElementById("welcome");
 const nameUI=document.getElementById("playerName");
 
-// ===== SOUND =====
-const tickSound = document.getElementById("tickSound");
-const soundBtn = document.getElementById("soundBtn");
-let soundOn = false;
-
-soundBtn.addEventListener("click", () => {
-  soundOn = !soundOn;
-  if(soundOn){
-    tickSound.play();
-    soundBtn.textContent = "🔊 Sound ON";
-  } else {
-    tickSound.pause();
-    soundBtn.textContent = "🔇 Sound OFF";
-  }
-});
-
-function stopSound(){
-  tickSound.pause();
-  tickSound.currentTime = 0;
-  soundOn = false;
-  soundBtn.textContent = "🔇 Sound OFF";
-}
-
-// ===== INIT =====
 player.style.background=profile.color;
 picker.value=profile.color;
 nameInput.value=profile.name;
 nameUI.textContent=profile.name||"---";
-if(profile.name)welcome.innerText="Welcome back, "+profile.name;
+if(profile.name)welcome.textContent="Welcome back, "+profile.name;
 
-// ===== MENU =====
-function showLevels(){
-  menu.style.display="none";
-  levels.style.display="flex";
-}
-
-// Dynamicky generovanie levelov 1-10
-levels.innerHTML = "<h2>Select Level</h2>";
+levels.innerHTML="<h2>Select Level</h2>";
 for(let i=1;i<=10;i++){
-  const btn = document.createElement("button");
-  btn.textContent = "Level " + i;
-  btn.onclick = ()=>startLevel(i);
-  levels.appendChild(btn);
+  let b=document.createElement("button");
+  b.textContent="Level "+i;
+  b.onclick=()=>startLevel(i);
+  levels.appendChild(b);
 }
-levels.innerHTML += '<button onclick="back()">Back</button>';
+levels.innerHTML+='<button onclick="back()">Back</button>';
 
+function showLevels(){menu.style.display="none";levels.style.display="flex"}
 function showCustomize(){menu.style.display="none";custom.style.display="flex"}
 function back(){menu.style.display="flex";levels.style.display="none";custom.style.display="none"}
 
-// ===== SAVE =====
-nameInput.onchange=()=>{
-  profile.name=nameInput.value.trim();
-  localStorage.setItem("neonProfile",JSON.stringify(profile));
-  welcome.innerText="Welcome, "+profile.name;
-  nameUI.textContent=profile.name;
-};
-
-function saveColor(){
-  profile.color=picker.value;
-  player.style.background=picker.value;
-  localStorage.setItem("neonProfile",JSON.stringify(profile));
-}
-
-// ===== GAME VARS =====
-let y=0,vel=0,gravity=1800,jump=640;
+let y=0,vel=0,onGround=false;
+let gravity=1800,jump=640;
 let speed=300,score=0,level=1;
 let last=null,dead=false,mode="endless",goal=0;
 let diffTimer=0;
-const themes=["theme1","theme2","theme3","theme4"];
-let theme=0;
 
-// ===== START =====
-function startEndless(){ startGame("endless",1); }
-function startLevel(lvl){ startGame("level",lvl); }
-
-function startGame(m,lvl){
-  menu.style.display=levels.style.display=custom.style.display="none";
-  mode=m;
-  level=lvl;
-  speed=300+lvl*50;
-  goal=lvl*3000+4000;
-  score=0;y=0;vel=0;dead=false;last=null;
-
-  // Prvých pár sekúnd je bezpečné poschodie
-  spawnSafePlatform();
-
-  setTimeout(spawn,1800);
-  requestAnimationFrame(loop);
-  setInterval(()=>game.className=themes[++theme%themes.length],8000);
-}
-
-// ===== SAFE PLATFORM na začiatku =====
-function spawnSafePlatform(){
-  const safe = document.createElement("div");
-  safe.classList.add("obstacle","block");
-  safe.style.bottom="20px";
-  safe.style.right="-50px";
-  safe.style.width="60px";
-  safe.style.height="20px";
-  game.appendChild(safe);
-  let x=-50;
-  const move=setInterval(()=>{
-    if(dead){clearInterval(move);safe.remove();return;}
+function spawnPlatform(w=220,yPos=0){
+  const p=document.createElement("div");
+  p.className="platform";
+  p.style.width=w+"px";
+  p.style.bottom=yPos+"px";
+  p.style.right="-"+w+"px";
+  game.appendChild(p);
+  let x=-w;
+  const m=setInterval(()=>{
+    if(dead){clearInterval(m);p.remove();return;}
     x+=speed/60;
-    safe.style.right=x+"px";
-    if(x>game.offsetWidth+60){clearInterval(move);safe.remove();}
+    p.style.right=x+"px";
+    if(x>game.offsetWidth+w){clearInterval(m);p.remove();}
   },16);
 }
 
-// ===== INPUT =====
+function startEndless(){startGame("endless",1)}
+function startLevel(l){startGame("level",l)}
+
+function startGame(m,l){
+  menu.style.display=levels.style.display=custom.style.display="none";
+  mode=m;level=l;
+  speed=300+l*50;
+  goal=l*3000+4000;
+  score=0;y=0;vel=0;dead=false;last=null;
+
+  document.querySelectorAll(".platform,.obstacle").forEach(e=>e.remove());
+
+  for(let i=0;i<6;i++) setTimeout(()=>spawnPlatform(),i*600);
+  setTimeout(spawn,3000);
+  requestAnimationFrame(loop);
+}
+
 document.addEventListener("keydown",e=>{if(e.code==="Space")jumpPlayer()});
 game.addEventListener("click",jumpPlayer);
-game.addEventListener("touchstart",jumpPlayer);
 
 function jumpPlayer(){
-  if(y===0&&!dead){
+  if(onGround&&!dead){
     vel=jump;
-    if(navigator.vibrate)navigator.vibrate(12);
+    onGround=false;
   }
 }
 
-// ===== LOOP =====
 function loop(t){
   if(dead)return;
   if(!last)last=t;
@@ -299,21 +228,24 @@ function loop(t){
 
   vel-=gravity*dt;
   y+=vel*dt;
-  if(y<0){y=0;vel=0}
+  onGround=false;
 
+  document.querySelectorAll(".platform").forEach(p=>{
+    const pr=p.getBoundingClientRect();
+    const pl=player.getBoundingClientRect();
+    if(pl.bottom<=pr.top+12&&pl.bottom>=pr.top-12&&pl.right>pr.left+6&&pl.left<pr.right-6&&vel<=0){
+      y=game.clientHeight-pr.top-36;
+      vel=0;onGround=true;
+    }
+  });
+
+  if(y<0){y=0;vel=0;onGround=true}
   player.style.bottom=y+"px";
-  player.style.transform=`rotate(${y*1.2}deg)`;
 
   score+=Math.floor(dt*120);
   scoreEl.textContent=score;
-
-  diffTimer+=dt;
-  if(mode==="endless"&&diffTimer>6){
-    level++;speed+=30;diffTimer=0;
-  }
-
   if(mode==="level"){
-    progress.style.width=Math.min(100,(score/goal)*100)+"%";
+    progress.style.width=Math.min(100,score/goal*100)+"%";
     if(score>=goal)return levelComplete();
   }
 
@@ -321,58 +253,32 @@ function loop(t){
   requestAnimationFrame(loop);
 }
 
-// ===== OBSTACLES =====
 function spawn(){
   if(dead)return;
-  const obs=document.createElement("div");
-  obs.classList.add("obstacle");
-
-  const types = level < 3 ? ["spike","block"] :
-                level < 6 ? ["spike","block","tall"] :
-                ["spike","block","tall","double"];
-  obs.classList.add(types[Math.floor(Math.random()*types.length)]);
-  game.appendChild(obs);
-
+  const o=document.createElement("div");
+  o.className="obstacle spike";
+  game.appendChild(o);
   let x=-140;
-  const move=setInterval(()=>{
-    if(dead){clearInterval(move);obs.remove();return;}
-    x+=speed/60;obs.style.right=x+"px";
-
-    const o = obs.getBoundingClientRect();
-    const p = player.getBoundingClientRect();
-    if(p.right-4 > o.left && p.left+4 < o.right && p.bottom > o.top+6) gameOver();
-    if(x>game.offsetWidth+160){clearInterval(move);obs.remove();}
+  const m=setInterval(()=>{
+    if(dead){clearInterval(m);o.remove();return;}
+    x+=speed/60;o.style.right=x+"px";
+    const a=o.getBoundingClientRect(),b=player.getBoundingClientRect();
+    if(b.right>a.left&&b.left<a.right&&b.bottom>a.top+6)gameOver();
+    if(x>game.offsetWidth+160){clearInterval(m);o.remove();}
   },16);
-
-  setTimeout(spawn,1300 - Math.min(level*50,800));
+  setTimeout(spawn,1200);
 }
 
-// ===== END =====
 function gameOver(){
-  stopSound();
   dead=true;
-  if(score>profile.bestScore){
-    profile.bestScore=score;
-    localStorage.setItem("neonProfile",JSON.stringify(profile));
-  }
   over.style.display="flex";
-  over.innerHTML=`
-    💀 GAME OVER 💀<br>
-    Score: ${score}<br>
-    Best: ${profile.bestScore}<br>
-    <button onclick="location.reload()">Menu</button>
-  `;
+  over.innerHTML=`💀 GAME OVER<br>Score:${score}<br><button onclick="location.reload()">Menu</button>`;
 }
 
 function levelComplete(){
-  stopSound();
   dead=true;
   over.style.display="flex";
-  over.innerHTML=`
-    ✅ LEVEL COMPLETE<br>
-    Score: ${score}<br>
-    <button onclick="location.reload()">Menu</button>
-  `;
+  over.innerHTML=`✅ LEVEL COMPLETE<br><button onclick="location.reload()">Menu</button>`;
 }
 </script>
 
