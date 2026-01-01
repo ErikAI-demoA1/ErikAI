@@ -42,6 +42,14 @@ body{
   box-shadow:0 0 12px rgba(255,255,255,.7);
 }
 
+.floor {
+  position:absolute;
+  bottom:0;
+  width:100%;
+  height:20px;
+  background:#1c7c7c;
+}
+
 #ui{
   position:absolute;
   top:12px;left:16px;
@@ -91,6 +99,7 @@ input{
 <body>
 
 <div id="game" class="theme1">
+  <div class="floor"></div>
   <div id="player"></div>
 
   <div id="ui">
@@ -123,13 +132,7 @@ input{
   </div>
 
   <!-- LEVEL SELECT -->
-  <div id="levels" class="screen" style="display:none">
-    <h2>Select Level</h2>
-    <button onclick="startLevel(1)">Level 1</button>
-    <button onclick="startLevel(3)">Level 3</button>
-    <button onclick="startLevel(5)">Level 5</button>
-    <button onclick="back()">Back</button>
-  </div>
+  <div id="levels" class="screen" style="display:none"></div>
 
   <!-- CUSTOMIZE -->
   <div id="custom" class="screen" style="display:none">
@@ -198,7 +201,21 @@ nameUI.textContent=profile.name||"---";
 if(profile.name)welcome.innerText="Welcome back, "+profile.name;
 
 // ===== MENU =====
-function showLevels(){menu.style.display="none";levels.style.display="flex"}
+function showLevels(){
+  menu.style.display="none";
+  levels.style.display="flex";
+}
+
+// Dynamicky generovanie levelov 1-10
+levels.innerHTML = "<h2>Select Level</h2>";
+for(let i=1;i<=10;i++){
+  const btn = document.createElement("button");
+  btn.textContent = "Level " + i;
+  btn.onclick = ()=>startLevel(i);
+  levels.appendChild(btn);
+}
+levels.innerHTML += '<button onclick="back()">Back</button>';
+
 function showCustomize(){menu.style.display="none";custom.style.display="flex"}
 function back(){menu.style.display="flex";levels.style.display="none";custom.style.display="none"}
 
@@ -225,12 +242,9 @@ const themes=["theme1","theme2","theme3","theme4"];
 let theme=0;
 
 // ===== START =====
-function startEndless(){
-  startGame("endless",1);
-}
-function startLevel(lvl){
-  startGame("level",lvl);
-}
+function startEndless(){ startGame("endless",1); }
+function startLevel(lvl){ startGame("level",lvl); }
+
 function startGame(m,lvl){
   menu.style.display=levels.style.display=custom.style.display="none";
   mode=m;
@@ -238,9 +252,31 @@ function startGame(m,lvl){
   speed=300+lvl*50;
   goal=lvl*3000+4000;
   score=0;y=0;vel=0;dead=false;last=null;
+
+  // Prvých pár sekúnd je bezpečné poschodie
+  spawnSafePlatform();
+
   setTimeout(spawn,1800);
   requestAnimationFrame(loop);
   setInterval(()=>game.className=themes[++theme%themes.length],8000);
+}
+
+// ===== SAFE PLATFORM na začiatku =====
+function spawnSafePlatform(){
+  const safe = document.createElement("div");
+  safe.classList.add("obstacle","block");
+  safe.style.bottom="20px";
+  safe.style.right="-50px";
+  safe.style.width="60px";
+  safe.style.height="20px";
+  game.appendChild(safe);
+  let x=-50;
+  const move=setInterval(()=>{
+    if(dead){clearInterval(move);safe.remove();return;}
+    x+=speed/60;
+    safe.style.right=x+"px";
+    if(x>game.offsetWidth+60){clearInterval(move);safe.remove();}
+  },16);
 }
 
 // ===== INPUT =====
@@ -290,26 +326,30 @@ function spawn(){
   if(dead)return;
   const obs=document.createElement("div");
   obs.classList.add("obstacle");
-  const types=level<3?["spike","block"]:level<6?["spike","block","tall"]:["spike","block","tall","double"];
-  obs.classList.add(types[Math.random()*types.length|0]);
+
+  const types = level < 3 ? ["spike","block"] :
+                level < 6 ? ["spike","block","tall"] :
+                ["spike","block","tall","double"];
+  obs.classList.add(types[Math.floor(Math.random()*types.length)]);
   game.appendChild(obs);
 
   let x=-140;
   const move=setInterval(()=>{
-    if(dead){clearInterval(move);obs.remove();return}
+    if(dead){clearInterval(move);obs.remove();return;}
     x+=speed/60;obs.style.right=x+"px";
 
-    const o=obs.getBoundingClientRect(),p=player.getBoundingClientRect();
-    if(p.right-4>o.left&&p.left+4<o.right&&p.bottom>o.top+6) gameOver();
-    if(x>game.offsetWidth+160){clearInterval(move);obs.remove()}
+    const o = obs.getBoundingClientRect();
+    const p = player.getBoundingClientRect();
+    if(p.right-4 > o.left && p.left+4 < o.right && p.bottom > o.top+6) gameOver();
+    if(x>game.offsetWidth+160){clearInterval(move);obs.remove();}
   },16);
 
-  setTimeout(spawn,1300);
+  setTimeout(spawn,1300 - Math.min(level*50,800));
 }
 
 // ===== END =====
 function gameOver(){
-  stopSound(); // zastaví hudbu
+  stopSound();
   dead=true;
   if(score>profile.bestScore){
     profile.bestScore=score;
@@ -325,7 +365,7 @@ function gameOver(){
 }
 
 function levelComplete(){
-  stopSound(); // zastaví hudbu
+  stopSound();
   dead=true;
   over.style.display="flex";
   over.innerHTML=`
@@ -337,4 +377,4 @@ function levelComplete(){
 </script>
 
 </body>
-</html>
+  </html>
