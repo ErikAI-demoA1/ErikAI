@@ -29,27 +29,31 @@ body{
   transition:background 4s linear;
 }
 
+/* THEMES */
 .theme1{background:linear-gradient(#0f2027,#203a43)}
 .theme2{background:linear-gradient(#141e30,#243b55)}
 .theme3{background:linear-gradient(#134e5e,#1c7c7c)}
 .theme4{background:linear-gradient(#232526,#414345)}
 
+/* PLAYER */
 #player{
   position:absolute;
   width:36px;height:36px;
-  left:130px;
-  bottom:0;
+  left:130px;bottom:20px;
   border-radius:6px;
   box-shadow:0 0 12px rgba(255,255,255,.7);
 }
 
-.platform{
+/* FLOOR */
+.floor{
   position:absolute;
+  bottom:0;
   height:20px;
-  background:#1c7c7c;
-  border-radius:6px;
+  width:200%;
+  background:linear-gradient(90deg,#1c7c7c,#5fdfff,#1c7c7c);
 }
 
+/* UI */
 #ui{
   position:absolute;
   top:12px;left:16px;
@@ -66,6 +70,7 @@ body{
   background:#5fdfff;border-radius:4px
 }
 
+/* SCREENS */
 .screen{
   position:absolute;inset:0;
   display:flex;
@@ -88,7 +93,19 @@ input{
   border-radius:6px;border:none;
 }
 
-.obstacle{position:absolute;bottom:0;right:-140px}
+/* LEVEL SCROLL */
+#levels{
+  overflow-y:auto;
+  max-height:85%;
+  padding-bottom:20px;
+}
+#levels::-webkit-scrollbar{width:6px}
+#levels::-webkit-scrollbar-thumb{
+  background:#5fdfff;border-radius:4px
+}
+
+/* OBSTACLES */
+.obstacle{position:absolute;bottom:20px;right:-140px}
 .spike{width:26px;height:40px;background:#ff6b6b;clip-path:polygon(50% 0%,0% 100%,100% 100%)}
 .block{width:28px;height:28px;background:#ff9f43;border-radius:6px}
 .tall{width:28px;height:52px;background:#ffa502;border-radius:6px}
@@ -99,6 +116,7 @@ input{
 <body>
 
 <div id="game" class="theme1">
+  <div class="floor" id="floor"></div>
   <div id="player"></div>
 
   <div id="ui">
@@ -108,12 +126,13 @@ input{
     <div id="progressBox"><div id="progress"></div></div>
   </div>
 
-  <button id="soundBtn" style="position:absolute;top:12px;right:16px;">🔇 Sound OFF</button>
+  <button id="soundBtn" style="position:absolute;top:12px;right:16px">🔇 Sound OFF</button>
 
   <audio id="tickSound" preload="auto" loop>
     <source src="zvuk6normal.mp3" type="audio/mpeg">
   </audio>
 
+  <!-- MENU -->
   <div id="menu" class="screen">
     <h1>NEON FLOW</h1>
     <input id="nameInput" placeholder="Your name" maxlength="12">
@@ -123,8 +142,14 @@ input{
     <p id="welcome"></p>
   </div>
 
-  <div id="levels" class="screen" style="display:none"></div>
+  <!-- LEVELS -->
+  <div id="levels" class="screen" style="display:none">
+    <h2>Select Level</h2>
+    <div id="levelButtons"></div>
+    <button onclick="back()">Back</button>
+  </div>
 
+  <!-- CUSTOM -->
   <div id="custom" class="screen" style="display:none">
     <h2>Player Color</h2>
     <input type="color" id="colorPick">
@@ -136,11 +161,14 @@ input{
 </div>
 
 <script>
+/* PROFILE */
 let profile=JSON.parse(localStorage.getItem("neonProfile"))||{name:"",color:"#5fdfff",bestScore:0};
 localStorage.setItem("neonProfile",JSON.stringify(profile));
 
+/* ELEMENTS */
 const game=document.getElementById("game");
 const player=document.getElementById("player");
+const floor=document.getElementById("floor");
 const scoreEl=document.getElementById("score");
 const lvlEl=document.getElementById("lvl");
 const menu=document.getElementById("menu");
@@ -152,135 +180,134 @@ const progress=document.getElementById("progress");
 const nameInput=document.getElementById("nameInput");
 const welcome=document.getElementById("welcome");
 const nameUI=document.getElementById("playerName");
+const levelButtons=document.getElementById("levelButtons");
 
+/* SOUND */
+const tickSound=document.getElementById("tickSound");
+const soundBtn=document.getElementById("soundBtn");
+let soundOn=false;
+soundBtn.onclick=()=>{
+  soundOn=!soundOn;
+  soundOn?(tickSound.play(),soundBtn.textContent="🔊 Sound ON")
+         :(tickSound.pause(),soundBtn.textContent="🔇 Sound OFF");
+};
+function stopSound(){tickSound.pause();tickSound.currentTime=0;soundOn=false;soundBtn.textContent="🔇 Sound OFF"}
+
+/* INIT */
 player.style.background=profile.color;
 picker.value=profile.color;
 nameInput.value=profile.name;
 nameUI.textContent=profile.name||"---";
 if(profile.name)welcome.textContent="Welcome back, "+profile.name;
 
-levels.innerHTML="<h2>Select Level</h2>";
-for(let i=1;i<=10;i++){
-  let b=document.createElement("button");
-  b.textContent="Level "+i;
-  b.onclick=()=>startLevel(i);
-  levels.appendChild(b);
-}
-levels.innerHTML+='<button onclick="back()">Back</button>';
-
+/* MENU */
 function showLevels(){menu.style.display="none";levels.style.display="flex"}
 function showCustomize(){menu.style.display="none";custom.style.display="flex"}
 function back(){menu.style.display="flex";levels.style.display="none";custom.style.display="none"}
 
-let y=0,vel=0,onGround=false;
-let gravity=1800,jump=640;
-let speed=300,score=0,level=1;
-let last=null,dead=false,mode="endless",goal=0;
-let diffTimer=0;
-
-function spawnPlatform(w=220,yPos=0){
-  const p=document.createElement("div");
-  p.className="platform";
-  p.style.width=w+"px";
-  p.style.bottom=yPos+"px";
-  p.style.right="-"+w+"px";
-  game.appendChild(p);
-  let x=-w;
-  const m=setInterval(()=>{
-    if(dead){clearInterval(m);p.remove();return;}
-    x+=speed/60;
-    p.style.right=x+"px";
-    if(x>game.offsetWidth+w){clearInterval(m);p.remove();}
-  },16);
+/* SAVE */
+nameInput.onchange=()=>{
+  profile.name=nameInput.value.trim();
+  localStorage.setItem("neonProfile",JSON.stringify(profile));
+  welcome.textContent="Welcome, "+profile.name;
+  nameUI.textContent=profile.name;
+};
+function saveColor(){
+  profile.color=picker.value;
+  player.style.background=picker.value;
+  localStorage.setItem("neonProfile",JSON.stringify(profile));
 }
 
+/* LEVEL BUTTONS */
+for(let i=1;i<=10;i++){
+  const b=document.createElement("button");
+  b.textContent="Level "+i;
+  b.onclick=()=>startLevel(i);
+  levelButtons.appendChild(b);
+}
+
+/* GAME VARS */
+let y=0,vel=0,gravity=1800,jump=640;
+let speed=300,score=0,level=1,last=null,dead=false,mode="endless",goal=0;
+const themes=["theme1","theme2","theme3","theme4"];
+let theme=0,floorX=0;
+
+/* START */
 function startEndless(){startGame("endless",1)}
-function startLevel(l){startGame("level",l)}
-
-function startGame(m,l){
+function startLevel(lvl){startGame("level",lvl)}
+function startGame(m,lvl){
   menu.style.display=levels.style.display=custom.style.display="none";
-  mode=m;level=l;
-  speed=300+l*50;
-  goal=l*3000+4000;
-  score=0;y=0;vel=0;dead=false;last=null;
-
-  document.querySelectorAll(".platform,.obstacle").forEach(e=>e.remove());
-
-  for(let i=0;i<6;i++) setTimeout(()=>spawnPlatform(),i*600);
-  setTimeout(spawn,3000);
+  mode=m;level=lvl;speed=300+lvl*50;goal=lvl*3000+4000;
+  score=0;y=0;vel=0;dead=false;last=null;floorX=0;
+  setTimeout(spawn,1500);
   requestAnimationFrame(loop);
+  setInterval(()=>game.className=themes[++theme%themes.length],8000);
 }
 
-document.addEventListener("keydown",e=>{if(e.code==="Space")jumpPlayer()});
+/* INPUT */
+document.addEventListener("keydown",e=>e.code==="Space"&&jumpPlayer());
 game.addEventListener("click",jumpPlayer);
+function jumpPlayer(){if(y===0&&!dead)vel=jump}
 
-function jumpPlayer(){
-  if(onGround&&!dead){
-    vel=jump;
-    onGround=false;
-  }
-}
-
+/* LOOP */
 function loop(t){
   if(dead)return;
   if(!last)last=t;
   let dt=(t-last)/1000;last=t;
 
-  vel-=gravity*dt;
-  y+=vel*dt;
-  onGround=false;
+  vel-=gravity*dt;y+=vel*dt;
+  if(y<0){y=0;vel=0}
 
-  document.querySelectorAll(".platform").forEach(p=>{
-    const pr=p.getBoundingClientRect();
-    const pl=player.getBoundingClientRect();
-    if(pl.bottom<=pr.top+12&&pl.bottom>=pr.top-12&&pl.right>pr.left+6&&pl.left<pr.right-6&&vel<=0){
-      y=game.clientHeight-pr.top-36;
-      vel=0;onGround=true;
-    }
-  });
-
-  if(y<0){y=0;vel=0;onGround=true}
-  player.style.bottom=y+"px";
+  player.style.bottom=(y+20)+"px";
+  floorX-=speed*dt;
+  floor.style.transform=`translateX(${floorX}px)`;
+  if(floorX<-game.offsetWidth)floorX=0;
 
   score+=Math.floor(dt*120);
   scoreEl.textContent=score;
+  lvlEl.textContent=level;
+
   if(mode==="level"){
-    progress.style.width=Math.min(100,score/goal*100)+"%";
+    progress.style.width=Math.min(100,(score/goal)*100)+"%";
     if(score>=goal)return levelComplete();
   }
 
-  lvlEl.textContent=level;
   requestAnimationFrame(loop);
 }
 
+/* OBSTACLES */
 function spawn(){
   if(dead)return;
-  const o=document.createElement("div");
-  o.className="obstacle spike";
-  game.appendChild(o);
+  const obs=document.createElement("div");
+  const types=level<3?["spike","block"]:level<6?["spike","block","tall"]:["spike","block","tall","double"];
+  obs.className="obstacle "+types[Math.random()*types.length|0];
+  game.appendChild(obs);
+
   let x=-140;
-  const m=setInterval(()=>{
-    if(dead){clearInterval(m);o.remove();return;}
-    x+=speed/60;o.style.right=x+"px";
-    const a=o.getBoundingClientRect(),b=player.getBoundingClientRect();
-    if(b.right>a.left&&b.left<a.right&&b.bottom>a.top+6)gameOver();
-    if(x>game.offsetWidth+160){clearInterval(m);o.remove();}
+  const move=setInterval(()=>{
+    if(dead){clearInterval(move);obs.remove();return}
+    x+=speed/60;obs.style.right=x+"px";
+    const o=obs.getBoundingClientRect(),p=player.getBoundingClientRect();
+    if(p.right>o.left&&p.left<o.right&&p.bottom>o.top)gameOver();
+    if(x>game.offsetWidth+160){clearInterval(move);obs.remove()}
   },16);
+
   setTimeout(spawn,1200);
 }
 
+/* END */
 function gameOver(){
-  dead=true;
+  stopSound();dead=true;
+  if(score>profile.bestScore){profile.bestScore=score;localStorage.setItem("neonProfile",JSON.stringify(profile))}
   over.style.display="flex";
-  over.innerHTML=`💀 GAME OVER<br>Score:${score}<br><button onclick="location.reload()">Menu</button>`;
+  over.innerHTML=`💀 GAME OVER<br>Score: ${score}<br>Best: ${profile.bestScore}<br><button onclick="location.reload()">Menu</button>`;
 }
-
 function levelComplete(){
-  dead=true;
+  stopSound();dead=true;
   over.style.display="flex";
-  over.innerHTML=`✅ LEVEL COMPLETE<br><button onclick="location.reload()">Menu</button>`;
+  over.innerHTML=`✅ LEVEL COMPLETE<br>Score: ${score}<br><button onclick="location.reload()">Menu</button>`;
 }
 </script>
 
 </body>
-  </html>
+             </html>
