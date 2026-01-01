@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Textový Prekladač a Stiahnutie</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #121212;
+    color: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  h1 { margin-bottom: 20px; }
+  textarea {
+    width: 90%;
+    max-width: 600px;
+    height: 120px;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 16px;
+    resize: vertical;
+  }
+  select, button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  button { background: #5fdfff; color: #000; font-weight: bold; }
+  select { background: #333; color: #f0f0f0; }
+  #status { margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<h1>Textový Prekladač a Stiahnutie</h1>
+
+<textarea id="inputText" placeholder="Napíš svoj text sem..."></textarea>
+
+<select id="language">
+  <option value="sk">Slovenčina</option>
+  <option value="cs">Čeština</option>
+  <option value="pl">Poľština</option>
+</select>
+
+<button id="translateBtn">Preložiť a Stiahnuť</button>
+
+<div id="status"></div>
+
+<script>
+const inputText = document.getElementById('inputText');
+const language = document.getElementById('language');
+const status = document.getElementById('status');
+const translateBtn = document.getElementById('translateBtn');
+
+// Tu vlož svoj Google Translate API kľúč
+const API_KEY = 'TU_VLOŽ_VOJV_KĽÚČ'; 
+
+translateBtn.addEventListener('click', async () => {
+  const text = inputText.value.trim();
+  if(!text) {
+    alert('Napíš text, ktorý chceš preložiť!');
+    return;
+  }
+
+  const targetLang = language.value;
+
+  status.textContent = 'Prekladám...';
+
+  try {
+    const url = `https://translation.googleapis.com/language/translate/v2?key=${API_KEY}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        q: text,
+        target: targetLang
+      }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+    if(data.error) {
+      status.textContent = 'Chyba pri preklade: ' + data.error.message;
+      return;
+    }
+
+    const translatedText = data.data.translations[0].translatedText;
+
+    // Vytvorenie súboru na stiahnutie
+    const blob = new Blob([translatedText], {type: 'text/plain;charset=utf-8'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `prelozeny_text_${targetLang}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    status.textContent = 'Hotovo! Súbor stiahnutý.';
+  } catch (err) {
+    console.error(err);
+    status.textContent = 'Chyba pri preklade alebo sieti.';
+  }
+});
+</script>
+
+</body>
+</html>
