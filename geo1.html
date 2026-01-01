@@ -39,7 +39,8 @@ body{
 #player{
   position:absolute;
   width:36px;height:36px;
-  left:130px;bottom:20px;
+  left:130px;
+  bottom:20px;
   border-radius:6px;
   box-shadow:0 0 12px rgba(255,255,255,.7);
 }
@@ -51,6 +52,16 @@ body{
   height:20px;
   width:200%;
   background:linear-gradient(90deg,#1c7c7c,#5fdfff,#1c7c7c);
+}
+
+/* MOTION TRAIL */
+.trail{
+  position:absolute;
+  width:14px;
+  height:4px;
+  background:rgba(255,255,255,.6);
+  border-radius:4px;
+  pointer-events:none;
 }
 
 /* UI */
@@ -232,13 +243,17 @@ let speed=300,score=0,level=1,last=null,dead=false,mode="endless",goal=0;
 const themes=["theme1","theme2","theme3","theme4"];
 let theme=0,floorX=0;
 
+/* ROTATION */
+let rot=0;
+let rotSpeed=0;
+
 /* START */
 function startEndless(){startGame("endless",1)}
 function startLevel(lvl){startGame("level",lvl)}
 function startGame(m,lvl){
   menu.style.display=levels.style.display=custom.style.display="none";
   mode=m;level=lvl;speed=300+lvl*50;goal=lvl*3000+4000;
-  score=0;y=0;vel=0;dead=false;last=null;floorX=0;
+  score=0;y=0;vel=0;dead=false;last=null;floorX=0;rot=0;
   setTimeout(spawn,1500);
   requestAnimationFrame(loop);
   setInterval(()=>game.className=themes[++theme%themes.length],8000);
@@ -247,7 +262,29 @@ function startGame(m,lvl){
 /* INPUT */
 document.addEventListener("keydown",e=>e.code==="Space"&&jumpPlayer());
 game.addEventListener("click",jumpPlayer);
-function jumpPlayer(){if(y===0&&!dead)vel=jump}
+function jumpPlayer(){
+  if(y===0&&!dead){
+    vel=jump;
+    rotSpeed=900;
+  }
+}
+
+/* TRAIL */
+function spawnTrail(){
+  if(dead)return;
+  const t=document.createElement("div");
+  t.className="trail";
+  t.style.left=(player.offsetLeft-16)+"px";
+  t.style.bottom=(player.offsetTop+26)+"px";
+  game.appendChild(t);
+  let life=1;
+  const fade=setInterval(()=>{
+    life-=0.1;
+    t.style.opacity=life;
+    t.style.transform="translateX(-12px)";
+    if(life<=0){clearInterval(fade);t.remove();}
+  },16);
+}
 
 /* LOOP */
 function loop(t){
@@ -258,10 +295,17 @@ function loop(t){
   vel-=gravity*dt;y+=vel*dt;
   if(y<0){y=0;vel=0}
 
+  rot+=rotSpeed*dt;
+  rotSpeed*=0.98;
+  player.style.transform=`rotate(${rot}deg)`;
+
   player.style.bottom=(y+20)+"px";
+
   floorX-=speed*dt;
   floor.style.transform=`translateX(${floorX}px)`;
   if(floorX<-game.offsetWidth)floorX=0;
+
+  if(y>0)spawnTrail();
 
   score+=Math.floor(dt*120);
   scoreEl.textContent=score;
@@ -298,7 +342,10 @@ function spawn(){
 /* END */
 function gameOver(){
   stopSound();dead=true;
-  if(score>profile.bestScore){profile.bestScore=score;localStorage.setItem("neonProfile",JSON.stringify(profile))}
+  if(score>profile.bestScore){
+    profile.bestScore=score;
+    localStorage.setItem("neonProfile",JSON.stringify(profile))
+  }
   over.style.display="flex";
   over.innerHTML=`💀 GAME OVER<br>Score: ${score}<br>Best: ${profile.bestScore}<br><button onclick="location.reload()">Menu</button>`;
 }
@@ -310,4 +357,4 @@ function levelComplete(){
 </script>
 
 </body>
-             </html>
+  </html>
