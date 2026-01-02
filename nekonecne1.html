@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Nekonečné vety</title>
+<title>Nekonečné vety - Rýchle</title>
 <style>
   body{
     margin:0;
@@ -52,28 +52,27 @@
 
 <div id="number">0</div>
 <div id="words"></div>
-<button id="startBtn">Štart</button>
+<button id="startBtn">Štart / Pokračuj</button>
 
 <script>
 const numberEl = document.getElementById('number');
 const wordsEl = document.getElementById('words');
 
 let value = parseInt(localStorage.getItem('lastValue') || '0');
-let interval = 1000;   // počiatočný interval 1 sekunda
-const speedUp = 5;     // zrýchlenie v milisekundách (0.005 sekúnd = 5 ms)
-let running = false;
 let words = localStorage.getItem('words') || '';
+let running = false;
 
-// Rozšírený zoznam znakov: latinka, diakritika, čísla, kórejské znaky, japonské znaky, symboly
+// Rozšírený zoznam znakov: latinka, diakritika, čísla, kórejské znaky, japonské znaky, gréčtina, symboly
 function getRandomLetter(){
   const letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZáéíóúäčďľňôŕšťžÁÉÍÓÚÄČĎĽŇÔŔŠŤŽ0123456789 ' +
-                  'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ' + // Kórejské
+                  'ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ' + // Kórejčina
                   'あいうえおかきくけこさしすせそたちつてとなにぬねの' + // Japončina
                   'αβγδεζηθικλμνξοπρστυφχψω' + // Gréčtina
                   '☀☁☂☃★☆☽☾♠♣♥♦♪♫⚡✔✖☯☮'; // Symboly
   return letters.charAt(Math.floor(Math.random() * letters.length));
 }
 
+// Hlavný krok
 function step(){
   if(!running) return;
 
@@ -83,7 +82,7 @@ function step(){
   numberEl.style.color = `hsl(${Math.random()*360},70%,60%)`;
   localStorage.setItem('lastValue', value);
 
-  // pridaj písmená podľa hodnoty čísla
+  // pridaj písmená
   const lettersToAdd = Math.floor(Math.log10(value+1)) + 1;
   for(let i=0;i<lettersToAdd;i++){
     words += getRandomLetter();
@@ -103,12 +102,11 @@ function step(){
 
   localStorage.setItem('words', words);
 
-  // presné zrýchlenie o 0,005 sekúnd = 5 ms
-  interval = Math.max(5, interval - speedUp);
-
-  setTimeout(step, interval);
+  // max rýchly a plynulý krok
+  requestAnimationFrame(step);
 }
 
+// Štart / Pokračuj
 document.getElementById('startBtn').addEventListener('click', ()=>{
   if(!running){
     running = true;
@@ -116,7 +114,7 @@ document.getElementById('startBtn').addEventListener('click', ()=>{
   }
 });
 
-// načítanie z uloženia pri štarte
+// načítanie uložených hodnôt
 numberEl.textContent = value;
 wordsEl.textContent = words;
 </script>
