@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎮 TapRace - Klikni Rýchlo!</title>
 <style>
-  /* --- Základné nastavenie --- */
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Arial', sans-serif;
@@ -157,7 +156,7 @@
   </div>
 
   <div class="winner" id="winner"></div>
-  <button class="reset-btn" onclick="resetGame()">🔄 Reset</button>
+  <button class="reset-btn" id="resetBtn">🔄 Reset</button>
 </div>
 
 <script>
@@ -173,22 +172,29 @@ const gameEl = document.getElementById('game');
 const soloModeEl = document.getElementById('solo-mode');
 const mode1v1El = document.getElementById('1v1-mode');
 const winnerEl = document.getElementById('winner');
+const resetBtn = document.getElementById('resetBtn');
 
+// --- Funkcia štartu ---
 function startGame(selectedMode){
   mode = selectedMode;
   gameEl.style.display = 'flex';
   winnerEl.innerText = '';
+  
   soloModeEl.style.display = (mode==='solo') ? 'flex' : 'none';
   mode1v1El.style.display = (mode==='1v1') ? 'flex' : 'none';
-  soloScore = 0; p1Score=0; p2Score=0;
-  document.getElementById('solo-score').innerText = soloScore;
-  document.getElementById('p1-score').innerText = p1Score;
-  document.getElementById('p2-score').innerText = p2Score;
+  
+  resetScores();
   time = 10;
   timerEl.innerText = `Čas: ${time}s`;
+  
+  // Povoliť klikacie tlačidlá
+  enableButtons(true);
+
+  clearInterval(timerInterval);
   timerInterval = setInterval(countDown, 1000);
 }
 
+// --- Odpočítavanie ---
 function countDown(){
   time--;
   timerEl.innerText = `Čas: ${time}s`;
@@ -198,17 +204,25 @@ function countDown(){
   }
 }
 
-// Solo klik
+// --- Solo klik ---
 document.getElementById('solo-btn').addEventListener('click', ()=>{
   soloScore++;
   document.getElementById('solo-score').innerText = soloScore;
 });
 
-// 1v1 klik
-document.getElementById('p1-btn').addEventListener('click', ()=>{ p1Score++; document.getElementById('p1-score').innerText = p1Score; });
-document.getElementById('p2-btn').addEventListener('click', ()=>{ p2Score++; document.getElementById('p2-score').innerText = p2Score; });
+// --- 1v1 klik ---
+document.getElementById('p1-btn').addEventListener('click', ()=>{ 
+  p1Score++; 
+  document.getElementById('p1-score').innerText = p1Score; 
+});
+document.getElementById('p2-btn').addEventListener('click', ()=>{ 
+  p2Score++; 
+  document.getElementById('p2-score').innerText = p2Score; 
+});
 
+// --- Koniec hry ---
 function endGame(){
+  enableButtons(false);
   if(mode==='solo'){
     winnerEl.innerText = `Koniec! Tvoje skóre: ${soloScore}`;
   } else if(mode==='1v1'){
@@ -218,12 +232,40 @@ function endGame(){
   }
 }
 
-function resetGame(){
+// --- Reset skóre ---
+function resetScores(){
+  soloScore = 0;
+  p1Score = 0;
+  p2Score = 0;
+  document.getElementById('solo-score').innerText = soloScore;
+  document.getElementById('p1-score').innerText = p1Score;
+  document.getElementById('p2-score').innerText = p2Score;
+}
+
+// --- Povoliť / zakázať tlačidlá ---
+function enableButtons(enable){
+  document.getElementById('solo-btn').disabled = !enable;
+  document.getElementById('p1-btn').disabled = !enable;
+  document.getElementById('p2-btn').disabled = !enable;
+  if(enable){
+    document.getElementById('solo-btn').style.opacity = '1';
+    document.getElementById('p1-btn').style.opacity = '1';
+    document.getElementById('p2-btn').style.opacity = '1';
+  } else {
+    document.getElementById('solo-btn').style.opacity = '0.6';
+    document.getElementById('p1-btn').style.opacity = '0.6';
+    document.getElementById('p2-btn').style.opacity = '0.6';
+  }
+}
+
+// --- Reset celej hry ---
+resetBtn.addEventListener('click', ()=>{
   clearInterval(timerInterval);
   gameEl.style.display = 'none';
   winnerEl.innerText = '';
-}
+  resetScores();
+});
 </script>
 
 </body>
-</html>
+  </html>
