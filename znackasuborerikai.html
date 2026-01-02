@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ErikAI Packager</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial,system-ui;
+  background:#0b1220;
+  color:#e5ecff;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+.app{
+  width:520px;
+  background:#121a2b;
+  border-radius:14px;
+  padding:18px;
+  box-shadow:0 0 40px rgba(0,0,0,.6);
+}
+h1{margin:0 0 6px;font-size:20px}
+p{margin:0 0 12px;color:#9fb0d0;font-size:13px}
+label{display:block;margin-top:10px;font-size:13px;color:#9fb0d0}
+input,button{
+  width:100%;
+  padding:10px;
+  margin-top:6px;
+  border-radius:8px;
+  border:none;
+  font-size:14px;
+}
+input{
+  background:#0b1220;
+  color:#e5ecff;
+}
+button{
+  background:linear-gradient(90deg,#34d399,#60a5fa);
+  color:#041014;
+  font-weight:bold;
+  cursor:pointer;
+}
+button.alt{
+  background:#0b1220;
+  color:#9fb0d0;
+  border:1px solid #1e2a44;
+}
+.list{
+  margin-top:8px;
+  max-height:120px;
+  overflow:auto;
+  background:#0b1220;
+  border-radius:8px;
+  padding:6px;
+  font-size:12px;
+}
+.footer{
+  margin-top:10px;
+  text-align:center;
+  font-size:12px;
+  color:#7f92b8;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <h1>ErikAI Packager</h1>
+  <p>Zabaľ svoje súbory do ErikAI balíka (.erikai)</p>
+
+  <label>Vyber súbory (môžeš viac)</label>
+  <input type="file" id="files" multiple>
+
+  <div class="list" id="fileList">Žiadne súbory</div>
+
+  <label>Názov výsledného súboru</label>
+  <input id="name" placeholder="napr. moja_zbierka">
+
+  <button onclick="downloadErikai()">Stiahnuť .erikai</button>
+  <button class="alt" onclick="downloadZip()">Stiahnuť .erikai.zip</button>
+
+  <div class="footer">Offline • ErikAI ©</div>
+</div>
+
+<!-- JSZip -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+<script>
+const filesInput = document.getElementById('files');
+const list = document.getElementById('fileList');
+
+filesInput.addEventListener('change',()=>{
+  if(!filesInput.files.length){
+    list.textContent="Žiadne súbory";
+    return;
+  }
+  list.innerHTML=[...filesInput.files].map(f=>"📄 "+f.name).join("<br>");
+});
+
+/* .ERIKAI – jeden súbor */
+async function downloadErikai(){
+  if(!filesInput.files.length) return alert("Vyber súbory");
+  const name = document.getElementById('name').value || "erikai_bundle";
+
+  const zip = new JSZip();
+  [...filesInput.files].forEach(f=>zip.file(f.name,f));
+  zip.file("_erikai_meta.json", JSON.stringify({
+    brand:"ErikAI",
+    created:new Date().toISOString()
+  },null,2));
+
+  const blob = await zip.generateAsync({type:"blob"});
+  save(blob, name+".erikai");
+}
+
+/* .ERIKAI.ZIP */
+async function downloadZip(){
+  if(!filesInput.files.length) return alert("Vyber súbory");
+  const name = document.getElementById('name').value || "erikai_bundle";
+
+  const zip = new JSZip();
+  const inner = zip.folder(name+".erikai");
+
+  [...filesInput.files].forEach(f=>inner.file(f.name,f));
+  inner.file("_erikai_meta.json", JSON.stringify({
+    brand:"ErikAI",
+    created:new Date().toISOString()
+  },null,2));
+
+  const blob = await zip.generateAsync({type:"blob"});
+  save(blob, name+".erikai.zip");
+}
+
+/* download helper */
+function save(blob, filename){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+</script>
+</body>
+</html>
