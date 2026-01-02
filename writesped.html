@@ -4,53 +4,99 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>✨ ErikAI Typing Speed Test</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   body {
-    font-family: Arial, sans-serif;
-    background-color: #121212;
-    color: white;
-    text-align: center;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    flex-direction: column;
     padding: 20px;
   }
+
   h2 {
-    color: #ff4444;
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #ff6b6b;
+    text-shadow: 0 0 10px rgba(255,107,107,0.5);
   }
+
+  .card {
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    padding: 25px 30px;
+    width: 100%;
+    max-width: 700px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+  }
+
   #testText {
-    margin: 20px auto;
-    padding: 15px;
-    border: 1px solid #555;
-    border-radius: 10px;
-    width: 90%;
-    max-width: 700px;
-    background-color: #1e1e1e;
-    line-height: 1.5;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    background: rgba(255,255,255,0.05);
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border-left: 4px solid #ff6b6b;
+    transition: all 0.2s ease;
   }
+
   #inputArea {
-    width: 90%;
-    max-width: 700px;
-    padding: 10px;
+    width: 100%;
+    padding: 15px 20px;
     font-size: 16px;
-    border-radius: 8px;
-    border: 1px solid #555;
-    background-color: #1e1e1e;
-    color: white;
+    border-radius: 12px;
+    border: none;
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    resize: none;
+    outline: none;
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.1);
+    transition: all 0.2s ease;
   }
+
+  #inputArea.correct {
+    border: 2px solid #00ff95;
+  }
+
+  #inputArea.incorrect {
+    border: 2px solid #ff4b4b;
+  }
+
   #results {
     margin-top: 20px;
-    font-size: 18px;
+    font-size: 1.1rem;
+    line-height: 1.5;
+    color: #ffd166;
+    font-weight: 600;
+    min-height: 40px;
+    text-align: center;
   }
+
   button {
-    background-color: #ff4444;
+    background: linear-gradient(145deg, #ff6b6b, #ff4444);
     color: white;
     border: none;
-    padding: 10px 20px;
-    margin-top: 10px;
+    padding: 12px 25px;
+    margin-top: 15px;
     cursor: pointer;
-    border-radius: 5px;
+    border-radius: 10px;
     font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 6px 18px rgba(255,75,75,0.5);
+    transition: all 0.3s ease;
   }
+
   button:hover {
-    background-color: darkred;
+    background: linear-gradient(145deg, #ff4444, #ff6b6b);
+    box-shadow: 0 8px 22px rgba(255,75,75,0.7);
+    transform: translateY(-2px);
   }
 </style>
 </head>
@@ -58,12 +104,14 @@
 
 <h2>⌨️ ErikAI Typing Speed Test</h2>
 
-<p id="testText">Skopírujte tento text a začnite písať do nižšieho poľa:</p>
+<div class="card">
+  <div id="testText">Skopírujte tento text a začnite písať do nižšieho poľa:</div>
 
-<textarea id="inputArea" rows="5" placeholder="Začni písať tu..."></textarea><br>
-<button onclick="resetTest()">🔄 Reset</button>
+  <textarea id="inputArea" rows="5" placeholder="Začni písať tu..."></textarea><br>
+  <button onclick="resetTest()">🔄 Reset</button>
 
-<div id="results"></div>
+  <div id="results"></div>
+</div>
 
 <script>
 const sampleText = "Toto je testovací text na meranie rýchlosti písania. Skúste písať presne tak, ako je napísané, a zistite svoju rýchlosť a presnosť.";
@@ -79,20 +127,32 @@ testTextEl.textContent = sampleText;
 
 inputEl.addEventListener('input', () => {
   if (!startTime) startTime = new Date();
+
+  // Highlight správnosť
+  let correctSoFar = true;
+  for (let i = 0; i < inputEl.value.length; i++) {
+    if (inputEl.value[i] !== sampleText[i]) {
+      correctSoFar = false;
+      break;
+    }
+  }
+  inputEl.classList.toggle('correct', correctSoFar && inputEl.value.length > 0);
+  inputEl.classList.toggle('incorrect', !correctSoFar);
+
   if (inputEl.value === sampleText) {
     finished = true;
     const endTime = new Date();
     const timeSec = (endTime - startTime) / 1000;
     const wordsTyped = sampleText.split(' ').length;
     const wpm = Math.round((wordsTyped / timeSec) * 60);
-    
+
     let errors = 0;
     for (let i = 0; i < sampleText.length; i++) {
       if (inputEl.value[i] !== sampleText[i]) errors++;
     }
     const accuracy = Math.max(0, Math.round(((sampleText.length - errors) / sampleText.length) * 100));
-    
-    resultsEl.innerHTML = `🕒 Čas: ${timeSec.toFixed(2)} s<br>⚡ Rýchlosť: ${wpm} slov za minútu<br>✅ Presnosť: ${accuracy}%`;
+
+    resultsEl.innerHTML = `🕒 Čas: ${timeSec.toFixed(2)} s<br>⚡ Rýchlosť: ${wpm} slov/min<br>✅ Presnosť: ${accuracy}%`;
     inputEl.disabled = true;
   }
 });
@@ -102,6 +162,7 @@ function resetTest() {
   inputEl.disabled = false;
   startTime = null;
   finished = false;
+  inputEl.classList.remove('correct', 'incorrect');
   resultsEl.innerHTML = '';
   inputEl.focus();
 }
