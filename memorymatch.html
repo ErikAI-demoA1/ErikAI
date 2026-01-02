@@ -5,32 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🧠 MemoryMatch</title>
 <style>
+  /* --- Základný reset --- */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #6a11cb, #2575fc);
     display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
-    color: white;
     flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    color: white;
+    padding: 20px;
+    text-align: center;
   }
 
   h1 {
     margin-bottom: 20px;
+    font-size: 3rem;
     text-shadow: 2px 2px 6px rgba(0,0,0,0.5);
   }
 
   .stats {
     margin-bottom: 15px;
-    font-size: 18px;
+    font-size: 1.5rem;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
   }
 
   #game {
     display: grid;
-    gap: 10px;
+    gap: 15px;
     justify-content: center;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
   }
 
   .card {
@@ -48,7 +58,7 @@
     transition: transform 0.6s;
     transform-style: preserve-3d;
     border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
 
   .card.flipped .card-inner {
@@ -64,7 +74,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 40px;
+    font-size: 2.5rem;
+    transition: all 0.3s ease;
   }
 
   .card-front {
@@ -73,20 +84,20 @@
   }
 
   .card-back {
-    background: #ff6f61;
+    background: linear-gradient(135deg, #ff6f61, #ff3f3f);
     transform: rotateY(180deg);
     color: white;
     font-weight: bold;
   }
 
   button {
-    margin-top: 20px;
-    padding: 10px 20px;
+    margin-top: 10px;
+    padding: 12px 25px;
     background-color: #2575fc;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     color: white;
-    font-size: 16px;
+    font-size: 1rem;
     cursor: pointer;
     transition: 0.3s;
   }
@@ -95,14 +106,30 @@
     background-color: #6a11cb;
   }
 
-  @media (max-width: 600px) {
+  /* --- Animácia pri zhode --- */
+  .card.matched .card-inner {
+    box-shadow: 0 0 20px #00ff85;
+    transform: scale(1.05);
+    pointer-events: none;
+  }
+
+  /* --- Responzívne --- */
+  @media (max-width: 768px) {
     #game {
-      grid-template-columns: repeat(4, 70px);
+      gap: 10px;
     }
-    .card {
-      width: 70px;
-      height: 70px;
+    .card { width: 80px; height: 80px; }
+    .card-front, .card-back { font-size: 2rem; }
+  }
+
+  @media (max-width: 480px) {
+    #game {
+      gap: 8px;
     }
+    .card { width: 60px; height: 60px; }
+    .card-front, .card-back { font-size: 1.5rem; }
+    h1 { font-size: 2rem; }
+    .stats { font-size: 1.2rem; }
   }
 </style>
 </head>
@@ -143,11 +170,13 @@ function startGame() {
   createCards();
   moves = 0;
   matches = 0;
+  flippedCards = [];
   movesElement.textContent = moves;
   matchesElement.textContent = matches;
 
   gameElement.innerHTML = '';
-  gameElement.style.gridTemplateColumns = `repeat(${Math.sqrt(cards.length)}, 100px)`;
+  const cols = Math.sqrt(cards.length);
+  gameElement.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
   cards.forEach(sym => {
     const card = document.createElement('div');
@@ -164,7 +193,7 @@ function startGame() {
 }
 
 function flipCard(card) {
-  if (flippedCards.length < 2 && !card.classList.contains('flipped')) {
+  if (flippedCards.length < 2 && !card.classList.contains('flipped') && !card.classList.contains('matched')) {
     card.classList.add('flipped');
     flippedCards.push(card);
 
@@ -182,6 +211,8 @@ function checkMatch() {
   const sym2 = card2.querySelector('.card-front').textContent;
 
   if (sym1 === sym2) {
+    card1.classList.add('matched');
+    card2.classList.add('matched');
     matches++;
     matchesElement.textContent = matches;
     flippedCards = [];
@@ -194,6 +225,7 @@ function checkMatch() {
   }
 }
 
+// Automaticky spusti hru pri načítaní
 startGame();
 </script>
 
