@@ -45,6 +45,7 @@
     margin-bottom: 20px;
     border-left: 4px solid #ff6b6b;
     transition: all 0.2s ease;
+    min-height: 70px;
   }
 
   #inputArea {
@@ -79,7 +80,7 @@
     text-align: center;
   }
 
-  button {
+  .btn {
     background: linear-gradient(145deg, #ff6b6b, #ff4444);
     color: white;
     border: none;
@@ -93,11 +94,20 @@
     transition: all 0.3s ease;
   }
 
-  button:hover {
+  .btn:hover {
     background: linear-gradient(145deg, #ff4444, #ff6b6b);
     box-shadow: 0 8px 22px rgba(255,75,75,0.7);
     transform: translateY(-2px);
   }
+
+  .btn-secondary {
+    background: linear-gradient(145deg, #4b9eff, #1db9ff);
+  }
+
+  .btn-secondary:hover {
+    background: linear-gradient(145deg, #1db9ff, #4b9eff);
+  }
+
 </style>
 </head>
 <body>
@@ -108,13 +118,20 @@
   <div id="testText">Skopírujte tento text a začnite písať do nižšieho poľa:</div>
 
   <textarea id="inputArea" rows="5" placeholder="Začni písať tu..."></textarea><br>
-  <button onclick="resetTest()">🔄 Reset</button>
+  
+  <button class="btn" onclick="resetTest()">🔄 Reset</button>
+  <button class="btn btn-secondary" onclick="submitTest()">✅ Potvrdiť</button>
 
   <div id="results"></div>
 </div>
 
 <script>
-const sampleText = "Toto je testovací text na meranie rýchlosti písania. Skúste písať presne tak, ako je napísané, a zistite svoju rýchlosť a presnosť.";
+const sampleTexts = [
+  "Toto je testovací text na meranie rýchlosti písania. Skúste písať presne tak, ako je napísané, a zistite svoju rýchlosť a presnosť.",
+  "Rýchle učenie sa dá dosiahnuť iba pravidelným cvičením a sústredenou praxou. Skúste písať rýchlo a presne.",
+  "Programovanie v JavaScripte je zábavné, ale vyžaduje trpezlivosť a prax pri písaní správnych syntaktických zápisov.",
+  "Každý deň sa snažte zlepšiť rýchlosť a presnosť písania. Takto sa z vás stane expert."
+];
 
 const testTextEl = document.getElementById('testText');
 const inputEl = document.getElementById('inputArea');
@@ -122,40 +139,49 @@ const resultsEl = document.getElementById('results');
 
 let startTime;
 let finished = false;
+let currentText = "";
 
-testTextEl.textContent = sampleText;
+// vyber náhodný text
+function pickRandomText() {
+  const idx = Math.floor(Math.random() * sampleTexts.length);
+  currentText = sampleTexts[idx];
+  testTextEl.textContent = currentText;
+}
+
+pickRandomText();
 
 inputEl.addEventListener('input', () => {
   if (!startTime) startTime = new Date();
 
-  // Highlight správnosť
   let correctSoFar = true;
   for (let i = 0; i < inputEl.value.length; i++) {
-    if (inputEl.value[i] !== sampleText[i]) {
+    if (inputEl.value[i] !== currentText[i]) {
       correctSoFar = false;
       break;
     }
   }
   inputEl.classList.toggle('correct', correctSoFar && inputEl.value.length > 0);
   inputEl.classList.toggle('incorrect', !correctSoFar);
-
-  if (inputEl.value === sampleText) {
-    finished = true;
-    const endTime = new Date();
-    const timeSec = (endTime - startTime) / 1000;
-    const wordsTyped = sampleText.split(' ').length;
-    const wpm = Math.round((wordsTyped / timeSec) * 60);
-
-    let errors = 0;
-    for (let i = 0; i < sampleText.length; i++) {
-      if (inputEl.value[i] !== sampleText[i]) errors++;
-    }
-    const accuracy = Math.max(0, Math.round(((sampleText.length - errors) / sampleText.length) * 100));
-
-    resultsEl.innerHTML = `🕒 Čas: ${timeSec.toFixed(2)} s<br>⚡ Rýchlosť: ${wpm} slov/min<br>✅ Presnosť: ${accuracy}%`;
-    inputEl.disabled = true;
-  }
 });
+
+function submitTest() {
+  if (!inputEl.value) return;
+
+  const endTime = new Date();
+  const timeSec = (endTime - startTime) / 1000;
+  const wordsTyped = currentText.split(' ').length;
+  const wpm = Math.round((wordsTyped / timeSec) * 60);
+
+  let errors = 0;
+  for (let i = 0; i < currentText.length; i++) {
+    if (inputEl.value[i] !== currentText[i]) errors++;
+  }
+  const accuracy = Math.max(0, Math.round(((currentText.length - errors) / currentText.length) * 100));
+
+  resultsEl.innerHTML = `🕒 Čas: ${timeSec.toFixed(2)} s<br>⚡ Rýchlosť: ${wpm} slov/min<br>✅ Presnosť: ${accuracy}%`;
+  inputEl.disabled = true;
+  finished = true;
+}
 
 function resetTest() {
   inputEl.value = '';
@@ -164,6 +190,7 @@ function resetTest() {
   finished = false;
   inputEl.classList.remove('correct', 'incorrect');
   resultsEl.innerHTML = '';
+  pickRandomText();
   inputEl.focus();
 }
 </script>
