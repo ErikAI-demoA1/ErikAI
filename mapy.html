@@ -3,7 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>🌍 ErikAI Mapy</title>
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -40,7 +48,7 @@
 
     button {
       padding: 10px 18px;
-      margin-bottom: 15px;
+      margin: 5px;
       border: none;
       border-radius: 8px;
       background-color: #0077cc;
@@ -54,17 +62,51 @@
       background-color: #005fa3;
     }
 
-    iframe {
+    /* Vyhľadávanie */
+    .search-box {
+      max-width: 1000px;
+      margin: 0 auto 15px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    #searchInput {
+      flex: 1;
+      min-width: 220px;
+      max-width: 600px;
+      padding: 11px 14px;
+      border: 2px solid #0077cc;
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    #searchInput:focus {
+      border-color: #00aaff;
+    }
+
+    body.dark-mode #searchInput {
+      background: #222;
+      color: white;
+      border-color: #00aaff;
+    }
+
+    #map {
       width: 100%;
       max-width: 1000px;
       height: 500px;
+      margin: 0 auto;
       border: 3px solid #0077cc;
       border-radius: 15px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      overflow: hidden;
       transition: border-color 0.3s, box-shadow 0.3s;
     }
 
-    body.dark-mode iframe {
+    body.dark-mode #map {
       border-color: #00aaff;
       box-shadow: 0 8px 20px rgba(0, 170, 255, 0.3);
     }
@@ -73,6 +115,13 @@
       font-size: 18px;
       margin: 10px 0 20px;
       font-weight: bold;
+    }
+
+    #stav {
+      font-size: 14px;
+      margin: 10px auto;
+      max-width: 1000px;
+      min-height: 20px;
     }
 
     .footer {
@@ -85,8 +134,13 @@
     body.dark-mode .footer {
       color: #aaaaaa;
     }
+
+    .leaflet-control-attribution {
+      font-size: 10px;
+    }
   </style>
 </head>
+
 <body>
 
   <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
@@ -94,29 +148,73 @@
   <p id="cas"></p>
 
   <h2>🌍 ErikAI Mapy</h2>
-  <p>Mapa tvojej aktuálnej polohy:</p>
 
-  <iframe
-    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2577.582977363296!2d18.579231376814304!3d49.2854520713941!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDnCsDE3JzA3LjYiTiAxOMKwMzQnNTMuNSJF!5e0!3m2!1ssk!2ssk!4v1718569123456!5m2!1ssk!2ssk"
-    loading="lazy"
-    allowfullscreen
-    referrerpolicy="no-referrer-when-downgrade">
-  </iframe>
+  <p>
+    Interaktívna mapa Slovenska – vyhľadaj miesto alebo použi svoju aktuálnu polohu.
+  </p>
 
-  <p class="footer">Zdroj: Google Maps • Neodosiela žiadne údaje ErikAI</p>
+  <!-- Vyhľadávanie -->
+  <div class="search-box">
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="🔎 Zadaj mesto, obec alebo adresu..."
+    />
+
+    <button onclick="vyhladatMiesto()">
+      🔎 Vyhľadať
+    </button>
+
+    <button onclick="mojaPoloha()">
+      📍 Moja poloha
+    </button>
+  </div>
+
+  <p id="stav"></p>
+
+  <!-- Mapa -->
+  <div id="map"></div>
+
   <p class="footer">
-    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-    To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
+    Zdroj mapy: © OpenStreetMap contributors
+  </p>
+
+  <p class="footer">
+    This work is licensed under the Creative Commons
+    Attribution-NonCommercial-NoDerivatives 4.0 International License.
+    <br>
+    To view a copy of this license, visit
+    http://creativecommons.org/licenses/by-nc-nd/4.0/
+    <br>
     © 2025 Erik Mohylák – All rights reserved.
   </p>
 
+
+  <!-- Leaflet JavaScript -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+  </script>
+
+
   <script>
+
+    /* =========================
+       TÉMA
+    ========================= */
+
     function toggleTheme() {
       document.body.classList.toggle('dark-mode');
     }
 
+
+    /* =========================
+       AKTUÁLNY ČAS
+    ========================= */
+
     function aktualizujCas() {
+
       const teraz = new Date();
+
       const moznosti = {
         weekday: 'long',
         year: 'numeric',
@@ -126,24 +224,311 @@
         minute: '2-digit',
         second: '2-digit'
       };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
+
+      const casText =
+        teraz.toLocaleDateString('sk-SK', moznosti);
+
+      document.getElementById('cas').innerText =
+        `🕓 Aktuálny čas: ${casText}`;
     }
+
     setInterval(aktualizujCas, 1000);
+
     aktualizujCas();
+
+
+    /* =========================
+       MAPA SLOVENSKA
+    ========================= */
+
+    const map = L.map('map').setView(
+      [48.6690, 19.6990],
+      7
+    );
+
+
+    /* OpenStreetMap */
+    L.tileLayer(
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {
+        maxZoom: 19,
+        attribution:
+          '&copy; OpenStreetMap contributors'
+      }
+    ).addTo(map);
+
+
+    /* =========================
+       MARKER
+    ========================= */
+
+    let marker = null;
+
+
+    function pridajMarker(lat, lon, text) {
+
+      if (marker) {
+        map.removeLayer(marker);
+      }
+
+      marker = L.marker([lat, lon])
+        .addTo(map)
+        .bindPopup(text)
+        .openPopup();
+    }
+
+
+    /* =========================
+       KLIKNUTIE NA MAPU
+    ========================= */
+
+    map.on('click', function(e) {
+
+      const lat = e.latlng.lat.toFixed(6);
+      const lon = e.latlng.lng.toFixed(6);
+
+      pridajMarker(
+        e.latlng.lat,
+        e.latlng.lng,
+        `
+          📌 <b>Vybrané miesto</b><br>
+          Zemepisná šírka: ${lat}<br>
+          Zemepisná dĺžka: ${lon}
+        `
+      );
+
+    });
+
+
+    /* =========================
+       VYHĽADÁVANIE
+    ========================= */
+
+    async function vyhladatMiesto() {
+
+      const input =
+        document.getElementById('searchInput').value.trim();
+
+      const stav =
+        document.getElementById('stav');
+
+
+      if (!input) {
+
+        stav.innerText =
+          '⚠️ Zadaj mesto, obec alebo adresu.';
+
+        return;
+      }
+
+
+      stav.innerText =
+        '🔎 Vyhľadávam...';
+
+
+      try {
+
+        const url =
+          'https://nominatim.openstreetmap.org/search?' +
+          'format=json' +
+          '&q=' +
+          encodeURIComponent(input) +
+          '&countrycodes=sk' +
+          '&limit=1';
+
+
+        const response =
+          await fetch(url);
+
+
+        const data =
+          await response.json();
+
+
+        if (!data.length) {
+
+          stav.innerText =
+            '❌ Miesto sa nepodarilo nájsť.';
+
+          return;
+        }
+
+
+        const miesto =
+          data[0];
+
+
+        const lat =
+          parseFloat(miesto.lat);
+
+        const lon =
+          parseFloat(miesto.lon);
+
+
+        map.setView(
+          [lat, lon],
+          15
+        );
+
+
+        pridajMarker(
+          lat,
+          lon,
+          `
+            🔎 <b>${miesto.display_name}</b>
+          `
+        );
+
+
+        stav.innerText =
+          `✅ Nájdené: ${miesto.display_name}`;
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        stav.innerText =
+          '❌ Nastala chyba pri vyhľadávaní.';
+
+      }
+
+    }
+
+
+    /* =========================
+       ENTER = VYHĽADAŤ
+    ========================= */
+
+    document
+      .getElementById('searchInput')
+      .addEventListener('keydown', function(event) {
+
+        if (event.key === 'Enter') {
+
+          vyhladatMiesto();
+
+        }
+
+      });
+
+
+    /* =========================
+       MOJA POLOHA
+    ========================= */
+
+    function mojaPoloha() {
+
+      const stav =
+        document.getElementById('stav');
+
+
+      if (!navigator.geolocation) {
+
+        stav.innerText =
+          '❌ Tvoje zariadenie nepodporuje GPS polohu.';
+
+        return;
+      }
+
+
+      stav.innerText =
+        '📍 Zisťujem tvoju polohu...';
+
+
+      navigator.geolocation.getCurrentPosition(
+
+        function(position) {
+
+          const lat =
+            position.coords.latitude;
+
+          const lon =
+            position.coords.longitude;
+
+
+          map.setView(
+            [lat, lon],
+            16
+          );
+
+
+          pridajMarker(
+            lat,
+            lon,
+            `
+              📍 <b>Moja aktuálna poloha</b><br>
+              Šírka: ${lat.toFixed(6)}<br>
+              Dĺžka: ${lon.toFixed(6)}
+            `
+          );
+
+
+          stav.innerText =
+            '✅ Tvoja poloha bola nájdená.';
+
+        },
+
+
+        function(error) {
+
+          console.error(error);
+
+
+          if (error.code === 1) {
+
+            stav.innerText =
+              '⚠️ Povolenie polohy bolo zamietnuté.';
+
+          } else {
+
+            stav.innerText =
+              '❌ Poloha sa nepodarila zistiť.';
+
+          }
+
+        },
+
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+
+      );
+
+    }
+
   </script>
+
+
+  <!-- GOOGLE TRANSLATE -->
 
   <div id="google_translate_element"></div>
+
   <script type="text/javascript">
+
     function googleTranslateElementInit() {
+
       new google.translate.TranslateElement({
+
         pageLanguage: 'sk',
-        includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+
+        includedLanguages:
+          'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
+
+        layout:
+          google.translate.TranslateElement.InlineLayout.SIMPLE
+
       }, 'google_translate_element');
+
     }
+
   </script>
-  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+  <script
+    src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+  </script>
 
 </body>
-</html>
+  </html>
