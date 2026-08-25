@@ -1,4 +1,4 @@
-ErikAI Web OS
+ErikAI OS 2026
 
 A modular, lightweight web-based operating system built using HTML, CSS, and JavaScript.
 Designed for customizability, simplicity, and expansion through standalone HTML modules.
@@ -68,7 +68,7 @@ You can add, remove, or replace modules freely.
 
 💼 License (Copyright Notice)
 
-Copyright © 2025 Erik
+Copyright © 2025 Erik Mohylák 
 
 The owner retains all rights to the original code.
 
@@ -147,7 +147,7 @@ Môžeš ich ľubovoľne pridávať, mazať alebo nahrádzať.
 
 💼 Licencia (Autorské práva)
 
-Copyright © 2025 Erik
+Copyright © 2025 Erik Mohylák 
 
 Majiteľ si ponecháva všetky práva k pôvodnému zdrojovému kódu.
 
