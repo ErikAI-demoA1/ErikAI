@@ -1,38 +1,98 @@
-<!DOCTYPE html><html lang="sk">
+<!DOCTYPE html>
+<html lang="sk">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>ErikAI QR Skener</title>
+
   <script src="https://unpkg.com/@zxing/library@latest"></script>
+
   <style>
-    body { font-family: Arial; text-align: center; padding: 20px; }
-    video { width: 100%; max-width: 400px; border: 2px solid red; border-radius: 10px; }
-    #output { margin-top: 15px; font-weight: bold; }
-    button { margin: 10px; padding: 10px 15px; font-size: 16px; border: none; background: red; color: white; border-radius: 6px; cursor: pointer; }
+    body {
+      font-family: Arial;
+      text-align: center;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body.dark-mode {
+      background-color: #121212;
+      color: white;
+    }
+
+    video {
+      width: 100%;
+      max-width: 400px;
+      border: 2px solid red;
+      border-radius: 10px;
+    }
+
+    #output {
+      margin-top: 15px;
+      font-weight: bold;
+      word-break: break-word;
+    }
+
+    button {
+      margin: 10px;
+      padding: 10px 15px;
+      font-size: 16px;
+      border: none;
+      background: red;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+
+    #imageInput {
+      display: none;
+    }
+
+    #preview {
+      display: none;
+      max-width: 400px;
+      width: 100%;
+      margin: 15px auto;
+      border-radius: 10px;
+      border: 2px solid red;
+    }
+
+    #actionButtons {
+      display: none;
+    }
+
+    #stav {
+      margin-top: 10px;
+      font-size: 15px;
+    }
   </style>
 </head>
+
 <body>
 
+  <!-- TÉMA -->
   <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
 
-<script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
-</script>
+  <script>
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+    }
+  </script>
 
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
 
-<p id="cas" style="font-size: 18px;"></p>
+  <!-- ČAS -->
+  <p id="cas" style="font-size: 18px;"></p>
 
   <script>
     function aktualizujCas() {
+
       const teraz = new Date();
+
       const moznosti = {
         weekday: 'long',
         year: 'numeric',
@@ -42,67 +102,355 @@
         minute: '2-digit',
         second: '2-digit'
       };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
+
+      const casText =
+        teraz.toLocaleDateString('sk-SK', moznosti);
+
+      document.getElementById('cas').innerText =
+        `🕓 Aktuálny čas: ${casText}`;
     }
+
     setInterval(aktualizujCas, 1000);
+
     aktualizujCas();
   </script>
 
+
+  <!-- GOOGLE TRANSLATE -->
+
   <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
-  }
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  <h2>🌍 ErikAI QR Skener</h2>
-  <video id="video" autoplay></video>
-  <div id="output"></div>
-  <div id="actionButtons" style="display:none;">
-    <button onclick="goToLink()">Prejsť na stránku</button>
-    <button onclick="copyCode()">Skopírovať</button>
-  </div>  <script>
-    const codeReader = new ZXing.BrowserQRCodeReader();
-    const videoElement = document.getElementById('video');
-    const output = document.getElementById('output');
-    const actionButtons = document.getElementById('actionButtons');
-    let lastResult = '';
 
-    codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
-      if (result) {
-        if (result.text !== lastResult) {
-          lastResult = result.text;
-          output.textContent = `✅ QR kód: ${result.text}`;
-          actionButtons.style.display = 'block';
-        }
-      }
-    });
+  <script type="text/javascript">
 
-    function goToLink() {
-      if (lastResult.startsWith('http')) {
-        window.open(lastResult, '_blank');
-      } else {
-        alert('Toto nie je odkaz na stránku.');
-      }
+    function googleTranslateElementInit() {
+
+      new google.translate.TranslateElement({
+
+        pageLanguage: 'sk',
+
+        includedLanguages:
+          'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
+
+        layout:
+          google.translate.TranslateElement.InlineLayout.SIMPLE
+
+      }, 'google_translate_element');
+
     }
 
-    function copyCode() {
-      navigator.clipboard.writeText(lastResult).then(() => {
-        alert('Skopírované do schránky!');
-      });
-    }
   </script>
 
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
+  <script
+    src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+  </script>
+
+
+  <!-- NADPIS -->
+
+  <h2>🌍 ErikAI QR Skener</h2>
+
+  <p>
+    📷 Naskenuj QR kód kamerou alebo 🖼️ vyber obrázok z telefónu.
   </p>
+
+
+  <!-- KAMERA -->
+
+  <video id="video" autoplay></video>
+
+
+  <!-- VYBRAŤ OBRÁZOK -->
+
+  <br>
+
+  <button onclick="document.getElementById('imageInput').click()">
+    🖼️ Vybrať obrázok
+  </button>
+
+  <input
+    type="file"
+    id="imageInput"
+    accept="image/*"
+  />
+
+
+  <!-- NÁHĽAD OBRÁZKA -->
+
+  <img id="preview" alt="Vybraný obrázok QR kódu">
+
+
+  <!-- STAV -->
+
+  <div id="stav"></div>
+
+
+  <!-- VÝSLEDOK -->
+
+  <div id="output"></div>
+
+
+  <!-- TLAČIDLÁ -->
+
+  <div id="actionButtons">
+
+    <button onclick="goToLink()">
+      🌐 Prejsť na stránku
+    </button>
+
+    <button onclick="copyCode()">
+      📋 Skopírovať
+    </button>
+
+  </div>
+
+
+  <script>
+
+    /* =========================
+       QR SKENER
+    ========================= */
+
+    const codeReader =
+      new ZXing.BrowserQRCodeReader();
+
+    const videoElement =
+      document.getElementById('video');
+
+    const output =
+      document.getElementById('output');
+
+    const actionButtons =
+      document.getElementById('actionButtons');
+
+    const stav =
+      document.getElementById('stav');
+
+    let lastResult = '';
+
+
+    /* =========================
+       FUNKCIA VÝSLEDKU
+    ========================= */
+
+    function zobrazQR(text) {
+
+      if (!text) {
+        return;
+      }
+
+      lastResult = text;
+
+      output.textContent =
+        `✅ QR kód: ${text}`;
+
+      actionButtons.style.display =
+        'block';
+
+      stav.textContent =
+        'QR kód bol úspešne rozpoznaný.';
+
+    }
+
+
+    /* =========================
+       SKENOVANIE KAMEROU
+    ========================= */
+
+    codeReader.decodeFromVideoDevice(
+      null,
+      'video',
+      (result, err) => {
+
+        if (result) {
+
+          if (result.text !== lastResult) {
+
+            zobrazQR(result.text);
+
+          }
+
+        }
+
+      }
+    );
+
+
+    /* =========================
+       SKENOVANIE OBRÁZKA
+    ========================= */
+
+    document
+      .getElementById('imageInput')
+      .addEventListener('change', async function(event) {
+
+        const file = event.target.files[0];
+
+        if (!file) {
+          return;
+        }
+
+        stav.textContent =
+          '🔎 Hľadám QR kód v obrázku...';
+
+        output.textContent = '';
+
+        actionButtons.style.display =
+          'none';
+
+
+        /* Náhľad */
+
+        const preview =
+          document.getElementById('preview');
+
+        preview.src =
+          URL.createObjectURL(file);
+
+        preview.style.display =
+          'block';
+
+
+        try {
+
+          const imageUrl =
+            URL.createObjectURL(file);
+
+          const img =
+            new Image();
+
+          img.onload = async function() {
+
+            try {
+
+              const result =
+                await codeReader.decodeFromImageUrl(
+                  imageUrl
+                );
+
+              if (result) {
+
+                zobrazQR(result.text);
+
+              } else {
+
+                stav.textContent =
+                  '❌ QR kód sa v obrázku nenašiel.';
+
+              }
+
+            } catch (error) {
+
+              console.error(error);
+
+              stav.textContent =
+                '❌ QR kód sa v obrázku nepodarilo nájsť.';
+
+              output.textContent =
+                'Skús vybrať kvalitnejšiu alebo ostrejšiu fotografiu.';
+
+            }
+
+            URL.revokeObjectURL(imageUrl);
+
+          };
+
+          img.src = imageUrl;
+
+        } catch (error) {
+
+          console.error(error);
+
+          stav.textContent =
+            '❌ Obrázok sa nepodarilo spracovať.';
+
+        }
+
+      });
+
+
+    /* =========================
+       OTVORIŤ ODKAZ
+    ========================= */
+
+    function goToLink() {
+
+      if (!lastResult) {
+        return;
+      }
+
+      if (
+        lastResult.startsWith('http://') ||
+        lastResult.startsWith('https://')
+      ) {
+
+        window.open(
+          lastResult,
+          '_blank'
+        );
+
+      } else {
+
+        alert(
+          'Toto nie je odkaz na stránku.'
+        );
+
+      }
+
+    }
+
+
+    /* =========================
+       KOPÍROVAŤ
+    ========================= */
+
+    function copyCode() {
+
+      if (!lastResult) {
+        return;
+      }
+
+      navigator.clipboard
+        .writeText(lastResult)
+        .then(() => {
+
+          alert(
+            'Skopírované do schránky!'
+          );
+
+        })
+        .catch(() => {
+
+          alert(
+            'Kopírovanie sa nepodarilo.'
+          );
+
+        });
+
+    }
+
+  </script>
+
+
+  <!-- LICENCIA -->
+
+  <p
+    style="
+      font-size: 14px;
+      color: gray;
+      margin-top: 20px;
+    "
+  >
+    This work is licensed under the Creative Commons
+    Attribution-NonCommercial-NoDerivatives 4.0 International License.
+    <br>
+
+    To view a copy of this license, visit
+    http://creativecommons.org/licenses/by-nc-nd/4.0/
+
+    <br>
+
+    © 2025 Erik Mohylák – All rights reserved.
+  </p>
+
 </body>
 </html>
