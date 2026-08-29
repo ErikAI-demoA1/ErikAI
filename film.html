@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ErikAI Studios — The City</title>
+
+<style>
+*{box-sizing:border-box}
+
+:root{
+  --sky1:#07111f;
+  --sky2:#172b46;
+  --ground:#11151c;
+  --road:#20252d;
+  --light:#ffd86b;
+  --text:#fff;
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  margin:0;
+  overflow:hidden;
+  background:#05080d;
+  color:var(--text);
+  font-family:Inter,Segoe UI,Arial,sans-serif;
+}
+
+button{
+  font:inherit;
+}
+
+/* =========================================================
+   FILM
+   ========================================================= */
+
+#film{
+  position:relative;
+  width:100vw;
+  height:100vh;
+  overflow:hidden;
+  background:linear-gradient(
+    to bottom,
+    var(--sky1),
+    var(--sky2) 58%,
+    #26313e 59%,
+    #11151c 100%
+  );
+}
+
+/* =========================================================
+   OBLOHA
+   ========================================================= */
+
+.sky{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+
+.moon{
+  position:absolute;
+  width:80px;
+  height:80px;
+  right:12%;
+  top:11%;
+  border-radius:50%;
+  background:#fff6ce;
+  box-shadow:0 0 45px rgba(255,240,170,.35);
+}
+
+.stars{
+  position:absolute;
+  inset:0;
+  opacity:.75;
+  background-image:
+    radial-gradient(circle at 12% 18%,#fff 0 1px,transparent 2px),
+    radial-gradient(circle at 22% 31%,#fff 0 1px,transparent 2px),
+    radial-gradient(circle at 38% 14%,#fff 0 1px,transparent 2px),
+    radial-gradient(circle at 51% 25%,#fff 0 1px,transparent 2px),
+    radial-gradient(circle at 67% 13%,#fff 0 1px,transparent 2px),
+    radial-gradient(circle at 82% 30%,#fff 0 1px,transparent 2px),
+    radial-gradient(circle at 92% 17%,#fff 0 1px,transparent 2px),
+    radial-gradient(circle at 74% 42%,#fff 0 1px,transparent 2px);
+  animation:twinkle 4s infinite alternate;
+}
+
+@keyframes twinkle{
+  from{opacity:.4}
+  to{opacity:.9}
+}
+
+/* =========================================================
+   2.5D MESTO
+   ========================================================= */
+
+.city{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:30%;
+  height:42%;
+  transform:translateX(0);
+  will-change:transform;
+}
+
+.layer{
+  position:absolute;
+  left:-10%;
+  width:120%;
+  bottom:0;
+  display:flex;
+  align-items:flex-end;
+  gap:12px;
+}
+
+.far{
+  height:72%;
+  opacity:.35;
+  transform:scale(1.08);
+}
+
+.mid{
+  height:88%;
+  opacity:.65;
+  transform:scale(1.04);
+}
+
+.near{
+  height:100%;
+}
+
+.building{
+  position:relative;
+  flex:0 0 auto;
+  width:80px;
+  background:linear-gradient(
+    90deg,
+    #101923,
+    #1b2735
+  );
+  border-top:1px solid rgba(255,255,255,.06);
+}
+
+.far .building{width:120px}
+.mid .building{width:100px}
+.near .building{width:130px}
+
+.windows{
+  position:absolute;
+  inset:12px;
+  background:
+    repeating-linear-gradient(
+      to right,
+      transparent 0 12px,
+      rgba(255,214,103,.7) 12px 19px,
+      transparent 19px 29px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 13px,
+      rgba(255,214,103,.55) 13px 20px,
+      transparent 20px 31px
+    );
+  opacity:.8;
+}
+
+/* =========================================================
+   CESTA
+   ========================================================= */
+
+.ground{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:31%;
+  background:linear-gradient(
+    to bottom,
+    #151a21,
+    #090c11
+  );
+}
+
+.road{
+  position:absolute;
+  left:-10%;
+  width:120%;
+  bottom:0;
+  height:26%;
+  background:#252a31;
+  transform:perspective(500px) rotateX(38deg);
+  transform-origin:bottom;
+}
+
+.road-lines{
+  position:absolute;
+  left:-20%;
+  width:140%;
+  bottom:12%;
+  height:8px;
+  background:repeating-linear-gradient(
+    to right,
+    #ddd 0 70px,
+    transparent 70px 135px
+  );
+  animation:roadMove 2s linear infinite;
+}
+
+@keyframes roadMove{
+  from{transform:translateX(0)}
+  to{transform:translateX(-135px)}
+}
+
+/* =========================================================
+   LAMPY
+   ========================================================= */
+
+.lamps{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:27%;
+  height:40%;
+  pointer-events:none;
+}
+
+.lamp{
+  position:absolute;
+  bottom:0;
+  width:5px;
+  height:100%;
+  background:#111820;
+}
+
+.lamp:before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:-12px;
+  width:29px;
+  height:18px;
+  border-radius:50%;
+  background:var(--light);
+  box-shadow:0 0 28px 12px rgba(255,216,107,.18);
+}
+
+.l1{left:13%;height:80%}
+.l2{left:45%;height:95%}
+.l3{left:78%;height:75%}
+
+/* =========================================================
+   AUTÁ
+   ========================================================= */
+
+.cars{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:14%;
+  height:80px;
+  pointer-events:none;
+}
+
+.car{
+  position:absolute;
+  width:90px;
+  height:32px;
+  border-radius:12px 17px 7px 7px;
+  background:#18232e;
+  box-shadow:0 0 12px rgba(255,255,255,.08);
+}
+
+.car:before{
+  content:"";
+  position:absolute;
+  width:42px;
+  height:18px;
+  left:23px;
+  top:-12px;
+  border-radius:15px 15px 2px 2px;
+  background:#243545;
+}
+
+.car:after{
+  content:"";
+  position:absolute;
+  left:10px;
+  right:10px;
+  bottom:-7px;
+  height:10px;
+  background:
+    radial-gradient(circle,#050505 0 5px,transparent 6px)
+    left center/20px 10px no-repeat,
+    radial-gradient(circle,#050505 0 5px,transparent 6px)
+    right center/20px 10px no-repeat;
+}
+
+.car1{
+  animation:carDrive 12s linear infinite;
+}
+
+.car2{
+  animation:carDrive 17s linear infinite 4s;
+  transform:scale(.7);
+}
+
+@keyframes carDrive{
+  from{left:-120px}
+  to{left:calc(100% + 120px)}
+}
+
+/* =========================================================
+   POSTAVY
+   ========================================================= */
+
+.characters{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:27%;
+  height:45%;
+  pointer-events:none;
+}
+
+.character{
+  position:absolute;
+  width:75px;
+  height:180px;
+  bottom:0;
+  transition:all 1s ease;
+  will-change:left,transform,opacity;
+}
+
+.body{
+  position:absolute;
+  left:22px;
+  top:55px;
+  width:32px;
+  height:75px;
+  border-radius:13px 13px 8px 8px;
+  background:#273c52;
+}
+
+.head{
+  position:absolute;
+  left:24px;
+  top:20px;
+  width:28px;
+  height:32px;
+  border-radius:50%;
+  background:#d39b78;
+}
+
+.leg{
+  position:absolute;
+  top:120px;
+  width:12px;
+  height:60px;
+  border-radius:10px;
+  background:#151b23;
+  transform-origin:top;
+}
+
+.leg.left{left:25px}
+.leg.right{left:40px}
+
+.arm{
+  position:absolute;
+  top:63px;
+  width:10px;
+  height:55px;
+  border-radius:8px;
+  background:#d39b78;
+  transform-origin:top;
+}
+
+.arm.left{
+  left:16px;
+  transform:rotate(12deg);
+}
+
+.arm.right{
+  left:49px;
+  transform:rotate(-12deg);
+}
+
+.character.walk .leg.left{
+  animation:walkA .45s infinite alternate;
+}
+
+.character.walk .leg.right{
+  animation:walkB .45s infinite alternate;
+}
+
+.character.walk .arm.left{
+  animation:armA .45s infinite alternate;
+}
+
+.character.walk .arm.right{
+  animation:armB .45s infinite alternate;
+}
+
+@keyframes walkA{
+  from{transform:rotate(22deg)}
+  to{transform:rotate(-22deg)}
+}
+
+@keyframes walkB{
+  from{transform:rotate(-22deg)}
+  to{transform:rotate(22deg)}
+}
+
+@keyframes armA{
+  from{transform:rotate(-18deg)}
+  to{transform:rotate(18deg)}
+}
+
+@keyframes armB{
+  from{transform:rotate(18deg)}
+  to{transform:rotate(-18deg)}
+}
+
+#erik .body{
+  background:#31587d;
+}
+
+#martin .body{
+  background:#493c68;
+}
+
+#lucia .body{
+  background:#704e4b;
+}
+
+/* =========================================================
+   KAMERA
+   ========================================================= */
+
+#camera{
+  position:absolute;
+  inset:0;
+  transform-origin:center;
+  will-change:transform;
+}
+
+/* =========================================================
+   TITULKY
+   ========================================================= */
+
+#subtitle{
+  position:absolute;
+  left:50%;
+  bottom:6%;
+  transform:translateX(-50%);
+  width:min(850px,88%);
+  text-align:center;
+  opacity:0;
+  transition:opacity .35s ease;
+  pointer-events:none;
+  text-shadow:0 2px 8px #000;
+}
+
+#speaker{
+  display:block;
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:1px;
+  margin-bottom:5px;
+  text-transform:uppercase;
+}
+
+#dialogue{
+  font-size:22px;
+  line-height:1.4;
+  font-weight:500;
+}
+
+/* =========================================================
+   FILMOVÉ PRUHY
+   ========================================================= */
+
+.bar{
+  position:absolute;
+  left:0;
+  right:0;
+  height:7vh;
+  background:#000;
+  z-index:20;
+  pointer-events:none;
+}
+
+.bar.top{top:0}
+.bar.bottom{bottom:0}
+
+/* =========================================================
+   UI
+   ========================================================= */
+
+#menu{
+  position:absolute;
+  inset:0;
+  z-index:50;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:
+    radial-gradient(
+      circle,
+      rgba(20,35,55,.35),
+      rgba(0,0,0,.92)
+    );
+}
+
+.menu-box{
+  width:min(650px,90%);
+  text-align:center;
+}
+
+.menu-logo{
+  font-size:14px;
+  letter-spacing:5px;
+  opacity:.65;
+  margin-bottom:15px;
+}
+
+.menu-title{
+  font-size:clamp(42px,8vw,90px);
+  font-weight:800;
+  margin:0;
+  letter-spacing:-3px;
+}
+
+.menu-sub{
+  margin:12px 0 35px;
+  color:#aab5c2;
+}
+
+.play{
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  padding:15px 35px;
+  border-radius:40px;
+  cursor:pointer;
+  transition:.2s;
+  backdrop-filter:blur(10px);
+}
+
+.play:hover{
+  transform:scale(1.05);
+  background:rgba(255,255,255,.15);
+}
+
+#controls{
+  position:absolute;
+  left:50%;
+  bottom:2%;
+  transform:translateX(-50%);
+  z-index:40;
+  display:flex;
+  gap:8px;
+  opacity:0;
+  transition:.3s;
+}
+
+#controls.show{
+  opacity:1;
+}
+
+.control{
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(0,0,0,.55);
+  color:white;
+  border-radius:20px;
+  padding:7px 13px;
+  cursor:pointer;
+}
+
+#sceneName{
+  position:absolute;
+  top:10%;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:30;
+  opacity:0;
+  font-size:13px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  transition:opacity 1s;
+}
+
+/* =========================================================
+   KONIEC
+   ========================================================= */
+
+#credits{
+  position:absolute;
+  inset:0;
+  z-index:60;
+  display:none;
+  background:#000;
+  overflow:hidden;
+  text-align:center;
+}
+
+.credit-content{
+  position:absolute;
+  width:100%;
+  top:100%;
+  animation:credits 25s linear forwards;
+}
+
+@keyframes credits{
+  to{top:-150%}
+}
+
+.credit-content h2{
+  font-size:42px;
+  margin-bottom:45px;
+}
+
+.credit-content p{
+  color:#aaa;
+  line-height:2;
+  margin:0 0 40px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media(max-width:600px){
+  .moon{
+    width:55px;
+    height:55px;
+  }
+
+  .building{
+    width:65px!important;
+  }
+
+  #dialogue{
+    font-size:17px;
+  }
+
+  #speaker{
+    font-size:12px;
+  }
+
+  .character{
+    transform:scale(.82);
+    transform-origin:bottom;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="film">
+
+  <div id="camera">
+
+    <div class="sky">
+      <div class="stars"></div>
+      <div class="moon"></div>
+    </div>
+
+    <div class="city">
+
+      <div class="layer far">
+        <div class="building" style="height:60%"><div class="windows"></div></div>
+        <div class="building" style="height:85%"><div class="windows"></div></div>
+        <div class="building" style="height:70%"><div class="windows"></div></div>
+        <div class="building" style="height:95%"><div class="windows"></div></div>
+        <div class="building" style="height:55%"><div class="windows"></div></div>
+        <div class="building" style="height:80%"><div class="windows"></div></div>
+        <div class="building" style="height:65%"><div class="windows"></div></div>
+      </div>
+
+      <div class="layer mid">
+        <div class="building" style="height:70%"><div class="windows"></div></div>
+        <div class="building" style="height:90%"><div class="windows"></div></div>
+        <div class="building" style="height:55%"><div class="windows"></div></div>
+        <div class="building" style="height:100%"><div class="windows"></div></div>
+        <div class="building" style="height:75%"><div class="windows"></div></div>
+        <div class="building" style="height:92%"><div class="windows"></div></div>
+        <div class="building" style="height:65%"><div class="windows"></div></div>
+      </div>
+
+      <div class="layer near">
+        <div class="building" style="height:70%"><div class="windows"></div></div>
+        <div class="building" style="height:95%"><div class="windows"></div></div>
+        <div class="building" style="height:65%"><div class="windows"></div></div>
+        <div class="building" style="height:85%"><div class="windows"></div></div>
+        <div class="building" style="height:100%"><div class="windows"></div></div>
+        <div class="building" style="height:72%"><div class="windows"></div></div>
+        <div class="building" style="height:90%"><div class="windows"></div></div>
+      </div>
+
+    </div>
+
+    <div class="ground"></div>
+    <div class="road"></div>
+    <div class="road-lines"></div>
+
+    <div class="lamps">
+      <div class="lamp l1"></div>
+      <div class="lamp l2"></div>
+      <div class="lamp l3"></div>
+    </div>
+
+    <div class="cars">
+      <div class="car car1"></div>
+      <div class="car car2"></div>
+    </div>
+
+    <div class="characters">
+
+      <div id="erik" class="character">
+        <div class="head"></div>
+        <div class="body"></div>
+        <div class="arm left"></div>
+        <div class="arm right"></div>
+        <div class="leg left"></div>
+        <div class="leg right"></div>
+      </div>
+
+      <div id="martin" class="character">
+        <div class="head"></div>
+        <div class="body"></div>
+        <div class="arm left"></div>
+        <div class="arm right"></div>
+        <div class="leg left"></div>
+        <div class="leg right"></div>
+      </div>
+
+      <div id="lucia" class="character">
+        <div class="head"></div>
+        <div class="body"></div>
+        <div class="arm left"></div>
+        <div class="arm right"></div>
+        <div class="leg left"></div>
+        <div class="leg right"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div id="sceneName"></div>
+
+  <div id="subtitle">
+    <span id="speaker"></span>
+    <div id="dialogue"></div>
+  </div>
+
+  <div class="bar top"></div>
+  <div class="bar bottom"></div>
+
+  <div id="menu">
+    <div class="menu-box">
+      <div class="menu-logo">ERIKAI STUDIOS PRESENTS</div>
+      <h1 class="menu-title">THE CITY</h1>
+      <div class="menu-sub">
+        Krátky animovaný 2,5D film vytvorený pomocou HTML, CSS a JavaScriptu
+      </div>
+      <button class="play" onclick="startFilm()">
+        ▶ PREHRAŤ FILM
+      </button>
+    </div>
+  </div>
+
+  <div id="controls">
+    <button class="control" onclick="togglePause()">⏸</button>
+    <button class="control" onclick="skipScene()">⏭</button>
+    <button class="control" onclick="restartFilm()">↻</button>
+  </div>
+
+  <div id="credits">
+    <div class="credit-content">
+      <h2>THE CITY</h2>
+
+      <p>
+        ERIKAI STUDIOS<br>
+        PRESENTS
+      </p>
+
+      <p>
+        Príbeh<br>
+        ErikAI
+      </p>
+
+      <p>
+        Animácia<br>
+        HTML • CSS • JavaScript
+      </p>
+
+      <p>
+        Postavy<br>
+        Erik<br>
+        Martin<br>
+        Lucia
+      </p>
+
+      <p>
+        Ďakujeme za sledovanie
+      </p>
+
+      <p>
+        © 2026 ErikAI Studios
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+
+/* =========================================================
+   FILMOVÝ ENGINE
+   ========================================================= */
+
+/*
+  Každá scéna obsahuje:
+  - názov
+  - dĺžku
+  - polohu postáv
+  - pohyb kamery
+  - titulky
+
+  Novú scénu môžeš pridať iba ako ďalší objekt.
+*/
+
+const scenes=[
+
+  {
+    name:"01 — Nočné mesto",
+    duration:30000,
+    camera:"wide",
+    characters:{
+      erik:{left:"28%",opacity:1,walk:true},
+      martin:{left:"-15%",opacity:0,walk:false},
+      lucia:{left:"110%",opacity:0,walk:false}
+    },
+    dialogue:[
+      [3000,5000,"ERIK","Je tu dnes nejako príliš ticho..."],
+      [9000,5000,"ERIK","Mesto je pritom stále plné ľudí."],
+      [16000,5000,"ERIK","Tak prečo mám pocit, že tu niečo nesedí?"]
+    ]
+  },
+
+  {
+    name:"02 — Stretnutie",
+    duration:35000,
+    camera:"move",
+    characters:{
+      erik:{left:"45%",opacity:1,walk:false},
+      martin:{left:"65%",opacity:1,walk:true},
+      lucia:{left:"110%",opacity:0,walk:false}
+    },
+    dialogue:[
+      [3000,5000,"MARTIN","Erik! Počkaj!"],
+      [9000,5000,"ERIK","Martin? Čo tu robíš tak neskoro?"],
+      [16000,6000,"MARTIN","Potrebujem ti niečo povedať."],
+      [25000,6000,"ERIK","Tak hovor."]
+    ]
+  },
+
+  {
+    name:"03 — Zvláštne svetlo",
+    duration:40000,
+    camera:"zoom",
+    characters:{
+      erik:{left:"43%",opacity:1,walk:false},
+      martin:{left:"57%",opacity:1,walk:false},
+      lucia:{left:"105%",opacity:0,walk:false}
+    },
+    dialogue:[
+      [3000,6000,"MARTIN","Pozri sa tam hore."],
+      [11000,6000,"ERIK","Čo je to za svetlo?"],
+      [19000,6000,"MARTIN","Neviem. Objavilo sa pred pár minútami."],
+      [28000,6000,"ERIK","Vyzerá to, akoby sa približovalo."]
+    ]
+  },
+
+  {
+    name:"04 — Lucia",
+    duration:45000,
+    camera:"follow",
+    characters:{
+      erik:{left:"38%",opacity:1,walk:true},
+      martin:{left:"52%",opacity:1,walk:true},
+      lucia:{left:"72%",opacity:1,walk:true}
+    },
+    dialogue:[
+      [4000,6000,"LUCIA","Nemali by ste tu byť."],
+      [12000,6000,"ERIK","Kto si?"],
+      [20000,6000,"LUCIA","To teraz nie je dôležité."],
+      [28000,6000,"MARTIN","Tak prečo si nás zastavila?"],
+      [37000,5000,"LUCIA","Pretože už nemáme veľa času."]
+    ]
+  },
+
+  {
+    name:"05 — Cesta",
+    duration:45000,
+    camera:"road",
+    characters:{
+      erik:{left:"32%",opacity:1,walk:true},
+      martin:{left:"50%",opacity:1,walk:true},
+      lucia:{left:"68%",opacity:1,walk:true}
+    },
+    dialogue:[
+      [3000,6000,"ERIK","Kam vlastne ideme?"],
+      [11000,6000,"LUCIA","Na miesto, kde to celé začalo."],
+      [19000,6000,"MARTIN","A čo tam nájdeme?"],
+      [27000,7000,"LUCIA","Odpoveď."],
+      [37000,6000,"ERIK","Na otázku, ktorú ešte ani nepoznáme?"]
+    ]
+  },
+
+  {
+    name:"06 — Za mestom",
+    duration:40000,
+    camera:"wide",
+    characters:{
+      erik:{left:"40%",opacity:1,walk:false},
+      martin:{left:"53%",opacity:1,walk:false},
+      lucia:{left:"66%",opacity:1,walk:false}
+    },
+    dialogue:[
+      [4000,6000,"LUCIA","Tu zastavíme."],
+      [12000,6000,"MARTIN","Tu nič nie je."],
+      [20000,6000,"ERIK","Počkajte..."],
+      [28000,7000,"ERIK","Pozrite sa pred nás."]
+    ]
+  },
+
+  {
+    name:"07 — Odpoveď",
+    duration:45000,
+    camera:"zoom",
+    characters:{
+      erik:{left:"35%",opacity:1,walk:false},
+      martin:{left:"50%",opacity:1,walk:false},
+      lucia:{left:"65%",opacity:1,walk:false}
+    },
+    dialogue:[
+      [4000,7000,"MARTIN","To nie je možné..."],
+      [13000,7000,"ERIK","Celé mesto..."],
+      [22000,7000,"LUCIA","Teraz už viete, prečo som vás hľadala."],
+      [31000,7000,"ERIK","Čo máme urobiť?"],
+      [40000,4000,"LUCIA","Rozhodnúť sa."]
+    ]
+  },
+
+  {
+    name:"08 — Rozhodnutie",
+    duration:50000,
+    camera:"move",
+    characters:{
+      erik:{left:"30%",opacity:1,walk:false},
+      martin:{left:"50%",opacity:1,walk:false},
+      lucia:{left:"70%",opacity:1,walk:false}
+    },
+    dialogue:[
+      [4000,7000,"ERIK","Ak sa vrátime, nič sa nezmení."],
+      [14000,7000,"MARTIN","A ak pôjdeme ďalej?"],
+      [24000,7000,"LUCIA","Nebudeme vedieť, čo nás čaká."],
+      [33000,7000,"ERIK","Tak poďme."],
+      [43000,5000,"MARTIN","Spolu."]
+    ]
+  },
+
+  {
+    name:"09 — Nový začiatok",
+    duration:40000,
+    camera:"wide",
+    characters:{
+      erik:{left:"40%",opacity:1,walk:true},
+      martin:{left:"50%",opacity:1,walk:true},
+      lucia:{left:"60%",opacity:1,walk:true}
+    },
+    dialogue:[
+      [4000,7000,"ERIK","Myslíš, že sa ešte niekedy vrátime?"],
+      [14000,7000,"LUCIA","Možno."],
+      [24000,7000,"MARTIN","A čo bude potom?"],
+      [32000,5000,"ERIK","To zistíme neskôr."]
+    ]
+  },
+
+  {
+    name:"10 — Koniec prvej kapitoly",
+    duration:30000,
+    camera:"wide",
+    characters:{
+      erik:{left:"43%",opacity:1,walk:false},
+      martin:{left:"50%",opacity:1,walk:false},
+      lucia:{left:"57%",opacity:1,walk:false}
+    },
+    dialogue:[
+      [4000,7000,"ERIK","Takže toto bol iba začiatok..."],
+      [14000,7000,"LUCIA","Presne."],
+      [24000,5000,"MARTIN","Tak poďme."]
+    ]
+  }
+
+];
+
+/* =========================================================
+   STAV
+   ========================================================= */
+
+let currentScene=0;
+let sceneStart=0;
+let running=false;
+let paused=false;
+let pauseStarted=0;
+let totalPaused=0;
+let animationFrame=0;
+
+/* =========================================================
+   ELEMENTY
+   ========================================================= */
+
+const film=document.getElementById("film");
+const camera=document.getElementById("camera");
+const subtitle=document.getElementById("subtitle");
+const speaker=document.getElementById("speaker");
+const dialogue=document.getElementById("dialogue");
+const sceneName=document.getElementById("sceneName");
+const menu=document.getElementById("menu");
+const controls=document.getElementById("controls");
+const credits=document.getElementById("credits");
+
+/* =========================================================
+   START
+   ========================================================= */
+
+function startFilm(){
+
+  menu.style.display="none";
+  controls.classList.add("show");
+
+  currentScene=0;
+  running=true;
+  paused=false;
+  totalPaused=0;
+
+  playScene();
+
+  cancelAnimationFrame(animationFrame);
+  animationFrame=requestAnimationFrame(loop);
+}
+
+/* =========================================================
+   SCÉNA
+   ========================================================= */
+
+function playScene(){
+
+  const scene=scenes[currentScene];
+
+  sceneStart=performance.now();
+  totalPaused=0;
+
+  sceneName.textContent=scene.name;
+  sceneName.style.opacity=1;
+
+  setTimeout(()=>{
+    sceneName.style.opacity=0;
+  },2500);
+
+  applyCharacters(scene);
+  applyCamera(scene.camera);
+}
+
+/* =========================================================
+   POSTAVY
+   ========================================================= */
+
+function applyCharacters(scene){
+
+  Object.entries(scene.characters).forEach(([id,state])=>{
+
+    const el=document.getElementById(id);
+
+    el.style.left=state.left;
+    el.style.opacity=state.opacity;
+
+    el.classList.toggle("walk",state.walk);
+
+  });
+  }
+  /* =========================================================
+   KAMERA
+   ========================================================= */
+
+function applyCamera(type){
+
+  camera.style.transition="transform 8s ease";
+
+  if(type==="wide"){
+    camera.style.transform="scale(1) translateX(0)";
+  }
+
+  if(type==="move"){
+    camera.style.transform="scale(1.08) translateX(-3%)";
+  }
+
+  if(type==="zoom"){
+    camera.style.transform="scale(1.18) translateX(0)";
+  }
+
+  if(type==="follow"){
+    camera.style.transform="scale(1.12) translateX(-2%)";
+  }
+
+  if(type==="road"){
+    camera.style.transform="scale(1.08) translateY(-1%)";
+  }
+}
+
+/* =========================================================
+   TITULKY
+   ========================================================= */
+
+function updateSubtitle(elapsed){
+
+  const scene=scenes[currentScene];
+
+  let active=null;
+
+  for(const line of scene.dialogue){
+
+    const start=line[0];
+    const duration=line[1];
+
+    if(elapsed>=start && elapsed<start+duration){
+      active=line;
+      break;
+    }
+  }
+
+  if(active){
+
+    speaker.textContent=active[2];
+    dialogue.textContent=active[3];
+    subtitle.style.opacity=1;
+
+  }else{
+
+    subtitle.style.opacity=0;
+
+  }
+}
+
+/* =========================================================
+   HLAVNÁ SLUČKA
+   ========================================================= */
+
+function loop(now){
+
+  if(!running){
+    return;
+  }
+
+  if(!paused){
+
+    const elapsed=now-sceneStart-totalPaused;
+
+    updateSubtitle(elapsed);
+
+    if(elapsed>=scenes[currentScene].duration){
+
+      nextScene();
+      animationFrame=requestAnimationFrame(loop);
+      return;
+    }
+
+  }
+
+  animationFrame=requestAnimationFrame(loop);
+}
+
+/* =========================================================
+   ĎALŠIA SCÉNA
+   ========================================================= */
+
+function nextScene(){
+
+  currentScene++;
+
+  if(currentScene>=scenes.length){
+
+    endFilm();
+    return;
+  }
+
+  playScene();
+}
+
+/* =========================================================
+   PRESKOČENIE
+   ========================================================= */
+
+function skipScene(){
+
+  if(!running) return;
+
+  nextScene();
+}
+
+/* =========================================================
+   PAUZA
+   ========================================================= */
+
+function togglePause(){
+
+  if(!running) return;
+
+  const button=document.querySelector("#controls .control");
+
+  if(!paused){
+
+    paused=true;
+    pauseStarted=performance.now();
+    button.textContent="▶";
+
+  }else{
+
+    totalPaused+=performance.now()-pauseStarted;
+    paused=false;
+    button.textContent="⏸";
+
+  }
+}
+
+/* =========================================================
+   REŠTART
+   ========================================================= */
+
+function restartFilm(){
+
+  credits.style.display="none";
+  menu.style.display="none";
+
+  currentScene=0;
+  running=true;
+  paused=false;
+  totalPaused=0;
+
+  const button=document.querySelector("#controls .control");
+  button.textContent="⏸";
+
+  playScene();
+}
+
+/* =========================================================
+   KONIEC
+   ========================================================= */
+
+function endFilm(){
+
+  running=false;
+  subtitle.style.opacity=0;
+  controls.classList.remove("show");
+  credits.style.display="block";
+
+}
+
+/* =========================================================
+   KLÁVESNICA
+   ========================================================= */
+
+document.addEventListener("keydown",e=>{
+
+  if(e.code==="Space"){
+    e.preventDefault();
+    togglePause();
+  }
+
+  if(e.code==="ArrowRight"){
+    skipScene();
+  }
+
+});
+
+/* =========================================================
+   PRISPÔSOBENIE OKNU
+   ========================================================= */
+
+window.addEventListener("resize",()=>{
+
+  /*
+    Rozloženie je založené na percentách,
+    takže nie je potrebný nový výpočet scén.
+  */
+
+});
+
+</script>
+
+</body>
+</html>
