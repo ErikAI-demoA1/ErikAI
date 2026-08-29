@@ -1,0 +1,1888 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ErikAI Player Ratings</title>
+
+<style>
+:root{
+  --bg:#eef3f8;
+  --card:#ffffff;
+  --soft:#f6f8fb;
+  --text:#101820;
+  --muted:#697686;
+  --accent:#0b6ffe;
+  --accent2:#7c3aed;
+  --line:#dce4ed;
+  --danger:#dc3545;
+  --shadow:0 10px 30px rgba(20,40,60,.08);
+}
+
+[data-theme="dark"]{
+  --bg:#0b1016;
+  --card:#151b23;
+  --soft:#1b222c;
+  --text:#edf2f7;
+  --muted:#9ca8b6;
+  --accent:#5b9bff;
+  --accent2:#9b6cff;
+  --line:#2a3440;
+  --danger:#ff6472;
+  --shadow:0 10px 30px rgba(0,0,0,.28);
+}
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Inter,Segoe UI,Arial,sans-serif;
+  background:linear-gradient(135deg,var(--bg),var(--soft));
+  color:var(--text);
+}
+
+button,
+input,
+select{
+  font:inherit;
+}
+
+button{
+  border:1px solid var(--line);
+  background:var(--card);
+  color:var(--text);
+  border-radius:10px;
+  padding:10px 14px;
+  cursor:pointer;
+  transition:.18s;
+}
+
+button:hover{
+  transform:translateY(-1px);
+}
+
+.wrap{
+  max-width:1250px;
+  margin:auto;
+  padding:24px;
+}
+
+/* ================= HEADER ================= */
+
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  margin-bottom:25px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.logo{
+  width:56px;
+  height:56px;
+  border-radius:16px;
+  display:grid;
+  place-items:center;
+  color:white;
+  font-size:24px;
+  font-weight:900;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  box-shadow:var(--shadow);
+}
+
+h1{
+  margin:0;
+  font-size:25px;
+}
+
+.sub{
+  color:var(--muted);
+  font-size:13px;
+  margin-top:4px;
+}
+
+/* ================= PANEL ================= */
+
+.panel{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:20px;
+  margin-bottom:20px;
+  box-shadow:var(--shadow);
+}
+
+.panel h2{
+  margin:0 0 18px;
+  font-size:20px;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px;
+}
+
+.field label{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  margin-bottom:6px;
+}
+
+.field input,
+.field select{
+  width:100%;
+  padding:11px 12px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--soft);
+  color:var(--text);
+  outline:none;
+}
+
+.field input:focus,
+.field select:focus,
+.search:focus{
+  border-color:var(--accent);
+}
+
+/* ================= ATTRIBUTES ================= */
+
+.attribute-title{
+  margin:22px 0 12px;
+  font-size:15px;
+}
+
+.attribute{
+  display:grid;
+  grid-template-columns:55px 1fr 45px;
+  align-items:center;
+  gap:12px;
+  margin:11px 0;
+}
+
+.attribute-name{
+  font-weight:800;
+}
+
+.attribute input[type="range"]{
+  width:100%;
+  accent-color:var(--accent);
+}
+
+.attribute output{
+  font-weight:900;
+  text-align:right;
+}
+
+.preview{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  margin-top:18px;
+  padding:15px;
+  border-radius:13px;
+  background:var(--soft);
+  border:1px solid var(--line);
+}
+
+.preview-ovr{
+  font-size:31px;
+  font-weight:900;
+}
+
+.preview-info{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+
+.form-actions{
+  display:flex;
+  gap:10px;
+  margin-top:17px;
+}
+
+.primary{
+  background:var(--accent);
+  color:white;
+  border-color:var(--accent);
+}
+
+.cancel{
+  display:none;
+}
+
+/* ================= TOOLBAR ================= */
+
+.toolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:18px;
+}
+
+.search{
+  flex:1;
+  min-width:220px;
+  padding:14px 16px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--card);
+  color:var(--text);
+  outline:none;
+  box-shadow:var(--shadow);
+}
+
+.filter,
+.sort{
+  min-width:145px;
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--card);
+  color:var(--text);
+}
+
+/* ================= STATS ================= */
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-bottom:20px;
+}
+
+.stat{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:15px;
+  box-shadow:var(--shadow);
+}
+
+.stat strong{
+  display:block;
+  font-size:22px;
+}
+
+.stat span{
+  color:var(--muted);
+  font-size:12px;
+}
+
+/* ================= PLAYERS ================= */
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:18px;
+}
+
+.player-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:18px;
+  box-shadow:var(--shadow);
+  transition:.2s;
+}
+
+.player-card:hover{
+  transform:translateY(-3px);
+}
+
+.player-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.player-name{
+  font-size:21px;
+  font-weight:850;
+}
+
+.position{
+  color:var(--muted);
+  font-size:13px;
+  margin-top:4px;
+}
+
+.ovr{
+  width:67px;
+  height:67px;
+  border-radius:16px;
+  display:grid;
+  place-items:center;
+  color:white;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  font-size:27px;
+  font-weight:900;
+  flex-shrink:0;
+}
+
+.ovr-label{
+  display:block;
+  font-size:8px;
+  text-align:center;
+  opacity:.85;
+  margin-top:-17px;
+}
+
+.ratings{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin:18px 0;
+}
+
+.rating{
+  background:var(--soft);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:9px;
+  text-align:center;
+}
+
+.rating strong{
+  display:block;
+  font-size:19px;
+}
+
+.rating span{
+  color:var(--muted);
+  font-size:10px;
+}
+
+.details{
+  border-top:1px solid var(--line);
+  padding-top:12px;
+}
+
+.detail{
+  margin:9px 0;
+}
+
+.detail-head{
+  display:flex;
+  justify-content:space-between;
+  font-size:12px;
+  margin-bottom:4px;
+}
+
+.bar{
+  height:6px;
+  border-radius:20px;
+  background:var(--line);
+  overflow:hidden;
+}
+
+.bar i{
+  display:block;
+  height:100%;
+  width:0;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:20px;
+}
+
+.actions{
+  display:flex;
+  gap:8px;
+  margin-top:15px;
+}
+
+.actions button{
+  flex:1;
+}
+
+.delete{
+  color:var(--danger);
+}
+
+/* ================= EMPTY ================= */
+
+.empty{
+  grid-column:1/-1;
+  text-align:center;
+  padding:60px 20px;
+  color:var(--muted);
+  background:var(--card);
+  border:1px dashed var(--line);
+  border-radius:18px;
+}
+
+/* ================= FOOTER ================= */
+
+footer{
+  text-align:center;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.6;
+  margin:30px 0 10px;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:800px){
+
+  .stats{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .form-grid{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+@media(max-width:550px){
+
+  .wrap{
+    padding:14px;
+  }
+
+  header{
+    align-items:flex-start;
+  }
+
+  .logo{
+    width:48px;
+    height:48px;
+  }
+
+  h1{
+    font-size:20px;
+  }
+
+  .form-grid{
+    grid-template-columns:1fr;
+  }
+
+  .stats{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .grid{
+    grid-template-columns:1fr;
+  }
+
+  .form-actions{
+    flex-direction:column;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+<header>
+
+  <div class="brand">
+
+    <div class="logo">E</div>
+
+    <div>
+      <h1>ErikAI Player Ratings</h1>
+
+      <div class="sub">
+        Vlastný systém hodnotenia futbalových hráčov
+      </div>
+    </div>
+
+  </div>
+
+  <button onclick="toggleTheme()">🌓 Režim</button>
+
+</header>
+
+
+<!-- ================= PLAYER EDITOR ================= -->
+
+<section class="panel">
+
+  <h2 id="formTitle">⚽ Vytvoriť hráča</h2>
+
+  <div class="form-grid">
+
+    <div class="field">
+
+      <label>Meno</label>
+
+      <input
+        id="firstName"
+        type="text"
+        placeholder="Erik"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>Priezvisko</label>
+
+      <input
+        id="lastName"
+        type="text"
+        placeholder="Mohylák"
+      >
+
+    </div>
+
+
+    <div class="field">
+
+      <label>Pozícia</label>
+
+      <select id="position" onchange="updatePreview()">
+
+        <option value="ST">ST — Útočník</option>
+        <option value="CF">CF — Druhý útočník</option>
+
+        <option value="LW">LW — Ľavé krídlo</option>
+        <option value="RW">RW — Pravé krídlo</option>
+
+        <option value="CAM">CAM — Ofenzívny záložník</option>
+        <option value="CM">CM — Stredný záložník</option>
+        <option value="CDM">CDM — Defenzívny záložník</option>
+
+        <option value="LM">LM — Ľavý záložník</option>
+        <option value="RM">RM — Pravý záložník</option>
+
+        <option value="LB">LB — Ľavý obranca</option>
+        <option value="RB">RB — Pravý obranca</option>
+        <option value="CB">CB — Stopér</option>
+
+        <option value="GK">GK — Brankár</option>
+
+      </select>
+
+    </div>
+
+
+    <div class="field">
+
+      <label>Preferovaná noha</label>
+
+      <select id="foot">
+
+        <option value="Pravá">Pravá</option>
+        <option value="Ľavá">Ľavá</option>
+
+      </select>
+
+    </div>
+
+  </div>
+
+
+  <h3 class="attribute-title">
+    Hlavné atribúty
+  </h3>
+
+
+  <!-- PAC -->
+
+  <div class="attribute">
+
+    <span class="attribute-name">PAC</span>
+
+    <input
+      id="pac"
+      type="range"
+      min="1"
+      max="99"
+      value="75"
+      oninput="updatePreview()"
+    >
+
+    <output id="pacValue">75</output>
+
+  </div>
+
+
+  <!-- SHO -->
+
+  <div class="attribute">
+
+    <span class="attribute-name">SHO</span>
+
+    <input
+      id="sho"
+      type="range"
+      min="1"
+      max="99"
+      value="75"
+      oninput="updatePreview()"
+    >
+
+    <output id="shoValue">75</output>
+
+  </div>
+
+
+  <!-- PAS -->
+
+  <div class="attribute">
+
+    <span class="attribute-name">PAS</span>
+
+    <input
+      id="pas"
+      type="range"
+      min="1"
+      max="99"
+      value="75"
+      oninput="updatePreview()"
+    >
+
+    <output id="pasValue">75</output>
+
+  </div>
+
+
+  <!-- DRI -->
+
+  <div class="attribute">
+
+    <span class="attribute-name">DRI</span>
+
+    <input
+      id="dri"
+      type="range"
+      min="1"
+      max="99"
+      value="75"
+      oninput="updatePreview()"
+    >
+
+    <output id="driValue">75</output>
+
+  </div>
+
+
+  <!-- DEF -->
+
+  <div class="attribute">
+
+    <span class="attribute-name">DEF</span>
+
+    <input
+      id="def"
+      type="range"
+      min="1"
+      max="99"
+      value="75"
+      oninput="updatePreview()"
+    >
+
+    <output id="defValue">75</output>
+
+  </div>
+
+
+  <!-- PHY -->
+
+  <div class="attribute">
+
+    <span class="attribute-name">PHY</span>
+
+    <input
+      id="phy"
+      type="range"
+      min="1"
+      max="99"
+      value="75"
+      oninput="updatePreview()"
+    >
+
+    <output id="phyValue">75</output>
+
+  </div>
+
+
+  <!-- PREVIEW -->
+
+  <div class="preview">
+
+    <div class="preview-ovr">
+      OVR <span id="previewOVR">75</span>
+    </div>
+
+    <div class="preview-info">
+
+      OVR sa automaticky vypočítava podľa pozície.
+      Každá pozícia používa vlastné váhy atribútov.
+
+    </div>
+
+  </div>
+
+
+  <div class="form-actions">
+
+    <button
+      class="primary"
+      onclick="savePlayer()"
+    >
+      💾 <span id="saveText">Pridať hráča</span>
+    </button>
+
+    <button
+      id="cancelEdit"
+      class="cancel"
+      onclick="cancelEdit()"
+    >
+      Zrušiť úpravu
+    </button>
+
+    <button onclick="resetForm()">
+      Vyčistiť
+    </button>
+
+  </div>
+
+</section>
+
+
+<!-- ================= SEARCH ================= -->
+
+<div class="toolbar">
+
+  <input
+    id="search"
+    class="search"
+    placeholder="🔍 Hľadať hráča alebo pozíciu..."
+    oninput="renderPlayers()"
+  >
+
+
+  <select
+    id="filter"
+    class="filter"
+    onchange="renderPlayers()"
+  >
+
+    <option value="ALL">
+      Všetky pozície
+    </option>
+
+    <option value="GK">GK</option>
+
+    <option value="CB">CB</option>
+    <option value="LB">LB</option>
+    <option value="RB">RB</option>
+
+    <option value="CDM">CDM</option>
+    <option value="CM">CM</option>
+    <option value="CAM">CAM</option>
+
+    <option value="LM">LM</option>
+    <option value="RM">RM</option>
+
+    <option value="LW">LW</option>
+    <option value="RW">RW</option>
+
+    <option value="CF">CF</option>
+    <option value="ST">ST</option>
+
+  </select>
+
+
+  <select
+    id="sort"
+    class="sort"
+    onchange="renderPlayers()"
+  >
+
+    <option value="ovr">
+      OVR ↓
+    </option>
+
+    <option value="ovrAsc">
+      OVR ↑
+    </option>
+
+    <option value="name">
+      Meno A–Z
+    </option>
+
+    <option value="position">
+      Pozícia
+    </option>
+
+  </select>
+
+</div>
+
+
+<!-- ================= STATISTICS ================= -->
+
+<div class="stats">
+
+  <div class="stat">
+
+    <strong id="count">
+      0
+    </strong>
+
+    <span>
+      Hráčov
+    </span>
+
+  </div>
+
+
+  <div class="stat">
+
+    <strong id="average">
+      0
+    </strong>
+
+    <span>
+      Priemerný OVR
+    </span>
+
+  </div>
+
+
+  <div class="stat">
+
+    <strong id="best">
+      0
+    </strong>
+
+    <span>
+      Najvyšší OVR
+    </span>
+
+  </div>
+
+
+  <div class="stat">
+
+    <strong id="bestName">
+      —
+    </strong>
+
+    <span>
+      Najlepší hráč
+    </span>
+
+  </div>
+
+</div>
+
+
+<!-- ================= PLAYER LIST ================= -->
+
+<div id="players" class="grid"></div>
+
+
+<footer>
+
+  <b>ErikAI Player Ratings</b><br>
+
+  Systém používa hlavné atribúty PAC, SHO, PAS, DRI, DEF a PHY
+  a pozíciovo vážený výpočet OVR.<br>
+
+  Ide o vlastný analytický model inšpirovaný štruktúrou
+  futbalových ratingov; nejde o oficiálny výpočet EA SPORTS FC.
+
+</footer>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   POZÍCIOVÉ VÁHY
+   =========================================================
+
+   Každá pozícia má vlastné váhy.
+   Súčet váh každej pozície = 1.
+
+   Preto napríklad:
+   ST -> viac SHO/PAC/DRI
+   CB -> viac DEF/PHY
+   CM -> viac PAS/DRI/PHY
+   GK -> viac DEF/PHY/PAS
+*/
+
+const weights = {
+
+  ST:{
+    pac:.18,
+    sho:.30,
+    pas:.10,
+    dri:.20,
+    def:.04,
+    phy:.18
+  },
+
+  CF:{
+    pac:.16,
+    sho:.25,
+    pas:.16,
+    dri:.24,
+    def:.04,
+    phy:.15
+  },
+
+  LW:{
+    pac:.22,
+    sho:.19,
+    pas:.14,
+    dri:.28,
+    def:.04,
+    phy:.13
+  },
+
+  RW:{
+    pac:.22,
+    sho:.19,
+    pas:.14,
+    dri:.28,
+    def:.04,
+    phy:.13
+  },
+
+  CAM:{
+    pac:.12,
+    sho:.17,
+    pas:.24,
+    dri:.25,
+    def:.06,
+    phy:.16
+  },
+
+  CM:{
+    pac:.10,
+    sho:.10,
+    pas:.25,
+    dri:.20,
+    def:.15,
+    phy:.20
+  },
+
+  CDM:{
+    pac:.07,
+    sho:.06,
+    pas:.20,
+    dri:.15,
+    def:.29,
+    phy:.23
+  },
+
+  LM:{
+    pac:.18,
+    sho:.14,
+    pas:.18,
+    dri:.22,
+    def:.08,
+    phy:.20
+  },
+
+  RM:{
+    pac:.18,
+    sho:.14,
+    pas:.18,
+    dri:.22,
+    def:.08,
+    phy:.20
+  },
+
+  LB:{
+    pac:.16,
+    sho:.04,
+    pas:.17,
+    dri:.13,
+    def:.31,
+    phy:.19
+  },
+
+  RB:{
+    pac:.16,
+    sho:.04,
+    pas:.17,
+    dri:.13,
+    def:.31,
+    phy:.19
+  },
+
+  CB:{
+    pac:.09,
+    sho:.02,
+    pas:.10,
+    dri:.08,
+    def:.42,
+    phy:.29
+  },
+
+  GK:{
+    pac:.08,
+    sho:.01,
+    pas:.10,
+    dri:.08,
+    def:.43,
+    phy:.30
+  }
+
+};
+
+
+/* =========================================================
+   ATRIBÚTY
+   ========================================================= */
+
+const attributeKeys=[
+  "pac",
+  "sho",
+  "pas",
+  "dri",
+  "def",
+  "phy"
+];
+
+
+/* =========================================================
+   VÝPOČET OVR
+   ========================================================= */
+
+function calculateOVR(player){
+
+  const w=
+    weights[player.position] ||
+    weights.CM;
+
+  const result=
+    player.pac*w.pac+
+    player.sho*w.sho+
+    player.pas*w.pas+
+    player.dri*w.dri+
+    player.def*w.def+
+    player.phy*w.phy;
+
+  return Math.round(result);
+}
+
+
+/* =========================================================
+   LOCAL STORAGE
+   ========================================================= */
+
+let players=[];
+
+let editingId=null;
+
+try{
+
+  players=
+    JSON.parse(
+      localStorage.getItem(
+        "erikai-player-ratings"
+      )
+    ) || [];
+
+}catch(error){
+
+  players=[];
+
+}
+
+
+/* =========================================================
+   ULOŽENIE
+   ========================================================= */
+
+function persist(){
+
+  localStorage.setItem(
+    "erikai-player-ratings",
+    JSON.stringify(players)
+  );
+
+}
+
+
+/* =========================================================
+   FORM DATA
+   ========================================================= */
+
+function getFormData(){
+
+  return {
+
+    firstName:
+      document
+        .getElementById("firstName")
+        .value
+        .trim(),
+
+    lastName:
+      document
+        .getElementById("lastName")
+        .value
+        .trim(),
+
+    position:
+      document
+        .getElementById("position")
+        .value,
+
+    foot:
+      document
+        .getElementById("foot")
+        .value,
+
+    pac:+document.getElementById("pac").value,
+
+    sho:+document.getElementById("sho").value,
+
+    pas:+document.getElementById("pas").value,
+
+    dri:+document.getElementById("dri").value,
+
+    def:+document.getElementById("def").value,
+
+    phy:+document.getElementById("phy").value
+
+  };
+
+}
+
+
+/* =========================================================
+   CELÉ MENO
+   ========================================================= */
+
+function fullName(player){
+
+  const name=
+    `${player.firstName} ${player.lastName}`
+      .trim();
+
+  return name || "Neznámy hráč";
+
+}
+
+
+/* =========================================================
+   PREVIEW
+   ========================================================= */
+
+function updatePreview(){
+
+  attributeKeys.forEach(key=>{
+
+    const input=
+      document.getElementById(key);
+
+    const output=
+      document.getElementById(
+        key+"Value"
+      );
+
+    output.textContent=
+      input.value;
+
+  });
+
+
+  const player=
+    getFormData();
+
+
+  document.getElementById(
+    "previewOVR"
+  ).textContent=
+    calculateOVR(player);
+
+}
+
+
+/* =========================================================
+   ULOŽIŤ / PRIDAŤ HRÁČA
+   ========================================================= */
+
+function savePlayer(){
+
+  const form=
+    getFormData();
+
+
+  if(
+    !form.firstName &&
+    !form.lastName
+  ){
+
+    alert(
+      "Zadaj aspoň meno alebo priezvisko hráča."
+    );
+
+    return;
+
+  }
+
+
+  /* ÚPRAVA EXISTUJÚCEHO */
+
+  if(editingId!==null){
+
+    const index=
+      players.findIndex(
+        p=>p.id===editingId
+      );
+
+
+    if(index!==-1){
+
+      players[index]={
+        ...players[index],
+        ...form,
+        ovr:calculateOVR(form)
+      };
+
+    }
+
+
+    editingId=null;
+
+    document.getElementById(
+      "formTitle"
+    ).textContent=
+      "⚽ Vytvoriť hráča";
+
+    document.getElementById(
+      "saveText"
+    ).textContent=
+      "Pridať hráča";
+
+    document.getElementById(
+      "cancelEdit"
+    ).style.display=
+      "none";
+
+  }
+
+
+  /* NOVÝ HRÁČ */
+
+  else{
+
+    const player={
+      id:Date.now(),
+      ...form
+    };
+
+    player.ovr=
+      calculateOVR(player);
+
+    players.push(player);
+
+  }
+
+
+  persist();
+
+  renderPlayers();
+
+  resetForm();
+
+}
+
+
+/* =========================================================
+   RESET FORMULÁRA
+   ========================================================= */
+
+function resetForm(){
+
+  editingId=null;
+
+  document.getElementById(
+    "firstName"
+  ).value="";
+
+  document.getElementById(
+    "lastName"
+  ).value="";
+
+  document.getElementById(
+    "position"
+  ).value="ST";
+
+  document.getElementById(
+    "foot"
+  ).value="Pravá";
+
+
+  attributeKeys.forEach(key=>{
+
+    document.getElementById(key).value=75;
+
+  });
+
+
+  document.getElementById(
+    "formTitle"
+  ).textContent=
+    "⚽ Vytvoriť hráča";
+
+  document.getElementById(
+    "saveText"
+  ).textContent=
+    "Pridať hráča";
+
+  document.getElementById(
+    "cancelEdit"
+  ).style.display=
+    "none";
+
+
+  updatePreview();
+
+}
+
+
+/* =========================================================
+   ZRUŠIŤ ÚPRAVU
+   ========================================================= */
+
+function cancelEdit(){
+
+  resetForm();
+
+}
+
+/* =========================================================
+   ÚPRAVA HRÁČA
+   ========================================================= */
+
+function editPlayer(id){
+
+  const player=
+    players.find(
+      p=>p.id===id
+    );
+
+  if(!player) return;
+
+
+  editingId=id;
+
+
+  document.getElementById(
+    "firstName"
+  ).value=
+    player.firstName || "";
+
+  document.getElementById(
+    "lastName"
+  ).value=
+    player.lastName || "";
+
+  document.getElementById(
+    "position"
+  ).value=
+    player.position;
+
+  document.getElementById(
+    "foot"
+  ).value=
+    player.foot || "Pravá";
+
+
+  attributeKeys.forEach(key=>{
+
+    document.getElementById(key).value=
+      player[key];
+
+  });
+
+
+  document.getElementById(
+    "formTitle"
+  ).textContent=
+    "✏️ Upraviť hráča";
+
+  document.getElementById(
+    "saveText"
+  ).textContent=
+    "Uložiť zmeny";
+
+  document.getElementById(
+    "cancelEdit"
+  ).style.display=
+    "block";
+
+
+  updatePreview();
+
+
+  window.scrollTo({
+    top:0,
+    behavior:"smooth"
+  });
+
+}
+
+
+/* =========================================================
+   VYMAZANIE HRÁČA
+   ========================================================= */
+
+function deletePlayer(id){
+
+  const player=
+    players.find(
+      p=>p.id===id
+    );
+
+  if(!player) return;
+
+
+  const confirmed=
+    confirm(
+      `Naozaj chceš odstrániť hráča ${fullName(player)}?`
+    );
+
+
+  if(!confirmed) return;
+
+
+  players=
+    players.filter(
+      p=>p.id!==id
+    );
+
+
+  persist();
+
+  renderPlayers();
+
+}
+
+
+/* =========================================================
+   OCHRANA TEXTU
+   ========================================================= */
+
+function escapeHTML(value){
+
+  return String(value ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+
+}
+
+
+/* =========================================================
+   KARTA HRÁČA
+   ========================================================= */
+
+function playerCard(player){
+
+  const attrs=[
+    ["PAC",player.pac],
+    ["SHO",player.sho],
+    ["PAS",player.pas],
+    ["DRI",player.dri],
+    ["DEF",player.def],
+    ["PHY",player.phy]
+  ];
+
+
+  return `
+
+  <article class="player-card">
+
+    <div class="player-top">
+
+      <div>
+
+        <div class="player-name">
+          ${escapeHTML(fullName(player))}
+        </div>
+
+        <div class="position">
+          ${escapeHTML(player.position)}
+          •
+          ${escapeHTML(player.foot || "Pravá")}
+        </div>
+
+      </div>
+
+
+      <div class="ovr">
+
+        ${player.ovr}
+
+        <span class="ovr-label">
+          OVR
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <div class="ratings">
+
+      ${attrs.map(attr=>`
+
+        <div class="rating">
+
+          <strong>
+            ${attr[1]}
+          </strong>
+
+          <span>
+            ${attr[0]}
+          </span>
+
+        </div>
+
+      `).join("")}
+
+    </div>
+
+
+    <div class="details">
+
+      ${attrs.map(attr=>`
+
+        <div class="detail">
+
+          <div class="detail-head">
+
+            <span>
+              ${attr[0]}
+            </span>
+
+            <b>
+              ${attr[1]}
+            </b>
+
+          </div>
+
+          <div class="bar">
+
+            <i
+              style="width:${attr[1]}%"
+            ></i>
+
+          </div>
+
+        </div>
+
+      `).join("")}
+
+    </div>
+
+
+    <div class="actions">
+
+      <button
+        onclick="editPlayer(${player.id})"
+      >
+        ✏️ Upraviť
+      </button>
+
+      <button
+        class="delete"
+        onclick="deletePlayer(${player.id})"
+      >
+        🗑️ Zmazať
+      </button>
+
+    </div>
+
+  </article>
+
+  `;
+
+}
+
+
+/* =========================================================
+   VYKRESLENIE
+   ========================================================= */
+
+function renderPlayers(){
+
+  const search=
+    document.getElementById(
+      "search"
+    ).value
+      .toLowerCase()
+      .trim();
+
+
+  const filter=
+    document.getElementById(
+      "filter"
+    ).value;
+
+
+  const sort=
+    document.getElementById(
+      "sort"
+    ).value;
+
+
+  let filtered=
+    players.filter(player=>{
+
+      const name=
+        fullName(player)
+          .toLowerCase();
+
+
+      const matchesSearch=
+        !search ||
+        name.includes(search) ||
+        player.position
+          .toLowerCase()
+          .includes(search);
+
+
+      const matchesPosition=
+        filter==="ALL" ||
+        player.position===filter;
+
+
+      return(
+        matchesSearch &&
+        matchesPosition
+      );
+
+    });
+
+
+  /* SORT */
+
+  if(sort==="ovr"){
+
+    filtered.sort(
+      (a,b)=>b.ovr-a.ovr
+    );
+
+  }
+
+  else if(sort==="ovrAsc"){
+
+    filtered.sort(
+      (a,b)=>a.ovr-b.ovr
+    );
+
+  }
+
+  else if(sort==="name"){
+
+    filtered.sort(
+      (a,b)=>
+        fullName(a)
+          .localeCompare(
+            fullName(b),
+            "sk"
+          )
+    );
+
+  }
+
+  else if(sort==="position"){
+
+    filtered.sort(
+      (a,b)=>
+        a.position
+          .localeCompare(
+            b.position
+          )
+    );
+
+  }
+
+
+  const container=
+    document.getElementById(
+      "players"
+    );
+
+
+  if(!filtered.length){
+
+    container.innerHTML=`
+
+      <div class="empty">
+
+        <div style="font-size:38px">
+          ⚽
+        </div>
+
+        <h2>
+          Žiadni hráči
+        </h2>
+
+        <p>
+          Vytvor prvého hráča pomocou
+          formulára vyššie.
+        </p>
+
+      </div>
+
+    `;
+
+  }
+
+  else{
+
+    container.innerHTML=
+      filtered
+        .map(playerCard)
+        .join("");
+
+  }
+
+
+  updateStatistics(filtered);
+
+}
+/* =========================================================
+   ŠTATISTIKY
+   ========================================================= */
+
+function updateStatistics(list){
+
+  const count=
+    list.length;
+
+
+  const average=
+    count
+      ? Math.round(
+          list.reduce(
+            (sum,p)=>sum+p.ovr,
+            0
+          )/count
+        )
+      :0;
+
+
+  const best=
+    count
+      ? Math.max(
+          ...list.map(
+            p=>p.ovr
+          )
+        )
+      :0;
+
+
+  const bestPlayer=
+    list.find(
+      p=>p.ovr===best
+    );
+
+
+  document.getElementById(
+    "count"
+  ).textContent=
+    count;
+
+
+  document.getElementById(
+    "average"
+  ).textContent=
+    average;
+
+
+  document.getElementById(
+    "best"
+  ).textContent=
+    best;
+
+
+  document.getElementById(
+    "bestName"
+  ).textContent=
+    bestPlayer
+      ? fullName(bestPlayer)
+      : "—";
+
+}
+
+
+/* =========================================================
+   DARK MODE
+   ========================================================= */
+
+function toggleTheme(){
+
+  const dark=
+    document.documentElement
+      .getAttribute(
+        "data-theme"
+      )==="dark";
+
+
+  document.documentElement
+    .toggleAttribute(
+      "data-theme",
+      !dark
+    );
+
+
+  localStorage.setItem(
+    "erikai-theme",
+    !dark
+      ? "dark"
+      : "light"
+  );
+
+}
+
+
+if(
+  localStorage.getItem(
+    "erikai-theme"
+  )==="dark"
+){
+
+  document.documentElement
+    .setAttribute(
+      "data-theme",
+      "dark"
+    );
+
+}
+
+
+/* =========================================================
+   START
+   ========================================================= */
+
+updatePreview();
+
+renderPlayers();
+
+</script>
+
+</body>
+</html>
