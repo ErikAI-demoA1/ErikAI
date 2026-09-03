@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI • Preview Engine</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+        radial-gradient(circle at 15% 10%, rgba(90, 80, 255, .18), transparent 30%),
+        radial-gradient(circle at 85% 80%, rgba(0, 210, 255, .10), transparent 30%),
+        #080a10;
+    color: #f4f6ff;
+    min-height: 100vh;
+}
+
+/* ===== APP ===== */
+
+.app {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ===== SIDEBAR ===== */
+
+.sidebar {
+    width: 260px;
+    background: rgba(12, 15, 24, .88);
+    border-right: 1px solid rgba(255,255,255,.07);
+    backdrop-filter: blur(25px);
+    padding: 24px 18px;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 8px 28px;
+}
+
+.logo-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    font-size: 21px;
+    background: linear-gradient(135deg, #6d5dfc, #00c6ff);
+    box-shadow: 0 8px 30px rgba(80,90,255,.25);
+}
+
+.logo-text {
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -.5px;
+}
+
+.logo-text span {
+    color: #8176ff;
+}
+
+.nav-title {
+    color: #626879;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    margin: 15px 10px 9px;
+}
+
+.nav-item {
+    padding: 12px 13px;
+    border-radius: 12px;
+    color: #9298a8;
+    margin-bottom: 5px;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.nav-item:hover,
+.nav-item.active {
+    background: rgba(111,96,255,.12);
+    color: #fff;
+}
+
+.nav-item.active {
+    box-shadow: inset 3px 0 0 #7567ff;
+}
+
+/* ===== MAIN ===== */
+
+.main {
+    flex: 1;
+    padding: 30px;
+    overflow: auto;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.title h1 {
+    font-size: 30px;
+    letter-spacing: -.9px;
+}
+
+.title p {
+    color: #777e90;
+    margin-top: 6px;
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 13px;
+    border: 1px solid rgba(255,255,255,.07);
+    background: rgba(255,255,255,.035);
+    border-radius: 30px;
+    color: #aeb4c3;
+    font-size: 12px;
+}
+
+.dot {
+    width: 7px;
+    height: 7px;
+    background: #4de49a;
+    border-radius: 50%;
+    box-shadow: 0 0 12px #4de49a;
+}
+
+/* ===== IMPORT ===== */
+
+.import-card {
+    border: 1px dashed rgba(130,120,255,.45);
+    background:
+        linear-gradient(145deg, rgba(110,95,255,.09), rgba(255,255,255,.025));
+    border-radius: 22px;
+    min-height: 190px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transition: .25s;
+    cursor: pointer;
+}
+
+.import-card:hover {
+    border-color: rgba(140,130,255,.9);
+    transform: translateY(-2px);
+    box-shadow: 0 20px 70px rgba(70,60,200,.12);
+}
+
+.upload-icon {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    border-radius: 17px;
+    background: rgba(111,96,255,.15);
+    font-size: 25px;
+    margin-bottom: 14px;
+}
+
+.import-card h2 {
+    font-size: 17px;
+}
+
+.import-card p {
+    color: #747b8c;
+    font-size: 13px;
+    margin-top: 7px;
+}
+
+input[type=file] {
+    display: none;
+}
+
+/* ===== PREVIEW ===== */
+
+.preview {
+    display: none;
+    animation: appear .35s ease;
+}
+
+@keyframes appear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 28px 0 16px;
+}
+
+.project-name {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+
+.project-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: rgba(111,96,255,.14);
+    font-size: 21px;
+}
+
+.project-name h2 {
+    font-size: 19px;
+}
+
+.project-name p {
+    color: #747b8c;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+button {
+    border: 0;
+    cursor: pointer;
+    color: white;
+    font-weight: 650;
+    border-radius: 11px;
+    padding: 11px 15px;
+    transition: .2s;
+}
+
+.preview-btn {
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.07);
+}
+
+.editor-btn {
+    background: linear-gradient(135deg, #7162ff, #4d8cff);
+    box-shadow: 0 8px 25px rgba(90,80,255,.2);
+}
+
+button:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+}
+
+/* ===== GRID ===== */
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+.card {
+    background: rgba(16,19,29,.76);
+    border: 1px solid rgba(255,255,255,.065);
+    border-radius: 18px;
+    padding: 19px;
+    min-height: 135px;
+    backdrop-filter: blur(20px);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #d9dce6;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.card-title span {
+    color: #8376ff;
+}
+
+.badge {
+    font-size: 9px;
+    color: #777e91;
+    background: rgba(255,255,255,.045);
+    padding: 4px 7px;
+    border-radius: 6px;
+}
+
+.value {
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.sub {
+    color: #707789;
+    font-size: 11px;
+    margin-top: 5px;
+}
+
+/* ===== RAW DATA ===== */
+
+.raw-card {
+    grid-column: 1 / -1;
+}
+
+.raw-data {
+    max-height: 240px;
+    overflow: auto;
+    background: #080a0f;
+    border-radius: 12px;
+    padding: 14px;
+    color: #8f96aa;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+/* ===== EMPTY ===== */
+
+.empty {
+    color: #666d7e;
+    font-size: 12px;
+}
+
+/* ===== RESPONSIVE ===== */
+
+@media(max-width: 900px) {
+    .sidebar {
+        display: none;
+    }
+
+    .main {
+        padding: 20px;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .raw-card {
+        grid-column: auto;
+    }
+
+    .topbar,
+    .project-header {
+        align-items: flex-start;
+        gap: 15px;
+        flex-direction: column;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="logo">
+            <div class="logo-icon">✦</div>
+            <div class="logo-text">
+                Erik<span>AI</span>
+            </div>
+        </div>
+
+        <div class="nav-title">WORKSPACE</div>
+
+        <div class="nav-item active">👁️ Preview Engine</div>
+        <div class="nav-item">📂 Projekty</div>
+        <div class="nav-item">🧩 Importy</div>
+        <div class="nav-item">⚙️ Nastavenia</div>
+
+        <div class="nav-title">SYSTEM</div>
+
+        <div class="nav-item">🔐 Bezpečnosť</div>
+        <div class="nav-item">ℹ️ O ErikAI</div>
+
+    </aside>
+
+
+    <!-- MAIN -->
+    <main class="main">
+
+        <div class="topbar">
+
+            <div class="title">
+                <h1>Preview Engine</h1>
+                <p>Inteligentný náhľad projektových súborov</p>
+            </div>
+
+            <div class="status">
+                <span class="dot"></span>
+                ErikAI Engine Online
+            </div>
+
+        </div>
+
+
+        <!-- IMPORT -->
+        <label class="import-card" for="fileInput">
+
+            <div class="upload-icon">↑</div>
+
+            <h2>Importovať projekt</h2>
+
+            <p>
+                Pretiahni sem alebo vyber súbor .JSON
+            </p>
+
+        </label>
+
+        <input id="fileInput" type="file" accept=".json,application/json">
+
+
+        <!-- PREVIEW -->
+        <section class="preview" id="preview">
+
+            <div class="project-header">
+
+                <div class="project-name">
+
+                    <div class="project-icon" id="projectIcon">
+                        🧩
+                    </div>
+
+                    <div>
+                        <h2 id="projectTitle">Projekt</h2>
+                        <p id="projectType">ErikAI Project</p>
+                    </div>
+
+                </div>
+
+                <div class="actions">
+                    <button class="preview-btn" onclick="resetPreview()">
+                        ✕ Zavrieť
+                    </button>
+
+                    <button class="editor-btn" onclick="openEditor()">
+                        ✏️ Otvoriť editor
+                    </button>
+                </div>
+
+            </div>
+
+
+            <div class="grid">
+
+                <!-- MODEL -->
+                <div class="card">
+
+                    <div class="card-header">
+
+                        <div class="card-title">
+                            <span>◈</span>
+                            Model / Objekt
+                        </div>
+
+                        <div class="badge">DATA</div>
+
+                    </div>
+
+                    <div class="value" id="modelValue">
+                        —
+                    </div>
+
+                    <div class="sub" id="modelSub">
+                        —
+                    </div>
+
+                </div>
+
+
+                <!-- DIMENSIONS -->
+                <div class="card">
+
+                    <div class="card-header">
+
+                        <div class="card-title">
+                            <span>⌗</span>
+                            Rozmery
+                        </div>
+
+                        <div class="badge">GEOMETRY</div>
+
+                    </div>
+
+                    <div class="value" id="dimensionsValue">
+                        —
+                    </div>
+
+                    <div class="sub">
+                        Parametrické rozmery objektu
+                    </div>
+
+                </div>
+
+
+                <!-- MATERIAL -->
+                <div class="card">
+
+                    <div class="card-header">
+
+                        <div class="card-title">
+                            <span>◇</span>
+                            Materiál
+                        </div>
+
+                        <div class="badge">MATERIAL</div>
+
+                    </div>
+
+                    <div class="value" id="materialValue">
+                        —
+                    </div>
+
+                    <div class="sub">
+                        Identifikovaný materiál
+                    </div>
+
+                </div>
+
+
+                <!-- PARAMETERS -->
+                <div class="card">
+
+                    <div class="card-header">
+
+                        <div class="card-title">
+                            <span>⚙</span>
+                            Parametre
+                        </div>
+
+                        <div class="badge">PARAMETERS</div>
+
+                    </div>
+
+                    <div id="parametersValue" class="empty">
+                        Žiadne parametre
+                    </div>
+
+                </div>
+
+
+                <!-- SETTINGS -->
+                <div class="card">
+
+                    <div class="card-header">
+
+                        <div class="card-title">
+                            <span>◉</span>
+                            Nastavenia
+                        </div>
+
+                        <div class="badge">CONFIG</div>
+
+                    </div>
+
+                    <div id="settingsValue" class="empty">
+                        Žiadne nastavenia
+                    </div>
+
+                </div>
+
+
+                <!-- OPERATIONS -->
+                <div class="card">
+
+                    <div class="card-header">
+
+                        <div class="card-title">
+                            <span>↻</span>
+                            Operácie
+                        </div>
+
+                        <div class="badge">HISTORY</div>
+
+                    </div>
+
+                    <div id="operationsValue" class="empty">
+                        Žiadna história
+                    </div>
+
+                </div>
+
+
+                <!-- RAW JSON -->
+                <div class="card raw-card">
+
+                    <div class="card-header">
+
+                        <div class="card-title">
+                            <span>{ }</span>
+                            Zdrojové dáta
+                        </div>
+
+                        <div class="badge">
+                            READ ONLY
+                        </div>
+
+                    </div>
+
+                    <pre class="raw-data" id="rawData"></pre>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script>
+
+let currentProject = null;
+
+
+/* ==========================================
+   JSON IMPORT
+========================================== */
+
+document.getElementById("fileInput")
+.addEventListener("change", function(event) {
+
+    const file = event.target.files[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+
+        try {
+
+            const json = JSON.parse(e.target.result);
+
+            currentProject = json;
+
+            generatePreview(json);
+
+        } catch(error) {
+
+            alert("❌ Súbor neobsahuje platný JSON.");
+
+        }
+
+    };
+
+    reader.readAsText(file);
+
+});
+
+
+/* ==========================================
+   PREVIEW ENGINE
+========================================== */
+
+function generatePreview(data) {
+
+    document.querySelector(".import-card").style.display = "none";
+
+    document.getElementById("preview").style.display = "block";
+
+
+    /*
+        ErikAI sa pokúsi pochopiť rôzne názvy
+        rovnakých údajov.
+    */
+
+    const projectName =
+        data.name ||
+        data.projectName ||
+        data.project ||
+        "Neznámy projekt";
+
+
+    const type =
+        data.type ||
+        data.format ||
+        data.application ||
+        "ErikAI Project";
+
+
+    document.getElementById("projectTitle").textContent =
+        projectName;
+
+    document.getElementById("projectType").textContent =
+        type;
+
+
+    /* MODEL */
+
+    const model =
+        data.model ||
+        data.object ||
+        data.modelName ||
+        "Nešpecifikované";
+
+
+    document.getElementById("modelValue").textContent =
+        model;
+
+
+    document.getElementById("modelSub").textContent =
+        data.version ?
+        "Verzia " + data.version :
+        "Informácie z projektových dát";
+
+
+    /* DIMENSIONS */
+
+    if (data.dimensions) {
+
+        const d = data.dimensions;
+
+        let dimensionText = "";
+
+        if (d.width !== undefined)
+            dimensionText += `Š ${d.width} `;
+
+        if (d.height !== undefined)
+            dimensionText += `V ${d.height} `;
+
+        if (d.depth !== undefined)
+            dimensionText += `H ${d.depth}`;
+
+        document.getElementById("dimensionsValue")
+        .textContent = dimensionText || "Definované";
+
+    } else {
+
+        document.getElementById("dimensionsValue")
+        .textContent =
+        data.size || "Neuvedené";
+
+    }
+
+
+    /* MATERIAL */
+
+    document.getElementById("materialValue")
+    .textContent =
+    data.material ||
+    data.materialName ||
+    "Neuvedený";
+
+
+    /* PARAMETERS */
+
+    renderObject(
+        data.parameters,
+        "parametersValue"
+    );
+
+
+    /* SETTINGS */
+
+    renderObject(
+        data.settings,
+        "settingsValue"
+    );
+
+
+    /* OPERATIONS */
+
+    renderObject(
+        data.operations ||
+        data.history,
+        "operationsValue"
+    );
+
+
+    /* RAW */
+
+    document.getElementById("rawData")
+    .textContent =
+    JSON.stringify(data, null, 2);
+
+}
+
+
+/* ==========================================
+   OBJECT RENDERER
+========================================== */
+
+function renderObject(object, elementId) {
+
+    const element =
+        document.getElementById(elementId);
+
+    if (!object) {
+
+        element.innerHTML =
+        '<span class="empty">Žiadne údaje</span>';
+
+        return;
+
+    }
+
+
+    let html = "";
+
+    if (Array.isArray(object)) {
+
+        object.forEach((item, index) => {
+
+            html += `
+                <div style="
+                    padding:5px 0;
+                    border-bottom:1px solid rgba(255,255,255,.04);
+                ">
+                    ${index + 1}. ${escapeHtml(
+                        typeof item === "object"
+                        ? JSON.stringify(item)
+                        : String(item)
+                    )}
+                </div>
+            `;
+
+        });
+
+    } else {
+
+        Object.entries(object)
+        .slice(0, 8)
+        .forEach(([key, value]) => {
+
+            html += `
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    gap:15px;
+                    padding:5px 0;
+                ">
+                    <span style="color:#747b8c">
+                        ${escapeHtml(key)}
+                    </span>
+
+                    <strong>
+                        ${escapeHtml(
+                            typeof value === "object"
+                            ? JSON.stringify(value)
+                            : String(value)
+                        )}
+                    </strong>
+                </div>
+            `;
+
+        });
+
+    }
+
+    element.innerHTML =
+        html ||
+        '<span class="empty">Žiadne údaje</span>';
+
+}
+
+
+/* ==========================================
+   SECURITY
+========================================== */
+
+function escapeHtml(value) {
+
+    return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+}
+
+
+/* ==========================================
+   CLOSE
+========================================== */
+
+function resetPreview() {
+
+    currentProject = null;
+
+    document.getElementById("preview")
+    .style.display = "none";
+
+    document.querySelector(".import-card")
+    .style.display = "flex";
+
+    document.getElementById("fileInput")
+    .value = "";
+
+}
+
+
+/* ==========================================
+   EDITOR
+========================================== */
+
+function openEditor() {
+
+    if (!currentProject) return;
+
+    alert(
+        "✏️ Editor ErikAI\n\n" +
+        "Tu bude samostatný editor projektu.\n" +
+        "Preview Engine zostáva iba READ ONLY."
+    );
+
+}
+
+</script>
+
+</body>
+  </html>
