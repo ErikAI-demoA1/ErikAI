@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ERIKAI // DIGITAL FOOTPRINT DETECTOR</title>
+
+<style>
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+:root{
+  --bg:#050609;
+  --panel:#0b0d12;
+  --panel2:#10131a;
+  --border:#202631;
+  --text:#edf2f7;
+  --muted:#7e8998;
+  --accent:#7c5cff;
+  --cyan:#00e5ff;
+  --green:#32e875;
+  --yellow:#ffc857;
+  --red:#ff5263;
+}
+
+body{
+  background:
+    radial-gradient(circle at 50% -10%,#17112d 0%,transparent 42%),
+    radial-gradient(circle at 90% 90%,#071c22 0%,transparent 30%),
+    var(--bg);
+  color:var(--text);
+  font-family:Inter,Arial,sans-serif;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+body:before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.035;
+  background-image:
+    linear-gradient(rgba(255,255,255,.4) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.4) 1px,transparent 1px);
+  background-size:45px 45px;
+}
+
+.container{
+  width:min(1180px,94%);
+  margin:auto;
+  padding:28px 0 70px;
+}
+
+/* HEADER */
+
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:14px 0 30px;
+  border-bottom:1px solid var(--border);
+}
+
+.logo{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.logoMark{
+  width:42px;
+  height:42px;
+  border:1px solid #4938a8;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  background:#100d21;
+  box-shadow:0 0 30px #4e35c522;
+  font-weight:900;
+}
+
+.logoText{
+  font-weight:900;
+  letter-spacing:2px;
+}
+
+.logoSub{
+  color:var(--muted);
+  font-size:10px;
+  letter-spacing:2px;
+  margin-top:3px;
+}
+
+.status{
+  font-size:11px;
+  color:var(--green);
+  border:1px solid #214c35;
+  padding:8px 12px;
+  border-radius:30px;
+  background:#0b1811;
+}
+
+.status:before{
+  content:"";
+  width:7px;
+  height:7px;
+  display:inline-block;
+  border-radius:50%;
+  background:var(--green);
+  margin-right:7px;
+  box-shadow:0 0 12px var(--green);
+}
+
+/* HERO */
+
+.hero{
+  padding:55px 0 35px;
+  max-width:800px;
+}
+
+.kicker{
+  color:var(--cyan);
+  font-size:11px;
+  letter-spacing:3px;
+  font-weight:bold;
+  margin-bottom:15px;
+}
+
+h1{
+  font-size:clamp(38px,7vw,76px);
+  line-height:.95;
+  letter-spacing:-3px;
+  margin-bottom:20px;
+}
+
+.hero p{
+  color:#9aa4b3;
+  line-height:1.7;
+  max-width:680px;
+}
+
+.warning{
+  margin-top:24px;
+  padding:14px 16px;
+  border:1px solid #2b303a;
+  border-radius:12px;
+  background:#090b10;
+  color:#8d98a7;
+  font-size:12px;
+}
+
+/* CONTROL */
+
+.control{
+  display:flex;
+  gap:12px;
+  margin:25px 0;
+  flex-wrap:wrap;
+}
+
+button{
+  border:0;
+  cursor:pointer;
+  color:white;
+  font-weight:800;
+  letter-spacing:.5px;
+}
+
+.scanBtn{
+  padding:16px 24px;
+  border-radius:12px;
+  background:linear-gradient(135deg,#765cff,#5141c8);
+  box-shadow:0 10px 35px #5c45d52b;
+}
+
+.scanBtn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 14px 40px #6b52ff44;
+}
+
+.clearBtn{
+  padding:16px 20px;
+  border-radius:12px;
+  background:#11141b;
+  border:1px solid var(--border);
+  color:#9ba5b3;
+}
+
+/* DASHBOARD */
+
+.dashboard{
+  display:grid;
+  grid-template-columns:300px 1fr;
+  gap:18px;
+}
+
+.card{
+  background:linear-gradient(145deg,#0c0f15,#090b10);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 20px 60px #0000002b;
+}
+
+.cardTitle{
+  font-size:11px;
+  color:#778292;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  margin-bottom:20px;
+}
+
+/* SCORE */
+
+.scoreBox{
+  text-align:center;
+}
+
+.scoreCircle{
+  width:190px;
+  height:190px;
+  border-radius:50%;
+  margin:20px auto;
+  display:grid;
+  place-items:center;
+  position:relative;
+  background:conic-gradient(var(--accent) 0deg,#171a22 0deg);
+}
+
+.scoreCircle:before{
+  content:"";
+  position:absolute;
+  inset:9px;
+  border-radius:50%;
+  background:#090b10;
+}
+
+.scoreValue{
+  position:relative;
+  font-size:47px;
+  font-weight:900;
+}
+
+.scoreLabel{
+  color:var(--muted);
+  font-size:11px;
+  margin-top:-10px;
+}
+
+/* RESULTS */
+
+.results{
+  display:grid;
+  gap:10px;
+}
+
+.result{
+  display:grid;
+  grid-template-columns:42px 1fr auto;
+  align-items:center;
+  gap:13px;
+  padding:14px;
+  border:1px solid #1c212b;
+  background:#0b0e14;
+  border-radius:13px;
+}
+
+.icon{
+  width:38px;
+  height:38px;
+  border-radius:10px;
+  display:grid;
+  place-items:center;
+  background:#141821;
+  font-size:17px;
+}
+
+.resultName{
+  font-weight:700;
+  font-size:13px;
+}
+
+.resultDesc{
+  color:#697584;
+  font-size:11px;
+  margin-top:4px;
+}
+
+.badge{
+  padding:6px 9px;
+  border-radius:20px;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:1px;
+}
+
+.green{
+  color:var(--green);
+  background:#0b2116;
+  border:1px solid #183f28;
+}
+
+.yellow{
+  color:var(--yellow);
+  background:#211a09;
+  border:1px solid #493a16;
+}
+
+.red{
+  color:var(--red);
+  background:#240d12;
+  border:1px solid #4c1821;
+}
+
+.gray{
+  color:#87919f;
+  background:#11151c;
+  border:1px solid #252b34;
+}
+
+/* GRID */
+
+.infoGrid{
+  margin-top:18px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:18px;
+}
+
+.infoItem{
+  padding:13px 0;
+  border-bottom:1px solid #1b2028;
+}
+
+.infoItem:last-child{
+  border-bottom:0;
+}
+
+.infoKey{
+  font-size:10px;
+  color:#697584;
+  margin-bottom:5px;
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+
+.infoValue{
+  font-size:13px;
+  word-break:break-word;
+}
+
+/* SCANNER */
+
+.scanning{
+  display:none;
+  margin-top:20px;
+}
+
+.scanning.active{
+  display:block;
+}
+
+.progress{
+  height:5px;
+  border-radius:20px;
+  background:#171b23;
+  overflow:hidden;
+  margin-top:12px;
+}
+
+.progressBar{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--cyan));
+  transition:width .25s;
+}
+
+/* FOOTER */
+
+footer{
+  text-align:center;
+  color:#4d5764;
+  font-size:10px;
+  margin-top:45px;
+  letter-spacing:1px;
+}
+
+@media(max-width:850px){
+  .dashboard{
+    grid-template-columns:1fr;
+  }
+
+  .infoGrid{
+    grid-template-columns:1fr;
+  }
+
+  header{
+    align-items:flex-start;
+  }
+
+  h1{
+    letter-spacing:-2px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+  <div class="logo">
+    <div class="logoMark">E</div>
+    <div>
+      <div class="logoText">ERIKAI</div>
+      <div class="logoSub">DIGITAL FOOTPRINT DETECTOR</div>
+    </div>
+  </div>
+
+  <div class="status">LOCAL SESSION</div>
+</header>
+
+<section class="hero">
+
+  <div class="kicker">PERSONAL PRIVACY INTELLIGENCE</div>
+
+  <h1>WHAT CAN THE WEB KNOW ABOUT YOU?</h1>
+
+  <p>
+    Lokálny diagnostický nástroj, ktorý analyzuje informácie dostupné
+    aktuálnemu webovému prehliadaču. Žiadne tajné získavanie údajov,
+    žiadne čítanie telefónu a žiadny prístup k súkromným aplikáciám.
+  </p>
+
+  <div class="warning">
+    ⚠ Tento nástroj zobrazuje iba údaje, ku ktorým má webová stránka
+    legitímny prístup. Položky označené ako nedostupné sú zámerne
+    chránené operačným systémom alebo prehliadačom.
+  </div>
+
+</section>
+
+<div class="control">
+
+  <button class="scanBtn" onclick="startScan()">
+    ▶ SPUSTIŤ KOMPLETNÝ SCAN
+  </button>
+
+  <button class="clearBtn" onclick="clearScan()">
+    VYMAZAŤ VÝSLEDKY
+  </button>
+
+</div>
+
+<div class="scanning" id="scanning">
+
+  <div class="card">
+
+    <div class="cardTitle">Analyzujem browser environment...</div>
+
+    <div id="scanText">Inicializácia...</div>
+
+    <div class="progress">
+      <div class="progressBar" id="progress"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="dashboard">
+
+  <div class="card scoreBox">
+
+    <div class="cardTitle">Privacy Exposure</div>
+
+    <div class="scoreCircle" id="scoreCircle">
+
+      <div class="scoreValue" id="score">
+        --
+      </div>
+
+    </div>
+
+    <div class="scoreLabel">
+      orientačné skóre dostupných browser údajov
+    </div>
+
+  </div>
+
+
+  <div class="card">
+
+    <div class="cardTitle">
+      Detection Matrix
+    </div>
+
+    <div class="results" id="results">
+
+      <div class="result">
+
+        <div class="icon">◉</div>
+
+        <div>
+          <div class="resultName">
+            Scanner pripravený
+          </div>
+
+          <div class="resultDesc">
+            Stlač „Spustiť kompletný scan“
+          </div>
+        </div>
+
+        <div class="badge gray">
+          WAITING
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<div class="infoGrid">
+
+  <div class="card">
+
+    <div class="cardTitle">Browser Identity</div>
+
+    <div id="browserInfo">
+      <div class="infoItem">
+        <div class="infoKey">User Agent</div>
+        <div class="infoValue">—</div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <div class="card">
+
+    <div class="cardTitle">Device Environment</div>
+
+    <div id="deviceInfo">
+      <div class="infoItem">
+        <div class="infoKey">Platform</div>
+        <div class="infoValue">—</div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <div class="card">
+
+    <div class="cardTitle">Network / Location</div>
+
+    <div id="networkInfo">
+      <div class="infoItem">
+        <div class="infoKey">Geolocation</div>
+        <div class="infoValue">Not requested</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+
+<footer>
+  ERIKAI DIGITAL FOOTPRINT DETECTOR • LOCAL-FIRST • NO TRACKING
+</footer>
+
+</div>
+
+
+<script>
+
+const results = document.getElementById("results");
+const scanning = document.getElementById("scanning");
+const progress = document.getElementById("progress");
+const scanText = document.getElementById("scanText");
+
+let detected = [];
+
+
+/* -----------------------------
+   HELPERS
+----------------------------- */
+
+function addResult(icon,name,desc,status,type){
+
+  detected.push({
+    name,
+    status,
+    type
+  });
+
+  const item = document.createElement("div");
+
+  item.className="result";
+
+  item.innerHTML=`
+
+    <div class="icon">${icon}</div>
+
+    <div>
+
+      <div class="resultName">
+        ${name}
+      </div>
+
+      <div class="resultDesc">
+        ${desc}
+      </div>
+
+    </div>
+
+    <div class="badge ${type}">
+      ${status}
+    </div>
+  `;
+
+  results.appendChild(item);
+}
+
+
+function setProgress(value,text){
+
+  progress.style.width=value+"%";
+
+  scanText.textContent=text;
+
+}
+
+
+function sleep(ms){
+
+  return new Promise(
+    resolve=>setTimeout(resolve,ms)
+  );
+
+}
+
+
+/* -----------------------------
+   MAIN SCAN
+----------------------------- */
+
+async function startScan(){
+
+  detected=[];
+
+  results.innerHTML="";
+
+  scanning.classList.add("active");
+
+  setProgress(5,"Inicializujem bezpečný lokálny scan...");
+
+  await sleep(350);
+
+  /* BROWSER */
+
+  setProgress(15,"Analyzujem browser identity...");
+
+  addResult(
+    "🌐",
+    "Browser",
+    navigator.userAgent,
+    "DETECTED",
+    "green"
+  );
+
+  await sleep(250);
+
+
+  /* PLATFORM */
+
+  setProgress(25,"Analyzujem platform information...");
+
+  addResult(
+    "📱",
+    "Platform",
+    navigator.platform || "Not exposed",
+    "DETECTED",
+    "green"
+  );
+
+  await sleep(250);
+
+
+  /* LANGUAGE */
+
+  setProgress(35,"Analyzujem jazykové nastavenia...");
+
+  addResult(
+    "🗣",
+    "Language",
+    navigator.language || "Unknown",
+    "DETECTED",
+    "yellow"
+  );
+
+  await sleep(250);
+
+
+  /* SCREEN */
+
+  setProgress(45,"Analyzujem obrazovku...");
+
+  addResult(
+    "▣",
+    "Screen",
+    `${screen.width} × ${screen.height}px`,
+    "DETECTED",
+    "yellow"
+  );
+
+  await sleep(250);
+
+
+  /* TIMEZONE */
+
+  setProgress(55,"Analyzujem časové pásmo...");
+
+  const timezone =
+    Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  addResult(
+    "◷",
+    "Time zone",
+    timezone || "Unknown",
+    "DETECTED",
+    "yellow"
+  );
+
+  await sleep(250);
+
+
+  /* COOKIES */
+
+  setProgress(65,"Kontrolujem cookie environment...");
+
+  addResult(
+    "🍪",
+    "Cookies",
+    navigator.cookieEnabled
+      ? "Browser umožňuje cookies"
+      : "Cookies sú vypnuté",
+    navigator.cookieEnabled
+      ? "ENABLED"
+      : "BLOCKED",
+    navigator.cookieEnabled
+      ? "yellow"
+      : "green"
+  );
+
+  await sleep(250);
+
+
+  /* LOCAL STORAGE */
+
+  setProgress(72,"Kontrolujem lokálne úložisko...");
+
+  let storageAvailable=false;
+
+  try{
+
+    localStorage.setItem(
+      "__test",
+      "1"
+    );
+
+    localStorage.removeItem(
+      "__test"
+    );
+
+    storageAvailable=true;
+
+  }catch(e){}
+
+  addResult(
+    "▤",
+    "Local Storage",
+    storageAvailable
+      ? "Táto stránka môže používať lokálne úložisko"
+      : "LocalStorage nedostupné",
+    storageAvailable
+      ? "AVAILABLE"
+      : "BLOCKED",
+    storageAvailable
+      ? "yellow"
+      : "green"
+  );
+
+  await sleep(250);
+
+
+  /* GEOLOCATION */
+
+  setProgress(80,"Kontrolujem dostupnosť GPS API...");
+
+  addResult(
+    "📍",
+    "Precise Location",
+    navigator.geolocation
+      ? "API existuje, ale poloha vyžaduje povolenie"
+      : "Geolocation API nedostupné",
+    navigator.geolocation
+      ? "PERMISSION"
+      : "BLOCKED",
+    navigator.geolocation
+      ? "yellow"
+      : "green"
+  );
+
+  await sleep(250);
+
+
+  /* CAMERA */
+
+  setProgress(87,"Kontrolujem camera/microphone API...");
+
+  const media =
+    !!(navigator.mediaDevices &&
+       navigator.mediaDevices.getUserMedia);
+
+  addResult(
+    "◉",
+    "Camera / Microphone",
+    media
+      ? "Dostupné iba po udelení povolenia"
+      : "API nedostupné",
+    media
+      ? "PERMISSION"
+      : "BLOCKED",
+    media
+      ? "yellow"
+      : "green"
+  );
+
+  await sleep(250);
+
+
+  /* SENSITIVE DATA */
+
+  setProgress(94,"Kontrolujem chránené údaje...");
+
+  addResult(
+    "🔒",
+    "Private phone data",
+    "IMEI, SMS, kontakty a údaje iných aplikácií nie sú dostupné",
+    "PROTECTED",
+    "green"
+  );
+
+  await sleep(250);
+
+
+  /* FINISH */
+
+  setProgress(100,"Scan dokončený.");
+
+  calculateScore();
+
+  updateInformation();
+
+}
+
+
+/* -----------------------------
+   SCORE
+----------------------------- */
+
+function calculateScore(){
+
+  let score=0;
+
+  detected.forEach(item=>{
+
+    if(item.type==="yellow")
+      score+=7;
+
+    if(item.type==="red")
+      score+=15;
+
+  });
+
+  score=Math.min(
+    100,
+    Math.round(score)
+  );
+
+  document.getElementById(
+    "score"
+  ).textContent=score;
+
+  const degrees =
+    score*3.6;
+
+  document.getElementById(
+    "scoreCircle"
+  ).style.background=
+    `conic-gradient(
+      var(--accent)
+      ${degrees}deg,
+      #171a22
+      ${degrees}deg
+    )`;
+
+}
+
+
+/* -----------------------------
+   INFORMATION PANELS
+----------------------------- */
+
+function updateInformation(){
+
+  document.getElementById(
+    "browserInfo"
+  ).innerHTML=`
+
+    <div class="infoItem">
+      <div class="infoKey">User Agent</div>
+      <div class="infoValue">
+        ${escapeHTML(navigator.userAgent)}
+      </div>
+    </div>
+
+    <div class="infoItem">
+      <div class="infoKey">Language</div>
+      <div class="infoValue">
+        ${escapeHTML(navigator.language)}
+      </div>
+    </div>
+
+    <div class="infoItem">
+      <div class="infoKey">Online</div>
+      <div class="infoValue">
+        ${navigator.onLine ? "YES" : "NO"}
+      </div>
+    </div>
+
+  `;
+
+
+  document.getElementById(
+    "deviceInfo"
+  ).innerHTML=`
+
+    <div class="infoItem">
+      <div class="infoKey">Platform</div>
+      <div class="infoValue">
+        ${escapeHTML(navigator.platform || "Unknown")}
+      </div>
+    </div>
+
+    <div class="infoItem">
+      <div class="infoKey">CPU Cores</div>
+      <div class="infoValue">
+        ${navigator.hardwareConcurrency || "Not exposed"}
+      </div>
+    </div>
+
+    <div class="infoItem">
+      <div class="infoKey">Screen</div>
+      <div class="infoValue">
+        ${screen.width} × ${screen.height}
+      </div>
+    </div>
+
+  `;
+
+
+  document.getElementById(
+    "networkInfo"
+  ).innerHTML=`
+
+    <div class="infoItem">
+      <div class="infoKey">Timezone</div>
+      <div class="infoValue">
+        ${escapeHTML(
+          Intl.DateTimeFormat()
+          .resolvedOptions()
+          .timeZone
+        )}
+      </div>
+    </div>
+
+    <div class="infoItem">
+      <div class="infoKey">Location</div>
+      <div class="infoValue">
+        Permission required
+      </div>
+    </div>
+
+    <div class="infoItem">
+      <div class="infoKey">IP Address</div>
+      <div class="infoValue">
+        Not exposed by pure local JavaScript
+      </div>
+    </div>
+
+  `;
+
+}
+
+
+/* -----------------------------
+   CLEAR
+----------------------------- */
+
+function clearScan(){
+
+  detected=[];
+
+  results.innerHTML=`
+
+    <div class="result">
+
+      <div class="icon">◉</div>
+
+      <div>
+
+        <div class="resultName">
+          Scanner pripravený
+        </div>
+
+        <div class="resultDesc">
+          Stlač „Spustiť kompletný scan“
+        </div>
+
+      </div>
+
+      <div class="badge gray">
+        WAITING
+      </div>
+
+    </div>
+  `;
+
+  document.getElementById(
+    "score"
+  ).textContent="--";
+
+  document.getElementById(
+    "scoreCircle"
+  ).style.background=
+    "conic-gradient(var(--accent) 0deg,#171a22 0deg)";
+
+  scanning.classList.remove("active");
+
+}
+
+
+/* -----------------------------
+   SECURITY
+----------------------------- */
+
+function escapeHTML(text){
+
+  return String(text)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+
+}
+
+</script>
+
+</body>
+</html>
