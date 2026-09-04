@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI Universal File Engine</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #0f1117;
+        color: #fff;
+    }
+
+    header {
+        padding: 22px;
+        background: #171a23;
+        border-bottom: 1px solid #292e3a;
+    }
+
+    header h1 {
+        margin: 0;
+        font-size: 25px;
+    }
+
+    header p {
+        margin: 7px 0 0;
+        color: #9da5b4;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: auto;
+        padding: 25px;
+    }
+
+    .upload {
+        border: 2px dashed #41495a;
+        border-radius: 15px;
+        padding: 45px;
+        text-align: center;
+        background: #151821;
+        cursor: pointer;
+        transition: .2s;
+    }
+
+    .upload:hover {
+        border-color: #6d7cff;
+        background: #191d29;
+    }
+
+    .upload input {
+        display: none;
+    }
+
+    .upload-icon {
+        font-size: 45px;
+        margin-bottom: 12px;
+    }
+
+    .toolbar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 20px 0;
+    }
+
+    button,
+    select,
+    input[type="text"] {
+        background: #1b202b;
+        color: white;
+        border: 1px solid #343b4b;
+        padding: 10px 14px;
+        border-radius: 9px;
+    }
+
+    button {
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #272e3c;
+    }
+
+    .files {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 15px;
+    }
+
+    .file-card {
+        background: #171a23;
+        border: 1px solid #292e3a;
+        border-radius: 13px;
+        padding: 17px;
+    }
+
+    .file-name {
+        font-weight: bold;
+        word-break: break-all;
+        margin-bottom: 10px;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 5px 8px;
+        border-radius: 6px;
+        background: #252b38;
+        color: #b9c1d0;
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+
+    .info {
+        color: #929aaa;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .status {
+        margin-top: 10px;
+        color: #8f9cff;
+    }
+
+    .preview {
+        margin-top: 25px;
+        padding: 20px;
+        background: #151821;
+        border-radius: 13px;
+        min-height: 150px;
+    }
+
+    .preview img,
+    .preview video {
+        max-width: 100%;
+        max-height: 500px;
+        border-radius: 10px;
+    }
+
+    .preview pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #0b0d12;
+        padding: 15px;
+        border-radius: 10px;
+        max-height: 500px;
+        overflow: auto;
+    }
+
+    .empty {
+        text-align: center;
+        color: #737b8b;
+        padding: 40px;
+    }
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>ErikAI Universal File Engine</h1>
+    <p>Universal file detection, preview and project management</p>
+</header>
+
+<div class="container">
+
+    <label class="upload">
+        <input id="fileInput" type="file" multiple>
+        <div class="upload-icon">📁</div>
+        <h2>Vyber súbory</h2>
+        <p>ErikAI automaticky rozpozná formát súboru.</p>
+    </label>
+
+    <div class="toolbar">
+        <input
+            id="search"
+            type="text"
+            placeholder="Hľadať súbor..."
+        >
+
+        <select id="category">
+            <option value="all">Všetky kategórie</option>
+            <option value="CAD">CAD / 3D</option>
+            <option value="DATA">Dáta</option>
+            <option value="IMAGE">Obrázky</option>
+            <option value="VIDEO">Video</option>
+            <option value="AUDIO">Audio</option>
+            <option value="DOCUMENT">Dokumenty</option>
+            <option value="CODE">Kód</option>
+            <option value="ARCHIVE">Archívy</option>
+            <option value="OTHER">Ostatné</option>
+        </select>
+
+        <button onclick="exportProject()">
+            💾 Export ErikAI JSON
+        </button>
+
+        <button onclick="clearFiles()">
+            🗑️ Vymazať
+        </button>
+    </div>
+
+    <div id="files" class="files">
+        <div class="empty">
+            Zatiaľ nebol pridaný žiadny súbor.
+        </div>
+    </div>
+
+    <div class="preview">
+        <h2>Preview</h2>
+        <div id="previewContent">
+            Vyber súbor.
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+/* =========================================================
+   ERIKAI UNIVERSAL FILE FORMAT REGISTRY
+   ========================================================= */
+
+const FORMAT_REGISTRY = {
+
+    /* ---------- CAD / 3D ---------- */
+
+    "step":  { category: "CAD", name: "STEP", preview: false },
+    "stp":   { category: "CAD", name: "STEP", preview: false },
+    "iges":  { category: "CAD", name: "IGES", preview: false },
+    "igs":   { category: "CAD", name: "IGES", preview: false },
+
+    "stl":   { category: "CAD", name: "STL", preview: true },
+    "obj":   { category: "CAD", name: "OBJ", preview: true },
+    "ply":   { category: "CAD", name: "PLY", preview: true },
+    "gltf":  { category: "CAD", name: "glTF", preview: true },
+    "glb":   { category: "CAD", name: "GLB", preview: true },
+
+    "dxf":   { category: "CAD", name: "DXF", preview: false },
+
+    "catpart": {
+        category: "CAD",
+        name: "CATIA Part",
+        preview: false
+    },
+
+    "catproduct": {
+        category: "CAD",
+        name: "CATIA Product",
+        preview: false
+    },
+
+    "catdrawing": {
+        category: "CAD",
+        name: "CATIA Drawing",
+        preview: false
+    },
+
+    /* ---------- DATA ---------- */
+
+    "json": { category: "DATA", name: "JSON", preview: true },
+    "xml":  { category: "DATA", name: "XML", preview: true },
+    "csv":  { category: "DATA", name: "CSV", preview: true },
+    "yaml": { category: "DATA", name: "YAML", preview: true },
+    "yml":  { category: "DATA", name: "YAML", preview: true },
+
+    /* ---------- IMAGES ---------- */
+
+    "png":  { category: "IMAGE", name: "PNG", preview: true },
+    "jpg":  { category: "IMAGE", name: "JPEG", preview: true },
+    "jpeg": { category: "IMAGE", name: "JPEG", preview: true },
+    "gif":  { category: "IMAGE", name: "GIF", preview: true },
+    "webp": { category: "IMAGE", name: "WebP", preview: true },
+    "avif": { category: "IMAGE", name: "AVIF", preview: true },
+    "svg":  { category: "IMAGE", name: "SVG", preview: true },
+    "bmp":  { category: "IMAGE", name: "BMP", preview: true },
+
+    /* ---------- VIDEO ---------- */
+
+    "mp4":  { category: "VIDEO", name: "MP4", preview: true },
+    "webm": { category: "VIDEO", name: "WebM", preview: true },
+    "mov":  { category: "VIDEO", name: "MOV", preview: true },
+    "m4v":  { category: "VIDEO", name: "M4V", preview: true },
+
+    /* ---------- AUDIO ---------- */
+
+    "mp3":  { category: "AUDIO", name: "MP3", preview: true },
+    "wav":  { category: "AUDIO", name: "WAV", preview: true },
+    "ogg":  { category: "AUDIO", name: "OGG", preview: true },
+    "flac": { category: "AUDIO", name: "FLAC", preview: true },
+    "m4a":  { category: "AUDIO", name: "M4A", preview: true },
+
+    /* ---------- DOCUMENTS ---------- */
+
+    "pdf":  { category: "DOCUMENT", name: "PDF", preview: true },
+    "txt":  { category: "DOCUMENT", name: "Text", preview: true },
+    "rtf":  { category: "DOCUMENT", name: "RTF", preview: false },
+
+    "doc":  { category: "DOCUMENT", name: "Word", preview: false },
+    "docx": { category: "DOCUMENT", name: "Word", preview: false },
+
+    "xls":  { category: "DOCUMENT", name: "Excel", preview: false },
+    "xlsx": { category: "DOCUMENT", name: "Excel", preview: false },
+
+    "ppt":  { category: "DOCUMENT", name: "PowerPoint", preview: false },
+    "pptx": { category: "DOCUMENT", name: "PowerPoint", preview: false },
+
+    /* ---------- CODE ---------- */
+
+    "html": { category: "CODE", name: "HTML", preview: true },
+    "htm":  { category: "CODE", name: "HTML", preview: true },
+    "css":  { category: "CODE", name: "CSS", preview: true },
+    "js":   { category: "CODE", name: "JavaScript", preview: true },
+    "ts":   { category: "CODE", name: "TypeScript", preview: true },
+    "py":   { category: "CODE", name: "Python", preview: true },
+    "cpp":  { category: "CODE", name: "C++", preview: true },
+    "c":    { category: "CODE", name: "C", preview: true },
+    "java": { category: "CODE", name: "Java", preview: true },
+
+    /* ---------- ARCHIVES ---------- */
+
+    "zip": { category: "ARCHIVE", name: "ZIP", preview: false },
+    "tar": { category: "ARCHIVE", name: "TAR", preview: false },
+
+    /* ---------- ErikAI ---------- */
+
+    "erikai": {
+        category: "ERIKAI",
+        name: "ErikAI Project",
+        preview: true
+    }
+};
+
+
+/* =========================================================
+   PROJECT DATA
+   ========================================================= */
+
+let files = [];
+
+
+/* =========================================================
+   FILE INPUT
+   ========================================================= */
+
+document.getElementById("fileInput")
+    .addEventListener("change", function(event) {
+
+        for (const file of event.target.files) {
+
+            const extension =
+                file.name.split(".").pop().toLowerCase();
+
+            const format =
+                FORMAT_REGISTRY[extension] || {
+                    category: "OTHER",
+                    name: extension.toUpperCase(),
+                    preview: false
+                };
+
+            files.push({
+                id: crypto.randomUUID(),
+                name: file.name,
+                extension,
+                size: file.size,
+                type: file.type,
+                category: format.category,
+                format: format.name,
+                preview: format.preview,
+                file
+            });
+        }
+
+        renderFiles();
+    });
+
+
+/* =========================================================
+   RENDER FILES
+   ========================================================= */
+
+function renderFiles() {
+
+    const container = document.getElementById("files");
+
+    const search =
+        document.getElementById("search")
+        .value
+        .toLowerCase();
+
+    const category =
+        document.getElementById("category")
+        .value;
+
+    const filtered = files.filter(file => {
+
+        const matchesSearch =
+            file.name.toLowerCase().includes(search);
+
+        const matchesCategory =
+            category === "all" ||
+            file.category === category;
+
+        return matchesSearch && matchesCategory;
+    });
+
+
+    if (filtered.length === 0) {
+
+        container.innerHTML =
+            `<div class="empty">
+                Žiadne súbory.
+            </div>`;
+
+        return;
+    }
+
+
+    container.innerHTML = "";
+
+    filtered.forEach(file => {
+
+        const card =
+            document.createElement("div");
+
+        card.className = "file-card";
+
+        card.innerHTML = `
+            <div class="file-name">
+                ${escapeHTML(file.name)}
+            </div>
+
+            <div class="badge">
+                ${file.format}
+            </div>
+
+            <div class="info">
+                Kategória: ${file.category}<br>
+                Veľkosť: ${formatBytes(file.size)}<br>
+                Prípona: .${file.extension}
+            </div>
+
+            <div class="status">
+                ${file.preview
+                    ? "🟢 Preview dostupný"
+                    : "🟡 Vyžaduje špecializovaný parser"}
+            </div>
+
+            <br>
+
+            <button onclick="previewFile('${file.id}')">
+                👁️ Preview
+            </button>
+        `;
+
+        container.appendChild(card);
+    });
+}
+
+
+/* =========================================================
+   PREVIEW
+   ========================================================= */
+
+async function previewFile(id) {
+
+    const fileData =
+        files.find(f => f.id === id);
+
+    if (!fileData) return;
+
+    const file = fileData.file;
+
+    const preview =
+        document.getElementById("previewContent");
+
+    preview.innerHTML = "";
+
+
+    /* IMAGE */
+
+    if (fileData.category === "IMAGE") {
+
+        const img =
+            document.createElement("img");
+
+        img.src =
+            URL.createObjectURL(file);
+
+        preview.appendChild(img);
+
+        return;
+    }
+
+
+    /* VIDEO */
+
+    if (fileData.category === "VIDEO") {
+
+        const video =
+            document.createElement("video");
+
+        video.controls = true;
+        video.src =
+            URL.createObjectURL(file);
+
+        preview.appendChild(video);
+
+        return;
+    }
+
+
+    /* AUDIO */
+
+    if (fileData.category === "AUDIO") {
+
+        const audio =
+            document.createElement("audio");
+
+        audio.controls = true;
+        audio.src =
+            URL.createObjectURL(file);
+
+        preview.appendChild(audio);
+
+        return;
+    }
+
+
+    /* TEXT / JSON / XML / CODE */
+
+    if (
+        fileData.category === "DATA" ||
+        fileData.category === "CODE" ||
+        fileData.extension === "txt"
+    ) {
+
+        const text =
+            await file.text();
+
+        const pre =
+            document.createElement("pre");
+
+        pre.textContent = text;
+
+        preview.appendChild(pre);
+
+        return;
+    }
+
+
+    /* PDF */
+
+    if (fileData.extension === "pdf") {
+
+        const iframe =
+            document.createElement("iframe");
+
+        iframe.src =
+            URL.createObjectURL(file);
+
+        iframe.width = "100%";
+        iframe.height = "600";
+
+        iframe.style.border = "none";
+
+        preview.appendChild(iframe);
+
+        return;
+    }
+
+
+    /* OTHER */
+
+    preview.innerHTML = `
+        <p>
+            Tento formát bol rozpoznaný ako
+            <strong>${fileData.format}</strong>.
+        </p>
+
+        <p>
+            ErikAI ho zatiaľ uchováva ako RAW súbor.
+            Pre plnú editáciu bude potrebný parser
+            pre tento formát.
+        </p>
+    `;
+}
+
+
+/* =========================================================
+   EXPORT ERIKAI PROJECT
+   ========================================================= */
+
+function exportProject() {
+
+    const project = {
+
+        erikai: {
+            format: "EUPF",
+            version: "1.0"
+        },
+
+        project: {
+            id: crypto.randomUUID(),
+            name: "ErikAI Universal Project",
+            created: new Date().toISOString()
+        },
+
+        files: files.map(file => ({
+
+            id: file.id,
+
+            name: file.name,
+
+            extension: file.extension,
+
+            format: file.format,
+
+            category: file.category,
+
+            mimeType: file.type,
+
+            size: file.size,
+
+            capabilities: {
+
+                preview: file.preview,
+
+                import: true,
+
+                edit: false,
+
+                export: false
+
+            }
+
+        })),
+
+        metadata: {},
+
+        parts: [],
+
+        assemblies: [],
+
+        geometry: [],
+
+        features: [],
+
+        sketches: [],
+
+        constraints: [],
+
+        parameters: [],
+
+        materials: [],
+
+        relationships: [],
+
+        history: [],
+
+        previews: [],
+
+        externalFiles: []
+    };
+
+
+    const json =
+        JSON.stringify(project, null, 4);
+
+    const blob =
+        new Blob(
+            [json],
+            { type: "application/json" }
+        );
+
+    const url =
+        URL.createObjectURL(blob);
+
+    const a =
+        document.createElement("a");
+
+    a.href = url;
+    a.download = "ErikAI_Project.json";
+
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
+
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+
+function formatBytes(bytes) {
+
+    if (bytes === 0)
+        return "0 B";
+
+    const units =
+        ["B", "KB", "MB", "GB"];
+
+    const i =
+        Math.floor(
+            Math.log(bytes) / Math.log(1024)
+        );
+
+    return (
+        (bytes / Math.pow(1024, i))
+        .toFixed(2)
+        + " "
+        + units[i]
+    );
+}
+
+
+function escapeHTML(text) {
+
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+function clearFiles() {
+
+    files = [];
+
+    renderFiles();
+
+    document.getElementById("previewContent")
+        .innerHTML = "Vyber súbor.";
+}
+
+
+document.getElementById("search")
+    .addEventListener("input", renderFiles);
+
+document.getElementById("category")
+    .addEventListener("change", renderFiles);
+
+</script>
+
+</body>
+</html>
