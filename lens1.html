@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#070b12">
+<title>ERIKAI VISION</title>
+
+<style>
+*{box-sizing:border-box}
+
+:root{
+  --bg:#05080d;
+  --panel:#0b111a;
+  --panel2:#101925;
+  --line:#1b2a3c;
+  --text:#f1f6fc;
+  --muted:#8191a5;
+  --accent:#55aaff;
+  --accent2:#795cff;
+  --green:#35d99a;
+  --red:#ff617b;
+  --shadow:0 20px 70px rgba(0,0,0,.45);
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 15% 0%,#16365b 0,transparent 32%),
+    radial-gradient(circle at 100% 20%,#321c58 0,transparent 28%),
+    var(--bg);
+  color:var(--text);
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+.app{
+  width:min(1250px,100%);
+  margin:auto;
+  padding:18px;
+}
+
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  margin-bottom:18px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.logo{
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  border-radius:15px;
+  border:1px solid #2a4563;
+  background:linear-gradient(145deg,#14283e,#090e15);
+  font-size:23px;
+  box-shadow:0 0 35px rgba(77,163,255,.12);
+}
+
+h1{
+  margin:0;
+  font-size:20px;
+  letter-spacing:.5px;
+}
+
+.subtitle{
+  color:var(--muted);
+  font-size:11px;
+  margin-top:4px;
+}
+
+.status{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:11px;
+  color:var(--muted);
+}
+
+.dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#687789;
+}
+
+.dot.live{
+  background:var(--green);
+  box-shadow:0 0 14px var(--green);
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.45fr) minmax(320px,.75fr);
+  gap:16px;
+}
+
+.card{
+  background:linear-gradient(145deg,rgba(13,20,30,.96),rgba(7,11,17,.96));
+  border:1px solid var(--line);
+  border-radius:21px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+
+.viewer{
+  position:relative;
+  aspect-ratio:16/10;
+  min-height:400px;
+  background:#010307;
+  overflow:hidden;
+}
+
+video,
+#photo{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+#photo{
+  display:none;
+}
+
+canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+}
+
+.topbar{
+  position:absolute;
+  left:15px;
+  right:15px;
+  top:15px;
+  display:flex;
+  justify-content:space-between;
+  pointer-events:none;
+}
+
+.badge{
+  padding:8px 10px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;
+  background:rgba(3,8,14,.68);
+  backdrop-filter:blur(14px);
+  font-size:10px;
+}
+
+.scan{
+  position:absolute;
+  inset:15%;
+  pointer-events:none;
+}
+
+.c{
+  position:absolute;
+  width:42px;
+  height:42px;
+  border-color:#fff;
+  border-style:solid;
+}
+
+.tl{top:0;left:0;border-width:3px 0 0 3px}
+.tr{top:0;right:0;border-width:3px 3px 0 0}
+.bl{bottom:0;left:0;border-width:0 0 3px 3px}
+.br{bottom:0;right:0;border-width:0 3px 3px 0}
+
+.line{
+  position:absolute;
+  left:15%;
+  right:15%;
+  top:15%;
+  height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  box-shadow:0 0 16px var(--accent);
+  animation:scan 2.5s linear infinite;
+}
+
+@keyframes scan{
+  0%{top:15%}
+  50%{top:85%}
+  100%{top:15%}
+}
+
+.controls{
+  padding:14px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  border-top:1px solid var(--line);
+}
+
+button,
+.file{
+  appearance:none;
+  border:1px solid #26384e;
+  background:#101a27;
+  color:var(--text);
+  border-radius:11px;
+  padding:11px 13px;
+  font-weight:700;
+  font-size:12px;
+  cursor:pointer;
+}
+
+button:hover,
+.file:hover{
+  background:#172537;
+}
+
+.primary{
+  background:linear-gradient(135deg,#287fd8,#604ed5);
+  border-color:#5e91df;
+}
+
+.green{
+  border-color:#245a4b;
+  color:#78edbd;
+}
+
+.file input{
+  display:none;
+}
+
+.side{
+  padding:16px;
+}
+
+.title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+
+.title h2{
+  margin:0;
+  font-size:14px;
+}
+
+.muted{
+  color:var(--muted);
+  font-size:10px;
+}
+
+.detected{
+  padding:16px;
+  border-radius:16px;
+  background:linear-gradient(145deg,#0c1826,#091019);
+  border:1px solid #1c344b;
+  margin-bottom:12px;
+}
+
+.detected small{
+  color:var(--muted);
+  font-size:10px;
+}
+
+.detectedName{
+  font-size:23px;
+  font-weight:800;
+  margin:7px 0;
+}
+
+.confidence{
+  color:var(--green);
+  font-size:12px;
+}
+
+.characteristics{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:11px;
+}
+
+.tag{
+  background:#111d2b;
+  border:1px solid #1d2c3e;
+  padding:5px 8px;
+  border-radius:7px;
+  color:#a8b9cb;
+  font-size:9px;
+}
+
+.actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:12px 0;
+}
+
+.action{
+  text-align:center;
+  padding:13px 8px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#0d151f;
+  cursor:pointer;
+  font-size:11px;
+  font-weight:700;
+}
+
+.action:hover{
+  border-color:#3a5e83;
+}
+
+.results{
+  margin-top:15px;
+}
+
+.result{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:11px;
+  margin-bottom:8px;
+  border-radius:13px;
+  background:#0a1119;
+  border:1px solid #182637;
+}
+
+.resultIcon{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  background:#111d2b;
+  font-size:20px;
+}
+
+.resultInfo{
+  min-width:0;
+  flex:1;
+}
+
+.resultName{
+  font-weight:700;
+  font-size:12px;
+}
+
+.resultMeta{
+  margin-top:3px;
+  color:var(--muted);
+  font-size:10px;
+}
+
+.result a{
+  text-decoration:none;
+  color:#78bfff;
+  font-size:10px;
+  font-weight:700;
+}
+
+.empty{
+  border:1px dashed #26384c;
+  border-radius:15px;
+  padding:28px 15px;
+  text-align:center;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.5;
+}
+
+.searchPanel{
+  display:none;
+  margin-top:12px;
+  padding:13px;
+  border:1px solid #23364c;
+  border-radius:14px;
+  background:#0b131d;
+}
+
+.searchPanel.show{
+  display:block;
+}
+
+.searchPanel input{
+  width:100%;
+  padding:11px;
+  border-radius:10px;
+  border:1px solid #26394e;
+  background:#070d14;
+  color:white;
+  outline:none;
+  margin-bottom:8px;
+}
+
+.searchButtons{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+
+.info{
+  margin-top:13px;
+  padding:11px;
+  border-radius:11px;
+  background:#0b1723;
+  border:1px solid #1c354d;
+  color:#9bb0c6;
+  font-size:10px;
+  line-height:1.5;
+}
+
+@media(max-width:850px){
+  .app{padding:10px}
+  .grid{grid-template-columns:1fr}
+  .viewer{
+    min-height:0;
+    aspect-ratio:4/3;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header>
+  <div class="brand">
+    <div class="logo">◉</div>
+    <div>
+      <h1>ERIKAI VISION</h1>
+      <div class="subtitle">VISUAL OBJECT & PRODUCT FINDER</div>
+    </div>
+  </div>
+
+  <div class="status">
+    <span id="dot" class="dot"></span>
+    <span id="status">ENGINE OFFLINE</span>
+  </div>
+</header>
+
+
+<div class="grid">
+
+<section class="card">
+
+  <div class="viewer">
+
+    <video id="video" autoplay playsinline muted></video>
+    <img id="photo">
+
+    <canvas id="canvas"></canvas>
+
+    <div class="topbar">
+      <div class="badge">ERIKAI VISION ENGINE</div>
+      <div class="badge" id="fps">0 FPS</div>
+    </div>
+
+    <div class="scan">
+      <div class="c tl"></div>
+      <div class="c tr"></div>
+      <div class="c bl"></div>
+      <div class="c br"></div>
+    </div>
+
+    <div class="line"></div>
+
+  </div>
+
+  <div class="controls">
+
+    <button class="primary" id="start">
+      📷 Spustiť kameru
+    </button>
+
+    <button id="switch">
+      🔄 Kamera
+    </button>
+
+    <button id="freeze">
+      ❄ Zmraziť
+    </button>
+
+    <label class="file">
+      🖼️ Nahrať obrázok
+      <input type="file" id="file" accept="image/*">
+    </label>
+
+    <button class="green" id="similar">
+      🔎 Nájsť podobné
+    </button>
+
+    <button id="stop">
+      ■ Stop
+    </button>
+
+  </div>
+
+</section>
+
+
+<aside class="card side">
+
+  <div class="title">
+    <h2>🧠 ANALÝZA OBJEKTU</h2>
+    <span class="muted" id="engine">READY</span>
+  </div>
+
+  <div id="detected">
+
+    <div class="empty">
+      Namier kameru na objekt.<br><br>
+      ErikAI sa pokúsi identifikovať objekt.
+    </div>
+
+  </div>
+
+
+  <div class="actions">
+
+    <div class="action" id="webSearch">
+      🌐 WEB
+    </div>
+
+    <div class="action" id="shopSearch">
+      🛒 OBCHODY
+    </div>
+
+  </div>
+
+
+  <div id="searchPanel" class="searchPanel">
+
+    <input
+      id="searchText"
+      placeholder="Uprav vyhľadávanie..."
+    >
+
+    <div class="searchButtons">
+
+      <button id="google">
+        Google
+      </button>
+
+      <button id="bing">
+        Bing
+      </button>
+
+      <button id="images">
+        Obrázky
+      </button>
+
+      <button id="shopping">
+        Shopping
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <div class="results">
+
+    <div class="title">
+      <h2>🔎 PODOBNÉ / ODPORÚČANÉ</h2>
+      <span class="muted">LIVE SEARCH</span>
+    </div>
+
+    <div id="recommendations">
+
+      <div class="empty">
+        Po rozpoznaní objektu sa tu zobrazia
+        vyhľadávacie možnosti a odporúčania.
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="info">
+    💡 <b>Ako to funguje:</b><br>
+    Kamera alebo obrázok → objektová detekcia →
+    vytvorenie inteligentného vyhľadávania →
+    otvorenie výsledkov podobných produktov.
+    Prehliadač nemusí dovoliť vloženie každého
+    obchodu priamo do iframe, preto sa odkazy
+    otvárajú bezpečne v novej karte.
+  </div>
+
+</aside>
+
+</div>
+</div>
+
+
+<!-- AI MODEL -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+
+<script>
+
+let model = null;
+let stream = null;
+let running = false;
+let frozen = false;
+
+let facing = "environment";
+
+let lastObjects = [];
+let selectedObject = "";
+
+const video = document.getElementById("video");
+const photo = document.getElementById("photo");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const status = document.getElementById("status");
+const dot = document.getElementById("dot");
+const engine = document.getElementById("engine");
+const fps = document.getElementById("fps");
+
+const detected = document.getElementById("detected");
+const recommendations =
+  document.getElementById("recommendations");
+
+const searchPanel =
+  document.getElementById("searchPanel");
+
+const searchText =
+  document.getElementById("searchText");
+
+let frameCount = 0;
+let fpsTime = performance.now();
+
+
+/* -------------------------
+   LOAD AI MODEL
+------------------------- */
+
+async function loadModel(){
+
+  engine.textContent = "LOADING";
+
+  try{
+
+    model = await cocoSsd.load();
+
+    engine.textContent = "ONLINE";
+
+  }catch(error){
+
+    engine.textContent = "ERROR";
+
+    console.error(error);
+
+  }
+
+}
+
+loadModel();
+
+
+/* -------------------------
+   CAMERA
+------------------------- */
+
+async function startCamera(){
+
+  stopCamera();
+
+  photo.style.display = "none";
+  video.style.display = "block";
+
+  try{
+
+    stream =
+      await navigator.mediaDevices.getUserMedia({
+
+        video:{
+          facingMode:facing,
+          width:{ideal:1280},
+          height:{ideal:720}
+        },
+
+        audio:false
+
+      });
+
+    video.srcObject = stream;
+
+    await video.play();
+
+    running = true;
+    frozen = false;
+
+    dot.classList.add("live");
+    status.textContent = "CAMERA LIVE";
+
+    resizeCanvas();
+
+    detectLoop();
+
+  }catch(error){
+
+    console.error(error);
+
+    status.textContent =
+      "CAMERA DENIED";
+
+    alert(
+      "Kamera sa nepodarilo spustiť. " +
+      "Skontroluj povolenie kamery."
+    );
+
+  }
+
+}
+
+
+function stopCamera(){
+
+  running = false;
+
+  if(stream){
+
+    stream
+      .getTracks()
+      .forEach(track => track.stop());
+
+    stream = null;
+
+  }
+
+  video.srcObject = null;
+
+  dot.classList.remove("live");
+
+  status.textContent =
+    "ENGINE READY";
+
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+}
+
+
+async function switchCamera(){
+
+  facing =
+    facing === "environment"
+      ? "user"
+      : "environment";
+
+  if(running){
+
+    await startCamera();
+
+  }
+
+}
+
+
+/* -------------------------
+   CANVAS
+------------------------- */
+
+function resizeCanvas(){
+
+  canvas.width =
+    video.videoWidth || 1280;
+
+  canvas.height =
+    video.videoHeight || 720;
+
+}
+
+
+/* -------------------------
+   DETECTION LOOP
+------------------------- */
+
+async function detectLoop(){
+
+  if(!running || frozen)
+    return;
+
+  if(
+    model &&
+    video.readyState >= 2
+  ){
+
+    try{
+
+      const predictions =
+        await model.detect(
+          video,
+          20,
+          .45
+        );
+
+      lastObjects = predictions;
+
+      drawBoxes(predictions);
+
+      showDetection(predictions);
+
+      frameCount++;
+
+      const now =
+        performance.now();
+
+      if(now - fpsTime > 1000){
+
+        fps.textContent =
+          frameCount + " FPS";
+
+        frameCount = 0;
+
+        fpsTime = now;
+
+      }
+
+    }catch(error){
+
+      console.error(error);
+
+    }
+
+  }
+
+  requestAnimationFrame(
+    detectLoop
+  );
+
+}
+
+
+/* -------------------------
+   DRAW BOXES
+------------------------- */
+
+function drawBoxes(objects){
+
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  const sx =
+    canvas.width /
+    video.videoWidth;
+
+  const sy =
+    canvas.height /
+    video.videoHeight;
+
+  objects.forEach(object => {
+
+    const [x,y,w,h] =
+      object.bbox;
+
+    ctx.strokeStyle =
+      "#55aaff";
+
+    ctx.lineWidth = 4;
+
+    ctx.strokeRect(
+      x*sx,
+      y*sy,
+      w*sx,
+      h*sy
+    );
+
+    const label =
+      object.class +
+      " " +
+      Math.round(
+        object.score*100
+      ) +
+      "%";
+
+    ctx.font =
+      "bold 16px Arial";
+
+    const width =
+      ctx.measureText(label)
+        .width + 18;
+
+    ctx.fillStyle =
+      "#55aaff";
+
+    ctx.fillRect(
+      x*sx,
+      Math.max(
+        0,
+        y*sy-29
+      ),
+      width,
+      29
+    );
+
+    ctx.fillStyle =
+      "#ffffff";
+
+    ctx.fillText(
+      label,
+      x*sx+9,
+      Math.max(
+        20,
+        y*sy-9
+      )
+    );
+
+  });
+
+}
+
+
+/* -------------------------
+   DETECTION RESULT
+------------------------- */
+
+function showDetection(objects){
+
+  if(!objects.length){
+
+    detected.innerHTML = `
+      <div class="empty">
+        Objekt zatiaľ nebol rozpoznaný.
+      </div>
+    `;
+
+    return;
+
+  }
+
+  const best =
+    [...objects]
+      .sort(
+        (a,b)=>
+          b.score-a.score
+      )[0];
+
+  selectedObject =
+    best.class;
+
+  const percent =
+    Math.round(
+      best.score*100
+    );
+
+  detected.innerHTML = `
+
+    <small>NAJPRAVDEPODOBNEJŠÍ OBJEKT</small>
+
+    <div class="detectedName">
+      ${escapeHTML(best.class)}
+    </div>
+
+    <div class="confidence">
+      ${percent}% confidence
+    </div>
+
+    <div class="characteristics">
+
+      <span class="tag">
+        OBJECT DETECTION
+      </span>
+
+      <span class="tag">
+        ${objects.length} objektov
+      </span>
+
+      <span class="tag">
+        ${Math.round(best.bbox[2])}×
+        ${Math.round(best.bbox[3])} px
+      </span>
+
+    </div>
+
+  `;
+
+  createRecommendations(
+    best.class
+  );
+
+}
+
+
+/* -------------------------
+   RECOMMENDATIONS
+------------------------- */
+
+function createRecommendations(name){
+
+  const q =
+    encodeURIComponent(
+      name
+    );
+
+  const products = [
+
+    {
+      icon:"🔎",
+      name:
+        "Podobné " +
+        name,
+      meta:
+        "Vizuálne podobné výsledky",
+      url:
+        "https://www.google.com/search?tbm=isch&q=similar+"+q
+    },
+
+    {
+      icon:"🛒",
+      name:
+        name +
+        " — produkty",
+      meta:
+        "Nájsť produkty",
+      url:
+        "https://www.google.com/search?tbm=shop&q="+q
+    },
+
+    {
+      icon:"🌐",
+      name:
+        name +
+        " — web",
+      meta:
+        "Webové výsledky",
+      url:
+        "https://www.google.com/search?q="+q
+    },
+
+    {
+      icon:"🖼️",
+      name:
+        name +
+        " — obrázky",
+      meta:
+        "Obrázkové výsledky",
+      url:
+        "https://www.bing.com/images/search?q="+q
+    }
+
+  ];
+
+  recommendations.innerHTML =
+    products.map(
+      product => `
+
+        <div class="result">
+
+          <div class="resultIcon">
+            ${product.icon}
+          </div>
+
+          <div class="resultInfo">
+
+            <div class="resultName">
+              ${escapeHTML(product.name)}
+            </div>
+
+            <div class="resultMeta">
+              ${escapeHTML(product.meta)}
+            </div>
+
+          </div>
+
+          <a
+            href="${product.url}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            OTVORIŤ →
+          </a>
+
+        </div>
+
+      `
+    ).join("");
+
+}
+
+
+/* -------------------------
+   SEARCH PANEL
+------------------------- */
+
+function openSearchPanel(){
+
+  searchPanel.classList.toggle(
+    "show"
+  );
+
+  searchText.value =
+    selectedObject ||
+    "";
+
+  searchText.focus();
+
+}
+
+
+function doSearch(type){
+
+  const query =
+    searchText.value.trim();
+
+  if(!query)
+    return;
+
+  const q =
+    encodeURIComponent(query);
+
+  let url = "";
+
+  if(type === "google"){
+
+    url =
+      "https://www.google.com/search?q="+q;
+
+  }
+
+  if(type === "bing"){
+
+    url =
+      "https://www.bing.com/search?q="+q;
+
+  }
+
+  if(type === "images"){
+
+    url =
+      "https://www.google.com/search?tbm=isch&q="+q;
+
+  }
+
+  if(type === "shopping"){
+
+    url =
+      "https://www.google.com/search?tbm=shop&q="+q;
+
+  }
+
+  if(url){
+
+    window.open(
+      url,
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+  }
+
+}
+
+
+/* -------------------------
+   IMAGE UPLOAD
+------------------------- */
+
+document
+  .getElementById("file")
+  .addEventListener(
+    "change",
+    async event => {
+
+      const file =
+        event.target.files[0];
+
+      if(!file)
+        return;
+
+      stopCamera();
+
+      const url =
+        URL.createObjectURL(file);
+
+      photo.src = url;
+
+      photo.style.display =
+        "block";
+
+      video.style.display =
+        "none";
+
+      photo.onload =
+        async () => {
+
+          canvas.width =
+            photo.naturalWidth;
+
+          canvas.height =
+            photo.naturalHeight;
+
+          if(!model)
+            return;
+
+          const predictions =
+            await model.detect(
+              photo,
+              20,
+              .45
+            );
+
+          lastObjects =
+            predictions;
+
+          drawImageBoxes(
+            predictions
+          );
+
+          showDetection(
+            predictions
+          );
+
+        };
+
+    }
+  );
+
+
+function drawImageBoxes(objects){
+
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  objects.forEach(object => {
+
+    const [x,y,w,h] =
+      object.bbox;
+
+    ctx.strokeStyle =
+      "#55aaff";
+
+    ctx.lineWidth = 5;
+
+    ctx.strokeRect(
+      x,y,w,h
+    );
+
+    const label =
+      object.class +
+      " " +
+      Math.round(
+        object.score*100
+      ) +
+      "%";
+
+    ctx.font =
+      "bold 18px Arial";
+
+    ctx.fillStyle =
+      "#55aaff";
+
+    ctx.fillRect(
+      x,
+      Math.max(
+        0,
+        y-34
+      ),
+      ctx.measureText(label)
+        .width+18,
+      34
+    );
+
+    ctx.fillStyle =
+      "#fff";
+
+    ctx.fillText(
+      label,
+      x+9,
+      Math.max(
+        23,
+        y-11
+      )
+    );
+
+  });
+
+}
+
+
+/* -------------------------
+   FREEZE
+------------------------- */
+
+document
+  .getElementById("freeze")
+  .onclick = () => {
+
+    frozen =
+      !frozen;
+
+    document
+      .getElementById("freeze")
+      .textContent =
+        frozen
+        ? "▶ Pokračovať"
+        : "❄ Zmraziť";
+
+    if(!frozen)
+      detectLoop();
+
+  };
+
+
+/* -------------------------
+   SIMILAR SEARCH
+------------------------- */
+
+document
+  .getElementById("similar")
+  .onclick = () => {
+
+    if(!selectedObject){
+
+      alert(
+        "Najprv nechaj ErikAI rozpoznať objekt."
+      );
+
+      return;
+
+    }
+
+    searchText.value =
+      "similar " +
+      selectedObject;
+
+    searchPanel.classList.add(
+      "show"
+    );
+
+  };
+
+
+/* -------------------------
+   BUTTONS
+------------------------- */
+
+document
+  .getElementById("start")
+  .onclick =
+    startCamera;
+
+document
+  .getElementById("stop")
+  .onclick =
+    stopCamera;
+
+document
+  .getElementById("switch")
+  .onclick =
+    switchCamera;
+
+document
+  .getElementById("webSearch")
+  .onclick =
+    openSearchPanel;
+
+document
+  .getElementById("shopSearch")
+  .onclick =
+    () => {
+
+      if(!selectedObject)
+        return;
+
+      searchText.value =
+        selectedObject;
+
+      searchPanel.classList.add(
+        "show"
+      );
+
+    };
+
+
+document
+  .getElementById("google")
+  .onclick =
+    () => doSearch("google");
+
+document
+  .getElementById("bing")
+  .onclick =
+    () => doSearch("bing");
+
+document
+  .getElementById("images")
+  .onclick =
+    () => doSearch("images");
+
+document
+  .getElementById("shopping")
+  .onclick =
+    () => doSearch("shopping");
+
+
+/* -------------------------
+   SECURITY
+------------------------- */
+
+function escapeHTML(text){
+
+  return String(text)
+    .replace(
+      /[&<>"']/g,
+      char => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#039;"
+      })[char]
+    );
+
+}
+
+
+/* -------------------------
+   RESIZE
+------------------------- */
+
+window.addEventListener(
+  "resize",
+  () => {
+
+    if(video.videoWidth)
+      resizeCanvas();
+
+  }
+);
+
+</script>
+
+</body>
+</html>
