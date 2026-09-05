@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>ERIKAI VISION</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+margin:0;background:#07090d;color:#fff;
+font-family:Arial,sans-serif
+}
+.app{
+max-width:720px;margin:auto;padding:16px
+}
+h1{
+margin:0;font-size:28px;letter-spacing:1px
+}
+.sub{
+color:#8e96a3;margin:4px 0 15px
+}
+.engine{
+padding:10px 13px;border:1px solid #252b35;
+border-radius:12px;background:#10141b;
+font-size:13px;margin-bottom:12px
+}
+.green{color:#59e391}
+.yellow{color:#ffd166}
+.red{color:#ff6868}
+
+.card{
+background:#10141b;
+border:1px solid #252b35;
+border-radius:18px;
+padding:14px;
+margin-bottom:12px
+}
+
+.viewer{
+position:relative;
+background:#050608;
+border-radius:15px;
+overflow:hidden;
+min-height:220px;
+display:flex;
+align-items:center;
+justify-content:center
+}
+
+video,img,canvas{
+width:100%;
+display:block;
+max-height:520px;
+object-fit:contain
+}
+
+#preview,#canvas{display:none}
+
+.placeholder{
+padding:60px 15px;
+text-align:center;
+color:#737b88
+}
+
+.buttons{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:8px;
+margin-top:10px
+}
+
+button,label{
+border:0;
+border-radius:12px;
+padding:13px 10px;
+background:#1b212b;
+color:#fff;
+font-weight:bold;
+text-align:center;
+cursor:pointer
+}
+
+button.main,label.main{
+background:#fff;
+color:#111
+}
+
+button:disabled{
+opacity:.45
+}
+
+input[type=file]{display:none}
+
+.analysis{
+padding:14px;
+background:#151a22;
+border-radius:14px;
+margin-top:10px
+}
+
+.analysis-title{
+font-size:12px;
+color:#89919e;
+margin-bottom:6px
+}
+
+.object{
+font-size:25px;
+font-weight:bold
+}
+
+.score{
+font-size:14px;
+color:#63e89a;
+margin-top:4px
+}
+
+.note{
+font-size:12px;
+color:#8d95a1;
+margin-top:8px;
+line-height:1.4
+}
+
+.search{
+display:none
+}
+
+.search input{
+width:100%;
+padding:13px;
+border-radius:12px;
+border:1px solid #303743;
+background:#0a0d12;
+color:#fff;
+font-size:15px
+}
+
+.search-buttons{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:8px;
+margin-top:8px
+}
+
+.results{
+display:none
+}
+
+.resultBtn{
+display:block;
+width:100%;
+margin-top:8px;
+text-decoration:none
+}
+
+#loading{
+display:none;
+text-align:center;
+padding:15px;
+color:#b8bec8
+}
+
+#stop{
+display:none
+}
+
+@media(min-width:600px){
+.buttons{grid-template-columns:repeat(4,1fr)}
+.search-buttons{grid-template-columns:repeat(4,1fr)}
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<h1>◉ ERIKAI VISION</h1>
+<div class="sub">VISUAL OBJECT & PRODUCT FINDER</div>
+
+<div class="engine" id="engine">
+🧠 ENGINE: <span class="yellow">OFFLINE</span>
+</div>
+
+<div class="card">
+
+<div class="viewer">
+
+<div class="placeholder" id="placeholder">
+📷<br><br>
+Namier kameru na objekt alebo nahraj obrázok.
+</div>
+
+<video id="video" autoplay playsinline></video>
+<img id="preview">
+<canvas id="canvas"></canvas>
+
+</div>
+
+<div class="buttons">
+
+<button class="main" id="start">📷 Kamera</button>
+
+<button id="switch">🔄 Kamera</button>
+
+<button id="freeze">❄ Zmraziť</button>
+
+<label class="main" for="file">🖼️ Obrázok</label>
+
+</div>
+
+<input id="file" type="file" accept="image/*">
+
+<button id="analyze" class="main"
+style="width:100%;margin-top:8px" disabled>
+🔎 ANALYZOVAŤ OBJEKT
+</button>
+
+<button id="stop"
+style="width:100%;margin-top:8px">
+■ Stop kamera
+</button>
+
+<div id="loading">
+⏳ ErikAI pripravuje vision engine...
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="analysis-title">
+🧠 ANALÝZA OBJEKTU
+</div>
+
+<div id="analysis">
+READY
+</div>
+
+</div>
+
+
+<div class="card search" id="searchBox">
+
+<div class="analysis-title">
+🌐 VYHĽADÁVANIE
+</div>
+
+<input id="query" placeholder="Uprav vyhľadávanie...">
+
+<div class="search-buttons">
+
+<button onclick="searchGoogle()">Google</button>
+<button onclick="searchBing()">Bing</button>
+<button onclick="searchImages()">Obrázky</button>
+<button onclick="searchShopping()">Shopping</button>
+
+</div>
+
+</div>
+
+
+<div class="card results" id="results">
+
+<div class="analysis-title">
+🔎 PODOBNÉ / ODPORÚČANÉ
+</div>
+
+<div id="links"></div>
+
+</div>
+
+</div>
+
+
+<script type="module">
+
+import {
+pipeline,
+env
+} from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1";
+
+env.useBrowserCache=true;
+
+
+/* =========================
+   ELEMENTS
+========================= */
+
+const video=document.getElementById("video");
+const preview=document.getElementById("preview");
+const canvas=document.getElementById("canvas");
+const placeholder=document.getElementById("placeholder");
+
+const start=document.getElementById("start");
+const stop=document.getElementById("stop");
+const freeze=document.getElementById("freeze");
+const switchBtn=document.getElementById("switch");
+const file=document.getElementById("file");
+const analyze=document.getElementById("analyze");
+
+const engine=document.getElementById("engine");
+const loading=document.getElementById("loading");
+const analysis=document.getElementById("analysis");
+
+const searchBox=document.getElementById("searchBox");
+const results=document.getElementById("results");
+const query=document.getElementById("query");
+const links=document.getElementById("links");
+
+
+/* =========================
+   STATE
+========================= */
+
+let detector=null;
+let stream=null;
+let imageSource=null;
+let facing="environment";
+let lastLabel="";
+
+
+/* =========================
+   MODEL
+========================= */
+
+async function loadEngine(){
+
+if(detector)return detector;
+
+loading.style.display="block";
+
+engine.innerHTML=
+'🧠 ENGINE: <span class="yellow">NAČÍTAVAM...</span>';
+
+try{
+
+detector=await pipeline(
+"object-detection",
+"Xenova/yolos-tiny"
+);
+
+engine.innerHTML=
+'🧠 ENGINE: <span class="green">ONLINE</span>';
+
+loading.style.display="none";
+
+return detector;
+
+}catch(error){
+
+console.error(error);
+
+engine.innerHTML=
+'🧠 ENGINE: <span class="red">CHYBA</span>';
+
+loading.style.display="none";
+
+analysis.innerHTML=
+'<span class="red">❌ Vision engine sa nepodarilo načítať.</span>'+
+'<div class="note">'+
+'Skontroluj internetové pripojenie a skús to znova.'+
+'</div>';
+
+throw error;
+}
+
+}
+
+
+/* =========================
+   CAMERA
+========================= */
+
+async function startCamera(){
+
+try{
+
+if(stream){
+stream.getTracks().forEach(t=>t.stop());
+}
+
+stream=await navigator.mediaDevices.getUserMedia({
+video:{
+facingMode:facing,
+width:{ideal:1280},
+height:{ideal:720}
+},
+audio:false
+});
+
+video.srcObject=stream;
+
+video.style.display="block";
+preview.style.display="none";
+canvas.style.display="none";
+placeholder.style.display="none";
+
+start.style.display="none";
+stop.style.display="block";
+
+imageSource=null;
+analyze.disabled=false;
+
+analysis.innerHTML="READY";
+
+}catch(error){
+
+console.error(error);
+
+analysis.innerHTML=
+'<span class="red">❌ Kamera nie je dostupná.</span>'+
+'<div class="note">'+
+'Povoľ kameru v prehliadači alebo použi nahratie obrázka.'+
+'</div>';
+
+}
+
+}
+
+
+start.onclick=startCamera;
+
+
+stop.onclick=()=>{
+
+if(stream){
+stream.getTracks().forEach(t=>t.stop());
+stream=null;
+}
+
+video.style.display="none";
+stop.style.display="none";
+start.style.display="block";
+
+placeholder.style.display="block";
+
+};
+
+
+switchBtn.onclick=async()=>{
+
+facing=
+facing==="environment"
+?"user"
+:"environment";
+
+await startCamera();
+
+};
+
+
+/* =========================
+   FREEZE
+========================= */
+
+freeze.onclick=()=>{
+
+if(!stream || !video.videoWidth)return;
+
+canvas.width=video.videoWidth;
+canvas.height=video.videoHeight;
+
+const ctx=canvas.getContext("2d");
+
+ctx.drawImage(
+video,
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+canvas.style.display="block";
+video.style.display="none";
+
+imageSource=canvas;
+
+analyze.disabled=false;
+
+};
+
+
+/* =========================
+   IMAGE UPLOAD
+========================= */
+
+file.onchange=()=>{
+
+const f=file.files[0];
+
+if(!f)return;
+
+const url=URL.createObjectURL(f);
+
+preview.onload=()=>{
+
+preview.style.display="block";
+canvas.style.display="none";
+video.style.display="none";
+placeholder.style.display="none";
+
+imageSource=preview;
+analyze.disabled=false;
+
+analysis.innerHTML="READY";
+
+};
+
+preview.src=url;
+
+};
+
+
+/* =========================
+   ANALYSIS
+========================= */
+
+analyze.onclick=async()=>{
+
+if(!imageSource)return;
+
+analyze.disabled=true;
+
+analysis.innerHTML=
+'⏳ <span class="yellow">Analyzujem obrázok...</span>';
+
+try{
+
+const ai=await loadEngine();
+
+const output=await ai(
+imageSource,
+{
+threshold:0.30
+}
+);
+
+processOutput(output);
+
+}catch(error){
+
+console.error(error);
+
+analysis.innerHTML=
+'<span class="red">❌ Analýza zlyhala.</span>'+
+'<div class="note">'+
+error.message+
+'</div>';
+
+}
+
+analyze.disabled=false;
+
+};
+
+
+/* =========================
+   RESULT
+========================= */
+
+function processOutput(output){
+
+if(!output || !output.length){
+
+analysis.innerHTML=
+'<div class="object">🤔 Neviem</div>'+
+'<div class="note">'+
+'ErikAI nenašiel dostatočne jasný objekt.'+
+'</div>';
+
+return;
+}
+
+
+/*
+Odstránime veľmi slabé výsledky
+a zoradíme podľa skóre.
+*/
+
+const valid=output
+.filter(x=>x.score>=0.35)
+.sort((a,b)=>b.score-a.score);
+
+if(!valid.length){
+
+analysis.innerHTML=
+'<div class="object">🤔 Neviem</div>'+
+'<div class="note">'+
+'Výsledok bol príliš neistý.'+
+'</div>';
+
+return;
+}
+
+
+/*
+Vyberieme najlepší objekt.
+*/
+
+const best=valid[0];
+
+lastLabel=best.label;
+
+const score=Math.round(best.score*100);
+
+
+/*
+Slovenské názvy.
+*/
+
+const names={
+person:"Človek",
+car:"Auto",
+truck:"Nákladné auto",
+bus:"Autobus",
+motorcycle:"Motocykel",
+bicycle:"Bicykel",
+dog:"Pes",
+cat:"Mačka",
+horse:"Kôň",
+bird:"Vták",
+cow:"Krava",
+sheep:"Ovca",
+tv:"Televízor",
+laptop:"Notebook",
+cell:"Mobil",
+"cell phone":"Mobil",
+keyboard:"Klávesnica",
+mouse:"Myš",
+remote:"Diaľkový ovládač",
+chair:"Stolička",
+couch:"Gauč",
+bed:"Posteľ",
+bottle:"Fľaša",
+cup:"Šálka",
+book:"Kniha",
+backpack:"Batoh",
+handbag:"Kabelka",
+suitcase:"Kufor",
+umbrella:"Dáždnik",
+pizza:"Pizza",
+cake:"Koláč",
+banana:"Banán",
+apple:"Jablko",
+orange:"Pomaranč",
+sports:"Športová lopta",
+"tennis racket":"Tenisová raketa",
+"skateboard":"Skateboard",
+"traffic light":"Semafor",
+"stop sign":"STOP značka",
+"potted plant":"Rastlina",
+"refrigerator":"Chladnička",
+microwave:"Mikrovlnka",
+oven:"Rúra",
+toaster:"Toastovač",
+sink:"Umývadlo",
+toilet:"Toaleta",
+clock:"Hodiny",
+vase:"Váza",
+scissors:"Nožnice",
+toothbrush:"Zubná kefka"
+};
+
+const slovak=
+names[best.label] ||
+best.label;
+
+
+let quality;
+
+if(score>=85)
+quality="🟢 vysoká istota";
+else if(score>=60)
+quality="🟡 stredná istota";
+else
+quality="🟠 neistý výsledok";
+
+
+analysis.innerHTML=`
+
+<div class="object">
+${slovak}
+</div>
+
+<div class="score">
+${score}% • ${quality}
+</div>
+
+<div class="note">
+Rozpoznaná trieda: ${best.label}<br>
+Nájdených objektov: ${valid.length}
+</div>
+
+`;
+
+
+/*
+Vyplníme vyhľadávanie.
+*/
+
+createSearch(slovak,valid);
+
+}
+
+
+/* =========================
+   SEARCH
+========================= */
+
+function createSearch(name,objects){
+
+const objectNames=
+objects
+.slice(0,3)
+.map(x=>names[x.label]||x.label)
+.join(" ");
+
+const q=
+objectNames ||
+name;
+
+query.value=q;
+
+searchBox.style.display="block";
+results.style.display="block";
+
+links.innerHTML="";
+
+const encoded=encodeURIComponent(q);
+
+addLink(
+"🌐 Google",
+"https://www.google.com/search?q="+encoded
+);
+
+addLink(
+"🖼️ Google obrázky",
+"https://www.google.com/search?tbm=isch&q="+encoded
+);
+
+addLink(
+"🛒 Google Shopping",
+"https://www.google.com/search?tbm=shop&q="+encoded
+);
+
+addLink(
+"🔎 Bing",
+"https://www.bing.com/search?q="+encoded
+);
+
+addLink(
+"🖼️ Bing Images",
+"https://www.bing.com/images/search?q="+encoded
+);
+
+}
+
+
+function addLink(text,url){
+
+const a=document.createElement("a");
+
+a.className="resultBtn";
+a.href=url;
+a.target="_blank";
+a.rel="noopener";
+
+const b=document.createElement("button");
+
+b.textContent=text;
+b.style.width="100%";
+
+a.appendChild(b);
+
+links.appendChild(a);
+
+}
+
+
+/* =========================
+   SEARCH BUTTONS
+========================= */
+
+window.searchGoogle=()=>{
+openSearch(
+"https://www.google.com/search?q="
+);
+};
+
+window.searchBing=()=>{
+openSearch(
+"https://www.bing.com/search?q="
+);
+};
+
+window.searchImages=()=>{
+openSearch(
+"https://www.google.com/search?tbm=isch&q="
+);
+};
+
+window.searchShopping=()=>{
+openSearch(
+"https://www.google.com/search?tbm=shop&q="
+);
+};
+
+
+function openSearch(base){
+
+const q=query.value.trim()||lastLabel;
+
+if(!q)return;
+
+window.open(
+base+encodeURIComponent(q),
+"_blank"
+);
+
+}
+
+
+/* =========================
+   INITIAL
+========================= */
+
+analysis.innerHTML=
+'<div class="object">READY</div>'+
+'<div class="note">'+
+'Namier kameru na objekt alebo nahraj obrázok.<br>'+
+'ErikAI sa pokúsi identifikovať objekt.'+
+'</div>';
+
+</script>
+
+</body>
+</html>
