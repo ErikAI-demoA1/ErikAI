@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ErikAI Vision</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#101114;
+  color:#fff;
+  min-height:100vh;
+}
+.app{
+  max-width:700px;
+  margin:auto;
+  padding:16px;
+}
+h1{
+  margin:5px 0;
+  font-size:27px;
+}
+.sub{
+  color:#aaa;
+  margin-bottom:15px;
+}
+.preview{
+  width:100%;
+  aspect-ratio:4/3;
+  background:#1b1d22;
+  border-radius:18px;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.preview img,
+.preview video{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+#video{display:none}
+.controls{
+  display:flex;
+  gap:8px;
+  margin:12px 0;
+}
+button,.upload{
+  flex:1;
+  border:0;
+  border-radius:12px;
+  padding:13px 10px;
+  background:#252830;
+  color:white;
+  font-size:15px;
+  cursor:pointer;
+}
+button:active,.upload:active{
+  transform:scale(.98);
+}
+.primary{
+  background:#356df3;
+}
+input{display:none}
+.status{
+  margin:12px 0;
+  color:#aaa;
+  min-height:20px;
+}
+.result{
+  background:#1b1d22;
+  border-radius:16px;
+  padding:15px;
+  display:none;
+}
+.result h2{
+  margin:0 0 8px;
+}
+.item{
+  padding:12px 0;
+  border-bottom:1px solid #303238;
+}
+.item:last-child{border-bottom:0}
+.score{
+  color:#71a0ff;
+  float:right;
+}
+.search{
+  display:flex;
+  gap:7px;
+  margin-top:10px;
+}
+.search a{
+  flex:1;
+  text-decoration:none;
+  text-align:center;
+  padding:10px;
+  border-radius:10px;
+  background:#292c34;
+  color:white;
+}
+.small{
+  font-size:12px;
+  color:#777;
+  margin-top:14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <h1>👁️ ErikAI Vision</h1>
+  <div class="sub">AI rozpoznávanie obrázkov pomocou Transformers.js</div>
+
+  <div class="preview">
+    <img id="image" alt="Náhľad">
+    <video id="video" autoplay playsinline></video>
+    <span id="placeholder">📷 Vyber alebo odfoť obrázok</span>
+  </div>
+
+  <div class="controls">
+
+    <label class="upload">
+      🖼️ Fotka
+      <input id="file" type="file" accept="image/*">
+    </label>
+
+    <button id="camera">📷 Kamera</button>
+
+    <button id="snap" class="primary" style="display:none">
+      📸 Odfotiť
+    </button>
+
+  </div>
+
+  <button id="analyze" class="primary" disabled>
+    🤖 Analyzovať AI
+  </button>
+
+  <div id="status" class="status">
+    AI sa ešte nenačítala.
+  </div>
+
+  <div id="result" class="result"></div>
+
+  <div class="small">
+    ErikAI Vision Lite • Transformers.js • CLIP
+  </div>
+
+</div>
+
+
+<script type="module">
+
+import {
+  pipeline,
+  env
+} from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/+esm";
+
+
+// ================================
+// NASTAVENIE
+// ================================
+
+env.useBrowserCache = true;
+env.allowLocalModels = false;
+
+
+// ================================
+// ELEMENTY
+// ================================
+
+const image = document.getElementById("image");
+const video = document.getElementById("video");
+const file = document.getElementById("file");
+const camera = document.getElementById("camera");
+const snap = document.getElementById("snap");
+const analyze = document.getElementById("analyze");
+const status = document.getElementById("status");
+const result = document.getElementById("result");
+const placeholder = document.getElementById("placeholder");
+
+let classifier = null;
+let stream = null;
+let currentImage = null;
+
+
+// ================================
+// AI MODEL
+// ================================
+
+async function loadAI(){
+
+  status.textContent = "🤖 Načítavam AI model...";
+
+  try{
+
+    const gpu = navigator.gpu ? "webgpu" : "wasm";
+
+    classifier = await pipeline(
+      "zero-shot-image-classification",
+      "Xenova/clip-vit-base-patch32",
+      {
+        device: gpu
+      }
+    );
+
+    status.textContent =
+      "✅ AI pripravená (" + gpu.toUpperCase() + ")";
+
+  }catch(error){
+
+    console.error(error);
+
+    status.textContent =
+      "❌ AI sa nepodarilo načítať.";
+
+  }
+
+}
+
+loadAI();
+
+
+// ================================
+// OTVORENIE FOTKY
+// ================================
+
+file.addEventListener("change",e=>{
+
+  const selected = e.target.files[0];
+
+  if(!selected) return;
+
+  const url = URL.createObjectURL(selected);
+
+  image.src = url;
+  image.style.display = "block";
+  video.style.display = "none";
+  placeholder.style.display = "none";
+
+  currentImage = image;
+
+  analyze.disabled = false;
+
+  if(stream){
+    stream.getTracks().forEach(t=>t.stop());
+    stream = null;
+  }
+
+  camera.textContent = "📷 Kamera";
+  snap.style.display = "none";
+
+});
+
+
+// ================================
+// KAMERA
+// ================================
+
+camera.onclick = async()=>{
+
+  if(stream){
+
+    stream.getTracks().forEach(t=>t.stop());
+    stream = null;
+
+    video.style.display = "none";
+    image.style.display = "block";
+
+    snap.style.display = "none";
+    camera.textContent = "📷 Kamera";
+
+    return;
+  }
+
+  try{
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:"environment"
+      },
+      audio:false
+    });
+
+    video.srcObject = stream;
+
+    image.style.display = "none";
+    video.style.display = "block";
+    placeholder.style.display = "none";
+
+    snap.style.display = "block";
+    camera.textContent = "✖ Zavrieť";
+
+  }catch(error){
+
+    status.textContent =
+      "❌ Kamera nie je dostupná.";
+
+    console.error(error);
+
+  }
+
+};
+
+
+// ================================
+// FOTOGRAFIA Z KAMERY
+// ================================
+
+snap.onclick = ()=>{
+
+  if(!stream) return;
+
+  const canvas = document.createElement("canvas");
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+
+  ctx.drawImage(
+    video,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  image.src = canvas.toDataURL("image/jpeg",0.9);
+
+  image.style.display = "block";
+  video.style.display = "none";
+
+  currentImage = image;
+
+  analyze.disabled = false;
+
+  stream.getTracks().forEach(t=>t.stop());
+  stream = null;
+
+  snap.style.display = "none";
+  camera.textContent = "📷 Kamera";
+
+};
+
+
+// ================================
+// AI ANALÝZA
+// ================================
+
+analyze.onclick = async()=>{
+
+  if(!classifier || !currentImage){
+
+    status.textContent =
+      "⏳ AI alebo obrázok ešte nie sú pripravené.";
+
+    return;
+
+  }
+
+  analyze.disabled = true;
+
+  result.style.display = "none";
+
+  status.textContent =
+    "🧠 AI analyzuje obrázok...";
+
+  try{
+
+    /*
+      CLIP potrebuje kandidátne názvy.
+      Zatiaľ máme univerzálny zoznam.
+    */
+
+    const labels = [
+
+      "a person",
+      "a car",
+      "a motorcycle",
+      "a bicycle",
+      "a truck",
+      "a bus",
+
+      "a phone",
+      "a smartphone",
+      "a computer",
+      "a laptop",
+      "a television",
+      "a camera",
+
+      "a watch",
+      "a shoe",
+      "a backpack",
+      "a chair",
+      "a table",
+      "a sofa",
+
+      "a dog",
+      "a cat",
+      "a bird",
+      "a horse",
+
+      "food",
+      "fruit",
+      "a flower",
+      "a building",
+      "a house",
+
+      "a book",
+      "a bottle",
+      "a cup",
+      "a tool",
+      "electronics",
+
+      "a toy",
+      "clothing",
+      "something else"
+
+    ];
+
+    const output = await classifier(
+      currentImage,
+      labels
+    );
+
+    showResults(output);
+
+    status.textContent =
+      "✅ Analýza dokončená.";
+
+  }catch(error){
+
+    console.error(error);
+
+    status.textContent =
+      "❌ Chyba pri analýze.";
+
+  }
+
+  analyze.disabled = false;
+
+};
+
+
+// ================================
+// ZOBRAZENIE VÝSLEDKOV
+// ================================
+
+function showResults(data){
+
+  result.innerHTML = "";
+
+  const title = document.createElement("h2");
+
+  title.textContent = "🔎 Výsledok AI";
+
+  result.appendChild(title);
+
+
+  data.slice(0,5).forEach((item,index)=>{
+
+    const div = document.createElement("div");
+
+    div.className = "item";
+
+    const name =
+      item.label
+        .replace(/^a /,"")
+        .replace(/^an /,"");
+
+    const percent =
+      (item.score * 100).toFixed(1);
+
+    div.innerHTML = `
+      <b>${index+1}. ${name}</b>
+      <span class="score">${percent}%</span>
+
+      <div class="search">
+
+        <a
+          target="_blank"
+          href="https://www.google.com/search?q=${encodeURIComponent(name)}"
+        >
+          🔎 Google
+        </a>
+
+        <a
+          target="_blank"
+          href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(name)}"
+        >
+          🖼️ Obrázky
+        </a>
+
+      </div>
+    `;
+
+    result.appendChild(div);
+
+  });
+
+  result.style.display = "block";
+
+}
+
+</script>
+
+</body>
+</html>
