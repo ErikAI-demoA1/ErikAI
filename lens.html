@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#070b12">
+<title>ERIKAI VISION</title>
+
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#060910;
+  --panel:#0d131d;
+  --panel2:#111a27;
+  --line:#1d2a3a;
+  --text:#eef5ff;
+  --muted:#7f91a8;
+  --accent:#4da3ff;
+  --accent2:#7c5cff;
+  --good:#40e0a0;
+  --danger:#ff607c;
+}
+body{
+  margin:0;
+  background:
+    radial-gradient(circle at 20% 0%,#10243d 0,transparent 35%),
+    radial-gradient(circle at 100% 20%,#21143b 0,transparent 30%),
+    var(--bg);
+  color:var(--text);
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  min-height:100vh;
+}
+.app{
+  width:min(1180px,100%);
+  margin:auto;
+  padding:18px;
+}
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.logo{
+  width:46px;
+  height:46px;
+  border:1px solid #29415d;
+  border-radius:14px;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(145deg,#14263b,#0b1019);
+  box-shadow:0 0 30px #2364a022;
+  font-size:23px;
+}
+h1{font-size:20px;margin:0}
+.sub{font-size:12px;color:var(--muted);margin-top:3px}
+.status{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:var(--muted);
+  font-size:12px;
+}
+.dot{
+  width:8px;height:8px;border-radius:50%;
+  background:#64748b;
+}
+.dot.live{background:var(--good);box-shadow:0 0 12px #40e0a0}
+.layout{
+  display:grid;
+  grid-template-columns:minmax(0,1.5fr) minmax(290px,.7fr);
+  gap:16px;
+}
+.card{
+  background:linear-gradient(145deg,#0d141eeb,#090e16eb);
+  border:1px solid var(--line);
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 18px 60px #0005;
+}
+.viewer{
+  position:relative;
+  aspect-ratio:16/10;
+  min-height:400px;
+  background:#02050a;
+  overflow:hidden;
+}
+video,#imagePreview{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+#imagePreview{display:none}
+canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+}
+.scanCorners{
+  position:absolute;
+  inset:12%;
+  pointer-events:none;
+}
+.corner{
+  position:absolute;
+  width:42px;height:42px;
+  border-color:#fff;
+  border-style:solid;
+}
+.tl{left:0;top:0;border-width:3px 0 0 3px}
+.tr{right:0;top:0;border-width:3px 3px 0 0}
+.bl{left:0;bottom:0;border-width:0 0 3px 3px}
+.br{right:0;bottom:0;border-width:0 3px 3px 0}
+.scanLine{
+  position:absolute;
+  left:12%;right:12%;
+  top:12%;
+  height:2px;
+  background:linear-gradient(90deg,transparent,#4da3ff,transparent);
+  box-shadow:0 0 15px #4da3ff;
+  animation:scan 2.4s linear infinite;
+}
+@keyframes scan{
+  0%{top:12%}
+  50%{top:88%}
+  100%{top:12%}
+}
+.overlay{
+  position:absolute;
+  left:16px;right:16px;top:16px;
+  display:flex;
+  justify-content:space-between;
+  pointer-events:none;
+}
+.badge{
+  padding:8px 11px;
+  border:1px solid #ffffff20;
+  background:#050a11b8;
+  backdrop-filter:blur(12px);
+  border-radius:10px;
+  font-size:11px;
+}
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  padding:14px;
+  border-top:1px solid var(--line);
+}
+button,.fileBtn{
+  border:1px solid #26384d;
+  color:var(--text);
+  background:#111a27;
+  padding:11px 14px;
+  border-radius:11px;
+  cursor:pointer;
+  font-weight:600;
+  font-size:13px;
+}
+button:hover,.fileBtn:hover{background:#182538}
+.primary{
+  background:linear-gradient(135deg,#267bd2,#6149d9);
+  border-color:#5b8fe0;
+}
+.danger{border-color:#633244;color:#ff9bad}
+input[type=file]{display:none}
+
+.side{
+  padding:16px;
+}
+.sectionTitle{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:13px;
+}
+.sectionTitle h2{
+  font-size:14px;
+  margin:0;
+}
+.small{font-size:11px;color:var(--muted)}
+.result{
+  border:1px solid var(--line);
+  background:#0a111a;
+  border-radius:14px;
+  padding:13px;
+  margin-bottom:10px;
+}
+.resultTop{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+}
+.objectName{font-weight:700}
+.conf{color:var(--good);font-size:12px}
+.meta{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+  flex-wrap:wrap;
+}
+.tag{
+  color:#a9bbd0;
+  background:#111c2a;
+  padding:5px 8px;
+  border-radius:7px;
+  font-size:10px;
+}
+.empty{
+  color:var(--muted);
+  text-align:center;
+  padding:35px 15px;
+  border:1px dashed #233247;
+  border-radius:14px;
+  font-size:12px;
+}
+.stats{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  margin-top:12px;
+}
+.stat{
+  background:#0a111a;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:11px;
+}
+.stat b{display:block;font-size:17px}
+.stat span{font-size:10px;color:var(--muted)}
+.history{
+  margin-top:16px;
+}
+.historyItem{
+  display:flex;
+  justify-content:space-between;
+  padding:10px 0;
+  border-bottom:1px solid #182331;
+  font-size:12px;
+}
+.historyItem span:last-child{color:var(--muted)}
+.notice{
+  margin-top:12px;
+  padding:11px;
+  background:#0c1724;
+  border:1px solid #1c3853;
+  color:#9db5ce;
+  border-radius:11px;
+  font-size:11px;
+  line-height:1.5;
+}
+@media(max-width:800px){
+  .app{padding:10px}
+  .layout{grid-template-columns:1fr}
+  .viewer{min-height:0;aspect-ratio:4/3}
+  header{margin-bottom:12px}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<header>
+  <div class="brand">
+    <div class="logo">◉</div>
+    <div>
+      <h1>ERIKAI VISION</h1>
+      <div class="sub">AI Computer Vision Scanner</div>
+    </div>
+  </div>
+  <div class="status">
+    <span id="statusDot" class="dot"></span>
+    <span id="statusText">OFFLINE</span>
+  </div>
+</header>
+
+<div class="layout">
+
+<section class="card">
+  <div class="viewer">
+
+    <video id="video" autoplay playsinline muted></video>
+    <img id="imagePreview">
+
+    <canvas id="overlay"></canvas>
+
+    <div class="scanCorners">
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+    </div>
+
+    <div class="scanLine"></div>
+
+    <div class="overlay">
+      <div class="badge">VISION ENGINE</div>
+      <div class="badge" id="fps">0 FPS</div>
+    </div>
+
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="startBtn">📷 Spustiť kameru</button>
+    <button id="switchBtn">🔄 Kamera</button>
+    <button id="freezeBtn">❄ Zmraziť</button>
+
+    <label class="fileBtn">
+      🖼️ Obrázok
+      <input type="file" id="fileInput" accept="image/*">
+    </label>
+
+    <button class="danger" id="stopBtn">■ Stop</button>
+  </div>
+</section>
+
+<aside class="card side">
+
+  <div class="sectionTitle">
+    <h2>ROZPOZNANIE</h2>
+    <span class="small" id="engineState">ENGINE READY</span>
+  </div>
+
+  <div id="results">
+    <div class="empty">
+      Namier kameru na objekt.<br><br>
+      ERIKAI sa pokúsi nájsť rozpoznateľné objekty.
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <b id="objectCount">0</b>
+      <span>OBJEKTY</span>
+    </div>
+    <div class="stat">
+      <b id="confidence">—</b>
+      <span>CONFIDENCE</span>
+    </div>
+    <div class="stat">
+      <b id="resolution">—</b>
+      <span>VIDEO</span>
+    </div>
+  </div>
+
+  <div class="history">
+    <div class="sectionTitle">
+      <h2>HISTÓRIA</h2>
+      <button id="clearHistory" style="padding:6px 9px;font-size:10px">Vymazať</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+  <div class="notice">
+    Kamera sa používa iba po udelení povolenia.
+    Táto verzia je pripravená na pripojenie objektového AI modelu.
+  </div>
+
+</aside>
+
+</div>
+</div>
+
+<!-- TensorFlow.js -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+
+<!-- COCO-SSD -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("overlay");
+const ctx = canvas.getContext("2d");
+
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const switchBtn = document.getElementById("switchBtn");
+const freezeBtn = document.getElementById("freezeBtn");
+const fileInput = document.getElementById("fileInput");
+
+const statusDot = document.getElementById("statusDot");
+const statusText = document.getElementById("statusText");
+const engineState = document.getElementById("engineState");
+
+const results = document.getElementById("results");
+const objectCount = document.getElementById("objectCount");
+const confidence = document.getElementById("confidence");
+const resolution = document.getElementById("resolution");
+const fpsLabel = document.getElementById("fps");
+
+let stream = null;
+let model = null;
+let facingMode = "environment";
+let running = false;
+let frozen = false;
+let lastTime = performance.now();
+let frames = 0;
+let fps = 0;
+let lastPrediction = [];
+
+const history = [];
+
+async function loadEngine(){
+  engineState.textContent = "LOADING MODEL...";
+  try{
+    model = await cocoSsd.load();
+    engineState.textContent = "ENGINE ONLINE";
+  }catch(err){
+    engineState.textContent = "MODEL ERROR";
+    console.error(err);
+  }
+}
+
+async function startCamera(){
+  stopCamera();
+
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:facingMode,
+        width:{ideal:1280},
+        height:{ideal:720}
+      },
+      audio:false
+    });
+
+    video.srcObject = stream;
+    await video.play();
+
+    running = true;
+    frozen = false;
+
+    statusDot.classList.add("live");
+    statusText.textContent = "CAMERA LIVE";
+
+    resolution.textContent =
+      video.videoWidth + "×" + video.videoHeight;
+
+    resizeCanvas();
+    detectLoop();
+
+  }catch(err){
+    console.error(err);
+    statusText.textContent = "CAMERA DENIED";
+    alert("Kameru sa nepodarilo spustiť. Skontroluj povolenie kamery.");
+  }
+}
+
+function stopCamera(){
+  running = false;
+
+  if(stream){
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+
+  video.srcObject = null;
+
+  statusDot.classList.remove("live");
+  statusText.textContent = "OFFLINE";
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+async function switchCamera(){
+  facingMode =
+    facingMode === "environment"
+      ? "user"
+      : "environment";
+
+  if(running) await startCamera();
+}
+
+function resizeCanvas(){
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
+}
+
+async function detectLoop(){
+
+  if(!running || frozen) return;
+
+  if(video.readyState >= 2 && model){
+
+    try{
+      const predictions =
+        await model.detect(video, 20, 0.45);
+
+      lastPrediction = predictions;
+
+      drawPredictions(predictions);
+      updateResults(predictions);
+
+      frames++;
+
+      const now = performance.now();
+
+      if(now - lastTime >= 1000){
+        fps = frames;
+        frames = 0;
+        lastTime = now;
+        fpsLabel.textContent = fps + " FPS";
+      }
+
+    }catch(err){
+      console.error(err);
+    }
+  }
+
+  requestAnimationFrame(detectLoop);
+}
+
+function drawPredictions(predictions){
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const sx = canvas.width / video.videoWidth;
+  const sy = canvas.height / video.videoHeight;
+
+  predictions.forEach(p => {
+
+    const [x,y,w,h] = p.bbox;
+
+    ctx.strokeStyle = "#4da3ff";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(
+      x*sx,
+      y*sy,
+      w*sx,
+      h*sy
+    );
+
+    const label =
+      p.class +
+      " " +
+      Math.round(p.score*100) +
+      "%";
+
+    ctx.font = "bold 16px Arial";
+
+    const textWidth =
+      ctx.measureText(label).width;
+
+    ctx.fillStyle = "#4da3ff";
+
+    ctx.fillRect(
+      x*sx,
+      Math.max(0,y*sy-28),
+      textWidth+18,
+      28
+    );
+
+    ctx.fillStyle = "#ffffff";
+
+    ctx.fillText(
+      label,
+      x*sx+9,
+      Math.max(19,y*sy-8)
+    );
+  });
+}
+
+function updateResults(predictions){
+
+  objectCount.textContent = predictions.length;
+
+  if(!predictions.length){
+
+    confidence.textContent = "—";
+
+    results.innerHTML = `
+      <div class="empty">
+        Zatiaľ nebol rozpoznaný objekt.
+      </div>
+    `;
+
+    return;
+  }
+
+  const best =
+    [...predictions]
+      .sort((a,b)=>b.score-a.score)[0];
+
+  confidence.textContent =
+    Math.round(best.score*100) + "%";
+
+  results.innerHTML = predictions
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,8)
+    .map((p,i)=>`
+      <div class="result">
+        <div class="resultTop">
+          <span class="objectName">
+            ${i+1}. ${escapeHTML(p.class)}
+          </span>
+          <span class="conf">
+            ${Math.round(p.score*100)}%
+          </span>
+        </div>
+        <div class="meta">
+          <span class="tag">OBJECT</span>
+          <span class="tag">
+            ${Math.round(p.bbox[2])}×${Math.round(p.bbox[3])} px
+          </span>
+        </div>
+      </div>
+    `)
+    .join("");
+}
+
+function freezeFrame(){
+
+  frozen = !frozen;
+
+  freezeBtn.textContent =
+    frozen ? "▶ Pokračovať" : "❄ Zmraziť";
+
+  if(!frozen){
+    detectLoop();
+  }
+}
+
+function escapeHTML(text){
+  return text.replace(/[&<>"']/g,m=>({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#039;"
+  }[m]));
+}
+
+function saveHistory(){
+
+  if(!lastPrediction.length) return;
+
+  const best =
+    [...lastPrediction]
+      .sort((a,b)=>b.score-a.score)[0];
+
+  history.unshift({
+    name:best.class,
+    score:Math.round(best.score*100),
+    time:new Date().toLocaleTimeString("sk-SK")
+  });
+
+  if(history.length > 8) history.pop();
+
+  renderHistory();
+}
+
+function renderHistory(){
+
+  document.getElementById("historyList").innerHTML =
+    history.length
+    ? history.map(item=>`
+        <div class="historyItem">
+          <span>🔎 ${escapeHTML(item.name)}</span>
+          <span>${item.score}% · ${item.time}</span>
+        </div>
+      `).join("")
+    : `<div class="small">Zatiaľ žiadne skeny.</div>`;
+}
+
+async function loadImage(file){
+
+  const img =
+    document.getElementById("imagePreview");
+
+  const url =
+    URL.createObjectURL(file);
+
+  img.src = url;
+  img.style.display = "block";
+  video.style.display = "none";
+
+  img.onload = async ()=>{
+
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+
+    if(model){
+
+      const predictions =
+        await model.detect(img,20,0.45);
+
+      drawImagePredictions(predictions);
+      updateResults(predictions);
+
+      lastPrediction = predictions;
+    }
+  };
+}
+
+function drawImagePredictions(predictions){
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  predictions.forEach(p=>{
+
+    const [x,y,w,h] = p.bbox;
+
+    ctx.strokeStyle="#4da3ff";
+    ctx.lineWidth=5;
+    ctx.strokeRect(x,y,w,h);
+
+    const label =
+      `${p.class} ${Math.round(p.score*100)}%`;
+
+    ctx.font="bold 18px Arial";
+
+    ctx.fillStyle="#4da3ff";
+
+    ctx.fillRect(
+      x,
+      Math.max(0,y-32),
+      ctx.measureText(label).width+18,
+      32
+    );
+
+    ctx.fillStyle="#fff";
+
+    ctx.fillText(
+      label,
+      x+9,
+      Math.max(22,y-10)
+    );
+  });
+}
+
+startBtn.onclick = startCamera;
+stopBtn.onclick = stopCamera;
+switchBtn.onclick = switchCamera;
+freezeBtn.onclick = freezeFrame;
+
+fileInput.onchange = e => {
+  if(e.target.files[0]) loadImage(e.target.files[0]);
+};
+
+document.getElementById("clearHistory").onclick = ()=>{
+  history.length = 0;
+  renderHistory();
+};
+
+window.addEventListener("resize",resizeCanvas);
+
+loadEngine();
+renderHistory();
+
+</script>
+</body>
+</html>
