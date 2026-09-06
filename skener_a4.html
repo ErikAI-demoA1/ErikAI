@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ErikAI Scan</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080b10;color:#fff;font:15px Arial,sans-serif}
+header{padding:16px;text-align:center;border-bottom:1px solid #202631}
+h1{margin:0;font-size:24px}small{color:#8993a3}
+main{max-width:900px;margin:auto;padding:15px}
+.box{background:#10151d;border:1px solid #252d39;border-radius:15px;padding:12px;margin-bottom:12px}
+video,img,canvas{width:100%;max-height:65vh;object-fit:contain;background:#05070a;border-radius:10px}
+video{display:block}
+.row{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+button,label{background:#171e28;color:#fff;border:1px solid #303a48;border-radius:9px;padding:10px 13px;cursor:pointer}
+button:hover,label:hover{background:#202936}
+.active{background:#286cff;border-color:#286cff}
+input{display:none}
+#scan{background:#286cff;border-color:#286cff;font-weight:bold}
+#out{display:none}
+.info{color:#9ba6b5;font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+<h1>ERIKAI SCAN</h1>
+<small>Inteligentný skener dokumentov</small>
+</header>
+
+<main>
+
+<div class="box">
+<video id="cam" autoplay playsinline></video>
+<canvas id="src" hidden></canvas>
+
+<div class="row">
+<button id="start">📷 Kamera</button>
+<button id="flip">🔄 Otočiť kameru</button>
+<label>🖼️ Fotka<input id="file" type="file" accept="image/*"></label>
+<button id="scan">📄 Skenovať</button>
+<button id="reset">↩️ Reset</button>
+</div>
+</div>
+
+<div class="box">
+<b>Formát</b>
+<div class="row" id="formats">
+<button data-v="AUTO" class="active">AUTO</button>
+<button data-v="A4">A4</button>
+<button data-v="A5">A5</button>
+<button data-v="A3">A3</button>
+</div>
+
+<b>Režim</b>
+<div class="row" id="modes">
+<button data-v="auto" class="active">AUTO</button>
+<button data-v="original">ORIGINÁL</button>
+<button data-v="document">DOKUMENT</button>
+<button data-v="bw">ČB</button>
+</div>
+</div>
+
+<div class="box">
+<canvas id="out"></canvas>
+<div class="row">
+<button onclick="savePNG()">PNG</button>
+<button onclick="savePDF()">PDF</button>
+<button onclick="saveWord()">Word</button>
+<button onclick="saveHTML()">HTML</button>
+</div>
+<p id="info" class="info">Pripravené na skenovanie.</p>
+</div>
+
+</main>
+
+<script>
+const $=id=>document.getElementById(id),
+cam=$('cam'),src=$('src'),out=$('out'),info=$('info');
+let stream=null,facing='environment',img=null,format='AUTO',mode='auto';
+
+async function camera(){
+ if(stream)stream.getTracks().forEach(t=>t.stop());
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({
+   video:{facingMode:{ideal:facing}},audio:false
+  });
+  cam.srcObject=stream;
+ }catch(e){info.textContent='Kamera nie je dostupná.'}
+}
+camera();
+
+$('start').onclick=camera;
+$('flip').onclick=()=>{facing=facing==='environment'?'user':'environment';camera()};
+$('file').onchange=e=>{
+ const f=e.target.files[0];if(!f)return;
+ img=new Image();
+ img.onload=()=>{draw(img);info.textContent='Obrázok načítaný.'};
+ img.src=URL.createObjectURL(f);
+};
+
+function group(id,fn){
+ $(id).onclick=e=>{
+  if(e.target.tagName!=='BUTTON')return;
+  [...$(id).children].forEach(x=>x.classList.remove('active'));
+  e.target.classList.add('active');fn(e.target.dataset.v);
+ };
+}
+group('formats',v=>format=v);
+group('modes',v=>mode=v);
+
+$('scan').onclick=()=>{
+ if(cam.srcObject){
+  src.width=cam.videoWidth;src.height=cam.videoHeight;
+  src.getContext('2d').drawImage(cam,0,0);
+  draw(src);
+ }else if(img)draw(img);
+ else info.textContent='Najprv odfoť alebo nahraj dokument.';
+};
+
+function draw(x){
+ const w=x.videoWidth||x.naturalWidth||x.width,h=x.videoHeight||x.naturalHeight||x.height;
+ const r=Math.min(1800/w,1800/h,1),W=w*r,H=h*r;
+ out.width=W;out.height=H;
+ const c=out.getContext('2d');c.drawImage(x,0,0,W,H);
+ let d=c.getImageData(0,0,W,H),p=d.data;
+ if(mode==='bw'||mode==='document'){
+  for(let i=0;i<p.length;i+=4){
+   let v=(p[i]*.299+p[i+1]*.587+p[i+2]*.114);
+   if(mode==='bw')v=v>145?255:0;
+   else v=Math.min(255,Math.max(0,(v-100)*1.8));
+   p[i]=p[i+1]=p[i+2]=v;
+  }
+  c.putImageData(d,0,0);
+ }
+ out.style.display='block';
+ info.textContent=`Sken pripravený • ${format} • ${mode.toUpperCase()} • ${W}×${H}px`;
+}
+
+function download(blob,name){
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+ a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);
+}
+
+function savePNG(){
+ out.toBlob(b=>download(b,'ErikAI-Scan.png'),'image/png');
+}
+
+function saveHTML(){
+ const html=`<!doctype html><html><body><h1>ErikAI Scan</h1><img src="${out.toDataURL('image/jpeg',.9)}" style="max-width:100%"></body></html>`;
+ download(new Blob([html],{type:'text/html'}),'ErikAI-Scan.html');
+}
+
+function saveWord(){
+ const html=`<html><body><h1>ErikAI Scan</h1><img src="${out.toDataURL('image/jpeg',.9)}" width="100%"></body></html>`;
+ download(new Blob([html],{type:'application/msword'}),'ErikAI-Scan.doc');
+}
+
+function savePDF(){
+ const data=out.toDataURL('image/jpeg',.9);
+ const b64=data.split(',')[1],bin=atob(b64),len=bin.length;
+ let a=[],o=0;
+ const add=s=>{a.push(s);o+=s.length};
+ add('%PDF-1.3\n');
+ const pos=[];
+ const obj=(n,s)=>{pos[n]=o;add(`${n} 0 obj\n${s}\nendobj\n`)};
+ obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+ obj(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+ obj(3,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /Im 4 0 R >> >> /Contents 5 0 R >>');
+ obj(4,`<< /Type /XObject /Subtype /Image /Width ${out.width} /Height ${out.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${len} >>\nstream\n${bin}\nendstream`);
+ const cont=`q\n595 0 0 842 0 0 cm\n/Im Do\nQ`;
+ obj(5,`<< /Length ${cont.length} >>\nstream\n${cont}\nendstream`);
+ const x=o;add(`xref\n0 6\n0000000000 65535 f \n`);
+ for(let i=1;i<6;i++)add(String(pos[i]).padStart(10,'0')+' 00000 n \n');
+ add(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${x}\n%%EOF`);
+ download(new Blob([a.join('')],{type:'application/pdf'}),'ErikAI-Scan.pdf');
+}
+
+$('reset').onclick=()=>{
+ out.style.display='none';img=null;
+ info.textContent='Pripravené na skenovanie.';
+ $('file').value='';
+};
+</script>
+
+</body>
+</html>
