@@ -5,46 +5,63 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ERIKAI OS • SimpleX Helper</title>
 
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
 <style>
 *{box-sizing:border-box}
 body{
- margin:0;background:#0b0b0f;color:#fff;
- font-family:Arial,sans-serif;padding:20px
+ margin:0;background:#09090d;color:#fff;
+ font-family:Arial,sans-serif;padding:18px
 }
-.app{max-width:500px;margin:auto}
-h1{text-align:center;margin:10px 0 5px}
-.sub{text-align:center;color:#aaa;margin-bottom:25px}
+.app{max-width:520px;margin:auto}
+h1{text-align:center;margin:8px 0 3px}
+.sub{text-align:center;color:#999;margin-bottom:20px}
 .card{
- background:#17171d;border-radius:20px;padding:20px;
- margin-bottom:15px
+ background:#17171d;border-radius:20px;
+ padding:18px;margin-bottom:14px
 }
-label{display:block;color:#aaa;font-size:13px;margin:12px 0 5px}
-input,select{
- width:100%;padding:13px;border:0;border-radius:12px;
- background:#26262e;color:#fff;font-size:16px
+h3{margin-top:0}
+textarea{
+ width:100%;height:105px;resize:none;
+ background:#24242c;color:#fff;
+ border:0;border-radius:12px;
+ padding:13px;font-size:14px
 }
 button{
- width:100%;padding:14px;margin-top:12px;border:0;
- border-radius:13px;background:#fff;color:#111;
- font-weight:bold;font-size:15px
+ width:100%;border:0;border-radius:13px;
+ padding:14px;margin-top:10px;
+ font-size:15px;font-weight:bold;
+ background:#fff;color:#111
 }
-button.secondary{background:#292930;color:#fff}
-#idBox{
- text-align:center;font-size:24px;font-weight:bold;
- padding:20px;background:#22222a;border-radius:15px;
- margin-top:15px
-}
+button.dark{background:#292930;color:#fff}
 #qr{
- display:block;width:200px;height:200px;
- margin:18px auto 5px;background:#fff;padding:8px;
- border-radius:10px
+ display:flex;justify-content:center;
+ margin:18px 0
 }
-.note{
- color:#aaa;font-size:13px;line-height:1.5;
- text-align:center
+#status{
+ text-align:center;color:#8cffae;
+ font-size:13px;margin-top:10px
 }
-.status{text-align:center;color:#7cff9b;font-size:13px}
-a{color:#fff}
+.info{
+ color:#aaa;font-size:13px;
+ line-height:1.5
+}
+.badge{
+ display:inline-block;
+ padding:6px 10px;
+ border-radius:20px;
+ background:#292930;
+ color:#bbb;font-size:12px
+}
+#preview{
+ display:none;
+ margin-top:15px;
+ background:#22222a;
+ padding:12px;
+ border-radius:12px;
+ word-break:break-all;
+ font-size:12px;color:#bbb
+}
 </style>
 </head>
 
@@ -53,156 +70,191 @@ a{color:#fff}
 <div class="app">
 
 <h1>ERIKAI OS</h1>
-<div class="sub">SimpleX Chat Helper</div>
+<div class="sub">SimpleX Connection Helper</div>
 
 <div class="card">
 
-<label>Výrobca zariadenia</label>
-<select id="brand">
-<option>XIAOMI</option>
-<option>HUAWEI</option>
-<option>SAMSUNG</option>
-<option>APPLE</option>
-<option>GOOGLE</option>
-<option>OTHER</option>
-</select>
+<span class="badge">🔐 SimpleX</span>
 
-<label>4-miestny kód zariadenia</label>
-<input id="pin" maxlength="4" inputmode="numeric"
-       placeholder="napr. 4827">
+<h3 style="margin-top:15px">
+Pripojenie zariadenia
+</h3>
 
-<button onclick="createID()">Vytvoriť ERIKAI ID</button>
-
-<div id="idBox">ERIKAI-????</div>
-
-</div>
-
-<div class="card">
-
-<h3>📷 Tvoj ERIKAI QR</h3>
-
-<img id="qr"
-src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=ERIKAI">
-
-<div class="note">
-QR obsahuje iba tvoje ERIKAI ID.
-<br>
-Nie je to telefónne číslo ani SimpleX účet.
-</div>
-
-<button class="secondary" onclick="copyID()">
-📋 Kopírovať ID
-</button>
-
-</div>
-
-<div class="card">
-
-<h3>🔐 Komunikácia cez SimpleX</h3>
-
-<p class="note">
-ERIKAI OS nepoužíva vlastný server na chat.
-Na samotnú komunikáciu použiješ aplikáciu
-SimpleX Chat.
+<p class="info">
+Najprv vytvor v aplikácii SimpleX svoju
+jednorazovú pozvánku. Potom ju vlož sem.
 </p>
 
-<button onclick="openSimpleX()">
-💬 Otvoriť SimpleX Chat
+<textarea id="link"
+placeholder="Vlož sem SimpleX invitation link..."></textarea>
+
+<button onclick="processLink()">
+🔗 Pripojiť SimpleX pozvánku
 </button>
 
-<button class="secondary" onclick="showInfo()">
-ℹ️ Ako to funguje?
-</button>
+<div id="status"></div>
 
-<div id="info" class="note" style="display:none;margin-top:15px">
-1. Nainštaluj SimpleX Chat.<br>
-2. V SimpleX vytvor kontakt alebo pozvánku.<br>
-3. QR/link pošli druhej osobe.<br>
-4. Chat prebieha v SimpleX.
 </div>
+
+<div class="card" id="qrCard" style="display:none">
+
+<h3>📷 QR pozvánka</h3>
+
+<p class="info">
+Druhý človek môže tento QR kód naskenovať
+priamo v SimpleX.
+</p>
+
+<div id="qr"></div>
+
+<button onclick="openSimpleX()">
+🚀 Otvoriť v SimpleX
+</button>
+
+<button class="dark" onclick="shareLink()">
+📤 Zdieľať pozvánku
+</button>
+
+<button class="dark" onclick="copyLink()">
+📋 Kopírovať pozvánku
+</button>
+
+<div id="preview"></div>
 
 </div>
 
 <div class="card">
-<div class="status">● ERIKAI OS pripravený</div>
+
+<h3>📱 Ako to funguje?</h3>
+
+<p class="info">
+1. Nainštaluj SimpleX Chat.<br>
+2. Vytvor jednorazovú pozvánku.<br>
+3. Vlož ju do ERIKAI OS.<br>
+4. ERIKAI OS vytvorí QR kód.<br>
+5. Druhý telefón ho naskenuje v SimpleX.<br>
+6. Po potvrdení môžete začať písať.
+</p>
+
+<button class="dark" onclick="downloadSimpleX()">
+📲 Stiahnuť SimpleX
+</button>
+
+</div>
+
+<div class="card">
+<div id="ready" class="info" style="text-align:center">
+● ERIKAI OS pripravený
+</div>
 </div>
 
 </div>
 
 <script>
 
-const brand=document.getElementById("brand");
-const pin=document.getElementById("pin");
-const idBox=document.getElementById("idBox");
-const qr=document.getElementById("qr");
+let simplexLink="";
 
-function randomPin(){
- return String(Math.floor(1000+Math.random()*9000));
-}
+function processLink(){
 
-function createID(){
+ const input=document.getElementById("link");
+ let value=input.value.trim();
 
- let p=pin.value.replace(/\D/g,"");
-
- if(p.length!==4){
-   p=randomPin();
-   pin.value=p;
+ if(!value){
+   setStatus("❌ Vlož SimpleX pozvánku.");
+   return;
  }
 
- const id="ERIKAI-"+brand.value+"-"+p;
+ if(!/^(https:\/\/|simplex:\/)/i.test(value)){
+   setStatus("❌ Toto nevyzerá ako SimpleX pozvánka.");
+   return;
+ }
 
- idBox.textContent=id;
+ simplexLink=value;
 
- localStorage.setItem("erikaiID",id);
+ document.getElementById("qr").innerHTML="";
 
- qr.src=
- "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data="+
- encodeURIComponent(id);
-}
+ new QRCode(document.getElementById("qr"),{
+   text:simplexLink,
+   width:220,
+   height:220,
+   correctLevel:QRCode.CorrectLevel.M
+ });
 
-function copyID(){
+ document.getElementById("qrCard").style.display="block";
 
- const id=idBox.textContent;
+ document.getElementById("preview").style.display="block";
+ document.getElementById("preview").textContent=simplexLink;
 
- navigator.clipboard?.writeText(id);
-
- alert("ID skopírované: "+id);
+ setStatus("✓ SimpleX pozvánka rozpoznaná.");
 }
 
 function openSimpleX(){
 
+ if(!simplexLink)return;
+
+ /*
+  * Najprv skúšame simplex:// URI.
+  * Ak zariadenie aplikáciu neotvorí,
+  * používateľ môže použiť klasický HTTPS link.
+  */
+
+ if(simplexLink.startsWith("simplex:/")){
+   location.href=simplexLink;
+   return;
+ }
+
+ const u=new URL(simplexLink);
+
+ const direct=
+   "simplex:/"+
+   u.pathname.replace(/^\/+/,"")+
+   u.hash+
+   (u.hostname ? "?h="+encodeURIComponent(u.hostname) : "");
+
+ location.href=direct;
+
+ setTimeout(()=>{
+   window.open(simplexLink,"_blank");
+ },1200);
+}
+
+function copyLink(){
+
+ if(!simplexLink)return;
+
+ navigator.clipboard.writeText(simplexLink)
+ .then(()=>setStatus("✓ Pozvánka skopírovaná."));
+}
+
+async function shareLink(){
+
+ if(!simplexLink)return;
+
+ if(navigator.share){
+
+   try{
+     await navigator.share({
+       title:"ERIKAI OS • SimpleX pozvánka",
+       text:"Pripoj sa ku mne cez SimpleX:",
+       url:simplexLink
+     });
+
+     setStatus("✓ Pozvánka zdieľaná.");
+
+   }catch(e){}
+   
+ }else{
+   copyLink();
+ }
+}
+
+function downloadSimpleX(){
  location.href="https://simplex.chat/downloads/";
 }
 
-function showInfo(){
-
- const x=document.getElementById("info");
-
- x.style.display=x.style.display==="none"
-   ?"block":"none";
+function setStatus(text){
+ document.getElementById("status").textContent=text;
 }
-
-window.onload=()=>{
-
- const old=localStorage.getItem("erikaiID");
-
- if(old){
-
-   idBox.textContent=old;
-
-   qr.src=
-   "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data="+
-   encodeURIComponent(old);
-
-   const parts=old.split("-");
-
-   if(parts.length===3){
-     brand.value=parts[1];
-     pin.value=parts[2];
-   }
- }
-
-};
 
 </script>
 
