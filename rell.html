@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ERIKAI OS • Video Feed</title>
+
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:#000;color:#fff;font-family:Arial,sans-serif}
+#feed{height:100dvh;overflow-y:auto;scroll-snap-type:y mandatory;scroll-behavior:smooth}
+.video{
+    position:relative;
+    width:100%;
+    height:100dvh;
+    scroll-snap-align:start;
+    background:#000;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    background:#000;
+}
+.info{
+    position:absolute;
+    left:16px;
+    bottom:25px;
+    right:80px;
+    text-shadow:0 2px 6px #000;
+}
+.info b{font-size:18px}
+.info small{display:block;margin-top:7px;opacity:.8}
+.buttons{
+    position:absolute;
+    right:15px;
+    bottom:90px;
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+.buttons button{
+    width:48px;
+    height:48px;
+    border:0;
+    border-radius:50%;
+    background:#ffffff25;
+    color:#fff;
+    font-size:21px;
+    backdrop-filter:blur(8px);
+}
+.source{
+    color:#fff;
+    text-decoration:none;
+    font-size:12px;
+    opacity:.75;
+}
+.loading{
+    position:fixed;
+    inset:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:#000;
+    z-index:20;
+    font-size:18px;
+}
+.logo{
+    position:fixed;
+    top:18px;
+    left:18px;
+    z-index:10;
+    font-weight:bold;
+    letter-spacing:1px;
+    text-shadow:0 2px 5px #000;
+}
+</style>
+</head>
+
+<body>
+
+<div class="logo">ERIKAI OS</div>
+<div id="loading" class="loading">Načítavam videá…</div>
+<div id="feed"></div>
+
+<script>
+const API="https://commons.wikimedia.org/w/api.php";
+const feed=document.getElementById("feed");
+const loading=document.getElementById("loading");
+
+const topics=[
+    "nature",
+    "animals",
+    "ocean",
+    "space",
+    "cars",
+    "city",
+    "sport",
+    "travel",
+    "water",
+    "technology"
+];
+
+const used=new Set();
+let loadingMore=false;
+
+function randomTopic(){
+    return topics[Math.floor(Math.random()*topics.length)];
+}
+
+async function getVideos(){
+    if(loadingMore)return;
+    loadingMore=true;
+
+    const topic=randomTopic();
+
+    const url=API+"?origin=*"+
+        "&action=query"+
+        "&format=json"+
+        "&generator=search"+
+        "&gsrnamespace=6"+
+        "&gsrlimit=20"+
+        "&gsrsearch="+encodeURIComponent("filetype:video "+topic)+
+        "&prop=imageinfo"+
+        "&iiprop=url|mime|size";
+
+    try{
+        const data=await fetch(url).then(r=>r.json());
+        const pages=Object.values(data.query?.pages||{});
+
+        let added=0;
+
+        for(const page of pages){
+            const info=page.imageinfo?.[0];
+            if(!info||!info.url)continue;
+
+            const mime=info.mime||"";
+            if(!mime.startsWith("video/"))continue;
+            if(used.has(info.url))continue;
+
+            used.add(info.url);
+            createVideo(info.url,page.title);
+            added++;
+
+            if(added>=5)break;
+        }
+
+        if(!feed.children.length){
+            loading.textContent="Videá sa nepodarilo načítať.";
+        }else{
+            loading.style.display="none";
+        }
+
+    }catch(e){
+        console.error(e);
+        loading.textContent="Chyba načítania videí.";
+    }
+
+    loadingMore=false;
+}
+
+function createVideo(url,title){
+
+    const box=document.createElement("section");
+    box.className="video";
+
+    const v=document.createElement("video");
+    v.src=url;
+    v.autoplay=false;
+    v.muted=true;
+    v.loop=true;
+    v.playsInline=true;
+    v.preload="metadata";
+
+    v.onerror=()=>{
+        box.remove();
+        getVideos();
+    };
+
+    const info=document.createElement("div");
+    info.className="info";
+
+    const name=document.createElement("b");
+    name.textContent=title.replace("File:","");
+
+    const small=document.createElement("small");
+    small.innerHTML=
+        'Wikimedia Commons • '+
+        '<a class="source" target="_blank" href="https://commons.wikimedia.org/wiki/'+
+        encodeURIComponent(title.replaceAll(" ","_"))+
+        '">zdroj</a>';
+
+    info.append(name,small);
+
+    const buttons=document.createElement("div");
+    buttons.className="buttons";
+
+    const like=document.createElement("button");
+    like.textContent="♡";
+    like.onclick=()=>{
+        like.textContent=like.textContent==="♡"?"♥":"♡";
+    };
+
+    const mute=document.createElement("button");
+    mute.textContent="🔇";
+    mute.onclick=()=>{
+        v.muted=!v.muted;
+        mute.textContent=v.muted?"🔇":"🔊";
+    };
+
+    const share=document.createElement("button");
+    share.textContent="↗";
+    share.onclick=()=>{
+        if(navigator.share){
+            navigator.share({title:"ERIKAI OS Video",url:url});
+        }else{
+            navigator.clipboard?.writeText(url);
+        }
+    };
+
+    buttons.append(like,mute,share);
+    box.append(v,info,buttons);
+    feed.appendChild(box);
+}
+
+const observer=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+        const v=e.target.querySelector("video");
+        if(e.isIntersecting){
+            document.querySelectorAll("video").forEach(x=>{
+                if(x!==v)x.pause();
+            });
+            v.play().catch(()=>{});
+        }else{
+            v.pause();
+        }
+    });
+},{threshold:.65});
+
+new MutationObserver(()=>{
+    document.querySelectorAll(".video").forEach(x=>{
+        if(!x.dataset.observed){
+            x.dataset.observed="1";
+            observer.observe(x);
+        }
+    });
+}).observe(feed,{childList:true});
+
+feed.addEventListener("scroll",()=>{
+    if(feed.scrollTop+feed.clientHeight>=feed.scrollHeight-feed.clientHeight*2){
+        getVideos();
+    }
+});
+
+getVideos();
+getVideos();
+</script>
+
+</body>
+</html>
