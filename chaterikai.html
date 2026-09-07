@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERIKAI OS • SimpleX Helper</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#0b0b0f;color:#fff;
+ font-family:Arial,sans-serif;padding:20px
+}
+.app{max-width:500px;margin:auto}
+h1{text-align:center;margin:10px 0 5px}
+.sub{text-align:center;color:#aaa;margin-bottom:25px}
+.card{
+ background:#17171d;border-radius:20px;padding:20px;
+ margin-bottom:15px
+}
+label{display:block;color:#aaa;font-size:13px;margin:12px 0 5px}
+input,select{
+ width:100%;padding:13px;border:0;border-radius:12px;
+ background:#26262e;color:#fff;font-size:16px
+}
+button{
+ width:100%;padding:14px;margin-top:12px;border:0;
+ border-radius:13px;background:#fff;color:#111;
+ font-weight:bold;font-size:15px
+}
+button.secondary{background:#292930;color:#fff}
+#idBox{
+ text-align:center;font-size:24px;font-weight:bold;
+ padding:20px;background:#22222a;border-radius:15px;
+ margin-top:15px
+}
+#qr{
+ display:block;width:200px;height:200px;
+ margin:18px auto 5px;background:#fff;padding:8px;
+ border-radius:10px
+}
+.note{
+ color:#aaa;font-size:13px;line-height:1.5;
+ text-align:center
+}
+.status{text-align:center;color:#7cff9b;font-size:13px}
+a{color:#fff}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<h1>ERIKAI OS</h1>
+<div class="sub">SimpleX Chat Helper</div>
+
+<div class="card">
+
+<label>Výrobca zariadenia</label>
+<select id="brand">
+<option>XIAOMI</option>
+<option>HUAWEI</option>
+<option>SAMSUNG</option>
+<option>APPLE</option>
+<option>GOOGLE</option>
+<option>OTHER</option>
+</select>
+
+<label>4-miestny kód zariadenia</label>
+<input id="pin" maxlength="4" inputmode="numeric"
+       placeholder="napr. 4827">
+
+<button onclick="createID()">Vytvoriť ERIKAI ID</button>
+
+<div id="idBox">ERIKAI-????</div>
+
+</div>
+
+<div class="card">
+
+<h3>📷 Tvoj ERIKAI QR</h3>
+
+<img id="qr"
+src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=ERIKAI">
+
+<div class="note">
+QR obsahuje iba tvoje ERIKAI ID.
+<br>
+Nie je to telefónne číslo ani SimpleX účet.
+</div>
+
+<button class="secondary" onclick="copyID()">
+📋 Kopírovať ID
+</button>
+
+</div>
+
+<div class="card">
+
+<h3>🔐 Komunikácia cez SimpleX</h3>
+
+<p class="note">
+ERIKAI OS nepoužíva vlastný server na chat.
+Na samotnú komunikáciu použiješ aplikáciu
+SimpleX Chat.
+</p>
+
+<button onclick="openSimpleX()">
+💬 Otvoriť SimpleX Chat
+</button>
+
+<button class="secondary" onclick="showInfo()">
+ℹ️ Ako to funguje?
+</button>
+
+<div id="info" class="note" style="display:none;margin-top:15px">
+1. Nainštaluj SimpleX Chat.<br>
+2. V SimpleX vytvor kontakt alebo pozvánku.<br>
+3. QR/link pošli druhej osobe.<br>
+4. Chat prebieha v SimpleX.
+</div>
+
+</div>
+
+<div class="card">
+<div class="status">● ERIKAI OS pripravený</div>
+</div>
+
+</div>
+
+<script>
+
+const brand=document.getElementById("brand");
+const pin=document.getElementById("pin");
+const idBox=document.getElementById("idBox");
+const qr=document.getElementById("qr");
+
+function randomPin(){
+ return String(Math.floor(1000+Math.random()*9000));
+}
+
+function createID(){
+
+ let p=pin.value.replace(/\D/g,"");
+
+ if(p.length!==4){
+   p=randomPin();
+   pin.value=p;
+ }
+
+ const id="ERIKAI-"+brand.value+"-"+p;
+
+ idBox.textContent=id;
+
+ localStorage.setItem("erikaiID",id);
+
+ qr.src=
+ "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data="+
+ encodeURIComponent(id);
+}
+
+function copyID(){
+
+ const id=idBox.textContent;
+
+ navigator.clipboard?.writeText(id);
+
+ alert("ID skopírované: "+id);
+}
+
+function openSimpleX(){
+
+ location.href="https://simplex.chat/downloads/";
+}
+
+function showInfo(){
+
+ const x=document.getElementById("info");
+
+ x.style.display=x.style.display==="none"
+   ?"block":"none";
+}
+
+window.onload=()=>{
+
+ const old=localStorage.getItem("erikaiID");
+
+ if(old){
+
+   idBox.textContent=old;
+
+   qr.src=
+   "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data="+
+   encodeURIComponent(old);
+
+   const parts=old.split("-");
+
+   if(parts.length===3){
+     brand.value=parts[1];
+     pin.value=parts[2];
+   }
+ }
+
+};
+
+</script>
+
+</body>
+</html>
