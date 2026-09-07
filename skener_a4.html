@@ -119,86 +119,162 @@ $('scan').onclick=()=>{
  else info.textContent='Najprv odfoť alebo nahraj dokument.';
 };
 
-/* NOVÉ: automatické nájdenie a zarovnanie papiera */
+/* VYLEPŠENÁ DETEKCIA DOKUMENTU */
 function scanPaper(x){
  const w=x.videoWidth||x.naturalWidth||x.width,
-       h=x.videoHeight||x.naturalHeight||x.height,
-       max=700,r=Math.min(max/w,max/h,1),
-       W=Math.round(w*r),H=Math.round(h*r);
+ h=x.videoHeight||x.naturalHeight||x.height,
+ max=900,r=Math.min(max/w,max/h,1),
+ W=Math.round(w*r),H=Math.round(h*r);
 
  const c=document.createElement('canvas'),g=c.getContext('2d');
- c.width=W;c.height=H;g.drawImage(x,0,0,W,H);
+ c.width=W;c.height=H;
+ g.drawImage(x,0,0,W,H);
 
- const d=g.getImageData(0,0,W,H),p=d.data;
- let minX=W,maxX=0,minY=H,maxY=0,n=0;
+ const d=g.getImageData(0,0,W,H).data;
+ const gray=new Uint8Array(W*H);
 
- /* hľadanie svetlej plochy dokumentu */
- for(let y=2;y<H-2;y+=2){
-  for(let xx=2;xx<W-2;xx+=2){
+ for(let y=0;y<H;y+=2){
+  for(let xx=0;xx<W;xx+=2){
    const i=(y*W+xx)*4;
-   const v=p[i]*.299+p[i+1]*.587+p[i+2]*.114;
-   if(v>175){
-    minX=Math.min(minX,xx);
-    maxX=Math.max(maxX,xx);
-    minY=Math.min(minY,y);
-    maxY=Math.max(maxY,y);
-    n++;
-   }
+   gray[y*W+xx]=d[i]*.299+d[i+1]*.587+d[i+2]*.114;
   }
  }
 
- /* ak sa papier nenašiel, nechá pôvodný obraz */
- if(n< W*H*.08 || maxX-minX<W*.35 || maxY-minY<H*.35)return x;
+ /* hľadanie výrazných hrán */
+ const edges=[];
+ for(let y=2;y<H-2;y+=3){
+  for(let xx=2;xx<W-2;xx+=3){
+   const i=y*W+xx;
+   const gx=Math.abs(gray[i+3]-gray[i-3]);
+   const gy=Math.abs(gray[i+3*W]-gray[i-3*W]);
 
- /* rohy približne podľa hraníc nájdenej plochy */
- const pad=8;
- return perspective(x,
-  {x:minX+pad,y:minY+pad},
-  {x:maxX-pad,y:minY+pad},
-  {x:maxX-pad,y:maxY-pad},
-  {x:minX+pad,y:maxY-pad}
- );
+   if(gx+gy>45)edges.push({x:xx,y});
+  }
+ }
+
+ if(edges.length<100)return x;
+
+ /*
+  * Hľadanie najvzdialenejších bodov v jednotlivých
+  * rohoch obrazu.
+  */
+ const cx=W/2,cy=H/2;
+ let tl=null,tr=null,br=null,bl=null;
+
+ for(const p of edges){
+  const dx=p.x-cx,dy=p.y-cy;
+
+  if(dx<0&&dy<0){
+   if(!tl||dx*dx+dy*dy>tl.s)tl={...p,s:dx*dx+dy*dy};
+  }
+  if(dx>0&&dy<0){
+   if(!tr||dx*dx+dy*dy>tr.s)tr={...p,s:dx*dx+dy*dy};
+  }
+  if(dx>0&&dy>0){
+   if(!br||dx*dx+dy*dy>br.s)br={...p,s:dx*dx+dy*dy};
+  }
+  if(dx<0&&dy>0){
+   if(!bl||dx*dx+dy*dy>bl.s)bl={...p,s:dx*dx+dy*dy};
+  }
+ }
+
+ if(!tl||!tr||!br||!bl)return x;
+
+ /* kontrola veľkosti nájdeného dokumentu */
+ const area=Math.abs(
+  tl.x*(tr.y-br.y)+
+  tr.x*(br.y-bl.y)+
+  br.x*(bl.y-tl.y)+
+  bl.x*(tl.y-tr.y)
+ )/2;
+
+ if(area<W*H*.18)return x;
+
+ /* kontrola, či body dávajú približne štvoruholník */
+ const top=Math.hypot(tr.x-tl.x,tr.y-tl.y);
+ const bottom=Math.hypot(br.x-bl.x,br.y-bl.y);
+ const left=Math.hypot(bl.x-tl.x,bl.y-tl.y);
+ const right=Math.hypot(br.x-tr.x,br.y-tr.y);
+
+ if(
+  top<W*.25||
+  bottom<W*.25||
+  left<H*.25||
+  right<H*.25||
+  Math.max(top,bottom)/Math.min(top,bottom)>2.5||
+  Math.max(left,right)/Math.min(left,right)>2.5
+ )return x;
+
+ return perspective(x,tl,tr,br,bl);
 }
 
-/* NOVÉ: perspektívne narovnanie */
+/* VYLEPŠENÉ PERSPEKTÍVNE NAROVNANIE */
 function perspective(x,a,b,c,d){
  const w=x.videoWidth||x.naturalWidth||x.width,
-       h=x.videoHeight||x.naturalHeight||x.height;
+ h=x.videoHeight||x.naturalHeight||x.height;
 
- const W=Math.max(
+ const W=Math.round(Math.max(
   Math.hypot(b.x-a.x,b.y-a.y),
   Math.hypot(c.x-d.x,c.y-d.y)
- );
- const H=Math.max(
+ ));
+
+ const H=Math.round(Math.max(
   Math.hypot(d.x-a.x,d.y-a.y),
   Math.hypot(c.x-b.x,c.y-b.y)
- );
+ ));
+
+ if(W<100||H<100)return x;
+
+ const src=document.createElement('canvas');
+ src.width=w;src.height=h;
+ const sg=src.getContext('2d');
+ sg.drawImage(x,0,0,w,h);
+
+ const sp=sg.getImageData(0,0,w,h).data;
 
  const z=document.createElement('canvas');
- z.width=Math.round(W);z.height=Math.round(H);
+ z.width=W;z.height=H;
  const q=z.getContext('2d');
+ const result=q.createImageData(W,H);
+ const rp=result.data;
 
- /* jednoduchá perspektívna transformácia cez rozdelenie na pásy */
- for(let y=0;y<z.height;y++){
-  const t=y/(z.height-1);
-  const lx=a.x+(d.x-a.x)*t;
-  const ly=a.y+(d.y-a.y)*t;
-  const rx=b.x+(c.x-b.x)*t;
-  const ry=b.y+(c.y-b.y)*t;
+ for(let y=0;y<H;y++){
+  const v=y/(H-1);
 
-  const sy=ly*(1-t)+ry*t;
-  const sx=(lx+rx)/2;
+  for(let xx=0;xx<W;xx++){
+   const u=xx/(W-1);
 
-  q.drawImage(
-   x,
-   Math.max(0,Math.min(w-1,sx-W/2)),
-   Math.max(0,Math.min(h-1,sy)),
-   Math.min(W,w),
-   1,
-   0,y,
-   z.width,1
-  );
+   /*
+    * 4-corner bilineárne mapovanie.
+    * Tým sa šikmý papier prevedie na
+    * rovný obdĺžnik.
+    */
+   const px=
+    (1-u)*(1-v)*a.x+
+    u*(1-v)*b.x+
+    u*v*c.x+
+    (1-u)*v*d.x;
+
+   const py=
+    (1-u)*(1-v)*a.y+
+    u*(1-v)*b.y+
+    u*v*c.y+
+    (1-u)*v*d.y;
+
+   const X=Math.max(0,Math.min(w-1,Math.round(px)));
+   const Y=Math.max(0,Math.min(h-1,Math.round(py)));
+
+   const si=(Y*w+X)*4;
+   const di=(y*W+xx)*4;
+
+   rp[di]=sp[si];
+   rp[di+1]=sp[si+1];
+   rp[di+2]=sp[si+2];
+   rp[di+3]=255;
+  }
  }
+
+ q.putImageData(result,0,0);
  return z;
 }
 
