@@ -2,65 +2,217 @@
 <html lang="sk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ERIKAI OS • SimpleX Helper</title>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <style>
 *{box-sizing:border-box}
+
 body{
- margin:0;background:#09090d;color:#fff;
- font-family:Arial,sans-serif;padding:18px
+ margin:0;
+ padding:18px;
+ background:#08080c;
+ color:#fff;
+ font-family:Arial,sans-serif
 }
-.app{max-width:520px;margin:auto}
-h1{text-align:center;margin:8px 0 3px}
-.sub{text-align:center;color:#999;margin-bottom:20px}
+
+.app{
+ max-width:520px;
+ margin:auto
+}
+
+h1{
+ text-align:center;
+ margin:8px 0 3px
+}
+
+.sub{
+ text-align:center;
+ color:#999;
+ margin-bottom:22px
+}
+
 .card{
- background:#17171d;border-radius:20px;
- padding:18px;margin-bottom:14px
+ background:#17171d;
+ border-radius:20px;
+ padding:18px;
+ margin-bottom:15px
 }
-h3{margin-top:0}
+
+h3{
+ margin:0 0 12px
+}
+
+label{
+ display:block;
+ color:#aaa;
+ font-size:13px;
+ margin:12px 0 6px
+}
+
 textarea{
- width:100%;height:105px;resize:none;
- background:#24242c;color:#fff;
- border:0;border-radius:12px;
- padding:13px;font-size:14px
+ width:100%;
+ height:115px;
+ resize:none;
+ border:0;
+ outline:0;
+ border-radius:12px;
+ background:#25252d;
+ color:#fff;
+ padding:13px;
+ font-size:14px;
+ line-height:1.4
 }
+
 button{
- width:100%;border:0;border-radius:13px;
- padding:14px;margin-top:10px;
- font-size:15px;font-weight:bold;
- background:#fff;color:#111
+ width:100%;
+ padding:14px;
+ margin-top:10px;
+ border:0;
+ border-radius:13px;
+ background:#fff;
+ color:#111;
+ font-size:15px;
+ font-weight:bold
 }
-button.dark{background:#292930;color:#fff}
-#qr{
- display:flex;justify-content:center;
- margin:18px 0
+
+button.dark{
+ background:#292930;
+ color:#fff
 }
-#status{
- text-align:center;color:#8cffae;
- font-size:13px;margin-top:10px
+
+button:active{
+ transform:scale(.98)
 }
-.info{
- color:#aaa;font-size:13px;
- line-height:1.5
-}
+
 .badge{
  display:inline-block;
  padding:6px 10px;
  border-radius:20px;
  background:#292930;
- color:#bbb;font-size:12px
+ color:#bbb;
+ font-size:12px
 }
+
+.info{
+ color:#aaa;
+ font-size:13px;
+ line-height:1.5
+}
+
+#status{
+ text-align:center;
+ margin-top:12px;
+ color:#8cffae;
+ font-size:13px
+}
+
+/* QR */
+#qrCard{
+ display:none
+}
+
+#qrWrap{
+ background:#fff;
+ padding:22px;
+ width:326px;
+ height:326px;
+ margin:20px auto;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ border-radius:12px;
+ box-shadow:0 0 25px #000
+}
+
+#qr{
+ width:280px;
+ height:280px;
+ background:#fff
+}
+
+#qr img,
+#qr canvas{
+ display:block!important;
+ width:280px!important;
+ height:280px!important;
+ image-rendering:pixelated
+}
+
+#qrWrap.qrFull{
+ position:fixed;
+ inset:0;
+ z-index:9999;
+ width:100vw;
+ height:100vh;
+ margin:0;
+ padding:30px;
+ border-radius:0;
+ background:#fff;
+ box-shadow:none
+}
+
+#qrWrap.qrFull #qr{
+ width:min(88vw,520px);
+ height:min(88vw,520px)
+}
+
+#qrWrap.qrFull #qr img,
+#qrWrap.qrFull #qr canvas{
+ width:min(88vw,520px)!important;
+ height:min(88vw,520px)!important
+}
+
+.closeQR{
+ display:none
+}
+
+#qrWrap.qrFull .closeQR{
+ display:block;
+ position:absolute;
+ top:18px;
+ right:18px;
+ width:auto;
+ padding:10px 15px;
+ background:#111;
+ color:#fff;
+ z-index:2
+}
+
 #preview{
  display:none;
- margin-top:15px;
- background:#22222a;
  padding:12px;
  border-radius:12px;
+ background:#22222a;
+ color:#aaa;
+ font-size:11px;
  word-break:break-all;
- font-size:12px;color:#bbb
+ line-height:1.4
+}
+
+.ready{
+ text-align:center;
+ color:#8cffae;
+ font-size:13px
+}
+
+@media(max-width:380px){
+ body{padding:12px}
+
+ #qrWrap{
+   width:286px;
+   height:286px;
+   padding:18px
+ }
+
+ #qr,
+ #qr img,
+ #qr canvas{
+   width:250px!important;
+   height:250px!important
+ }
 }
 </style>
 </head>
@@ -77,35 +229,51 @@ button.dark{background:#292930;color:#fff}
 <span class="badge">🔐 SimpleX</span>
 
 <h3 style="margin-top:15px">
-Pripojenie zariadenia
+Vytvorenie QR pozvánky
 </h3>
 
 <p class="info">
-Najprv vytvor v aplikácii SimpleX svoju
-jednorazovú pozvánku. Potom ju vlož sem.
+Najprv si v aplikácii SimpleX vytvor
+pozvánku na pridanie kontaktu.
+Potom ju vlož sem.
 </p>
 
-<textarea id="link"
-placeholder="Vlož sem SimpleX invitation link..."></textarea>
+<textarea
+ id="link"
+ placeholder="Vlož sem SimpleX invitation link..."></textarea>
 
 <button onclick="processLink()">
-🔗 Pripojiť SimpleX pozvánku
+🔗 Vytvoriť QR
 </button>
 
 <div id="status"></div>
 
 </div>
 
-<div class="card" id="qrCard" style="display:none">
 
-<h3>📷 QR pozvánka</h3>
+<div class="card" id="qrCard">
+
+<h3>📷 SimpleX QR</h3>
 
 <p class="info">
-Druhý človek môže tento QR kód naskenovať
-priamo v SimpleX.
+Tento QR obsahuje presne tvoju SimpleX
+pozvánku. Druhý telefón ju môže
+naskenovať priamo v SimpleX.
 </p>
 
-<div id="qr"></div>
+<div id="qrWrap">
+
+ <div id="qr"></div>
+
+ <button class="closeQR" onclick="fullscreenQR()">
+ ✕
+ </button>
+
+</div>
+
+<button onclick="fullscreenQR()">
+🔍 Zväčšiť QR
+</button>
 
 <button onclick="openSimpleX()">
 🚀 Otvoriť v SimpleX
@@ -123,17 +291,24 @@ priamo v SimpleX.
 
 </div>
 
+
 <div class="card">
 
-<h3>📱 Ako to funguje?</h3>
+<h3>📱 Ako sa pripojiť?</h3>
 
 <p class="info">
-1. Nainštaluj SimpleX Chat.<br>
-2. Vytvor jednorazovú pozvánku.<br>
-3. Vlož ju do ERIKAI OS.<br>
-4. ERIKAI OS vytvorí QR kód.<br>
-5. Druhý telefón ho naskenuje v SimpleX.<br>
-6. Po potvrdení môžete začať písať.
+<b>Telefón A</b><br>
+V SimpleX vytvorí invitation link
+a vloží ho do ERIKAI OS.
+<br><br>
+
+<b>Telefón B</b><br>
+Naskenuje QR kód pomocou SimpleX.
+<br><br>
+
+Po potvrdení sa vytvorí kontakt
+a komunikácia pokračuje priamo
+v SimpleX.
 </p>
 
 <button class="dark" onclick="downloadSimpleX()">
@@ -142,89 +317,115 @@ priamo v SimpleX.
 
 </div>
 
+
 <div class="card">
-<div id="ready" class="info" style="text-align:center">
+<div class="ready">
 ● ERIKAI OS pripravený
 </div>
 </div>
 
 </div>
 
+
 <script>
 
 let simplexLink="";
 
+const linkInput=document.getElementById("link");
+const qr=document.getElementById("qr");
+const qrCard=document.getElementById("qrCard");
+const status=document.getElementById("status");
+const preview=document.getElementById("preview");
+
+
+function setStatus(text){
+ status.textContent=text;
+}
+
+
+function isSimpleXLink(value){
+
+ return /^(https:\/\/|simplex:\/)/i.test(value);
+
+}
+
+
 function processLink(){
 
- const input=document.getElementById("link");
- let value=input.value.trim();
+ const value=linkInput.value.trim();
 
  if(!value){
-   setStatus("❌ Vlož SimpleX pozvánku.");
+   setStatus("❌ Najprv vlož SimpleX pozvánku.");
    return;
  }
 
- if(!/^(https:\/\/|simplex:\/)/i.test(value)){
+ if(!isSimpleXLink(value)){
    setStatus("❌ Toto nevyzerá ako SimpleX pozvánka.");
    return;
  }
 
  simplexLink=value;
 
- document.getElementById("qr").innerHTML="";
+ qr.innerHTML="";
 
- new QRCode(document.getElementById("qr"),{
+ new QRCode(qr,{
    text:simplexLink,
-   width:220,
-   height:220,
+   width:280,
+   height:280,
+   colorDark:"#000000",
+   colorLight:"#ffffff",
    correctLevel:QRCode.CorrectLevel.M
  });
 
- document.getElementById("qrCard").style.display="block";
+ qrCard.style.display="block";
 
- document.getElementById("preview").style.display="block";
- document.getElementById("preview").textContent=simplexLink;
+ preview.style.display="block";
+ preview.textContent=simplexLink;
 
- setStatus("✓ SimpleX pozvánka rozpoznaná.");
+ setStatus("✓ QR pozvánka je pripravená.");
+
+ localStorage.setItem(
+   "erikaiSimpleXInvite",
+   simplexLink
+ );
+
 }
+
+
+function fullscreenQR(){
+
+ document
+   .getElementById("qrWrap")
+   .classList.toggle("qrFull");
+
+}
+
 
 function openSimpleX(){
 
  if(!simplexLink)return;
 
  /*
-  * Najprv skúšame simplex:// URI.
-  * Ak zariadenie aplikáciu neotvorí,
-  * používateľ môže použiť klasický HTTPS link.
+  * Ak už máme simplex URI,
+  * otvoríme ho priamo.
   */
 
  if(simplexLink.startsWith("simplex:/")){
+
    location.href=simplexLink;
    return;
+
  }
 
- const u=new URL(simplexLink);
+ /*
+  * HTTPS invitation nechávame
+  * nedotknutú a otvoríme ju.
+  */
 
- const direct=
-   "simplex:/"+
-   u.pathname.replace(/^\/+/,"")+
-   u.hash+
-   (u.hostname ? "?h="+encodeURIComponent(u.hostname) : "");
+ window.location.href=simplexLink;
 
- location.href=direct;
-
- setTimeout(()=>{
-   window.open(simplexLink,"_blank");
- },1200);
 }
 
-function copyLink(){
-
- if(!simplexLink)return;
-
- navigator.clipboard.writeText(simplexLink)
- .then(()=>setStatus("✓ Pozvánka skopírovaná."));
-}
 
 async function shareLink(){
 
@@ -233,6 +434,7 @@ async function shareLink(){
  if(navigator.share){
 
    try{
+
      await navigator.share({
        title:"ERIKAI OS • SimpleX pozvánka",
        text:"Pripoj sa ku mne cez SimpleX:",
@@ -242,19 +444,79 @@ async function shareLink(){
      setStatus("✓ Pozvánka zdieľaná.");
 
    }catch(e){}
-   
+
  }else{
+
    copyLink();
+
  }
+
 }
+
+
+async function copyLink(){
+
+ if(!simplexLink)return;
+
+ try{
+
+   await navigator.clipboard.writeText(simplexLink);
+   setStatus("✓ Pozvánka skopírovaná.");
+
+ }catch(e){
+
+   prompt(
+     "Skopíruj SimpleX pozvánku:",
+     simplexLink
+   );
+
+ }
+
+}
+
 
 function downloadSimpleX(){
- location.href="https://simplex.chat/downloads/";
+
+ window.open(
+   "https://simplex.chat/downloads/",
+   "_blank"
+ );
+
 }
 
-function setStatus(text){
- document.getElementById("status").textContent=text;
-}
+
+window.addEventListener("load",()=>{
+
+ const saved=
+   localStorage.getItem("erikaiSimpleXInvite");
+
+ if(saved){
+
+   linkInput.value=saved;
+
+   simplexLink=saved;
+
+   qr.innerHTML="";
+
+   new QRCode(qr,{
+     text:simplexLink,
+     width:280,
+     height:280,
+     colorDark:"#000000",
+     colorLight:"#ffffff",
+     correctLevel:QRCode.CorrectLevel.M
+   });
+
+   qrCard.style.display="block";
+
+   preview.style.display="block";
+   preview.textContent=simplexLink;
+
+   setStatus("✓ Uložená pozvánka načítaná.");
+
+ }
+
+});
 
 </script>
 
