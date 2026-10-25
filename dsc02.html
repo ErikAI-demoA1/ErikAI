@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bakalárska Práca | Predikcia Motorových Olejov pomocou DSC</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-main: #07090e;
+      --bg-card: #0f172a;
+      --bg-input: #1e293b;
+      --border-color: #334155;
+      
+      --accent-fresh: #10b981;
+      --accent-fresh-dim: rgba(16, 185, 129, 0.15);
+      --accent-used: #f59e0b;
+      --accent-used-dim: rgba(245, 158, 11, 0.15);
+      --accent-pred: #38bdf8;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+      
+      --font-sans: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      padding: 24px;
+    }
+
+    .container { max-width: 1500px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .logo-area { display: flex; align-items: center; gap: 14px; }
+    .logo-icon {
+      width: 45px; height: 45px;
+      background: linear-gradient(135deg, var(--accent-fresh), #0284c7);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-family: var(--font-mono); color: #fff; font-size: 1.1rem;
+    }
+
+    .title-group h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; }
+    .title-group p { font-size: 0.82rem; color: var(--text-muted); }
+
+    .header-actions { display: flex; gap: 12px; }
+
+    .btn {
+      background: var(--bg-input); color: var(--text-main);
+      border: 1px solid var(--border-color); padding: 8px 16px;
+      border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer;
+      transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn:hover { background: #334155; border-color: #475569; }
+    .btn-primary { background: var(--accent-fresh); color: #000; font-weight: 700; border: none; }
+    .btn-primary:hover { background: #059669; }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 1100px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .card-title {
+      font-size: 0.88rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted);
+    }
+
+    .presets-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .preset-chip {
+      background: var(--bg-input); border: 1px solid var(--border-color);
+      color: var(--text-muted); padding: 5px 12px; border-radius: 20px;
+      font-size: 0.75rem; cursor: pointer; transition: all 0.2s;
+    }
+    .preset-chip:hover, .preset-chip.active {
+      border-color: var(--accent-fresh); color: var(--text-main); background: var(--accent-fresh-dim);
+    }
+
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px; }
+    .form-control {
+      width: 100%; background: var(--bg-input); border: 1px solid var(--border-color);
+      border-radius: 6px; padding: 8px 12px; color: var(--text-main);
+      font-family: var(--font-mono); font-size: 0.88rem;
+    }
+    .form-control:focus { outline: none; border-color: var(--accent-fresh); }
+
+    .sample-section { border-left: 3px solid transparent; padding-left: 12px; margin-bottom: 16px; }
+    .sample-section.fresh { border-color: var(--accent-fresh); }
+    .sample-section.used { border-color: var(--accent-used); }
+
+    .sample-title { font-weight: 600; font-size: 0.82rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .sample-title.fresh { color: var(--accent-fresh); }
+    .sample-title.used { color: var(--accent-used); }
+
+    .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* CHARTS CONTAINER */
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 950px) {
+      .charts-row { grid-template-columns: 1fr; }
+    }
+
+    .chart-wrapper {
+      position: relative; height: 320px; width: 100%; margin-top: 10px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 8px; padding: 16px;
+    }
+    .kpi-title { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .kpi-value { font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; margin: 6px 0 2px 0; }
+    .kpi-sub { font-size: 0.72rem; color: var(--text-muted); }
+
+    .status-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+    }
+    .status-good { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .status-warn { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .status-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+
+    .report-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
+    .report-table th, .report-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
+    .report-table th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.72rem; }
+    .mono { font-family: var(--font-mono); }
+
+    .thesis-box {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px dashed var(--accent-pred);
+      border-radius: 8px; padding: 14px 18px; margin-top: 16px;
+      font-size: 0.85rem;
+    }
+    .thesis-box strong { color: var(--accent-pred); display: block; margin-bottom: 4px; }
+
+    @media print {
+      body { background: #fff; color: #000; padding: 0; }
+      .btn, .header-actions, .presets-group { display: none !important; }
+      .card, .kpi-card { border: 1px solid #ccc; background: #fff; color: #000; }
+      .form-control { border: none; background: transparent; color: #000; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- HEADER -->
+  <header>
+    <div class="logo-area">
+      <div class="logo-icon">BP</div>
+      <div class="title-group">
+        <h1>Návrh využitia termických analýz pri predikcii motorových olejov</h1>
+        <p>Bakalársky simulačný a diagnostický modul (DSC • OIT • OOT • Kinetika)</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn" onclick="exportJSON()">Export JSON</button>
+      <button class="btn btn-primary" onclick="window.print()">Tlač do BP (PDF)</button>
+    </div>
+  </header>
+
+  <div class="dashboard-grid">
+    
+    <!-- SIDEBAR CONTROLS -->
+    <div class="sidebar">
+      
+      <!-- PRESETS -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">Kategórie Motorových Olejov</span></div>
+        <div class="presets-group">
+          <button class="preset-chip active" onclick="loadPreset('0w20')">0W-20 (Low SAPS)</button>
+          <button class="preset-chip" onclick="loadPreset('5w30')">5W-30 (LongLife)</button>
+          <button class="preset-chip" onclick="loadPreset('10w40')">10W-40 (Semi)</button>
+          <button class="preset-chip" onclick="loadPreset('15w40')">15W-40 (Heavy)</button>
+        </div>
+      </div>
+
+      <!-- PARAMS -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">1. Parametre Merania &amp; Prevádzky</span></div>
+        
+        <div class="grid-2col">
+          <div class="form-group">
+            <label>Atmosféra</label>
+            <select id="gasType" class="form-control" onchange="calculateResults()">
+              <option value="O2">Kyslík (100% O2)</option>
+              <option value="Air">Syntetický vzduch</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Izoterm. Teplota (°C)</label>
+            <input type="number" id="isoTemp" class="form-control" value="190" oninput="calculateResults()">
+          </div>
+        </div>
+
+        <!-- FRESH OIL -->
+        <div class="sample-section fresh">
+          <div class="sample-title fresh"><span>●</span> Čerstvý Olej (Referencia)</div>
+          <div class="grid-2col">
+            <div class="form-group">
+              <label>Hmotnosť (mg)</label>
+              <input type="number" id="freshMass" class="form-control" value="6.0" step="0.1" oninput="calculateResults()">
+            </div>
+            <div class="form-group">
+              <label>OIT (min)</label>
+              <input type="number" id="freshOIT" class="form-control" value="55.0" step="0.5" oninput="calculateResults()">
+            </div>
+          </div>
+          <div class="grid-2col">
+            <div class="form-group">
+              <label>OOT (°C)</label>
+              <input type="number" id="freshOOT" class="form-control" value="225.0" step="0.5" oninput="calculateResults()">
+            </div>
+            <div class="form-group">
+              <label>Ea (kJ/mol)</label>
+              <input type="number" id="freshEa" class="form-control" value="115.4" step="0.5" oninput="calculateResults()">
+            </div>
+          </div>
+        </div>
+
+        <!-- USED OIL -->
+        <div class="sample-section used">
+          <div class="sample-title used"><span>●</span> Použitý Olej (Vzorka)</div>
+          <div class="grid-2col">
+            <div class="form-group">
+              <label>Najazdené km / Mth</label>
+              <input type="number" id="usedKm" class="form-control" value="15000" step="500" oninput="calculateResults()">
+            </div>
+            <div class="form-group">
+              <label>OIT (min)</label>
+              <input type="number" id="usedOIT" class="form-control" value="14.5" step="0.5" oninput="calculateResults()">
+            </div>
+          </div>
+          <div class="grid-2col">
+            <div class="form-group">
+              <label>OOT (°C)</label>
+              <input type="number" id="usedOOT" class="form-control" value="190.0" step="0.5" oninput="calculateResults()">
+            </div>
+            <div class="form-group">
+              <label>Entalpia ΔH (J/g)</label>
+              <input type="number" id="usedEnthalpy" class="form-control" value="1420" step="10" oninput="calculateResults()">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div class="main-content">
+      
+      <!-- KPI METRICS -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">Zostatková Životnosť (RUL)</div>
+          <div class="kpi-value" id="kpiRUL">26.4 %</div>
+          <div class="kpi-sub">Kapacita antioxidantov</div>
+        </div>
+        
+        <div class="kpi-card">
+          <div class="kpi-title">Predikcia Výmeny (Max km)</div>
+          <div class="kpi-value" id="kpiPredKm">18 200 km</div>
+          <div class="kpi-sub">Odhad medznej hodnoty</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-title">Pokles OOT Teploty</div>
+          <div class="kpi-value" id="kpiOOTShift">-35.0 °C</div>
+          <div class="kpi-sub">Posun termickej stability</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-title">Stav pre BP</div>
+          <div style="margin-top: 6px;"><span class="status-badge status-warn" id="kpiStatus">Hranica Výmeny</span></div>
+          <div class="kpi-sub" style="margin-top: 6px;">Kinetické kritérium</div>
+        </div>
+      </div>
+
+      <!-- CHARTS ROW -->
+      <div class="charts-row">
+        <!-- DSC EXOTHERM CHART -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">DSC Termogram (Oxidácia - OIT)</span>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="dscChart"></canvas>
+          </div>
+        </div>
+
+        <!-- PREDICTION TREND CHART -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Predikčný Model: RUL vs. Kilometre</span>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE & THESIS OUTPUT -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Experimentálne Výsledky &amp; Vyhodnotenie pre Bakalársku Prácu</span>
+        </div>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Sledovaný Parameter</th>
+              <th>Čerstvý Olej (0 km)</th>
+              <th>Použitý Olej (<span id="tableKmLabel">15000</span> km)</th>
+              <th>Zmena / Degradácia</th>
+              <th>Hodnotenie pre Experiment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>OIT (Izotermický čas)</strong></td>
+              <td class="mono" id="tbFreshOIT">55.0 min</td>
+              <td class="mono" id="tbUsedOIT">14.5 min</td>
+              <td class="mono" id="tbDeltaOIT">-40.5 min</td>
+              <td><span class="status-badge status-danger">-73.6 % vyčerpania</span></td>
+            </tr>
+            <tr>
+              <td><strong>OOT (Teplota začiatku oxidácie)</strong></td>
+              <td class="mono" id="tbFreshOOT">225.0 °C</td>
+              <td class="mono" id="tbUsedOOT">190.0 °C</td>
+              <td class="mono" id="tbDeltaOOT">-35.0 °C</td>
+              <td><span class="status-badge status-warn">Znížená stálosť</span></td>
+            </tr>
+            <tr>
+              <td><strong>Aktivačná energia ($E_a$)</strong></td>
+              <td class="mono" id="tbFreshEa">115.4 kJ/mol</td>
+              <td class="mono" id="tbUsedEa">92.1 kJ/mol</td>
+              <td class="mono">-23.3 kJ/mol</td>
+              <td>Pokles kinetickej bariéry</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="thesis-box">
+          <strong>Návrh textu do kapitoly Vyhodnotenie výsledkov:</strong>
+          <p id="thesisConclusionText" style="margin-top: 4px; color: var(--text-main);">
+            Na základe DSC analýzy vykazuje vzorka po 15 000 km kritický pokles oxidačného indukčného času (OIT) o 73.6 %. Predikčný model indikuje dosiahnutie medznej hodnoty aditív pri cca 18 200 km, kedy sa odporúča fyzická výmena olejovej náplne v spaľovacom motore.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  let dscChartInst = null;
+  let trendChartInst = null;
+
+  const presets = {
+    '0w20': { freshMass: 6.0, freshOIT: 60.0, freshOOT: 230.0, freshEa: 118.0, usedKm: 15000, usedOIT: 16.0, usedOOT: 195.0, usedEnthalpy: 1350, isoTemp: 195 },
+    '5w30': { freshMass: 6.0, freshOIT: 55.0, freshOOT: 225.0, freshEa: 115.4, usedKm: 15000, usedOIT: 14.5, usedOOT: 190.0, usedEnthalpy: 1420, isoTemp: 190 },
+    '10w40': { freshMass: 6.5, freshOIT: 42.0, freshOOT: 215.0, freshEa: 105.0, usedKm: 10000, usedOIT: 11.0, usedOOT: 180.0, usedEnthalpy: 1510, isoTemp: 185 },
+    '15w40': { freshMass: 7.0, freshOIT: 35.0, freshOOT: 205.0, freshEa: 98.0, usedKm: 8000, usedOIT: 9.0, usedOOT: 172.0, usedEnthalpy: 1600, isoTemp: 180 }
+  };
+
+  function loadPreset(type) {
+    document.querySelectorAll('.preset-chip').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+
+    const p = presets[type];
+    document.getElementById('freshMass').value = p.freshMass;
+    document.getElementById('freshOIT').value = p.freshOIT;
+    document.getElementById('freshOOT').value = p.freshOOT;
+    document.getElementById('freshEa').value = p.freshEa;
+    document.getElementById('usedKm').value = p.usedKm;
+    document.getElementById('usedOIT').value = p.usedOIT;
+    document.getElementById('usedOOT').value = p.usedOOT;
+    document.getElementById('usedEnthalpy').value = p.usedEnthalpy;
+    document.getElementById('isoTemp').value = p.isoTemp;
+
+    calculateResults();
+  }
+
+  function calculateResults() {
+    const fOIT = parseFloat(document.getElementById('freshOIT').value) || 1;
+    const uOIT = parseFloat(document.getElementById('usedOIT').value) || 0;
+    const fOOT = parseFloat(document.getElementById('freshOOT').value) || 0;
+    const uOOT = parseFloat(document.getElementById('usedOOT').value) || 0;
+    const uKm = parseFloat(document.getElementById('usedKm').value) || 1;
+    const fEa = parseFloat(document.getElementById('freshEa').value) || 110;
+
+    const rul = Math.max(0, Math.min(100, (uOIT / fOIT) * 100));
+    const deltaOOT = uOOT - fOOT;
+    const deltaOIT = uOIT - fOIT;
+    
+    // Prediction model calculations
+    const decayConst = -Math.log(Math.max(0.01, uOIT / fOIT)) / uKm;
+    const targetOIT = fOIT * 0.15; 
+    const predictedMaxKm = decayConst > 0 ? -Math.log(0.15) / decayConst : uKm * 2;
+    const uEa = Math.max(70, fEa * (0.8 + 0.2 * (rul / 100)));
+
+    // KPI UI Updates
+    document.getElementById('kpiRUL').innerText = rul.toFixed(1) + ' %';
+    document.getElementById('kpiPredKm').innerText = Math.round(predictedMaxKm).toLocaleString() + ' km';
+    document.getElementById('kpiOOTShift').innerText = (deltaOOT > 0 ? '+' : '') + deltaOOT.toFixed(1) + ' °C';
+    document.getElementById('tableKmLabel').innerText = uKm.toLocaleString();
+
+    const statusBadge = document.getElementById('kpiStatus');
+    const thesisText = document.getElementById('thesisConclusionText');
+
+    if (rul > 50) {
+      statusBadge.innerText = 'Vyhovujúci Stav';
+      statusBadge.className = 'status-badge status-good';
+      thesisText.innerText = `Vzorka po ${uKm.toLocaleString()} km vykazuje dostatočnú oxidačnú rezervu (RUL ${rul.toFixed(1)}%). Predikčný model stanovuje výmenný interval pri cca ${Math.round(predictedMaxKm).toLocaleString()} km.`;
+    } else if (rul >= 20) {
+      statusBadge.innerText = 'Hranica Výmeny';
+      statusBadge.className = 'status-badge status-warn';
+      thesisText.innerText = `Vzorka po ${uKm.toLocaleString()} km dosiahla pokles OIT na ${rul.toFixed(1)}%. Antioxidanty sú v pokročilom štádiu vyčerpania, model predikuje kritickú medzu pri ${Math.round(predictedMaxKm).toLocaleString()} km.`;
+    } else {
+      statusBadge.innerText = 'Kritický Stav';
+      statusBadge.className = 'status-badge status-danger';
+      thesisText.innerText = `Kritické opotrebenie olejovej náplne po ${uKm.toLocaleString()} km. OIT pokleslo pod 20%, hrozí tvorba lakov a kalov v spaľovacom motore.`;
+    }
+
+    // Table updates
+    document.getElementById('tbFreshOIT').innerText = fOIT.toFixed(1) + ' min';
+    document.getElementById('tbUsedOIT').innerText = uOIT.toFixed(1) + ' min';
+    document.getElementById('tbDeltaOIT').innerText = deltaOIT.toFixed(1) + ' min';
+    document.getElementById('tbFreshOOT').innerText = fOOT.toFixed(1) + ' °C';
+    document.getElementById('tbUsedOOT').innerText = uOOT.toFixed(1) + ' °C';
+    document.getElementById('tbDeltaOOT').innerText = deltaOOT.toFixed(1) + ' °C';
+    document.getElementById('tbFreshEa').innerText = fEa.toFixed(1) + ' kJ/mol';
+    document.getElementById('tbUsedEa').innerText = uEa.toFixed(1) + ' kJ/mol';
+
+    updateCharts(fOIT, uOIT, decayConst, predictedMaxKm);
+  }
+
+  function generateDSCPoints(onset) {
+    const pts = [];
+    for (let x = 0; x <= Math.max(90, onset * 1.4); x += 1.5) {
+      let y = 0;
+      if (x > onset) {
+        const dx = x - onset;
+        y = (Math.pow(dx, 1.9) / (Math.pow(dx, 1.9) + 120)) * 10;
+      }
+      y += (Math.random() - 0.5) * 0.03;
+      pts.push({ x: parseFloat(x.toFixed(1)), y: parseFloat(y.toFixed(2)) });
+    }
+    return pts;
+  }
+
+  function updateCharts(fOIT, uOIT, decayConst, maxKm) {
+    // 1. DSC Chart
+    const ctx1 = document.getElementById('dscChart').getContext('2d');
+    if (dscChartInst) dscChartInst.destroy();
+
+    dscChartInst = new Chart(ctx1, {
+      type: 'line',
+      data: {
+        datasets: [
+          { label: 'Čerstvý Olej', data: generateDSCPoints(fOIT), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.3 },
+          { label: 'Použitý Olej', data: generateDSCPoints(uOIT), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.3 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+        scales: {
+          x: { type: 'linear', title: { display: true, color: '#94a3b8', text: 'Čas (min)' }, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+          y: { title: { display: true, color: '#94a3b8', text: 'Tepelný tok (mW/mg)' }, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+        },
+        plugins: { legend: { labels: { color: '#f8fafc' } } }
+      }
+    });
+
+    // 2. Trend Prediction Chart (OIT vs Kilometers)
+    const trendData = [];
+    const stepKm = maxKm / 40;
+    for (let km = 0; km <= maxKm * 1.2; km += stepKm) {
+      const oitVal = fOIT * Math.exp(-decayConst * km);
+      trendData.push({ x: Math.round(km), y: parseFloat(Math.max(0, oitVal).toFixed(1)) });
+    }
+
+    const ctx2 = document.getElementById('trendChart').getContext('2d');
+    if (trendChartInst) trendChartInst.destroy();
+
+    trendChartInst = new Chart(ctx2, {
+      type: 'line',
+      data: {
+        datasets: [
+          { label: 'Predikčný model poklesu OIT', data: trendData, borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.1)', borderWidth: 2, pointRadius: 2, fill: true, tension: 0.3 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+        scales: {
+          x: { type: 'linear', title: { display: true, color: '#94a3b8', text: 'Najazdené kilometre (km)' }, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+          y: { title: { display: true, color: '#94a3b8', text: 'OIT (min)' }, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+        },
+        plugins: { legend: { labels: { color: '#f8fafc' } } }
+      }
+    });
+  }
+
+  function exportJSON() {
+    const data = {
+      thesis: "Návrh využitia termických analýz pri predikcii motorových olejov",
+      timestamp: new Date().toISOString(),
+      fresh: { oit: document.getElementById('freshOIT').value, oot: document.getElementById('freshOOT').value, ea: document.getElementById('freshEa').value },
+      used: { km: document.getElementById('usedKm').value, oit: document.getElementById('usedOIT').value, oot: document.getElementById('usedOOT').value },
+      rul: document.getElementById('kpiRUL').innerText,
+      predictedKm: document.getElementById('kpiPredKm').innerText
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'bp_dsc_motor_oil_prediction.json';
+    a.click();
+  }
+
+  window.onload = () => calculateResults();
+</script>
+
+</body>
+</html>
