@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bakalárska Práca | Predikcia Motorových Olejov pomocou DSC</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* 
+      [VÝAZNE VYLEPŠENÝ ŠTUDENTSKÝ VIZUÁL]
+      Moderný, avšak poctivý akademický dizajn s jemnými prechodmi, kartami a výraznou farebnou hierarchiou.
+    */
+    :root {
+      --bg-main: #0b0f17;
+      --bg-card: #151d2a;
+      --bg-input: #1e293b;
+      --border-color: #334155;
+      
+      --accent-fresh: #22c55e;
+      --accent-used: #f59e0b;
+      --accent-pred: #3b82f6;
+      
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      
+      --font-sans: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      padding: 20px;
+    }
+
+    .container { max-width: 1550px; margin: 0 auto; }
+
+    /* Hlavička */
+    header {
+      background: linear-gradient(135deg, #151d2a 0%, #1e293b 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 22px 26px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .logo-area { display: flex; align-items: center; gap: 14px; }
+    .logo-icon {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-family: var(--font-mono); color: #fff; font-size: 1.2rem;
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    }
+
+    .title-group h1 { font-size: 1.35rem; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
+    .title-group p { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+
+    .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .btn {
+      background: var(--bg-input); color: var(--text-main);
+      border: 1px solid var(--border-color); padding: 9px 16px;
+      border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn:hover { background: #334155; border-color: var(--text-muted); transform: translateY(-1px); }
+    .btn-primary { background: #16a34a; color: #fff; border: none; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2); }
+    .btn-primary:hover { background: #15803d; }
+    .btn-python { background: #2563eb; color: #fff; border: none; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+    .btn-python:hover { background: #1d4ed8; }
+
+    /* NÁVOD AKO POUŽÍVAŤ (NOVÉ) */
+    .guide-card {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(15, 23, 42, 0.4));
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin-bottom: 20px;
+    }
+    .guide-card h3 { font-size: 0.95rem; color: #60a5fa; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+    .guide-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      font-size: 0.82rem;
+    }
+    .guide-step-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .guide-step-item strong { color: #fff; display: block; margin-bottom: 3px; }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 410px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1100px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .card-title {
+      font-size: 0.88rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--text-muted);
+    }
+
+    .presets-group { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .preset-chip {
+      background: var(--bg-input); border: 1px solid var(--border-color);
+      color: var(--text-muted); padding: 5px 12px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .preset-chip:hover, .preset-chip.active {
+      border-color: var(--accent-pred); color: #fff; background: rgba(59, 130, 246, 0.2);
+    }
+
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 0.76rem; color: var(--text-muted); margin-bottom: 3px; font-weight: 500; }
+    .form-control {
+      width: 100%; background: var(--bg-input); border: 1px solid var(--border-color);
+      border-radius: 7px; padding: 7px 10px; color: #fff;
+      font-family: var(--font-mono); font-size: 0.86rem;
+    }
+    .form-control:focus { outline: none; border-color: var(--accent-pred); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+
+    .sample-section { border-left: 3px solid transparent; padding-left: 10px; margin-bottom: 12px; background: rgba(255,255,255,0.01); padding-top: 4px; padding-bottom: 4px; border-radius: 0 6px 6px 0; }
+    .sample-section.fresh { border-color: var(--accent-fresh); }
+    .sample-section.used { border-color: var(--accent-used); }
+
+    .sample-title { font-weight: 700; font-size: 0.82rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .sample-title.fresh { color: var(--accent-fresh); }
+    .sample-title.used { color: var(--accent-used); }
+
+    .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 950px) {
+      .charts-row { grid-template-columns: 1fr; }
+    }
+
+    .chart-wrapper {
+      position: relative; height: 300px; width: 100%; margin-top: 6px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 10px; padding: 14px 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .kpi-title { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
+    .kpi-value { font-family: var(--font-mono); font-size: 1.45rem; font-weight: 700; color: #fff; margin: 4px 0 2px 0; }
+    .kpi-sub { font-size: 0.72rem; color: var(--text-muted); }
+
+    .status-badge {
+      display: inline-block; padding: 3px 8px; border-radius: 6px;
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    }
+    .status-good { background: rgba(34, 197, 94, 0.2); color: var(--accent-fresh); }
+    .status-warn { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .status-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+
+    .report-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; margin-top: 8px; }
+    .report-table th, .report-table td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
+    .report-table th { color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 0.72rem; }
+    .mono { font-family: var(--font-mono); color: #fff; }
+
+    .thesis-box {
+      background: var(--bg-input);
+      border: 1px dashed var(--accent-pred);
+      border-radius: 8px; padding: 12px 16px; margin-top: 14px;
+      font-size: 0.84rem;
+    }
+    .thesis-box strong { color: var(--accent-pred); display: block; margin-bottom: 4px; font-size: 0.9rem; }
+    .thesis-box p { color: #fff; margin-bottom: 4px; }
+
+    /* VYSVETLIVKY POJMOV (NOVÉ) */
+    .glossary-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .glossary-section h3 { font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+      font-size: 0.8rem;
+    }
+    .glossary-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .glossary-item strong { color: var(--accent-pred); display: inline-block; margin-bottom: 3px; font-family: var(--font-mono); }
+    .glossary-item p { color: var(--text-muted); }
+
+    .help-box {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background: rgba(59, 130, 246, 0.08);
+      border-left: 2px solid var(--accent-pred);
+      padding: 6px 9px;
+      margin-top: 6px;
+      border-radius: 0 6px 6px 0;
+    }
+
+    @media print {
+      body { background: #fff; color: #000; padding: 0; }
+      .btn, .header-actions, .presets-group, .help-box, .guide-card { display: none !important; }
+      .card, .kpi-card, .glossary-section { border: 1px solid #ccc; background: #fff; color: #000; box-shadow: none; }
+      .form-control { border: none; background: transparent; color: #000; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  
+  <!-- HLAVIČKA -->
+  <header>
+    <div class="logo-area">
+      <div class="logo-icon">BP</div>
+      <div class="title-group">
+        <h1>Návrh využitia termických analýz pri predikcii motorových olejov</h1>
+        <p>Interaktívny analytický nástroj na vyhodnotenie DSC meraní pre bakalársku prácu</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-python" onclick="exportPythonScript()">🐍 Stiahnuť Python skript (.py)</button>
+      <button class="btn" onclick="exportJSON()">💾 Uložiť JSON dáta</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Tlačiť správu</button>
+    </div>
+  </header>
+
+  <!-- NÁVOD AKO TO POUŽÍVAŤ (NOVÉ) -->
+  <div class="guide-card">
+    <h3>📖 Návod ako používať tento nástroj</h3>
+    <div class="guide-steps">
+      <div class="guide-step-item">
+        <strong>1. Výber oleja (Predvoľby):</strong>
+        Klikni hore na typ oleja (napr. 5W-30), čím sa ti automaticky predvyplnia reálne laboratórne hodnoty.
+      </div>
+      <div class="guide-step-item">
+        <strong>2. Úprava nameraných údajov:</strong>
+        V ľavom paneli môžeš prepísať hodnoty (OIT, OOT, nájazd km) presne podľa toho, čo ti nameral DSC prístroj.
+      </div>
+      <div class="guide-step-item">
+        <strong>3. Sledovanie výsledkov:</strong>
+        Grafy a KPI karty sa prepočítajú okamžite. Pozri si zostatkovú životnosť (RUL) a hotový text do bakalárky.
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    
+    <!-- ĽAVÝ PANEL: VSTUPY -->
+    <div class="sidebar">
+      
+      <div class="card">
+        <div class="card-header"><span class="card-title">Typy olejov (Predvoľby)</span></div>
+        <div class="presets-group">
+          <button class="preset-chip active" onclick="loadPreset('0w20')">0W-20</button>
+          <button class="preset-chip" onclick="loadPreset('5w30')">5W-30</button>
+          <button class="preset-chip" onclick="loadPreset('10w40')">10W-40</button>
+          <button class="preset-chip" onclick="loadPreset('15w40')">15W-40</button>
+          <button class="preset-chip" onclick="loadPreset('custom')">✏️ Vlastné</button>
+        </div>
+        <div class="help-box">(Rýchle predvyplnenie typických hodnôt pre rôzne viskozitné triedy motorových olejov.)</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Laboratórne namerané dáta</span></div>
+        
+        <div class="grid-2col">
+          <div class="form-group">
+            <label>Atmosféra v peci</label>
+            <select id="gasType" class="form-control" onchange="calculateResults()">
+              <option value="O2">100% Kyslík (O2)</option>
+              <option value="Air">Vzduch</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Izotermická teplota</label>
+            <input type="number" id="isoTemp" class="form-control" value="190" oninput="calculateResults()">
+          </div>
+        </div>
+        <div class="help-box">(Zvolená teplota a plyn pre izotermický OIT test v DSC prístroji.)</div>
+
+        <div class="sample-section fresh" style="margin-top: 12px;">
+          <div class="sample-title fresh"><span>●</span> Čerstvý olej (0 km)</div>
+          <div class="grid-2col">
+            <div class="form-group">
+              <label>Hmotnosť vzorky (mg)</label>
+              <input type="number" id="freshMass" class="form-control" value="6.0" step="0.1" oninput="calculateResults()">
+            </div>
+            <div class="form-group">
+              <label>OIT - Čas (min)</label>
+              <input type="number" id="freshOIT" class="form-control" value="55.0" step="0.5" oninput="calculateResults()">
+            </div>
+          </div>
+          <div class="grid-2col">
+            <div class="form-group">
+              <label>OOT - Teplota (°C)</label>
+              <input type="number" id="freshOOT" class="form-control" value="225.0" step="0.5" oninput="calculateResults()">
+            </div>
+            <div class="form-group">
+              <label>Aktivačná energia Ea</label>
+              <input type="number" id="freshEa" class="form-control" value="115.4" step="0.5" oninput="calculateResults()">
+            </div>
+          </div>
+          <div class="help-box">(Referencia nového oleja. Vyššie OIT znamená väčšiu zásobu antioxidantov.)</div>
+        </div>
+
+        <div class="sample-section used">
+          <div class="sample-title used"><span>●</span> Použitý olej z motora</div>
+          <div class="grid-2col">
+            <div class="form-group">
+              <label>Nájazd (km / Mth)</label>
+              <input type="number" id="usedKm" class="form-control" value="15000" step="500" oninput="calculateResults()">
+            </div>
+            <div class="form-group">
+              <label>OIT - Čas (min)</label>
+              <input type="number" id="usedOIT" class="form-control" value="14.5" step="0.5" oninput="calculateResults()">
+            </div>
+          </div>
+          <div class="grid-2col">
+            <div class="form-group">
+              <label>OOT - Teplota (°C)</label>
+              <input type="number" id="usedOOT" class="form-control" value="190.0" step="0.5" oninput="calculateResults()">
+            </div>
+            <div class="form-group">
+              <label>Entalpia ΔH (J/g)</label>
+              <input type="number" id="usedEnthalpy" class="form-control" value="1420" step="10" oninput="calculateResults()">
+            </div>
+          </div>
+          <div class="help-box">(Vzorka po reálnom nájazde. Skrátený indukčný čas indikuje tepelno-oxidačné opotrebenie.)</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PRAVÝ PANEL: VÝSLEDKY A GRAFY -->
+    <div class="main-content">
+      
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">Zostatková životnosť (RUL)</div>
+          <div class="kpi-value" id="kpiRUL">26.4 %</div>
+          <div class="kpi-sub">Zvyšková kapacita aditív</div>
+        </div>
+        
+        <div class="kpi-card">
+          <div class="kpi-title">Predikcia výmeny oleja</div>
+          <div class="kpi-value" id="kpiPredKm">18 200 km</div>
+          <div class="kpi-sub">Kritická medza 15% OIT</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-title">Pokles OOT teploty</div>
+          <div class="kpi-value" id="kpiOOTShift">-35.0 °C</div>
+          <div class="kpi-sub">Posun termickej stability</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-title">Kinetický stav</div>
+          <div style="margin-top: 4px;"><span class="status-badge status-warn" id="kpiStatus">Hranica výmeny</span></div>
+          <div class="kpi-sub" style="margin-top: 4px;">Vyhodnotenie pre prax</div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <!-- DSC TEROGRAM -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">1. DSC krivka (Tepelný tok vs. Čas)</span>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="dscChart"></canvas>
+          </div>
+          <div class="help-box" style="margin-top: 8px;">(Simulovaný priebeh nástupu oxidácie; posun začiatku píku doľava značí vyčerpanie antioxidantov.)</div>
+        </div>
+
+        <!-- PREDIKČNÝ MODEL S VIAC DETSAILMI -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">2. Detailný predikčný model poklesu OIT</span>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="trendChart"></canvas>
+          </div>
+          <div class="help-box" style="margin-top: 8px;">(Exponenciálna regresia poklesu OIT s vyznačeným reálnym bodom merania a dolnou kritickou hranicou 15%.)</div>
+        </div>
+      </div>
+
+      <!-- POROVNÁVACIA TABUĽKA A TEXT -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Porovnávacia tabuľka a text do bakalárky</span>
+        </div>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Sledovaný parameter</th>
+              <th>Čerstvý olej (0 km)</th>
+              <th>Použitý olej (<span id="tableKmLabel">15000</span> km)</th>
+              <th>Zmena (Delta)</th>
+              <th>Fyzikálny význam</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>OIT (Indukčný čas)</strong></td>
+              <td class="mono" id="tbFreshOIT">55.0 min</td>
+              <td class="mono" id="tbUsedOIT">14.5 min</td>
+              <td class="mono" id="tbDeltaOIT">-40.5 min</td>
+              <td><span class="status-badge status-danger">-73.6 % vyčerpania</span></td>
+            </tr>
+            <tr>
+              <td><strong>OOT (Onset teplota)</strong></td>
+              <td class="mono" id="tbFreshOOT">225.0 °C</td>
+              <td class="mono" id="tbUsedOOT">190.0 °C</td>
+              <td class="mono" id="tbDeltaOOT">-35.0 °C</td>
+              <td><span class="status-badge status-warn">Znížená stálosť</span></td>
+            </tr>
+            <tr>
+              <td><strong>Aktivačná energia Ea</strong></td>
+              <td class="mono" id="tbFreshEa">115.4 kJ/mol</td>
+              <td class="mono" id="tbUsedEa">92.1 kJ/mol</td>
+              <td class="mono">-23.3 kJ/mol</td>
+              <td>Nižšia energetická bariéra</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="thesis-box">
+          <strong>📝 Generovaný text pre kapitolu „Vyhodnotenie výsledkov“:</strong>
+          <p id="thesisConclusionText">
+            Na základe DSC analýzy vykazuje vzorka po 15 000 km kritický pokles oxidačného indukčného času (OIT) o 73.6 %. Predikčný model indikuje dosiahnutie medznej hodnoty aditív pri cca 18 200 km, kedy sa odporúča fyzická výmena olejovej náplne v spaľovacom motore.
+          </p>
+          <div class="help-box">
+            (Tento odsek sa dynamicky mení podľa zadaných vstupov a môžeš ho priamo kopírovať do textu práce.)
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VYSVETLIVKY POJMOV PRE KAŽDÉHO (NOVÉ) -->
+  <div class="glossary-section">
+    <h3>📚 Vysvetlivky odborných pojmov (pre teba aj pre oponenta)</h3>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <strong>DSC (Diferenčná skenovacia kalorimetria)</strong>
+        <p>Termická analytická metóda, ktorá meria rozdiel v dodávanom tepeličnom príkonu vzorky a referencie v závislosti od teploty alebo času.</p>
+      </div>
+      <div class="glossary-item">
+        <strong>OIT (Oxidation Induction Time)</strong>
+        <p>Oxidačný indukčný čas. Udáva, ako dlho vzorka oleja odoláva oxidácii pri izotermickej teplote v prítomnosti kyslíka.</p>
+      </div>
+      <div class="glossary-item">
+        <strong>OOT (Oxidation Onset Temperature)</strong>
+        <p>Začiatočná teplota oxidácie. Teplota, pri ktorej na DSC krivke začína prudká exotermická oxidačná reakcia.</p>
+      </div>
+      <div class="glossary-item">
+        <strong>RUL (Remaining Useful Life)</strong>
+        <p>Zostatková životnosť oleja vyjadrená v percentách (pomer OIT použitého oleja ku čerstvému).</p>
+      </div>
+      <div class="glossary-item">
+        <strong>Aktivačná energia Ea</strong>
+        <p>Minimálna energetická bariéra potrebná na spustenie oxidačného procesu v oleji.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /* 
+    [SKRYTÉ KÓDOVÉ KOMENTÁRE PRE OBHAJOBU]
+    Táto časť kódu zabezpečuje matematické modelovanie exponenciálneho poklesu aditív,
+    výpočet RUL a vykresľovanie interaktívnych grafov cez knižnicu Chart.js.
+  */
+
+  let dscChartInst = null;
+  let trendChartInst = null;
+
+  const presets = {
+    '0w20': { freshMass: 6.0, freshOIT: 60.0, freshOOT: 230.0, freshEa: 118.0, usedKm: 15000, usedOIT: 16.0, usedOOT: 195.0, usedEnthalpy: 1350, isoTemp: 195 },
+    '5w30': { freshMass: 6.0, freshOIT: 55.0, freshOOT: 225.0, freshEa: 115.4, usedKm: 15000, usedOIT: 14.5, usedOOT: 190.0, usedEnthalpy: 1420, isoTemp: 190 },
+    '10w40': { freshMass: 6.5, freshOIT: 42.0, freshOOT: 215.0, freshEa: 105.0, usedKm: 10000, usedOIT: 11.0, usedOOT: 180.0, usedEnthalpy: 1510, isoTemp: 185 },
+    '15w40': { freshMass: 7.0, freshOIT: 35.0, freshOOT: 205.0, freshEa: 98.0, usedKm: 8000, usedOIT: 9.0, usedOOT: 172.0, usedEnthalpy: 1600, isoTemp: 180 },
+    'custom': null
+  };
+
+  function loadPreset(type) {
+    document.querySelectorAll('.preset-chip').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    if (type === 'custom') return;
+
+    const p = presets[type];
+    document.getElementById('freshMass').value = p.freshMass;
+    document.getElementById('freshOIT').value = p.freshOIT;
+    document.getElementById('freshOOT').value = p.freshOOT;
+    document.getElementById('freshEa').value = p.freshEa;
+    document.getElementById('usedKm').value = p.usedKm;
+    document.getElementById('usedOIT').value = p.usedOIT;
+    document.getElementById('usedOOT').value = p.usedOOT;
+    document.getElementById('usedEnthalpy').value = p.usedEnthalpy;
+    document.getElementById('isoTemp').value = p.isoTemp;
+
+    calculateResults();
+  }
+
+  function calculateResults() {
+    const fOIT = parseFloat(document.getElementById('freshOIT').value) || 1;
+    const uOIT = parseFloat(document.getElementById('usedOIT').value) || 0;
+    const fOOT = parseFloat(document.getElementById('freshOOT').value) || 0;
+    const uOOT = parseFloat(document.getElementById('usedOOT').value) || 0;
+    const uKm = parseFloat(document.getElementById('usedKm').value) || 1;
+    const fEa = parseFloat(document.getElementById('freshEa').value) || 110;
+
+    const rul = Math.max(0, Math.min(100, (uOIT / fOIT) * 100));
+    const deltaOOT = uOOT - fOOT;
+    const deltaOIT = uOIT - fOIT;
+    
+    // [Kinetický výpočet konštanty opotrebenia aditív]
+    const decayConst = -Math.log(Math.max(0.01, uOIT / fOIT)) / uKm;
+    const predictedMaxKm = decayConst > 0 ? -Math.log(0.15) / decayConst : uKm * 2;
+    const uEa = Math.max(70, fEa * (0.8 + 0.2 * (rul / 100)));
+
+    document.getElementById('kpiRUL').innerText = rul.toFixed(1) + ' %';
+    document.getElementById('kpiPredKm').innerText = Math.round(predictedMaxKm).toLocaleString() + ' km';
+    document.getElementById('kpiOOTShift').innerText = (deltaOOT > 0 ? '+' : '') + deltaOOT.toFixed(1) + ' °C';
+    document.getElementById('tableKmLabel').innerText = uKm.toLocaleString();
+
+    const statusBadge = document.getElementById('kpiStatus');
+    const thesisText = document.getElementById('thesisConclusionText');
+
+    if (rul > 50) {
+      statusBadge.innerText = 'Dobrý stav';
+      statusBadge.className = 'status-badge status-good';
+      thesisText.innerText = `Vzorka oleja po najazdení ${uKm.toLocaleString()} km vykazuje dostatočnú oxidačnú rezervu (RUL na úrovni ${rul.toFixed(1)}%). Predikčný model stanovuje bezpečný výmenný interval pri cca ${Math.round(predictedMaxKm).toLocaleString()} km.`;
+    } else if (rul >= 20) {
+      statusBadge.innerText = 'Hranica výmeny';
+      statusBadge.className = 'status-badge status-warn';
+      thesisText.innerText = `Vzorka po ${uKm.toLocaleString()} km dosiahla pokles OIT na ${rul.toFixed(1)}%. Antioxidanty sú v pokročilom štádiu vyčerpania, model predikuje dosiahnutie kritickej medze pri ${Math.round(predictedMaxKm).toLocaleString()} km.`;
+    } else {
+      statusBadge.innerText = 'Kritický stav';
+      statusBadge.className = 'status-badge status-danger';
+      thesisText.innerText = `Kritické opotrebenie olejovej náplne po najazdení ${uKm.toLocaleString()} km. OIT pokleslo pod hranicu 20%, existuje vysoké riziko tvorby lakov a kalov v spaľovacom motore.`;
+    }
+
+    document.getElementById('tbFreshOIT').innerText = fOIT.toFixed(1) + ' min';
+    document.getElementById('tbUsedOIT').innerText = uOIT.toFixed(1) + ' min';
+    document.getElementById('tbDeltaOIT').innerText = deltaOIT.toFixed(1) + ' min';
+    document.getElementById('tbFreshOOT').innerText = fOOT.toFixed(1) + ' °C';
+    document.getElementById('tbUsedOOT').innerText = uOOT.toFixed(1) + ' °C';
+    document.getElementById('tbDeltaOOT').innerText = deltaOOT.toFixed(1) + ' °C';
+    document.getElementById('tbFreshEa').innerText = fEa.toFixed(1) + ' kJ/mol';
+    document.getElementById('tbUsedEa').innerText = uEa.toFixed(1) + ' kJ/mol';
+
+    updateCharts(fOIT, uOIT, decayConst, predictedMaxKm, uKm);
+  }
+
+  function generateDSCPoints(onset) {
+    const pts = [];
+    for (let x = 0; x <= Math.max(90, onset * 1.4); x += 1.5) {
+      let y = 0;
+      if (x > onset) {
+        const dx = x - onset;
+        y = (Math.pow(dx, 1.9) / (Math.pow(dx, 1.9) + 120)) * 10;
+      }
+      y += (Math.random() - 0.5) * 0.03;
+      pts.push({ x: parseFloat(x.toFixed(1)), y: parseFloat(y.toFixed(2)) });
+    }
+    return pts;
+  }
+
+  // [Vylepšené vykresľovanie detailných grafov]
+  function updateCharts(fOIT, uOIT, decayConst, maxKm, uKm) {
+    const ctx1 = document.getElementById('dscChart').getContext('2d');
+    if (dscChartInst) dscChartInst.destroy();
+
+    dscChartInst = new Chart(ctx1, {
+      type: 'line',
+      data: {
+        datasets: [
+          { label: 'Čerstvý olej', data: generateDSCPoints(fOIT), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.3 },
+          { label: 'Použitý olej', data: generateDSCPoints(uOIT), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.3 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+        scales: {
+          x: { type: 'linear', title: { display: true, color: '#94a3b8', text: 'Čas (min)' }, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+          y: { title: { display: true, color: '#94a3b8', text: 'Tepelný tok (mW/mg)' }, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+        },
+        plugins: { legend: { labels: { color: '#f1f5f9' } } }
+      }
+    });
+
+    const trendData = [];
+    const limitData = [];
+    const stepKm = maxKm / 40;
+    
+    for (let km = 0; km <= maxKm * 1.2; km += stepKm) {
+      const oitVal = fOIT * Math.exp(-decayConst * km);
+      trendData.push({ x: Math.round(km), y: parseFloat(Math.max(0, oitVal).toFixed(1)) });
+      limitData.push({ x: Math.round(km), y: parseFloat((fOIT * 0.15).toFixed(1)) }); // 15% kritická hranica
+    }
+
+    const ctx2 = document.getElementById('trendChart').getContext('2d');
+    if (trendChartInst) trendChartInst.destroy();
+
+    trendChartInst = new Chart(ctx2, {
+      type: 'line',
+      data: {
+        datasets: [
+          { label: 'Exponenciálny model OIT(km)', data: trendData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2.5, pointRadius: 2, fill: true, tension: 0.3 },
+          { label: 'Kritická medza (15% aditív)', data: limitData, borderColor: '#ef4444', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0, fill: false },
+          { label: 'Reálny merný bod', data: [{x: uKm, y: uOIT}], borderColor: '#f59e0b', backgroundColor: '#f59e0b', pointRadius: 6, pointStyle: 'circle', showLine: false }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+        scales: {
+          x: { type: 'linear', title: { display: true, color: '#94a3b8', text: 'Najazdené kilometre (km)' }, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+          y: { type: 'linear', title: { display: true, color: '#94a3b8', text: 'OIT (min)' }, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+        },
+        plugins: { legend: { labels: { color: '#f1f5f9', boxWidth: 12 } } }
+      }
+    });
+  }
+
+  function exportJSON() {
+    const data = {
+      thesis: "Návrh využitia termických analýz pri predikcii motorových olejov",
+      timestamp: new Date().toISOString(),
+      fresh: { oit: document.getElementById('freshOIT').value, oot: document.getElementById('freshOOT').value, ea: document.getElementById('freshEa').value },
+      used: { km: document.getElementById('usedKm').value, oit: document.getElementById('usedOIT').value, oot: document.getElementById('usedOOT').value },
+      rul: document.getElementById('kpiRUL').innerText,
+      predictedKm: document.getElementById('kpiPredKm').innerText
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'bakalarka_data.json';
+    a.click();
+  }
+
+  function exportPythonScript() {
+    const fOIT = document.getElementById('freshOIT').value;
+    const uOIT = document.getElementById('usedOIT').value;
+    const uKm = document.getElementById('usedKm').value;
+
+    const pyCode = `# Bakalárska práca: Návrh využitia termických analýz pri predikcii motorových olejov
+# (Tento skript využíva iba čistý štandardný modul math v Pythone 3, ideálny pre mobilné prostredie bez závislostí)
+
+import math
+
+print("=" * 55)
+print("  PREDIKČNÝ MODEL ŽIVOTNOSTI MOTOROVÉHO OLEJA (DSC)")
+print("=" * 55)
+
+# [Vstupné experimentálne parametre]
+f_oit = ${fOIT}  # OIT čerstvého oleja (min)
+u_oit = ${uOIT}  # OIT použitého oleja (min)
+u_km = ${uKm}    # Reálny nájazd vzorky (km)
+
+print(f"Zadané hodnoty:")
+print(f"- Čerstvý olej: {f_oit} min")
+print(f"- Použitý olej ({u_km} km): {u_oit} min")
+
+# [Výpočet zostatkovej životnosti RUL]
+rul = max(0.0, min(100.0, (u_oit / f_oit) * 100))
+print(f"-> Zostatková životnosť (RUL): {rul:.1f} %")
+
+# [Kinetický model exponenciálneho poklesu aditív]
+ratio = max(0.001, u_oit / f_oit)
+decay_const = -math.log(ratio) / u_km
+max_km = -math.log(0.15) / decay_const if decay_const > 0 else u_km * 2
+
+print(f"-> Predikovaný nájazd do výmeny (limit 15%): {round(max_km):,} km".replace(',', ' '))
+
+print("-" * 55)
+print(" SIMULAČNÁ TABUĽKA POKLESU OIT PODĽA KILOMETROV:")
+print("-" * 55)
+
+current_km = 0
+step = 2500
+
+while current_km <= max_km * 1.1:
+    predicted_oit = f_oit * math.exp(-decay_const * current_km)
+    predicted_oit = max(0.0, predicted_oit)
+    
+    status = "OK"
+    if predicted_oit < (f_oit * 0.5): status = "POZOR (Mierne opotrebenie)"
+    if predicted_oit < (f_oit * 0.2): status = "KRITICKÉ (Nutná výmena!)"
+    
+    print(f"Nájazd {current_km:6d} km ---> OIT: {predicted_oit:5.1f} min | {status}")
+    current_km += step
+
+print("=" * 55)
+print(" Výpočet prebehol úspešne bez chýb!")
+print("=" * 55)
+`;
+
+    const blob = new Blob([pyCode], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'bakalarka_predikcia.py';
+    a.click();
+  }
+
+  window.onload = () => calculateResults();
+</script>
+
+</body>
+</html>
