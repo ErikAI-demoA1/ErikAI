@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mesto zajtrajška</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --panel: #142238;
+  --line: #30435d;
+  --text: #eef5ff;
+  --muted: #a8b7ce;
+  --cyan: #53e0d0;
+  --gold: #ffd166;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: radial-gradient(ellipse at top, #1c3853, var(--bg) 65%);
+  color: var(--text);
+  font: 16px/1.5 system-ui, Arial, sans-serif;
+}
+button { font: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--gold); }
+.wrap { max-width: 1100px; margin: auto; padding: 22px; }
+header { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+h1 { margin:0; font-size:clamp(25px,4vw,40px); }
+h2 { margin-top:0; }
+p { color:var(--muted); }
+button {
+  border:1px solid var(--line); border-radius:11px;
+  background:#20334c; color:var(--text); padding:10px 14px;
+}
+.primary { background:var(--cyan); color:#081522; font-weight:800; }
+.hero,.panel,.metric {
+  border:1px solid var(--line); border-radius:18px;
+  background:linear-gradient(145deg,#172a41,#101a2b);
+  padding:20px; margin-top:18px;
+}
+.hero { padding:clamp(22px,5vw,42px); }
+.hero h2 { font-size:clamp(30px,5vw,49px); line-height:1.1; }
+.hero h2 span { color:var(--cyan); }
+.metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+.metric { margin-top:12px; padding:15px; }
+.value { font-size:26px; font-weight:850; }
+.bar { height:7px; background:#30435d; border-radius:20px; overflow:hidden; margin-top:8px; }
+.bar span { display:block; height:100%; background:var(--cyan); transition:width .3s; }
+.layout { display:grid; grid-template-columns:1.2fr .8fr; gap:18px; }
+.choices { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.choice { text-align:left; min-height:130px; background:#17283e; }
+.choice strong,.choice small { display:block; }
+.choice small { color:var(--muted); margin-top:7px; }
+.choice.selected { border-color:var(--cyan); background:#174047; }
+.choice:disabled { opacity:.4; cursor:not-allowed; }
+.log { max-height:300px; overflow:auto; }
+.log article { border-bottom:1px solid var(--line); padding:10px 0; }
+.log strong { display:block; }
+.log small { color:var(--muted); }
+.notice { border:1px solid #685638; background:#30291f; padding:14px; border-radius:12px; margin:15px 0; }
+#ending { display:none; border-color:var(--cyan); }
+#ending.show { display:block; }
+footer { text-align:center; color:var(--muted); font-size:12px; padding:25px 0; }
+@media(max-width:760px) {
+  .metrics { grid-template-columns:1fr 1fr; }
+  .layout { grid-template-columns:1fr; }
+}
+@media(max-width:440px) {
+  .wrap { padding:12px; }
+  .choices { grid-template-columns:1fr; }
+}
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after { transition:none!important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <div style="color:var(--cyan);font-size:12px;letter-spacing:3px">STRATEGICKÁ SIMULÁCIA</div>
+    <h1>🏙️ Mesto zajtrajška</h1>
+  </div>
+  <button id="reset">↻ Nová hra</button>
+</header>
+
+<section class="hero">
+  <p style="color:var(--cyan);font-weight:800">Tvoje mesto. Tvoje rozhodnutia.</p>
+  <h2>Budúcnosť sa <span>nestane sama.</span></h2>
+  <p>Staň sa starostom a veď mesto počas desiatich rokov. Investuj do ľudí, ekonomiky a prírody. Každé rozhodnutie má svoju cenu a následky.</p>
+  <button class="primary" id="start">Začať riadiť mesto →</button>
+</section>
+
+<section class="metrics">
+  <div class="metric">💶 Rozpočet<div class="value" id="budget">€ 1 000</div><div class="bar"><span id="budgetBar"></span></div></div>
+  <div class="metric">🙂 Spokojnosť<div class="value" id="happiness">60/100</div><div class="bar"><span id="happyBar"></span></div></div>
+  <div class="metric">🏭 Ekonomika<div class="value" id="economy">50/100</div><div class="bar"><span id="economyBar"></span></div></div>
+  <div class="metric">🌱 Príroda<div class="value" id="nature">50/100</div><div class="bar"><span id="natureBar"></span></div></div>
+</section>
+
+<div class="layout">
+<main>
+<section class="panel">
+  <h2 id="year">Rok 1 z 10</h2>
+  <p>Vyber jednu investíciu na tento rok.</p>
+  <div class="notice" id="event">
+    <strong>📘 Nový začiatok</strong>
+    <p>Mesto má základné rezervy. Akú budúcnosť mu pripravíš?</p>
+  </div>
+  <div class="choices" id="choices">
+    <button class="choice" data-id="park"><strong>🌳 Mestský park</strong><small>€180 · Príroda +14, spokojnosť +7</small></button>
+    <button class="choice" data-id="factory"><strong>🏭 Podpora podnikov</strong><small>€220 · Ekonomika +15, príroda −5</small></button>
+    <button class="choice" data-id="school"><strong>🏫 Moderná škola</strong><small>€200 · Spokojnosť +9, ekonomika +5</small></button>
+    <button class="choice" data-id="transport"><strong>🚌 Verejná doprava</strong><small>€240 · Príroda +8, spokojnosť +5</small></button>
+    <button class="choice" data-id="clinic"><strong>🏥 Zdravotné stredisko</strong><small>€260 · Spokojnosť +13</small></button>
+    <button class="choice" data-id="solar"><strong>☀️ Solárna energia</strong><small>€250 · Príroda +12, ekonomika +3</small></button>
+  </div>
+  <p id="hint">Vyber si investíciu.</p>
+  <button class="primary" id="confirm" disabled>Uzavrieť rok →</button>
+</section>
+
+<section class="panel">
+  <h2>📖 Kronika mesta</h2>
+  <div class="log" id="log"><article><strong>Začína sa nová kapitola</strong><small>Obyvatelia čakajú na tvoje prvé rozhodnutie.</small></article></div>
+</section>
+</main>
+
+<aside>
+<section class="panel">
+  <h2>🎯 Ako sa hrá?</h2>
+  <p><strong>1.</strong> Vyber si jednu investíciu za rok.</p>
+  <p><strong>2.</strong> Sleduj rozpočet a tri ukazovatele mesta.</p>
+  <p><strong>3.</strong> Ekonomika ovplyvňuje ročné príjmy.</p>
+  <p><strong>4.</strong> Každý druhý rok môže prísť nečakaná udalosť.</p>
+  <p><strong>5.</strong> Po desiatich rokoch sa vyhodnotí tvoja stratégia.</p>
+</section>
+<section class="panel" id="ending">
+  <h2 id="endingTitle">Výsledok desaťročia</h2>
+  <p id="endingText"></p>
+  <strong id="score"></strong>
+  <p><button class="primary" id="again">Skúsiť znova</button></p>
+</section>
+<section class="panel">
+  <h2>💡 Rada starostu</h2>
+  <p>Silná ekonomika pomáha rozpočtu, ale samotné peniaze nestačia. Zanedbaní obyvatelia alebo poškodená príroda môžu pokaziť aj bohaté mesto.</p>
+</section>
+</aside>
+</div>
+<footer>MESTO ZAJTRAJŠKA · Offline strategická hra · Herné hodnoty sú fiktívne</footer>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const projects = {
+  park:{name:'Mestský park',icon:'🌳',cost:180,h:7,e:0,n:14,desc:'Mesto získalo nový zelený priestor.'},
+  factory:{name:'Podpora podnikov',icon:'🏭',cost:220,h:1,e:15,n:-5,desc:'Vznikli nové pracovné príležitosti, no výroba zaťažuje okolie.'},
+  school:{name:'Moderná škola',icon:'🏫',cost:200,h:9,e:5,n:0,desc:'Vzdelávanie zlepšuje život a budúcu produktivitu.'},
+  transport:{name:'Verejná doprava',icon:'🚌',cost:240,h:5,e:1,n:8,desc:'Doprava je dostupnejšia a mesto čistejšie.'},
+  clinic:{name:'Zdravotné stredisko',icon:'🏥',cost:260,h:13,e:0,n:0,desc:'Obyvatelia majú lepší prístup k zdravotným službám.'},
+  solar:{name:'Solárna energia',icon:'☀️',cost:250,h:1,e:3,n:12,desc:'Čistejšia energia zlepšuje dlhodobú udržateľnosť.'}
+};
+const incidents = [
+  {name:'Vlna horúčav',desc:'Horúčavy zhoršili podmienky v meste.',icon:'🌡️',apply:s=>{s.n-=3;s.h-=2;}},
+  {name:'Nový podnikateľ',desc:'Nová firma prináša príjmy a pracovné miesta.',icon:'🤝',apply:s=>{s.e+=4;s.b+=65;}},
+  {name:'Búrka',desc:'Opravy po búrke stáli peniaze.',icon:'🌧️',apply:s=>{s.b-=70;s.n-=2;}},
+  {name:'Mestský festival',desc:'Festival potešil ľudí a podporil miestne podniky.',icon:'🎉',apply:s=>{s.h+=5;s.e+=2;s.b+=25;}},
+  {name:'Grant na inovácie',desc:'Mesto získalo finančnú podporu.',icon:'💡',apply:s=>{s.b+=100;s.e+=2;}},
+  {name:'Dopravné zápchy',desc:'Obyvatelia sa sťažujú na hluk a dopravu.',icon:'🚗',apply:s=>{s.h-=4;s.n-=2;}}
+];
+let game, selected;
+function fresh(){
+  game={year:1,b:1000,h:60,e:50,n:50,log:[],used:[],done:false};
+  selected=null;
+  game.log.push({title:'Začína sa nová kapitola',desc:'Obyvatelia čakajú na tvoje prvé rozhodnutie.',icon:'📘',year:1});
+  $('event').innerHTML='<strong>📘 Nový začiatok</strong><p>Mesto má základné rezervy. Akú budúcnosť mu pripravíš?</p>';
+  $('ending').classList.remove('show');
+  render();
+}
+function clamp(x){return Math.max(0,Math.min(100,Math.round(x)));}
+function money(x){return '€ '+Math.round(x).toLocaleString('sk-SK');}
+function addLog(title,desc,icon='📘'){
+  game.log.unshift({title,desc,icon,year:Math.min(game.year,10)});
+  if(game.log.length>40)game.log.length=40;
+}
+function safe(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function render(){
+  $('budget').textContent=money(game.b);
+  $('happiness').textContent=game.h+'/100';
+  $('economy').textContent=game.e+'/100';
+  $('nature').textContent=game.n+'/100';
+  $('budgetBar').style.width=Math.max(0,Math.min(100,game.b/15))+'%';
+  $('happyBar').style.width=game.h+'%';
+  $('economyBar').style.width=game.e+'%';
+  $('natureBar').style.width=game.n+'%';
+  $('year').textContent=game.done?'Desaťročie dokončené':`Rok ${game.year} z 10`;
+  $('confirm').disabled=!selected||game.done;
+  $('hint').textContent=game.done?'Hra sa skončila. Začni znova.':selected?'Vybrané: '+projects[selected].name+'. Potvrď uzavretie roka.':'Vyber si investíciu.';
+  document.querySelectorAll('[data-id]').forEach(btn=>{
+    const p=projects[btn.dataset.id];
+    btn.disabled=game.done||!!selected||game.b<p.cost;
+    btn.classList.toggle('selected',selected===btn.dataset.id);
+  });
+  $('log').innerHTML=game.log.map(x=>`<article><strong>${safe(x.icon)} ${safe(x.title)} · Rok ${x.year}</strong><small>${safe(x.desc)}</small></article>`).join('');
+}
+function choose(id){
+  if(game.done||selected)return;
+  const p=projects[id];
+  if(!p||game.b<p.cost)return;
+  selected=id;
+  $('event').innerHTML=`<strong>${p.icon} ${p.name}</strong><p>Investícia stojí ${money(p.cost)}. Po uzavretí roka sa prejavia jej účinky.</p>`;
+  render();
+}
+function closeYear(){
+  if(!selected||game.done)return;
+  const p=projects[selected];
+  game.b-=p.cost;
+  game.h=clamp(game.h+p.h);
+  game.e=clamp(game.e+p.e);
+  game.n=clamp(game.n+p.n);
+  addLog(p.name,p.desc,p.icon);
+  const income=70+Math.round(game.e*1.2), upkeep=40;
+  game.b+=income-upkeep;
+  addLog('Ročné vyúčtovanie',`Príjmy ${money(income)}, prevádzkové výdavky ${money(upkeep)}. Čistá zmena: ${money(income-upkeep)}.`,'🧾');
+  if(game.year%2===0){
+    let available=incidents.map((x,i)=>({...x,id:i})).filter(x=>!game.used.includes(x.id));
+    if(!available.length){game.used=[];available=incidents.map((x,i)=>({...x,id:i}));}
+    const event=available[Math.floor(Math.random()*available.length)];
+    game.used.push(event.id);event.apply(game);
+    game.h=clamp(game.h);game.e=clamp(game.e);game.n=clamp(game.n);
+    addLog(event.name,event.desc,event.icon);
+    $('event').innerHTML=`<strong>${event.icon} ${event.name}</strong><p>${event.desc}</p>`;
+  }else{
+    $('event').innerHTML='<strong>🕊️ Pokojný rok</strong><p>Mesto nemalo mimoriadnu udalosť. Pokračuj podľa plánu.</p>';
+  }
+  selected=null;
+  if(game.b<0){game.b=0;game.h=clamp(game.h-6);game.e=clamp(game.e-4);addLog('Rozpočtový deficit','Mesto muselo obmedziť výdavky.','⚠️');}
+  if(game.year>=10)finish();
+  else game.year++;
+  render();
+}
+function finish(){
+  game.done=true;
+  const avg=Math.round((game.h+game.e+game.n)/3);
+  const score=clamp(avg*.8+Math.min(20,game.b/50));
+  let title,text;
+  if(avg>=80&&game.b>=200){title='🏆 Mesto, na ktoré môžeš byť hrdý!';text='Vyvážil si ekonomiku, spokojnosť aj prírodu. Mesto má pevný základ do budúcnosti.';}
+  else if(avg>=60){title='🌇 Mesto je na dobrej ceste.';text='Dosiahol si viacero dobrých výsledkov. Niektoré oblasti však potrebujú ďalšiu pozornosť.';}
+  else{title='🛠️ Mesto potrebuje nový plán.';text='Tvoje rozhodnutia priniesli náročné kompromisy. Skús inú stratégiu a pouč sa z kroniky.';}
+  $('endingTitle').textContent=title;
+  $('endingText').textContent=text;
+  $('score').textContent=`Skóre: ${score}/100 · Rozpočet: ${money(game.b)} · Priemer ukazovateľov: ${avg}/100`;
+  $('ending').classList.add('show');
+  $('event').innerHTML=`<strong>🏁 ${title}</strong><p>${text}</p>`;
+  addLog('Koniec desaťročia',`${title} Skóre ${score}/100.`,'🏁');
+}
+function save(){
+  try{localStorage.setItem('mestoZajtrajskajsGame',JSON.stringify({game,selected}));alert('Hra uložená v tomto prehliadači.');}
+  catch(e){alert('Uloženie nie je v tomto prehliadači dostupné.');}
+}
+function load(){
+  try{
+    const raw=localStorage.getItem('mestoZajtrajskajsGame');
+    if(!raw){alert('Nenašla sa uložená hra.');return;}
+    const data=JSON.parse(raw);
+    if(!data.game||!Array.isArray(data.game.log))throw new Error('Neplatné uloženie');
+    game=data.game;selected=null;render();alert('Hra načítaná.');
+  }catch(e){alert('Uloženú hru sa nepodarilo načítať.');}
+}
+document.querySelectorAll('[data-id]').forEach(btn=>btn.addEventListener('click',()=>choose(btn.dataset.id)));
+$('confirm').addEventListener('click',closeYear);
+$('start').addEventListener('click',()=>$('year').scrollIntoView({behavior:'smooth',block:'center'}));
+$('reset').addEventListener('click',()=>{if(!game.done&&!confirm('Naozaj začať novú hru?'))return;fresh();});
+$('again').addEventListener('click',fresh);
+
+// Save/load controls are available from the keyboard as well:
+// Ctrl/Cmd+S saves; Ctrl/Cmd+O loads the local game.
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save();}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='o'){e.preventDefault();load();}
+});
+const saveButton=document.createElement('button');
+saveButton.textContent='Uložiť hru';
+saveButton.addEventListener('click',save);
+const loadButton=document.createElement('button');
+loadButton.textContent='Načítať hru';
+loadButton.addEventListener('click',load);
+document.querySelector('header').append(saveButton,loadButton);
+fresh();
+</script>
+</body>
+</html>
