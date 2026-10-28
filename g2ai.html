@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ChromaAura: Interactive Cybernetic Sound & Visual Synthesizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050608;
+            font-family: 'Rajdhani', sans-serif;
+            color: #e2e8f0;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Glassmorphism Styling */
+        .glass-panel {
+            background: rgba(10, 11, 16, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-panel-light {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Glowing Effects */
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        }
+
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
+        }
+
+        .neon-text-pink {
+            text-shadow: 0 0 10px rgba(255, 0, 127, 0.7);
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 240, 255, 0.3);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 240, 255, 0.6);
+        }
+
+        /* Range Inputs */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+            border: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #00f0ff;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -5px;
+            box-shadow: 0 0 10px #00f0ff;
+            transition: transform 0.1s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Sequencer Grid Buttons */
+        .seq-step {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .seq-step.active {
+            background: linear-gradient(135deg, #00f0ff 0%, #7000ff 100%);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.8);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+        .seq-step.current {
+            border-color: #ff007f;
+            transform: scale(1.08);
+        }
+
+        /* Audio Spectrum overlay */
+        canvas#visualizerCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        canvas#hudCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* Modal animations */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        .modal-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+    </style>
+</head>
+<body class="bg-black text-slate-100 flex flex-col h-screen w-screen overflow-hidden">
+
+    <!-- Visualizer Background Canvas -->
+    <canvas id="visualizerCanvas"></canvas>
+    <!-- Overlay HUD Canvas for visual effects / dynamic waves -->
+    <canvas id="hudCanvas"></canvas>
+
+    <!-- Overlay Start Screen / Audio Enable Modal -->
+    <div id="startOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md transition-opacity duration-500">
+        <div class="glass-panel p-8 md:p-10 rounded-2xl max-w-lg w-11/12 text-center border border-cyan-500/30 shadow-[0_0_50px_rgba(0,240,255,0.2)]">
+            <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-tr from-cyan-500 to-pink-500 flex items-center justify-center shadow-[0_0_25px_rgba(0,240,255,0.5)]">
+                <i class="fa-solid fa-waveform-lines text-3xl text-white"></i>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-black font-orbitron tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500 mb-3">
+                CHROMAAURA
+            </h1>
+            <p class="text-slate-300 mb-8 text-sm md:text-base leading-relaxed">
+                Cybernetic Sound & Particle Visualizer. Experience polyphonic synth synthesis, step sequencing, fluid geometry, and reactive particle physics.
+            </p>
+            <button id="btnInitAudio" class="w-full py-4 px-6 rounded-xl font-orbitron font-bold text-lg bg-gradient-to-r from-cyan-500 via-indigo-600 to-pink-500 hover:from-cyan-400 hover:to-pink-400 text-white tracking-widest shadow-[0_0_20px_rgba(0,240,255,0.4)] hover:shadow-[0_0_30px_rgba(255,0,127,0.6)] transform hover:-translate-y-0.5 transition-all">
+                INITIALIZE AURA
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Header / Top Bar -->
+    <header class="relative z-10 flex items-center justify-between px-4 py-3 glass-panel border-b border-white/10">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center text-black font-black font-orbitron text-lg shadow-lg">
+                CA
+            </div>
+            <div>
+                <h1 class="text-lg font-orbitron font-bold tracking-wider text-white flex items-center gap-2">
+                    CHROMAAURA
+                    <span id="audioStatusBadge" class="text-[10px] font-sans font-normal px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AUDIO READY</span>
+                </h1>
+                <p class="text-xs text-slate-400 hidden sm:block">Synthesizer & Visual Fluid Physics</p>
+            </div>
+        </div>
+
+        <!-- Central Quick Actions -->
+        <div class="flex items-center gap-2 md:gap-4">
+            <button id="btnPlaySeq" class="px-4 py-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-sm font-semibold flex items-center gap-2 transition">
+                <i class="fa-solid fa-play" id="playSeqIcon"></i>
+                <span class="hidden sm:inline">SEQ PLAY</span>
+            </button>
+
+            <button id="btnRandomize" class="px-3 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-sm font-semibold flex items-center gap-2 transition" title="Randomize Parameters & Steps">
+                <i class="fa-solid fa-dice"></i>
+                <span class="hidden md:inline">RANDOM</span>
+            </button>
+
+            <!-- Presets Dropdown -->
+            <div class="relative">
+                <select id="presetSelect" class="bg-slate-900/80 text-cyan-300 text-xs md:text-sm font-medium px-3 py-2 rounded-lg border border-cyan-500/30 focus:outline-none focus:border-cyan-400 cursor-pointer">
+                    <option value="cyberpunk">Preset: Cyberpunk Synthwave</option>
+                    <option value="deepSpace">Preset: Deep Space Ambient</option>
+                    <option value="quantum">Preset: Quantum Fluid Storm</option>
+                    <option value="acid">Preset: Acid Prism Harmonograph</option>
+                </select>
+            </div>
+
+            <!-- UI Collapse Toggle -->
+            <button id="btnToggleUI" class="p-2 rounded-lg bg-slate-800/80 text-slate-300 hover:text-white border border-white/10 transition" title="Toggle Controls Overlay">
+                <i class="fa-solid fa-expand"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Controls Overlay (Floating Glass Panel Layout) -->
+    <div id="controlsContainer" class="relative z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 overflow-y-auto pointer-events-none transition-all duration-300">
+
+        <!-- Left Column: Synthesizer & Audio FX Controls -->
+        <div class="lg:col-span-4 flex flex-col gap-4 pointer-events-auto">
+
+            <!-- Polyphonic Synthesizer Panel -->
+            <div class="glass-panel p-4 rounded-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-white/10 pb-2">
+                    <h2 class="font-orbitron text-sm font-semibold text-cyan-400 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-xs"></i> SYNTH ENGINE
+                    </h2>
+                    <span class="text-xs text-slate-400">POLYPHONIC</span>
+                </div>
+
+                <!-- Waveform Selectors -->
+                <div>
+                    <label class="text-xs text-slate-400 mb-1.5 block">Waveform</label>
+                    <div class="grid grid-cols-4 gap-2" id="waveformContainer">
+                        <button data-wave="sine" class="wave-btn py-1.5 rounded bg-cyan-500/30 border border-cyan-400 text-cyan-300 text-xs font-semibold hover:bg-cyan-500/40 transition">Sine</button>
+                        <button data-wave="sawtooth" class="wave-btn py-1.5 rounded bg-slate-800 border border-white/10 text-slate-400 text-xs font-semibold hover:bg-slate-700 transition">Saw</button>
+                        <button data-wave="square" class="wave-btn py-1.5 rounded bg-slate-800 border border-white/10 text-slate-400 text-xs font-semibold hover:bg-slate-700 transition">Square</button>
+                        <button data-wave="triangle" class="wave-btn py-1.5 rounded bg-slate-800 border border-white/10 text-slate-400 text-xs font-semibold hover:bg-slate-700 transition">Tri</button>
+                    </div>
+                </div>
+
+                <!-- Sliders for Envelope & Master Params -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Attack</span>
+                            <span id="attackVal" class="text-cyan-300">0.05s</span>
+                        </div>
+                        <input type="range" id="paramAttack" min="0.001" max="1" step="0.01" value="0.05">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Release</span>
+                            <span id="releaseVal" class="text-cyan-300">0.8s</span>
+                        </div>
+                        <input type="range" id="paramRelease" min="0.1" max="3" step="0.05" value="0.8">
+                    </div>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Cutoff Filter</span>
+                            <span id="cutoffVal" class="text-pink-400">2400Hz</span>
+                        </div>
+                        <input type="range" id="paramCutoff" min="100" max="10000" step="50" value="2400">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Resonance</span>
+                            <span id="resVal" class="text-pink-400">3.0</span>
+                        </div>
+                        <input type="range" id="paramResonance" min="0.1" max="15" step="0.1" value="3.0">
+                    </div>
+                </div>
+
+                <!-- Audio FX Chain -->
+                <div class="border-t border-white/10 pt-3 grid grid-cols-2 gap-3">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Delay Mix</span>
+                            <span id="delayVal" class="text-purple-300">35%</span>
+                        </div>
+                        <input type="range" id="paramDelay" min="0" max="0.8" step="0.02" value="0.35">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Reverb Mix</span>
+                            <span id="reverbVal" class="text-purple-300">45%</span>
+                        </div>
+                        <input type="range" id="paramReverb" min="0" max="0.9" step="0.02" value="0.45">
+                    </div>
+                </div>
+
+                <!-- Input Microphone Toggle -->
+                <div class="flex items-center justify-between border-t border-white/10 pt-3">
+                    <span class="text-xs text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-microphone text-cyan-400"></i> Mic Visualizer Input
+                    </span>
+                    <button id="btnToggleMic" class="px-3 py-1 rounded bg-slate-800 text-xs font-semibold text-slate-400 border border-white/10 hover:border-cyan-400 transition">
+                        ENABLE
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step Sequencer Panel -->
+            <div class="glass-panel p-4 rounded-xl space-y-3">
+                <div class="flex items-center justify-between border-b border-white/10 pb-2">
+                    <h2 class="font-orbitron text-sm font-semibold text-pink-400 flex items-center gap-2">
+                        <i class="fa-solid fa-cubes text-xs"></i> GENERATIVE SEQUENCER
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <span id="bpmVal" class="text-xs text-pink-300 font-mono">120 BPM</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">Tempo (BPM)</label>
+                        <input type="range" id="paramBpm" min="60" max="200" step="1" value="120">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">Musical Scale</label>
+                        <select id="scaleSelect" class="w-full bg-slate-900 text-pink-300 text-xs px-2 py-1.5 rounded border border-white/10 focus:outline-none">
+                            <option value="pentatonic">Minor Pentatonic</option>
+                            <option value="japanese">Insen (Japanese)</option>
+                            <option value="cyber">Cyber Synth (Dorian)</option>
+                            <option value="ambient">Ambient Lydian</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 16-step grid for 4 note rows -->
+                <div class="space-y-1.5 pt-2" id="sequencerGrid">
+                    <!-- Note rows generated via JS -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Middle Column: Canvas Play Area (Space for visualization) -->
+        <div class="lg:col-span-5 flex flex-col justify-between pointer-events-none min-h-[250px]">
+            <!-- Dynamic HUD Header Overlay -->
+            <div class="glass-panel p-3 rounded-xl flex items-center justify-between pointer-events-auto">
+                <div class="flex items-center gap-2 text-xs">
+                    <i class="fa-solid fa-circle-dot text-emerald-400 animate-pulse"></i>
+                    <span class="text-slate-300">TOUCH / DRAG CANVAS TO GENERATE HARMONICS</span>
+                </div>
+                <div id="freqStats" class="text-[11px] font-mono text-cyan-400 hidden sm:block">
+                    B: 000 | M: 000 | T: 000
+                </div>
+            </div>
+
+            <!-- Instructions Overlay Footer -->
+            <div class="glass-panel p-3 rounded-xl flex items-center justify-between text-xs text-slate-400 pointer-events-auto">
+                <span>Multi-touch & cursor reactive fluid dynamics</span>
+                <span class="font-mono text-pink-400">Audio FFT Active</span>
+            </div>
+        </div>
+
+        <!-- Right Column: Visual Physics & Palette Controls -->
+        <div class="lg:col-span-3 flex flex-col gap-4 pointer-events-auto">
+
+            <!-- Visual Physics Engine Settings -->
+            <div class="glass-panel p-4 rounded-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-white/10 pb-2">
+                    <h2 class="font-orbitron text-sm font-semibold text-purple-400 flex items-center gap-2">
+                        <i class="fa-solid fa-eye text-xs"></i> VISUAL ENGINE
+                    </h2>
+                </div>
+
+                <div>
+                    <label class="text-xs text-slate-400 mb-1.5 block">Visualization Mode</label>
+                    <div class="grid grid-cols-2 gap-2" id="visModeContainer">
+                        <button data-mode="fluid" class="vis-btn py-1.5 px-2 rounded bg-purple-500/30 border border-purple-400 text-purple-300 text-xs font-semibold hover:bg-purple-500/40 transition">Cyber Fluid</button>
+                        <button data-mode="harmonograph" class="vis-btn py-1.5 px-2 rounded bg-slate-800 border border-white/10 text-slate-400 text-xs font-semibold hover:bg-slate-700 transition">Harmonograph</button>
+                        <button data-mode="kaleidoscope" class="vis-btn py-1.5 px-2 rounded bg-slate-800 border border-white/10 text-slate-400 text-xs font-semibold hover:bg-slate-700 transition">Kaleidoscope</button>
+                        <button data-mode="quantum" class="vis-btn py-1.5 px-2 rounded bg-slate-800 border border-white/10 text-slate-400 text-xs font-semibold hover:bg-slate-700 transition">Quantum Field</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs text-slate-400 mb-1.5 block">Color Palette</label>
+                    <select id="paletteSelect" class="w-full bg-slate-900 text-purple-300 text-xs px-2 py-1.5 rounded border border-white/10 focus:outline-none">
+                        <option value="cyberpunk">Neon Cyberpunk</option>
+                        <option value="aurora">Sunset Aurora</option>
+                        <option value="deepSpace">Deep Space Cosmic</option>
+                        <option value="acid">Prism Acid</option>
+                        <option value="biolum">Bioluminescence</option>
+                    </select>
+                </div>
+
+                <!-- Particle Sensitivity Sliders -->
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Audio Reactivity</span>
+                            <span id="reactVal" class="text-purple-300">1.5x</span>
+                        </div>
+                        <input type="range" id="paramReactivity" min="0.2" max="3.0" step="0.1" value="1.5">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Particle Decay / Trail</span>
+                            <span id="trailVal" class="text-purple-300">0.12</span>
+                        </div>
+                        <input type="range" id="paramTrail" min="0.03" max="0.4" step="0.01" value="0.12">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">Particle Density</span>
+                            <span id="densityVal" class="text-purple-300">250</span>
+                        </div>
+                        <input type="range" id="paramDensity" min="100" max="600" step="20" value="250">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export & Record Panel -->
+            <div class="glass-panel p-4 rounded-xl space-y-3">
+                <h2 class="font-orbitron text-xs font-semibold text-slate-300 border-b border-white/10 pb-2">
+                    RECORD & EXPORT
+                </h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="btnCaptureHD" class="py-2 px-3 rounded bg-slate-800 hover:bg-slate-700 text-xs font-medium border border-white/10 text-cyan-300 flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-camera"></i> HD Image
+                    </button>
+                    <button id="btnRecordAudio" class="py-2 px-3 rounded bg-pink-500/20 hover:bg-pink-500/30 text-xs font-medium border border-pink-500/40 text-pink-300 flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-circle" id="recIcon"></i> <span id="recText">Rec Audio</span>
+                    </button>
+                </div>
+                <div id="recordingStatus" class="text-[11px] text-center text-slate-400 hidden">
+                    Recording audio... <span id="recTimer" class="font-mono text-pink-400">00:00</span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 glass-panel px-4 py-3 rounded-xl border border-cyan-500/40 text-sm text-cyan-200 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-3">
+        <i class="fa-solid fa-circle-info text-cyan-400"></i>
+        <span id="toastMsg">Notification message</span>
+    </div>
+
+    <!-- JavaScript Implementation -->
+    <script>
+        /**
+         * CHROMAAURA - Audio-Visual Synthesis & Physics Engine
+         */
+
+        // Global State & Configurations
+        const CONFIG = {
+            scaleNotes: {
+                pentatonic: [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25], // C4 Minor Pentatonic
+                japanese: [261.63, 277.18, 349.23, 392.00, 415.30, 523.25, 554.37, 698.46],  // Insen Scale
+                cyber: [293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33],      // D Dorian
+                ambient: [261.63, 293.66, 329.63, 370.00, 392.00, 440.00, 493.88, 523.25]     // C Lydian
+            },
+            palettes: {
+                cyberpunk: ['#00f0ff', '#7000ff', '#ff007f', '#fcee0a', '#00ff66'],
+                aurora: ['#ff7e5f', '#feb47b', '#86a8e7', '#91eae4', '#7f00ff'],
+                deepSpace: ['#00c6ff', '#0072ff', '#240b36', '#c31432', '#6a11cb'],
+                acid: ['#3a7bd5', '#3a6073', '#00d2ff', '#92fe9d', '#00c9ff'],
+                biolum: ['#00f2fe', '#4facfe', '#00c6ff', '#0072ff', '#108dc7']
+            }
+        };
+
+        // Audio Engine Core
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.masterGain = null;
+                this.analyser = null;
+                this.filter = null;
+                this.delayNode = null;
+                this.delayGain = null;
+                this.reverbNode = null;
+                this.reverbGain = null;
+                this.micStream = null;
+                this.micSource = null;
+                this.isMicActive = false;
+
+                this.waveform = 'sine';
+                this.attack = 0.05;
+                this.release = 0.8;
+                this.scale = 'pentatonic';
+
+                this.mediaRecorder = null;
+                this.audioChunks = [];
+                this.isRecording = false;
+            }
+
+            init() {
+                if (this.ctx) return;
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioCtx();
+
+                // Master Gain
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.setValueAtTime(0.7, this.ctx.currentTime);
+
+                // Analyser Node for Visual FFT
+                this.analyser = this.ctx.createAnalyser();
+                this.analyser.fftSize = 256;
+                this.analyser.smoothingTimeConstant = 0.8;
+
+                // Lowpass Filter
+                this.filter = this.ctx.createBiquadFilter();
+                this.filter.type = 'lowpass';
+                this.filter.frequency.setValueAtTime(2400, this.ctx.currentTime);
+                this.filter.Q.setValueAtTime(3.0, this.ctx.currentTime);
+
+                // Delay Node Setup
+                this.delayNode = this.ctx.createDelay();
+                this.delayNode.delayTime.setValueAtTime(0.25, this.ctx.currentTime);
+                this.delayGain = this.ctx.createGain();
+                this.delayGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+
+                // Simple Reverb Setup via Convolver Buffer Synthesis
+                this.reverbNode = this.ctx.createConvolver();
+                this.reverbNode.buffer = this.createImpulseResponse(2.5, 2.0);
+                this.reverbGain = this.ctx.createGain();
+                this.reverbGain.gain.setValueAtTime(0.45, this.ctx.currentTime);
+
+                // Routing Connections
+                // Synth Nodes -> Filter -> Analyser -> Delay/Reverb -> Master Output
+                this.filter.connect(this.analyser);
+
+                // Delay Feedback Loop
+                this.analyser.connect(this.delayNode);
+                this.delayNode.connect(this.delayGain);
+                this.delayGain.connect(this.delayNode);
+                this.delayGain.connect(this.masterGain);
+
+                // Reverb Chain
+                this.analyser.connect(this.reverbNode);
+                this.reverbNode.connect(this.reverbGain);
+                this.reverbGain.connect(this.masterGain);
+
+                // Direct Dry Signal
+                this.analyser.connect(this.masterGain);
+
+                // Master Output
+                this.masterGain.connect(this.ctx.destination);
+            }
+
+            createImpulseResponse(duration, decay) {
+                const sampleRate = this.ctx.sampleRate;
+                const length = sampleRate * duration;
+                const impulse = this.ctx.createBuffer(2, length, sampleRate);
+                const left = impulse.getChannelData(0);
+                const right = impulse.getChannelData(1);
+
+                for (let i = 0; i < length; i++) {
+                    const n = length - i;
+                    left[i] = (Math.random() * 2 - 1) * Math.pow(n / length, decay);
+                    right[i] = (Math.random() * 2 - 1) * Math.pow(n / length, decay);
+                }
+                return impulse;
+            }
+
+            playTone(freq, volume = 0.5) {
+                if (!this.ctx) return;
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                const osc = this.ctx.createOscillator();
+                const noteGain = this.ctx.createGain();
+
+                osc.type = this.waveform;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+                // Envelope calculation
+                const now = this.ctx.currentTime;
+                noteGain.gain.setValueAtTime(0, now);
+                noteGain.gain.linearRampToValueAtTime(volume, now + parseFloat(this.attack));
+                noteGain.gain.exponentialRampToValueAtTime(0.0001, now + parseFloat(this.attack) + parseFloat(this.release));
+
+                osc.connect(noteGain);
+                noteGain.connect(this.filter);
+
+                osc.start(now);
+                osc.stop(now + parseFloat(this.attack) + parseFloat(this.release) + 0.1);
+            }
+
+            async toggleMicrophone() {
+                if (this.isMicActive) {
+                    if (this.micStream) {
+                        this.micStream.getTracks().forEach(track => track.stop());
+                    }
+                    this.isMicActive = false;
+                    return false;
+                } else {
+                    try {
+                        this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                        this.micSource = this.ctx.createMediaStreamSource(this.micStream);
+                        this.micSource.connect(this.analyser);
+                        this.isMicActive = true;
+                        return true;
+                    } catch (err) {
+                        console.error('Mic access denied:', err);
+                        return false;
+                    }
+                }
+            }
+
+            getFFTData() {
+                if (!this.analyser) return { bass: 0, mid: 0, treble: 0, raw: [] };
+                const bufferLength = this.analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                this.analyser.getByteFrequencyData(dataArray);
+
+                // Frequency band separation
+                let bassSum = 0, midSum = 0, trebleSum = 0;
+                const third = Math.floor(bufferLength / 3);
+
+                for (let i = 0; i < bufferLength; i++) {
+                    if (i < third) bassSum += dataArray[i];
+                    else if (i < third * 2) midSum += dataArray[i];
+                    else trebleSum += dataArray[i];
+                }
+
+                return {
+                    bass: bassSum / third,
+                    mid: midSum / third,
+                    treble: trebleSum / third,
+                    raw: dataArray
+                };
+            }
+
+            startRecording() {
+                if (!this.ctx || this.isRecording) return;
+                const dest = this.ctx.createMediaStreamDestination();
+                this.masterGain.connect(dest);
+                this.mediaRecorder = new MediaRecorder(dest.stream);
+                this.audioChunks = [];
+
+                this.mediaRecorder.ondataavailable = (evt) => {
+                    if (evt.data.size > 0) this.audioChunks.push(evt.data);
+                };
+
+                this.mediaRecorder.onstop = () => {
+                    const blob = new Blob(this.audioChunks, { type: 'audio/wav' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ChromaAura-Session-${Date.now()}.wav`;
+                    a.click();
+                };
+
+                this.mediaRecorder.start();
+                this.isRecording = true;
+            }
+
+            stopRecording() {
+                if (this.mediaRecorder && this.isRecording) {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                }
+            }
+        }
+
+        // Particle Class for Physics Simulation
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.originX = x;
+                this.originY = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.radius = Math.random() * 3 + 1.5;
+                this.color = color;
+                this.life = 1.0;
+                this.decay = Math.random() * 0.015 + 0.005;
+                this.angle = Math.random() * Math.PI * 2;
+            }
+
+            update(fft, mode) {
+                this.life -= this.decay;
+
+                // Physics movement based on mode and FFT
+                const force = (fft.bass / 255) * 2.5;
+
+                if (mode === 'fluid') {
+                    this.vx += Math.cos(this.angle) * 0.2 * force;
+                    this.vy += Math.sin(this.angle) * 0.2 * force;
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vx *= 0.95;
+                    this.vy *= 0.95;
+                    this.angle += 0.05;
+                } else if (mode === 'quantum') {
+                    this.x += (Math.random() - 0.5) * force * 6;
+                    this.y += (Math.random() - 0.5) * force * 6;
+                } else {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Visual Engine Core
+        class VisualEngine {
+            constructor(canvas, hudCanvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.hudCanvas = hudCanvas;
+                this.hudCtx = hudCanvas.getContext('2d');
+
+                this.mode = 'fluid';
+                this.paletteName = 'cyberpunk';
+                this.colors = CONFIG.palettes.cyberpunk;
+
+                this.particles = [];
+                this.reactivity = 1.5;
+                this.trailDecay = 0.12;
+                this.maxParticles = 250;
+
+                this.harmonographAngle = 0;
+                this.resize();
+
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            resize() {
+                this.width = this.canvas.width = this.hudCanvas.width = window.innerWidth;
+                this.height = this.canvas.height = this.hudCanvas.height = window.innerHeight;
+            }
+
+            spawnParticles(x, y, count = 10) {
+                for (let i = 0; i < count; i++) {
+                    if (this.particles.length >= this.maxParticles) {
+                        this.particles.shift();
+                    }
+                    const color = this.colors[Math.floor(Math.random() * this.colors.length)];
+                    this.particles.push(new Particle(x, y, color));
+                }
+            }
+
+            render(fft) {
+                // Background trail fade effect
+                this.ctx.fillStyle = `rgba(5, 6, 8, ${this.trailDecay})`;
+                this.ctx.fillRect(0, 0, this.width, this.height);
+
+                this.hudCtx.clearRect(0, 0, this.width, this.height);
+
+                const center = { x: this.width / 2, y: this.height / 2 };
+
+                // Render based on selected Visual Mode
+                if (this.mode === 'fluid' || this.mode === 'quantum') {
+                    // Update and render particles
+                    for (let i = this.particles.length - 1; i >= 0; i--) {
+                        const p = this.particles[i];
+                        p.update(fft, this.mode);
+                        p.draw(this.ctx);
+                        if (p.life <= 0) this.particles.splice(i, 1);
+                    }
+                } else if (this.mode === 'harmonograph') {
+                    this.renderHarmonograph(center, fft);
+                } else if (this.mode === 'kaleidoscope') {
+                    this.renderKaleidoscope(center, fft);
+                }
+
+                // Render HUD Elements (Spectrum Line)
+                this.renderHUD(fft);
+            }
+
+            renderHarmonograph(center, fft) {
+                this.harmonographAngle += 0.02 + (fft.bass / 255) * 0.05;
+                const a1 = 2, f1 = 3, p1 = this.harmonographAngle;
+                const a2 = 2, f2 = 2, p2 = this.harmonographAngle * 0.5;
+
+                const scale = Math.min(this.width, this.height) * 0.3 * (1 + (fft.mid / 255) * 0.4);
+
+                this.ctx.save();
+                this.ctx.translate(center.x, center.y);
+                this.ctx.beginPath();
+                this.ctx.strokeStyle = this.colors[0];
+                this.ctx.lineWidth = 2;
+                this.ctx.shadowBlur = 15;
+                this.ctx.shadowColor = this.colors[1];
+
+                for (let t = 0; t < Math.PI * 4; t += 0.02) {
+                    const x = scale * Math.sin(f1 * t + p1);
+                    const y = scale * Math.sin(f2 * t + p2);
+                    if (t === 0) this.ctx.moveTo(x, y);
+                    else this.ctx.lineTo(x, y);
+                }
+                this.ctx.stroke();
+                this.ctx.restore();
+            }
+
+            renderKaleidoscope(center, fft) {
+                const numPetals = 8;
+                const radius = (fft.treble / 255) * 150 + 50;
+
+                this.ctx.save();
+                this.ctx.translate(center.x, center.y);
+
+                for (let i = 0; i < numPetals; i++) {
+                    this.ctx.rotate((Math.PI * 2) / numPetals);
+                    this.ctx.beginPath();
+                    this.ctx.strokeStyle = this.colors[i % this.colors.length];
+                    this.ctx.lineWidth = 3;
+                    this.ctx.arc(radius, 0, 30 + (fft.bass / 255) * 40, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
+                this.ctx.restore();
+            }
+
+            renderHUD(fft) {
+                if (!fft.raw || fft.raw.length === 0) return;
+
+                const ctx = this.hudCtx;
+                const sliceWidth = this.width / fft.raw.length;
+                let x = 0;
+
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+                ctx.beginPath();
+
+                for (let i = 0; i < fft.raw.length; i++) {
+                    const v = fft.raw[i] / 255.0;
+                    const y = this.height - (v * this.height * 0.25);
+
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+
+                    x += sliceWidth;
+                }
+
+                ctx.lineTo(this.width, this.height);
+                ctx.stroke();
+            }
+
+            captureScreenshot() {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = this.width;
+                tempCanvas.height = this.height;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                // Draw background
+                tempCtx.fillStyle = '#050608';
+                tempCtx.fillRect(0, 0, this.width, this.height);
+
+                // Draw visual layer
+                tempCtx.drawImage(this.canvas, 0, 0);
+                tempCtx.drawImage(this.hudCanvas, 0, 0);
+
+                const image = tempCanvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = `ChromaAura-Art-${Date.now()}.png`;
+                link.href = image;
+                link.click();
+            }
+        }
+
+        // Step Sequencer Engine
+        class StepSequencer {
+            constructor(audioEngine, visualEngine) {
+                this.audio = audioEngine;
+                this.visual = visualEngine;
+                this.steps = 16;
+                this.rows = 4;
+                this.grid = Array(this.rows).fill(null).map(() => Array(this.steps).fill(false));
+                this.currentStep = 0;
+                this.bpm = 120;
+                this.isPlaying = false;
+                this.timer = null;
+
+                // Pre-populate default interesting grid pattern
+                this.grid[0][0] = true;
+                this.grid[0][4] = true;
+                this.grid[0][8] = true;
+                this.grid[0][12] = true;
+                this.grid[1][2] = true;
+                this.grid[1][6] = true;
+                this.grid[1][10] = true;
+                this.grid[2][14] = true;
+            }
+
+            start() {
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+                this.currentStep = 0;
+                this.tick();
+            }
+
+            stop() {
+                this.isPlaying = false;
+                if (this.timer) clearTimeout(this.timer);
+            }
+
+            toggle() {
+                if (this.isPlaying) this.stop();
+                else this.start();
+                return this.isPlaying;
+            }
+
+            tick() {
+                if (!this.isPlaying) return;
+
+                const scaleNotes = CONFIG.scaleNotes[this.audio.scale] || CONFIG.scaleNotes.pentatonic;
+
+                // Trigger notes for active grid steps in current column
+                for (let row = 0; row < this.rows; row++) {
+                    if (this.grid[row][this.currentStep]) {
+                        const noteFreq = scaleNotes[row % scaleNotes.length];
+                        this.audio.playTone(noteFreq, 0.4);
+
+                        // Trigger visual particles on step hit
+                        const x = (window.innerWidth / this.steps) * this.currentStep + 20;
+                        const y = (window.innerHeight / (this.rows + 1)) * (row + 1);
+                        this.visual.spawnParticles(x, y, 15);
+                    }
+                }
+
+                // Update UI current step highlighting
+                this.updateStepUI();
+
+                this.currentStep = (this.currentStep + 1) % this.steps;
+
+                const interval = (60 / this.bpm / 4) * 1000;
+                this.timer = setTimeout(() => this.tick(), interval);
+            }
+
+            updateStepUI() {
+                const stepEls = document.querySelectorAll('.seq-step');
+                stepEls.forEach(el => {
+                    const step = parseInt(el.dataset.step);
+                    if (step === this.currentStep) {
+                        el.classList.add('current');
+                    } else {
+                        el.classList.remove('current');
+                    }
+                });
+            }
+
+            randomize() {
+                for (let r = 0; r < this.rows; r++) {
+                    for (let s = 0; s < this.steps; s++) {
+                        this.grid[r][s] = Math.random() < 0.25;
+                    }
+                }
+            }
+        }
+
+        // Application Controller & Interface Initialization
+        class AppController {
+            constructor() {
+                this.audio = new AudioEngine();
+                this.visual = new VisualEngine(
+                    document.getElementById('visualizerCanvas'),
+                    document.getElementById('hudCanvas')
+                );
+                this.sequencer = new StepSequencer(this.audio, this.visual);
+
+                this.initUI();
+                this.bindEvents();
+                this.animate();
+            }
+
+            initUI() {
+                // Build Sequencer UI Grid
+                const gridContainer = document.getElementById('sequencerGrid');
+                gridContainer.innerHTML = '';
+
+                for (let r = 0; r < this.sequencer.rows; r++) {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'grid grid-cols-16 gap-1';
+
+                    for (let s = 0; s < this.sequencer.steps; s++) {
+                        const btn = document.createElement('button');
+                        btn.className = `seq-step h-6 rounded-sm border border-white/10 bg-slate-900/80 hover:border-cyan-400 ${this.sequencer.grid[r][s] ? 'active' : ''}`;
+                        btn.dataset.row = r;
+                        btn.dataset.step = s;
+
+                        btn.addEventListener('click', () => {
+                            this.sequencer.grid[r][s] = !this.sequencer.grid[r][s];
+                            btn.classList.toggle('active', this.sequencer.grid[r][s]);
+                        });
+
+                        rowDiv.appendChild(btn);
+                    }
+                    gridContainer.appendChild(rowDiv);
+                }
+            }
+
+            bindEvents() {
+                // Initialize Audio Context on user gesture
+                document.getElementById('btnInitAudio').addEventListener('click', () => {
+                    this.audio.init();
+                    document.getElementById('startOverlay').classList.add('opacity-0', 'pointer-events-none');
+                    this.showToast("ChromaAura Initialized");
+                });
+
+                // Audio Parameter Controls
+                document.getElementById('waveformContainer').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('wave-btn')) {
+                        document.querySelectorAll('.wave-btn').forEach(b => {
+                            b.className = 'wave-btn py-1.5 rounded bg-slate-800 border border-white/10 text-slate-400 text-xs font-semibold hover:bg-slate-700 transition';
+                        });
+                        e.target.className = 'wave-btn py-1.5 rounded bg-cyan-500/30 border border-cyan-400 text-cyan-300 text-xs font-semibold hover:bg-cyan-500/40 transition';
+                        this.audio.waveform = e.target.dataset.wave;
+                    }
+                });
+
+                document.getElementById('paramAttack').addEventListener('input', (e) => {
+                    this.audio.attack = e.target.value;
+                    document.getElementById('attackVal').innerText = `${e.target.value}s`;
+                });
+
+                document.getElementById('paramRelease').addEventListener('input', (e) => {
+                    this.audio.release = e.target.value;
+                    document.getElementById('releaseVal').innerText = `${e.target.value}s`;
+                });
+
+                document.getElementById('paramCutoff').addEventListener('input', (e) => {
+                    if (this.audio.filter) this.audio.filter.frequency.setValueAtTime(e.target.value, this.audio.ctx.currentTime);
+                    document.getElementById('cutoffVal').innerText = `${e.target.value}Hz`;
+                });
+
+                document.getElementById('paramResonance').addEventListener('input', (e) => {
+                    if (this.audio.filter) this.audio.filter.Q.setValueAtTime(e.target.value, this.audio.ctx.currentTime);
+                    document.getElementById('resVal').innerText = e.target.value;
+                });
+
+                document.getElementById('paramDelay').addEventListener('input', (e) => {
+                    if (this.audio.delayGain) this.audio.delayGain.gain.setValueAtTime(e.target.value, this.audio.ctx.currentTime);
+                    document.getElementById('delayVal').innerText = `${Math.round(e.target.value * 100)}%`;
+                });
+
+                document.getElementById('paramReverb').addEventListener('input', (e) => {
+                    if (this.audio.reverbGain) this.audio.reverbGain.gain.setValueAtTime(e.target.value, this.audio.ctx.currentTime);
+                    document.getElementById('reverbVal').innerText = `${Math.round(e.target.value * 100)}%`;
+                });
+
+                // Sequencer & Scale controls
+                document.getElementById('btnPlaySeq').addEventListener('click', () => {
+                    const isPlaying = this.sequencer.toggle();
+                    const icon = document.getElementById('playSeqIcon');
+                    icon.className = isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+                });
+
+                document.getElementById('paramBpm').addEventListener('input', (e) => {
+                    this.sequencer.bpm = parseInt(e.target.value);
+                    document.getElementById('bpmVal').innerText = `${e.target.value} BPM`;
+                });
+
+                document.getElementById('scaleSelect').addEventListener('change', (e) => {
+                    this.audio.scale = e.target.value;
+                });
+
+                document.getElementById('btnRandomize').addEventListener('click', () => {
+                    this.sequencer.randomize();
+                    this.initUI();
+                    this.showToast("Randomized Sequencer Steps");
+                });
+
+                // Visual Engine Controls
+                document.getElementById('visModeContainer').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('vis-btn')) {
+                        document.querySelectorAll('.vis-btn').forEach(b => {
+                            b.className = 'vis-btn py-1.5 px-2 rounded bg-slate-800 border border-white/10 text-slate-400 text-xs font-semibold hover:bg-slate-700 transition';
+                        });
+                        e.target.className = 'vis-btn py-1.5 px-2 rounded bg-purple-500/30 border border-purple-400 text-purple-300 text-xs font-semibold hover:bg-purple-500/40 transition';
+                        this.visual.mode = e.target.dataset.mode;
+                    }
+                });
+
+                document.getElementById('paletteSelect').addEventListener('change', (e) => {
+                    const paletteKey = e.target.value;
+                    this.visual.colors = CONFIG.palettes[paletteKey];
+                });
+
+                document.getElementById('paramReactivity').addEventListener('input', (e) => {
+                    this.visual.reactivity = parseFloat(e.target.value);
+                    document.getElementById('reactVal').innerText = `${e.target.value}x`;
+                });
+
+                document.getElementById('paramTrail').addEventListener('input', (e) => {
+                    this.visual.trailDecay = parseFloat(e.target.value);
+                    document.getElementById('trailVal').innerText = e.target.value;
+                });
+
+                document.getElementById('paramDensity').addEventListener('input', (e) => {
+                    this.visual.maxParticles = parseInt(e.target.value);
+                    document.getElementById('densityVal').innerText = e.target.value;
+                });
+
+                // Interactive Touch/Mouse Canvas Synth trigger
+                const handlePointer = (e) => {
+                    if (!this.audio.ctx) return;
+                    const x = e.clientX || (e.touches && e.touches[0].clientX);
+                    const y = e.clientY || (e.touches && e.touches[0].clientY);
+
+                    if (!x || !y) return;
+
+                    // Map X to Pitch Scale, Y to Volume
+                    const scaleNotes = CONFIG.scaleNotes[this.audio.scale];
+                    const noteIdx = Math.floor((x / window.innerWidth) * scaleNotes.length);
+                    const freq = scaleNotes[Math.min(noteIdx, scaleNotes.length - 1)];
+                    const vol = Math.max(0.1, 1 - (y / window.innerHeight));
+
+                    this.audio.playTone(freq, vol * 0.5);
+                    this.visual.spawnParticles(x, y, 12);
+                };
+
+                window.addEventListener('mousedown', (e) => {
+                    if (e.target.tagName === 'CANVAS') handlePointer(e);
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (e.buttons === 1 && e.target.tagName === 'CANVAS') {
+                        handlePointer(e);
+                    }
+                });
+
+                window.addEventListener('touchstart', (e) => {
+                    if (e.target.tagName === 'CANVAS') handlePointer(e);
+                }, { passive: true });
+
+                // Mic Input
+                document.getElementById('btnToggleMic').addEventListener('click', async () => {
+                    const active = await this.audio.toggleMicrophone();
+                    const btn = document.getElementById('btnToggleMic');
+                    btn.innerText = active ? 'DISABLE' : 'ENABLE';
+                    btn.className = active ?
+                        'px-3 py-1 rounded bg-emerald-500/30 text-xs font-semibold text-emerald-300 border border-emerald-400 transition' :
+                        'px-3 py-1 rounded bg-slate-800 text-xs font-semibold text-slate-400 border border-white/10 hover:border-cyan-400 transition';
+                    this.showToast(active ? "Microphone input active" : "Microphone disabled");
+                });
+
+                // Preset Switcher
+                document.getElementById('presetSelect').addEventListener('change', (e) => {
+                    this.loadPreset(e.target.value);
+                });
+
+                // Record & Capture Buttons
+                document.getElementById('btnCaptureHD').addEventListener('click', () => {
+                    this.visual.captureScreenshot();
+                    this.showToast("HD Canvas Screenshot Exported");
+                });
+
+                document.getElementById('btnRecordAudio').addEventListener('click', () => {
+                    const recText = document.getElementById('recText');
+                    const recIcon = document.getElementById('recIcon');
+                    const status = document.getElementById('recordingStatus');
+
+                    if (!this.audio.isRecording) {
+                        this.audio.startRecording();
+                        recText.innerText = 'Stop Rec';
+                        recIcon.className = 'fa-solid fa-square text-red-500 animate-pulse';
+                        status.classList.remove('hidden');
+                        this.showToast("Recording Audio Session...");
+                    } else {
+                        this.audio.stopRecording();
+                        recText.innerText = 'Rec Audio';
+                        recIcon.className = 'fa-solid fa-circle';
+                        status.classList.add('hidden');
+                        this.showToast("Exporting WAV Audio File...");
+                    }
+                });
+
+                // UI Collapse Toggle
+                document.getElementById('btnToggleUI').addEventListener('click', () => {
+                    const container = document.getElementById('controlsContainer');
+                    container.classList.toggle('opacity-0');
+                    container.classList.toggle('pointer-events-none');
+                });
+            }
+
+            loadPreset(name) {
+                if (name === 'cyberpunk') {
+                    this.audio.waveform = 'sawtooth';
+                    this.audio.scale = 'cyber';
+                    this.visual.mode = 'fluid';
+                    this.visual.colors = CONFIG.palettes.cyberpunk;
+                } else if (name === 'deepSpace') {
+                    this.audio.waveform = 'sine';
+                    this.audio.scale = 'ambient';
+                    this.visual.mode = 'quantum';
+                    this.visual.colors = CONFIG.palettes.deepSpace;
+                } else if (name === 'quantum') {
+                    this.audio.waveform = 'square';
+                    this.audio.scale = 'pentatonic';
+                    this.visual.mode = 'kaleidoscope';
+                    this.visual.colors = CONFIG.palettes.aurora;
+                } else if (name === 'acid') {
+                    this.audio.waveform = 'triangle';
+                    this.audio.scale = 'japanese';
+                    this.visual.mode = 'harmonograph';
+                    this.visual.colors = CONFIG.palettes.acid;
+                }
+                this.showToast(`Preset loaded: ${name}`);
+            }
+
+            showToast(msg) {
+                const toast = document.getElementById('toast');
+                document.getElementById('toastMsg').innerText = msg;
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            }
+
+            animate() {
+                const fft = this.audio.getFFTData();
+
+                // Update Real-time Frequency HUD Text
+                document.getElementById('freqStats').innerText =
+                    `B: ${Math.round(fft.bass).toString().padStart(3, '0')} | ` +
+                    `M: ${Math.round(fft.mid).toString().padStart(3, '0')} | ` +
+                    `T: ${Math.round(fft.treble).toString().padStart(3, '0')}`;
+
+                this.visual.render(fft);
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // Initialize application when DOM is ready
+        window.addEventListener('DOMContentLoaded', () => {
+            window.app = new AppController();
+        });
+    </script>
+</body>
+</html>
