@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<title>ORBITAL — Gravitačný sandbox</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #05060a; font-family: 'Segoe UI', system-ui, sans-serif; color: #e8ecf5; }
+  #canvas { display: block; cursor: crosshair; }
+  #ui {
+    position: fixed; top: 16px; left: 16px; padding: 14px 18px;
+    background: rgba(12, 16, 28, 0.72); backdrop-filter: blur(10px);
+    border: 1px solid rgba(120, 160, 255, 0.18); border-radius: 12px;
+    font-size: 13px; line-height: 1.7; max-width: 260px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  #ui h1 { font-size: 15px; letter-spacing: 3px; font-weight: 600; color: #7fb3ff; margin-bottom: 8px; }
+  #ui .key { color: #9ac6ff; font-weight: 600; }
+  #ui .hint { color: #8a94a8; font-size: 12px; margin-top: 8px; }
+  #hud {
+    position: fixed; top: 16px; right: 16px; padding: 10px 16px;
+    background: rgba(12, 16, 28, 0.72); backdrop-filter: blur(10px);
+    border: 1px solid rgba(120, 160, 255, 0.18); border-radius: 12px;
+    font-size: 12px; font-variant-numeric: tabular-nums; text-align: right;
+    color: #a8b4c8;
+  }
+  #hud b { color: #7fb3ff; }
+  #controls {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; padding: 10px;
+    background: rgba(12, 16, 28, 0.72); backdrop-filter: blur(10px);
+    border: 1px solid rgba(120, 160, 255, 0.18); border-radius: 12px;
+  }
+  button {
+    padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(120,160,255,0.25);
+    background: rgba(60, 100, 180, 0.15); color: #cfe0ff; cursor: pointer;
+    font-size: 12px; letter-spacing: 0.5px; transition: all 0.15s;
+  }
+  button:hover { background: rgba(80, 130, 220, 0.35); border-color: #7fb3ff; }
+  button:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="ui">
+  <h1>ORBITAL</h1>
+  <div><span class="key">Klik</span> — vytvor teleso</div>
+  <div><span class="key">Ťahanie</span> — vystreľ s rýchlosťou</div>
+  <div><span class="key">Medzerník</span> — pauza</div>
+  <div><span class="key">R</span> — reset</div>
+  <div class="hint">Malé telesá ti obiehajú veľké. Vytvor si vlastnú slnečnú sústavu.</div>
+</div>
+
+<div id="hud">
+  Telesá: <b id="count">0</b><br>
+  FPS: <b id="fps">0</b>
+</div>
+
+<div id="controls">
+  <button id="btnReset">Reset</button>
+  <button id="btnPause">Pauza</button>
+  <button id="btnPreset">Demo sústava</button>
+  <button id="btnClear">Vyčistiť</button>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const countEl = document.getElementById('count');
+  const fpsEl = document.getElementById('fps');
+  const btnPause = document.getElementById('btnPause');
+
+  // ---- Konfigurácia fyziky ----
+  const G = 900;                 // gravitačná konštanta (ladené pre "feel")
+  const SOFTENING = 60;          // soft. faktor pre stabilitu (px)
+  const MAX_TRAIL = 30;          // dĺžka stopy
+  const COLLISION_DAMPING = 0.55; // strata energie pri zrážke
+
+  // ---- Stav ----
+  let bodies = [];
+  let paused = false;
+  let W = 0, H = 0, DPR = 1;
+  let camX = 0, camY = 0;        // world offset (stred obrazovky)
+
+  // ---- Interakcia ----
+  let dragging = false;
+  let dragStart = null;
+  let dragCurrent = null;
+  const palette = ['#7fb3ff', '#ff8a65', '#9be7a0', '#e79bff', '#ffd166', '#6ee7e7'];
+
+  // ---- Resize / DPR ----
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---- Teleso ----
+  let nextId = 1;
+  class Body {
+    constructor(x, y, vx, vy, mass, color) {
+      this.id = nextId++;
+      this.x = x; this.y = y;
+      this.vx = vx; this.vy = vy;
+      this.mass = mass;
+      this.radius = Math.cbrt(mass) * 3.2;
+      this.color = color;
+      this.trail = [];
+      this.ax = 0; this.ay = 0;
+    }
+  }
+
+  function makeRandomBody(x, y) {
+    const mass = 20 + Math.random() * 120;
+    const color = palette[Math.floor(Math.random() * palette.length)];
+    return new Body(x, y, 0, 0, mass, color);
+  }
+
+  // ---- Gravitačná interakcia (O(n²) — stačí pre stovky telies) ----
+  function computeForces() {
+    for (const b of bodies) { b.ax = 0; b.ay = 0; }
+    for (let i = 0; i < bodies.length; i++) {
+      const a = bodies[i];
+      for (let j = i + 1; j < bodies.length; j++) {
+        const b = bodies[j];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const d2 = dx * dx + dy * dy + SOFTENING;
+        const invD = 1 / Math.sqrt(d2);
+        const invD3 = invD * invD * invD;
+        const f = G * invD3;
+        const fx = f * dx, fy = f * dy;
+        a.ax += fx * b.mass;
+        a.ay += fy * b.mass;
+        b.ax -= fx * a.mass;
+        b.ay -= fy * a.mass;
+      }
+    }
+  }
+
+  // ---- Zrážky (spojenie telies) ----
+  function handleCollisions() {
+    for (let i = 0; i < bodies.length; i++) {
+      for (let j = i + 1; j < bodies.length; j++) {
+        const a = bodies[i], b = bodies[j];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.hypot(dx, dy);
+        if (d < a.radius + b.radius && d > 0.001) {
+          const totalMass = a.mass + b.mass;
+          const nx = dx / d, ny = dy / d;
+          // zachovanie hybnosti (nepružná zrážka)
+          const p = (a.mass * (a.vx*nx + a.vy*ny) + b.mass * (b.vx*nx + b.vy*ny)) / totalMass;
+          const px = p * nx, py = p * ny;
+          const pax = a.vx - (a.vx*nx + a.vy*ny)*nx;
+          const pay = a.vy - (a.vx*nx + a.vy*ny)*ny;
+          const pbx = b.vx - (b.vx*nx + b.vy*ny)*nx;
+          const pby = b.vy - (b.vx*nx + b.vy*ny)*ny;
+
+          const big = a.mass >= b.mass ? a : b;
+          const small = a.mass >= b.mass ? b : a;
+          const remaining = 1 - COLLISION_DAMPING;
+
+          big.mass = totalMass;
+          big.x = (a.x*a.mass + b.x*b.mass) / totalMass;
+          big.y = (a.y*a.mass + b.y*b.mass) / totalMass;
+          big.radius = Math.cbrt(big.mass) * 3.2;
+          big.vx = (big === a ? pax : pbx) * remaining + px;
+          big.vy = (big === a ? pay : pby) * remaining + py;
+          big.trail.length = 0;
+
+          // odstráň malé
+          const idx = bodies.indexOf(small);
+          if (idx >= 0) bodies.splice(idx, 1);
+          i = -1; break; // reštartuj kontrolu
+        }
+      }
+    }
+  }
+
+  // ---- Integrácia (symplektické Euler) ----
+  let lastTime = performance.now();
+  function step(dt) {
+    computeForces();
+    const subSteps = 2;
+    const h = dt / subSteps;
+    for (let s = 0; s < subSteps; s++) {
+      for (const b of bodies) {
+        b.vx += b.ax * h;
+        b.vy += b.ay * h;
+        b.x += b.vx * h;
+        b.y += b.vy * h;
+      }
+    }
+    handleCollisions();
+    for (const b of bodies) {
+      b.trail.push({ x: b.x, y: b.y });
+      if (b.trail.length > MAX_TRAIL) b.trail.shift();
+    }
+  }
+
+  // ---- Vykreslenie ----
+  function draw() {
+    // pozadie s jemným gradientom
+    const g = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.75);
+    g.addColorStop(0, '#0a0e1a');
+    g.addColorStop(1, '#020307');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // hviezdy (statické, generované raz)
+    if (!draw.stars) {
+      draw.stars = Array.from({length: 200}, () => ({
+        x: Math.random() * W, y: Math.random() * H,
+        r: Math.random() * 1.4 + 0.2, a: Math.random() * 0.7 + 0.2
+      }));
+    }
+    for (const s of draw.stars) {
+      ctx.globalAlpha = s.a;
+      ctx.fillStyle = '#dbe4ff';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // stopy
+    ctx.lineCap = 'round';
+    for (const b of bodies) {
+      if (b.trail.length < 2) continue;
+      ctx.beginPath();
+      ctx.strokeStyle = b.color;
+      for (let i = 0; i < b.trail.length; i++) {
+        const p = b.trail[i];
+        const a = i / b.trail.length;
+        ctx.globalAlpha = a * 0.5;
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.lineWidth = Math.min(b.radius * 0.4, 2.5);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // telesá s glow
+    for (const b of bodies) {
+      // glow
+      const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.radius * 4);
+      grad.addColorStop(0, b.color + 'cc');
+      grad.addColorStop(0.4, b.color + '33');
+      grad.addColorStop(1, b.color + '00');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius * 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // jadro
+      const core = ctx.createRadialGradient(
+        b.x - b.radius*0.3, b.y - b.radius*0.3, 0,
+        b.x, b.y, b.radius
+      );
+      core.addColorStop(0, '#ffffff');
+      core.addColorStop(0.4, b.color);
+      core.addColorStop(1, b.color);
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // náhľad vystrelenia
+    if (dragging && dragStart && dragCurrent) {
+      const dx = dragCurrent.x - dragStart.x;
+      const dy = dragCurrent.y - dragStart.y;
+      ctx.strokeStyle = 'rgba(127,179,255,0.6)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(dragStart.x, dragStart.y);
+      ctx.lineTo(dragCurrent.x, dragCurrent.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // šípka
+      const ang = Math.atan2(dy, dx);
+      const len = 12;
+      ctx.beginPath();
+      ctx.moveTo(dragCurrent.x, dragCurrent.y);
+      ctx.lineTo(dragCurrent.x - Math.cos(ang - 0.4) * len, dragCurrent.y - Math.sin(ang - 0.4) * len);
+      ctx.moveTo(dragCurrent.x, dragCurrent.y);
+      ctx.lineTo(dragCurrent.x - Math.cos(ang + 0.4) * len, dragCurrent.y - Math.sin(ang + 0.4) * len);
+      ctx.stroke();
+      // preview telesa
+      const mass = 20 + Math.hypot(dx, dy) * 0.3;
+      const r = Math.cbrt(mass) * 3.2;
+      ctx.fillStyle = 'rgba(127,179,255,0.35)';
+      ctx.beginPath();
+      ctx.arc(dragStart.x, dragStart.y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ---- Loop ----
+  let fpsAccum = 0, fpsFrames = 0;
+  function loop(now) {
+    const dt = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+
+    if (!paused) {
+      const scaled = dt * 60;
+      step(scaled);
+    }
+    draw();
+
+    // FPS
+    fpsAccum += dt; fpsFrames++;
+    if (fpsAccum >= 0.5) {
+      fpsEl.textContent = Math.round(fpsFrames / fpsAccum);
+      fpsAccum = 0; fpsFrames = 0;
+    }
+    countEl.textContent = bodies.length;
+
+    requestAnimationFrame(loop);
+  }
+
+  // ---- Ovládanie ----
+  function pointer(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    canvas.setPointerCapture(e.pointerId);
+    dragging = true;
+    dragStart = pointer(e);
+    dragCurrent = { ...dragStart };
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    dragCurrent = pointer(e);
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    if (!dragging) return;
+    const end = pointer(e);
+    const dx = end.x - dragStart.x;
+    const dy = end.y - dragStart.y;
+    const dist = Math.hypot(dx, dy);
+    // rýchlosť: 1px ťahania = ~0.15 px/frame
+    const vx = dx * 0.15;
+    const vy = dy * 0.15;
+    const mass = 20 + dist * 0.4;
+    const color = palette[Math.floor(Math.random() * palette.length)];
+    bodies.push(new Body(dragStart.x, dragStart.y, vx, vy, mass, color));
+    dragging = false;
+    dragStart = null;
+    dragCurrent = null;
+  });
+
+  canvas.addEventListener('pointercancel', () => {
+    dragging = false; dragStart = null; dragCurrent = null;
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      paused = !paused;
+      btnPause.textContent = paused ? 'Pokračovať' : 'Pauza';
+    }
+    if (e.key === 'r' || e.key === 'R') reset();
+  });
+
+  btnPause.addEventListener('click', () => {
+    paused = !paused;
+    btnPause.textContent = paused ? 'Pokračovať' : 'Pauza';
+  });
+  document.getElementById('btnReset').addEventListener('click', reset);
+  document.getElementById('btnClear').addEventListener('click', () => {
+    bodies = []; 
+  });
+  document.getElementById('btnPreset').addEventListener('click', preset);
+
+  // ---- Scenáre ----
+  function reset() {
+    bodies = [];
+    preset();
+  }
+
+  function preset() {
+    bodies = [];
+    const cx = W / 2, cy = H / 2;
+    // centrálna hviezda
+    const star = new Body(cx, cy, 0, 0, 4000, '#ffd166');
+    star.trail.length = 0;
+    bodies.push(star);
+
+    // planéty na kruhových dráhach
+    const orbits = [
+      { r: 110, m: 40, c: '#7fb3ff' },
+      { r: 180, m: 60, c: '#9be7a0' },
+      { r: 260, m: 35, c: '#ff8a65' },
+      { r: 340, m: 80, c: '#e79bff' },
+    ];
+    for (const o of orbits) {
+      const ang = Math.random() * Math.PI * 2;
+      const x = cx + Math.cos(ang) * o.r;
+      const y = cy + Math.sin(ang) * o.r;
+      // orbitálna rýchlosť: v = sqrt(G*M/r)
+      const v = Math.sqrt(G * star.mass / o.r);
+      const vx = -Math.sin(ang) * v;
+      const vy = Math.cos(ang) * v;
+      const p = new Body(x, y, vx, vy, o.m, o.c);
+      p.trail.length = 0;
+      bodies.push(p);
+    }
+    paused = false;
+    btnPause.textContent = 'Pauza';
+  }
+
+  // ---- Štart ----
+  preset();
+  lastTime = performance.now();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
