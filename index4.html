@@ -2,285 +2,671 @@
 <html lang="sk">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ErikAI OS 2026 — Welcome</title>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;600;800&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ErikAI OS 2027 — The Future Unveiled</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;600;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            crimson: {
+              DEFAULT: '#ff003c',
+              glow: '#ff1744',
+              dark: '#80001c',
+              black: '#0a0003'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Anton', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
-    :root{
-      --bg1:#0b1020;
-      --bg2:#041021;
-      --neon1:#8b5cf6;
-      --neon2:#06b6d4;
+    :root {
+      --bg-dark: #030206;
+      --crimson-main: #ff003c;
+      --crimson-glow: rgba(255, 0, 60, 0.6);
+      --glass-bg: rgba(18, 6, 12, 0.55);
+      --glass-border: rgba(255, 0, 60, 0.25);
     }
 
-    html,body{
-      height:100%;
-      margin:0;
-      font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:radial-gradient(1200px 600px at 10% 10%, rgba(139,92,246,0.08), transparent),
-                 linear-gradient(180deg,var(--bg1),var(--bg2));
-      color:#e6eef8;
-      -webkit-font-smoothing:antialiased;
-      padding:16px;
-      box-sizing:border-box;
-      overflow-x:hidden;
-      overflow-y:auto;
+    * {
+      box-sizing: border-box;
+      user-select: none;
     }
 
-    .card{
-      width:min(920px,100%);
-      border-radius:20px;
-      padding:48px;
-      background:rgba(255,255,255,0.02);
-      box-shadow:0 10px 40px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
-      backdrop-filter:blur(8px) saturate(120%);
-      position:relative;
-      overflow:hidden;
-      box-sizing:border-box;
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-dark);
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
-    .grid{
-      display:grid;
-      grid-template-columns:1fr 420px;
-      gap:36px;
-      align-items:center;
+    /* Background Canvas */
+    #particle-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
     }
 
-    .title{
-      font-family:Anton,Impact,sans-serif;
-      font-size:48px;
-      letter-spacing:2px;
-      margin:0 0 10px 0;
-      line-height:1;
-      color:white;
-      text-transform:uppercase;
-      display:flex;
-      align-items:center;
-      gap:14px;
-      flex-wrap:wrap;
+    /* Ambient Lighting */
+    .ambient-glow {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 0, 60, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      pointer-events: none;
+      filter: blur(80px);
+      animation: ambientPulse 8s infinite alternate ease-in-out;
     }
 
-    .title .badge{
-      font-size:12px;
-      padding:6px 10px;
-      border-radius:999px;
-      background:linear-gradient(90deg,var(--neon1),var(--neon2));
-      color:#041021;
-      font-weight:800;
-      letter-spacing:0.6px;
+    @keyframes ambientPulse {
+      0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.4; }
+      100% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.8; }
     }
 
-    .headline{font-size:18px;margin:0 0 18px 0;color:rgba(230,238,248,0.88);}
-    .lead{
-      background:linear-gradient(90deg,var(--neon1),var(--neon2));
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
-      font-weight:800;
-      font-size:22px;
-      margin:14px 0;
-      line-height:1.1;
+    /* Glassmorphism Card with 3D Depth */
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                  0 0 40px rgba(255, 0, 60, 0.15);
+      border-radius: 28px;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease;
     }
 
-    .poem{
-      font-size:15px;
-      color:rgba(230,238,248,0.78);
-      white-space:pre-wrap;
+    .glass-card:hover {
+      border-color: rgba(255, 0, 60, 0.5);
+      box-shadow: 0 35px 70px rgba(0, 0, 0, 0.9),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                  0 0 60px rgba(255, 0, 60, 0.3);
     }
 
-    .poem strong{color:white;}
-
-    .visual{
-      height:320px;
-      border-radius:14px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:linear-gradient(135deg, rgba(139,92,246,0.06), rgba(6,182,212,0.04));
-      border:1px solid rgba(255,255,255,0.03);
-      position:relative;
-      overflow:hidden;
+    /* Text Gradient */
+    .crimson-gradient-text {
+      background: linear-gradient(135deg, #ffffff 0%, #ff4d6d 40%, #ff003c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
-    .visual .shine{
-      position:absolute;
-      inset:-40%;
-      transform:rotate(25deg);
-      opacity:0.08;
-      background:linear-gradient(90deg,transparent 20%, rgba(255,255,255,0.65),transparent 80%);
-      animation:slide 6s linear infinite;
+    /* Shiny Button Effect */
+    .launch-btn {
+      position: relative;
+      background: linear-gradient(135deg, #ff003c 0%, #b30024 100%);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 25px rgba(255, 0, 60, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    @keyframes slide{
-      from{transform:translateX(-60%) rotate(25deg);}
-      to{transform:translateX(60%) rotate(25deg);}
+    .launch-btn:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 0 45px rgba(255, 0, 60, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.6);
     }
 
-    .visual h2{
-      font-family:Anton;
-      font-size:52px;
-      margin:0;
-      color:white;
-      letter-spacing:2px;
-      text-transform:uppercase;
+    .launch-btn::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+      transform: rotate(45deg);
+      transition: 0.8s;
+      opacity: 0;
     }
 
-    .visual p{
-      margin:6px 0 0 0;
-      font-size:13px;
-      color:rgba(230,238,248,0.75);
+    .launch-btn:hover::before {
+      left: 100%;
+      opacity: 1;
     }
 
-    .meta{
-      margin-top:22px;
-      font-size:13px;
-      color:rgba(230,238,248,0.6);
-      display:flex;
-      gap:12px;
-      align-items:center;
-      flex-wrap:wrap;
+    /* Boot Sequence Overlay */
+    #boot-overlay {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 1.2s cubic-bezier(0.77, 0, 0.175, 1), visibility 1.2s;
     }
 
-    .pill{
-      padding:8px 12px;
-      border-radius:999px;
-      background:rgba(255,255,255,0.03);
-      border:1px solid rgba(255,255,255,0.02);
-      font-weight:700;
+    /* Scanlines HUD effect */
+    .scanline {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0, 0, 0, 0.3) 50%,
+        rgba(0, 0, 0, 0.3)
+      );
+      background-size: 100% 4px;
+      pointer-events: none;
+      opacity: 0.4;
+      z-index: 3;
     }
 
-    .year-badge{
-      display:inline-block;
-      padding:6px 10px;
-      border-radius:8px;
-      background:linear-gradient(90deg,rgba(139,92,246,0.14),rgba(6,182,212,0.12));
-      font-weight:700;
+    /* Keyframe Animations */
+    @keyframes laserScan {
+      0% { top: -10%; opacity: 0; }
+      50% { opacity: 0.8; }
+      100% { top: 110%; opacity: 0; }
     }
 
-    /* --- Reálne tlačidlo --- */
-    .launch-btn{
-      margin-top:32px;
-      display:inline-block;
-      padding:14px 32px;
-      border-radius:999px;
-      background:linear-gradient(90deg,var(--neon1),var(--neon2));
-      color:#041021;
-      font-weight:800;
-      letter-spacing:1px;
-      text-decoration:none;
-      font-size:14px;
-      text-transform:uppercase;
-      box-shadow:0 0 20px rgba(6,182,212,0.5);
-      position:relative;
-      overflow:hidden;
-      transition:transform 0.25s ease,box-shadow 0.25s ease;
-      animation:glowPulse 3s ease-in-out infinite;
+    .laser-beam {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #ff003c, #ffffff, #ff003c, transparent);
+      box-shadow: 0 0 15px #ff003c, 0 0 30px #ff003c;
+      animation: laserScan 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .launch-btn:hover{
-      transform:scale(1.05);
-      box-shadow:0 0 30px rgba(139,92,246,0.8);
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #030206;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #330813;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #ff003c;
     }
 
-    @keyframes glowPulse{
-      0%,100%{box-shadow:0 0 18px rgba(6,182,212,0.4);}
-      50%{box-shadow:0 0 30px rgba(139,92,246,0.6);}
+    /* Audio Wave Visualizer Bars */
+    .wave-bar {
+      width: 3px;
+      height: 12px;
+      background-color: #ff003c;
+      border-radius: 2px;
+      display: inline-block;
+      transition: height 0.1s ease;
     }
-
-    /* --- RESPONSÍVNE ÚPRAVY --- */
-    @media (max-width:900px){
-      .grid{
-        grid-template-columns:1fr;
-        gap:24px;
-        text-align:center;
-      }
-
-      .card{
-        padding:32px 24px;
-      }
-
-      .title{
-        justify-content:center;
-        font-size:38px;
-      }
-
-      .headline{font-size:16px;}
-      .lead{font-size:18px;}
-      .poem{font-size:14px;}
-      .visual{height:220px;}
-      .visual h2{font-size:38px;}
-      .launch-btn{font-size:13px;padding:12px 28px;}
-    }
-
-    @media (max-width:480px){
-      .title{font-size:32px;}
-      .lead{font-size:16px;}
-      .launch-btn{width:100%;text-align:center;}
-      .visual{height:200px;}
-    }
-
   </style>
 </head>
-<body>
-  <div class="card">
-    <div class="grid">
-      <div>
-        <div class="title">
-          <span class="badge">.</span> .
-          <span style="opacity:.6;font-size:12px;margin-left:6px">.</span>
-        </div>
+<body class="relative flex items-center justify-center min-h-screen p-4 sm:p-6 md:p-10 overflow-x-hidden">
 
-        <p class="headline">
-          Nie je to trailer. Nie je to teaser. 
-          <strong>Je to dnešok, čo žije zajtrajškom.</strong>
-        </p>
+  <!-- Background 4D Particle Canvas -->
+  <canvas id="particle-canvas"></canvas>
+  <div class="ambient-glow"></div>
+  <div class="scanline"></div>
 
-        <div class="lead">
-          Z jadra roku 2025 sa rodí systém, ktorý už dýcha rytmom 2026. ⚡
-        </div>
-
-        <div class="poem">
-<strong>ErikAI OS 2026 čaká na novú spoluprácu a víziu do budúcnosti.</strong>
-
-Projekt je aktuálne dostupný na predaj — viac informácií na Instagram erik2005sk .
-
-Naladené. Prepojené. Svetlá sa rozžínajú. Kód ožíva.
-<span style="display:block;margin-top:10px;font-weight:800;color:white;font-size:16px">ErikAI OS 2026 —</span>
-realita, ktorá prišla skôr, než bolo naplánované.
-
-Pripravené valcovať. Ticho, precízne… 🤫🚀
-        </div>
-
-        <a href="index3.html" class="launch-btn">🔗 Otvor ErikAI OS už teraz</a>
-
-        <div class="meta">
-          <span class="pill">Realita dnes</span>
-          <span class="year-badge">2025 → 2026</span>
+  <!-- Boot Overlay Sequence -->
+  <div id="boot-overlay">
+    <div class="relative flex flex-col items-center justify-center text-center px-4">
+      <div class="relative w-24 h-24 mb-6 flex items-center justify-center">
+        <!-- Glowing Ring -->
+        <div class="absolute inset-0 rounded-full border-2 border-red-600/30 animate-ping"></div>
+        <div class="absolute inset-2 rounded-full border-2 border-t-red-600 border-r-transparent border-b-red-900 border-l-transparent animate-spin"></div>
+        <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-red-600 to-black flex items-center justify-center shadow-[0_0_20px_#ff003c]">
+          <span class="font-mono text-xs font-black text-white">2027</span>
         </div>
       </div>
 
-      <div class="visual">
-        <div class="shine"></div>
-        <div style="text-align:center;z-index:2">
-          <h2>ERIKAI OS</h2>
-          <p>OS 2026 — The future arrived early</p>
-        </div>
+      <div class="font-mono text-xs tracking-[0.3em] text-red-500 uppercase mb-2 animate-pulse" id="boot-status">
+        [ INITIALIZING ErikAI OS 2027 CORE ]
       </div>
+      <div class="w-64 h-1 bg-zinc-900 rounded-full overflow-hidden mb-6 border border-red-950">
+        <div id="boot-progress" class="h-full bg-gradient-to-r from-red-800 via-red-500 to-white w-0 transition-all duration-300"></div>
+      </div>
+      
+      <button id="skip-boot-btn" onclick="completeBootSequence()" class="mt-4 px-4 py-2 text-xs font-mono text-zinc-400 hover:text-white border border-zinc-800 hover:border-red-600 rounded-full transition-all opacity-0">
+        SKIP INTRO ▶
+      </button>
     </div>
   </div>
 
+  <!-- Main Presentation Container -->
+  <main class="relative z-10 w-full max-w-6xl my-auto opacity-0 transform translate-y-8 transition-all duration-1000 ease-out" id="main-content">
+    
+    <!-- Top Control Bar (Audio & Specs HUD) -->
+    <header class="flex justify-between items-center mb-6 px-2">
+      <div class="flex items-center space-x-3">
+        <span class="flex h-3 w-3 relative">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+        </span>
+        <span class="font-mono text-xs text-red-400 tracking-widest uppercase">KEYNOTE LIVE — 2027 VISION</span>
+      </div>
+
+      <!-- Voice Narration Toggle & Wave Indicator -->
+      <button id="narration-btn" onclick="toggleSpeechNarration()" class="flex items-center gap-3 px-4 py-2 rounded-full bg-red-950/40 border border-red-800/40 hover:border-red-500/80 transition-all text-xs font-mono text-red-300 shadow-lg group">
+        <div class="flex items-end gap-[2px] h-4" id="wave-container">
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+        </div>
+        <span id="speech-btn-label">VOICE NARRATION</span>
+        <svg id="speaker-icon" class="w-4 h-4 text-red-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Main Card HUD -->
+    <div class="glass-card p-6 sm:p-10 md:p-14 relative overflow-hidden" id="tilt-card">
+      <div class="laser-beam"></div>
+
+      <!-- Background HUD Watermark -->
+      <div class="absolute -right-20 -bottom-20 text-[180px] font-black text-red-950/10 font-display select-none pointer-events-none">
+        2027
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        
+        <!-- Left Content Column -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <!-- Badges -->
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="px-3.5 py-1 rounded-full bg-gradient-to-r from-red-600 to-red-800 text-white font-extrabold text-xs tracking-wider shadow-[0_0_15px_rgba(255,0,60,0.5)] uppercase">
+              VISION 2027
+            </span>
+            <span class="px-3 py-1 rounded-full bg-red-950/60 border border-red-500/30 text-red-300 font-mono text-xs tracking-wide">
+              .4D NEURAL CORE
+            </span>
+            <span class="px-3 py-1 rounded-full bg-black/60 border border-zinc-800 text-zinc-400 font-mono text-xs">
+              KEYNOTE REVEAL
+            </span>
+          </div>
+
+          <!-- Main Title -->
+          <h1 class="font-display text-4xl sm:text-6xl lg:text-7xl tracking-wider text-white uppercase leading-none">
+            ERIKAI OS <span class="crimson-gradient-text">2027</span>
+          </h1>
+
+          <!-- Headline -->
+          <p class="text-lg sm:text-xl font-medium text-zinc-300 leading-relaxed">
+            Nie je to trailer. Nie je to teaser. <br class="hidden sm:inline"/>
+            <strong class="text-white font-bold underline decoration-red-600 underline-offset-4">Je to dnešok, čo žije budúcnosťou.</strong>
+          </p>
+
+          <!-- Lead Statement -->
+          <div class="p-4 rounded-xl bg-gradient-to-r from-red-950/50 to-transparent border-l-4 border-red-600 text-base sm:text-lg font-semibold text-red-200">
+            Z jadra roku 2026 sa zrodil systém, ktorý bez kompromisov dýcha dimenziou 2027. ⚡
+          </div>
+
+          <!-- Official Poem / Vision Text -->
+          <div class="space-y-3 text-sm sm:text-base text-zinc-300 leading-relaxed font-normal bg-black/30 p-5 rounded-2xl border border-red-900/20 backdrop-blur-sm">
+            <p class="font-semibold text-white">
+              ErikAI OS 2027 čaká na novú spoluprácu a víziu do budúcnosti.
+            </p>
+            <p>
+              Projekt je aktuálne dostupný na predaj — viac informácií na 
+              <a href="https://instagram.com/erik2005sk" target="_blank" class="inline-flex items-center text-red-400 hover:text-red-300 font-mono font-bold underline underline-offset-2 transition-colors">
+                Instagram @erik2005sk
+              </a>.
+            </p>
+            <p class="text-zinc-400 italic">
+              Naladené. Prepojené. Svetlá sa rozžínajú. Kód ožíva.
+            </p>
+            <p class="text-white font-bold pt-2 border-t border-zinc-800/80">
+              ErikAI OS 2027 — <span class="text-red-400">realita, ktorá prišla skôr, než bolo naplánované.</span>
+            </p>
+            <p class="text-xs font-mono text-red-400/90 tracking-widest pt-1 uppercase">
+              Pripravené valcovať. Ticho, precízne… 🤫🚀
+            </p>
+          </div>
+
+          <!-- Action Button & Meta Info -->
+          <div class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <a href="index3.html" class="launch-btn px-8 py-4 rounded-full text-white font-black text-center text-sm tracking-widest uppercase transition-all duration-300">
+              🔗 Otvor ErikAI OS 2027
+            </a>
+            
+            <a href="https://instagram.com/erik2005sk" target="_blank" class="px-6 py-4 rounded-full bg-zinc-900/80 hover:bg-red-950/60 border border-zinc-800 hover:border-red-600/50 text-zinc-300 hover:text-white font-mono text-xs text-center transition-all">
+              INSTAGRAM @ERIK2005SK ↗
+            </a>
+          </div>
+
+        </div>
+
+        <!-- Right Visual Mockup Column (4D Device / Keynote Screen) -->
+        <div class="lg:col-span-5 flex justify-center">
+          <div class="relative w-full max-w-sm h-80 sm:h-96 rounded-2xl bg-gradient-to-b from-red-950/30 via-black to-zinc-950 border border-red-500/30 p-6 flex flex-col justify-between overflow-hidden shadow-[0_0_50px_rgba(255,0,60,0.2)] group">
+            
+            <!-- Animated Inner Neon Glow -->
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-red-600/30 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+            
+            <!-- Mockup HUD Header -->
+            <div class="flex justify-between items-center z-10 border-b border-red-900/30 pb-3">
+              <div class="flex space-x-1.5">
+                <div class="w-2.5 h-2.5 rounded-full bg-red-600"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-zinc-800"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-zinc-800"></div>
+              </div>
+              <span class="font-mono text-[10px] text-red-400/80 tracking-widest">4D MATRIX CORE v27.0</span>
+            </div>
+
+            <!-- Central Holographic Element -->
+            <div class="my-auto text-center z-10 relative">
+              <div class="w-24 h-24 mx-auto rounded-full bg-black/80 border border-red-500/50 flex items-center justify-center shadow-[0_0_30px_rgba(255,0,60,0.4)] group-hover:rotate-180 transition-transform duration-1000">
+                <div class="w-16 h-16 rounded-full border border-dashed border-red-400 animate-spin"></div>
+                <span class="absolute font-display text-2xl text-white tracking-widest">27</span>
+              </div>
+              <h3 class="font-display text-2xl text-white mt-4 tracking-wider">SYSTEM ACTIVE</h3>
+              <p class="font-mono text-xs text-red-400 mt-1">REAL-TIME HYPER ENGINE</p>
+            </div>
+
+            <!-- Mockup HUD Footer -->
+            <div class="z-10 pt-3 border-t border-red-900/30 flex justify-between items-center font-mono text-[10px] text-zinc-500">
+              <span>STATUS: ONLINE</span>
+              <span class="text-red-400 font-bold">100% UNLOCKED</span>
+            </div>
+
+            <!-- Subtle Grid overlay -->
+            <div class="absolute inset-0 bg-[radial-gradient(#ff003c_1px,transparent_1px)] [background-size:16px_16px] opacity-10 pointer-events-none"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Metadata Tags -->
+      <footer class="mt-8 pt-6 border-t border-zinc-800/80 flex flex-wrap justify-between items-center gap-4 text-xs font-mono text-zinc-400">
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="px-3 py-1 rounded-md bg-black/50 border border-zinc-800 text-zinc-300">
+            Realita 2027
+          </span>
+          <span class="px-3 py-1 rounded-md bg-black/50 border border-zinc-800 text-zinc-300">
+            Instagram @erik2005sk
+          </span>
+          <span class="px-3 py-1 rounded-md bg-black/50 border border-zinc-800 text-red-400">
+            4D Neural Core
+          </span>
+        </div>
+        <div class="text-zinc-500">
+          ErikAI OS © 2027 — All Rights Reserved
+        </div>
+      </footer>
+    </div>
+  </main>
+
+  <!-- Interactive Logic & Audio Engine Script -->
   <script>
-    const title = document.querySelector('.visual h2');
-    if(title){
-      title.animate([
-        {transform:'scale(0.96)',opacity:0.9},
-        {transform:'scale(1.02)',opacity:1},
-        {transform:'scale(1)',opacity:1}
-      ],{duration:900,easing:'cubic-bezier(.2,.9,.2,1)'});
+    // --- 1. Speech Narration Engine (Web Speech API) ---
+    const narrationText = "Predstavujeme ErikAI OS 2027 — systém, ktorý nič neskrýva, ale ukazuje, čo dokáže.";
+    let speechSynth = window.speechSynthesis;
+    let currentUtterance = null;
+    let isSpeaking = false;
+
+    function initSpeech() {
+      if (!('speechSynthesis' in window)) {
+        console.warn('Web Speech API is not supported in this browser.');
+        document.getElementById('speech-btn-label').innerText = 'SPEECH UNSUPPORTED';
+        return;
+      }
+
+      currentUtterance = new SpeechSynthesisUtterance(narrationText);
+      currentUtterance.lang = 'sk-SK';
+      currentUtterance.rate = 0.95; // Keynote cinematic pace
+      currentUtterance.pitch = 0.9; // Deep tone
+
+      currentUtterance.onstart = () => {
+        isSpeaking = true;
+        updateNarrationUI(true);
+      };
+
+      currentUtterance.onend = () => {
+        isSpeaking = false;
+        updateNarrationUI(false);
+      };
+
+      currentUtterance.onerror = () => {
+        isSpeaking = false;
+        updateNarrationUI(false);
+      };
     }
+
+    function toggleSpeechNarration() {
+      if (!speechSynth) return;
+
+      if (speechSynth.speaking) {
+        speechSynth.cancel();
+        isSpeaking = false;
+        updateNarrationUI(false);
+      } else {
+        // Find best Slovak voice if available
+        const voices = speechSynth.getVoices();
+        const skVoice = voices.find(v => v.lang.includes('sk') || v.lang.includes('SK'));
+        if (skVoice) currentUtterance.voice = skVoice;
+        
+        speechSynth.speak(currentUtterance);
+      }
+    }
+
+    function updateNarrationUI(active) {
+      const label = document.getElementById('speech-btn-label');
+      const waveBars = document.querySelectorAll('.wave-bar');
+      
+      if (active) {
+        label.innerText = 'PLAYING NARRATION';
+        label.classList.add('text-red-400');
+        waveBars.forEach((bar, i) => {
+          bar.style.animation = `wavePulse 0.6s ease-in-out infinite alternate ${i * 0.15}s`;
+        });
+      } else {
+        label.innerText = 'VOICE NARRATION';
+        label.classList.remove('text-red-400');
+        waveBars.forEach(bar => {
+          bar.style.animation = 'none';
+          bar.style.height = '12px';
+        });
+      }
+    }
+
+    // Add CSS Keyframe for Wave dynamically
+    const styleSheet = document.createElement('style');
+    styleSheet.innerHTML = `
+      @keyframes wavePulse {
+        0% { height: 4px; }
+        100% { height: 18px; }
+      }
+    `;
+    document.head.appendChild(styleSheet);
+
+
+    // --- 2. Boot Sequence Logic ---
+    let bootProgress = 0;
+    const progressBar = document.getElementById('boot-progress');
+    const statusText = document.getElementById('boot-status');
+    const bootOverlay = document.getElementById('boot-overlay');
+    const mainContent = document.getElementById('main-content');
+
+    const bootSteps = [
+      { progress: 25, status: '[ INITIALIZING ErikAI OS 2027 CORE ]' },
+      { progress: 55, status: '[ LOADING 4D HYPER ENGINE ]' },
+      { progress: 85, status: '[ UNLOCKING VISION 2027 KEYNOTE ]' },
+      { progress: 100, status: '[ SYSTEM READY ]' }
+    ];
+
+    let currentStep = 0;
+
+    function runBootSequence() {
+      setTimeout(() => {
+        const btn = document.getElementById('skip-boot-btn');
+        if(btn) btn.classList.remove('opacity-0');
+      }, 800);
+
+      const interval = setInterval(() => {
+        if (currentStep < bootSteps.length) {
+          progressBar.style.width = bootSteps[currentStep].progress + '%';
+          statusText.innerText = bootSteps[currentStep].status;
+          currentStep++;
+        } else {
+          clearInterval(interval);
+          setTimeout(completeBootSequence, 400);
+        }
+      }, 500);
+    }
+
+    function completeBootSequence() {
+      bootOverlay.style.opacity = '0';
+      bootOverlay.style.visibility = 'hidden';
+
+      setTimeout(() => {
+        mainContent.classList.remove('opacity-0', 'translate-y-8');
+        // Auto-play speech on first user interaction or after reveal
+        toggleSpeechNarration();
+      }, 300);
+    }
+
+
+    // --- 3. 4D Particle & Spatial Canvas Engine ---
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let particles = [];
+    let mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
+
+    function resizeCanvas() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+
+    class Particle4D {
+      constructor() {
+        this.reset();
+      }
+
+      reset() {
+        this.x = (Math.random() - 0.5) * width * 2;
+        this.y = (Math.random() - 0.5) * height * 2;
+        this.z = Math.random() * 1000 + 1;
+        this.size = Math.random() * 2 + 0.5;
+        this.color = Math.random() > 0.3 ? '#ff003c' : '#ffffff';
+        this.alpha = Math.random() * 0.7 + 0.3;
+      }
+
+      update() {
+        // Move towards viewer (4D depth movement)
+        this.z -= 2.5;
+        if (this.z <= 0) {
+          this.reset();
+          this.z = 1000;
+        }
+      }
+
+      draw() {
+        // Perspective projection
+        const k = 400 / this.z;
+        const px = this.x * k + width / 2 + (mouse.x * 0.05);
+        const py = this.y * k + height / 2 + (mouse.y * 0.05);
+        const size = Math.max(0, this.size * k);
+
+        if (px < 0 || px > width || py < 0 || py > height) return;
+
+        ctx.beginPath();
+        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = Math.min(1, (1000 - this.z) / 1000);
+        ctx.shadowBlur = size * 4;
+        ctx.shadowColor = this.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    function initParticles() {
+      particles = [];
+      const count = Math.min(Math.floor(window.innerWidth / 6), 150);
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle4D());
+      }
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, width, height);
+
+      // Smooth mouse interpolation
+      mouse.x += (mouse.targetX - mouse.x) * 0.05;
+      mouse.y += (mouse.targetY - mouse.y) * 0.05;
+
+      particles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+
+      requestAnimationFrame(animateParticles);
+    }
+
+
+    // --- 4. Interactive 3D Parallax Tilt for Glass Card ---
+    const tiltCard = document.getElementById('tilt-card');
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.targetX = e.clientX - window.innerWidth / 2;
+      mouse.targetY = e.clientY - window.innerHeight / 2;
+
+      if (tiltCard) {
+        const xRot = (mouse.targetY / window.innerHeight) * -12;
+        const yRot = (mouse.targetX / window.innerWidth) * 12;
+        tiltCard.style.transform = `perspective(1000px) rotateX(${xRot}deg) rotateY(${yRot}deg)`;
+      }
+    });
+
+    // Touch support for mobile tilt
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        mouse.targetX = e.touches[0].clientX - window.innerWidth / 2;
+        mouse.targetY = e.touches[0].clientY - window.innerHeight / 2;
+      }
+    });
+
+
+    // --- Init Everything on Load ---
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      initParticles();
+      animateParticles();
+      initSpeech();
+      runBootSequence();
+    });
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      initParticles();
+    });
   </script>
 </body>
-          </html>
+</html>
