@@ -4,97 +4,209 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ErikAI Kompas – Profesionálny</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: rgba(0, 0, 0, 0.08);
+      --accent: #ef4444;
+    }
+
+    body.dark-mode {
+      --bg: #030712;
+      --card-bg: rgba(17, 24, 39, 0.75);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #ef4444;
+    }
+
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       text-align: center;
-      background: #fefefe;
-      color: #111;
+      background: var(--bg);
+      color: var(--text);
       margin: 0;
       padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s ease, color 0.3s ease;
     }
-    body.dark-mode {
-      background: #121212;
-      color: #fff;
+
+    .container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      max-width: 380px;
+      width: 100%;
+      backdrop-filter: blur(16px);
     }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
     h2 {
-      color: #d10000;
-      margin-top: 10px;
+      color: var(--accent);
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin: 0;
     }
+
+    .theme-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 99px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .theme-btn:hover {
+      border-color: var(--accent);
+    }
+
+    /* Kruh kompasu */
     .kompas-wrapper {
-      margin: 20px auto;
-      width: 250px;
-      height: 250px;
-      border: 4px solid red;
+      margin: 25px auto;
+      width: 240px;
+      height: 240px;
+      border: 3px solid var(--accent);
       border-radius: 50%;
       position: relative;
-      background: radial-gradient(circle at center, #fff 90%, #ddd 100%);
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      background: radial-gradient(circle at center, var(--card-bg) 60%, var(--border) 100%);
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
+
+    /* Smerové značky v kruhu */
+    .smer-label {
+      position: absolute;
+      font-weight: 800;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .s-n { top: 8px; color: var(--accent); }
+    .s-s { bottom: 8px; }
+    .s-e { right: 12px; }
+    .s-w { left: 12px; }
+
+    .s-ne { top: 32px; right: 35px; font-size: 0.7rem; }
+    .s-nw { top: 32px; left: 35px; font-size: 0.7rem; }
+    .s-se { bottom: 32px; right: 35px; font-size: 0.7rem; }
+    .s-sw { bottom: 32px; left: 35px; font-size: 0.7rem; }
+
+    /* Ručička kompasu */
     .ručička {
       width: 4px;
-      height: 100px;
-      background: red;
+      height: 90px;
+      background: linear-gradient(to top, var(--muted) 50%, var(--accent) 50%);
       position: absolute;
-      top: 25px;
-      left: 50%;
+      top: 32px;
+      left: calc(50% - 2px);
       transform-origin: bottom center;
-      transition: transform 0.2s ease-out;
+      transition: transform 0.1s cubic-bezier(0.1, 1, 0.1, 1);
       border-radius: 2px;
     }
+
     .stred {
-      width: 12px;
-      height: 12px;
-      background: red;
+      width: 14px;
+      height: 14px;
+      background: var(--text);
+      border: 3px solid var(--accent);
       border-radius: 50%;
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      z-index: 2;
+      z-index: 3;
     }
-    .smer-label {
-      position: absolute;
-      font-weight: bold;
-      color: #d10000;
-    }
+
     .uhol {
-      margin-top: 15px;
-      font-size: 20px;
-      font-weight: bold;
+      margin-top: 20px;
+      font-size: 1.25rem;
+      font-weight: 700;
     }
-    .button {
-      margin: 10px;
-      padding: 10px 20px;
-      background-color: #d10000;
+
+    .upozornenie {
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: rgba(239, 68, 68, 0.08);
+      border-left: 4px solid var(--accent);
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 20px;
+      text-align: left;
+      line-height: 1.4;
+    }
+
+    .ios-btn {
+      margin-top: 15px;
+      width: 100%;
+      padding: 12px;
+      background-color: var(--accent);
       color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 12px;
+      font-weight: 700;
       cursor: pointer;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+      transition: transform 0.2s;
     }
-    .button:hover {
-      background-color: #b30000;
+
+    .ios-btn:hover {
+      transform: translateY(-2px);
     }
   </style>
 </head>
-<body>
+<body class="dark-mode">
 
-<button class="button" onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<div class="container">
+  <div class="top-bar">
+    <h2>🧭 ErikAI Kompas</h2>
+    <button class="theme-btn" onclick="toggleTheme()">🌓 Režim</button>
+  </div>
 
-<h2>🧭 ErikAI Kompas</h2>
+  <div class="kompas-wrapper" id="kompas">
+    <!-- Smerové značky v kruhu -->
+    <span class="smer-label s-n">S</span>
+    <span class="smer-label s-s">J</span>
+    <span class="smer-label s-e">V</span>
+    <span class="smer-label s-w">Z</span>
+    <span class="smer-label s-ne">NE</span>
+    <span class="smer-label s-nw">SV</span>
+    <span class="smer-label s-se">JV</span>
+    <span class="smer-label s-sw">JZ</span>
 
-<div class="kompas-wrapper" id="kompas">
-  <div class="ručička" id="rucicka"></div>
-  <div class="stred"></div>
+    <div class="ručička" id="rucicka"></div>
+    <div class="stred"></div>
+  </div>
+
+  <div class="uhol" id="uholText">Smer: 0° (Sever)</div>
+
+  <!-- iOS povolenie ak by bolo potrebné -->
+  <button id="iosPermBtn" class="ios-btn" style="display:none;" onclick="requestIOSPermission()">Povoliť snímač (iOS)</button>
+
+  <div class="upozornenie">
+    ℹ️ Kompas funguje lokálne v zariadení. Pre správnu funkciu povoľte prístup k orientácii polohy.
+  </div>
 </div>
-
-<div class="uhol" id="uholText">Smer: 0° (Sever)</div>
-
-<p class="upozornenie" style="max-width:500px; margin:auto; background:#fff3cd; padding:10px; border-left:6px solid #ffcc00;">
-  ℹ️ ErikAI Kompas funguje <strong>lokálne</strong> na vašom zariadení, žiadne dáta sa neodosielajú. <br>
-  ✅ Podporované: Android (Chrome), iOS (Safari od verzie 13.4)<br>
-  ❗ Nepodporované na: starších zariadeniach, niektorých desktopových prehliadačoch, PC bez senzora.
-</p>
 
 <script>
   function toggleTheme() {
@@ -110,36 +222,50 @@
   function aktualizujKompas(uhol) {
     const rucicka = document.getElementById("rucicka");
     const uholText = document.getElementById("uholText");
-    rucicka.style.transform = `rotate(${uhol}deg)`;
-    uholText.textContent = `Smer: ${Math.round(uhol)}° (${getSmer(uhol)})`;
-  }
-
-  function inicializujKompas() {
-    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
-      // iOS
-      DeviceOrientationEvent.requestPermission()
-        .then(permissionState => {
-          if (permissionState === "granted") {
-            window.addEventListener("deviceorientationabsolute", handler);
-          } else {
-            alert("Prístup k senzoru zamietnutý.");
-          }
-        })
-        .catch(console.error);
-    } else {
-      // Android a iné
-      window.addEventListener("deviceorientationabsolute", handler);
+    if(rucicka && uholText) {
+      rucicka.style.transform = `rotate(${uhol}deg)`;
+      uholText.textContent = `Smer: ${Math.round(uhol)}° (${getSmer(uhol)})`;
     }
   }
 
   function handler(event) {
+    let uhol = null;
     if (event.alpha !== null) {
-      const uhol = 360 - event.alpha;
+      uhol = 360 - event.alpha;
+    } else if (event.webkitCompassHeading !== undefined) {
+      uhol = event.webkitCompassHeading;
+    }
+    
+    if (uhol !== null) {
       aktualizujKompas(uhol);
     }
   }
 
-  inicializujKompas();
+  function inicializujKompas() {
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+      // Zobraziť tlačidlo pre iOS, kde je vyžadované explicitné gesto užívateľa
+      document.getElementById("iosPermBtn").style.display = "block";
+    } else {
+      // Android a štandardné prehliadače
+      window.addEventListener("deviceorientationabsolute", handler, true);
+      window.addEventListener("deviceorientation", handler, true);
+    }
+  }
+
+  function requestIOSPermission() {
+    DeviceOrientationEvent.requestPermission()
+      .then(permissionState => {
+        if (permissionState === "granted") {
+          window.addEventListener("deviceorientation", handler, true);
+          document.getElementById("iosPermBtn").style.display = "none";
+        } else {
+          alert("Prístup k senzoru kompasu bol zamietnutý.");
+        }
+      })
+      .catch(console.error);
+  }
+
+  window.onload = inicializujKompas;
 </script>
 
 </body>
