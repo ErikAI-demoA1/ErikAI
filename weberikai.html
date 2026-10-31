@@ -3,221 +3,357 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📱 ErikAI Webová verzia – Otváranie aplikácií (Android)</title>
+  <title>ErikAI OS – Spúšťač Android Aplikácií</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-light: #f4f4f4;
-      --bg-dark: #121212;
-      --text-light: #111;
-      --text-dark: #fff;
-      --card-light: #fff;
-      --card-dark: #1e1e1e;
-      --border-light: #ccc;
-      --border-dark: #333;
-      --accent: #d90000;
-      --accent-hover: #b30000;
+      --bg-deep: #030712;
+      --card-glass: rgba(17, 24, 39, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --neon-red: #ef4444;
+      --neon-orange: #f97316;
+      --accent-glow: rgba(239, 68, 68, 0.25);
+    }
+
+    body.light {
+      --bg-deep: #f1f5f9;
+      --card-glass: rgba(255, 255, 255, 0.85);
+      --card-border: rgba(0, 0, 0, 0.08);
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --neon-red: #dc2626;
+      --neon-orange: #ea580c;
+      --accent-glow: rgba(220, 38, 38, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
-      font-family: "Segoe UI", Roboto, Arial, sans-serif;
-      background: var(--bg-light);
-      color: var(--text-light);
-      margin: 0;
-      padding: 20px;
-      text-align: center;
-      transition: all 0.3s ease;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-deep);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(239, 68, 68, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(249, 115, 22, 0.05) 0%, transparent 40%),
+        linear-gradient(135deg, var(--bg-deep) 0%, #0b0f19 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 30px 20px;
+      transition: background 0.3s ease, color 0.3s ease;
     }
 
-    h1 {
-      font-size: 24px;
-      color: var(--text-light);
-      margin-bottom: 10px;
+    .main-container {
+      width: 100%;
+      max-width: 550px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    p {
-      font-size: 16px;
-      color: var(--text-light);
-    }
-
-    .card {
-      background: var(--card-light);
-      border: 1px solid var(--border-light);
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 500px;
-      margin: 20px auto;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      transition: all 0.3s ease;
-    }
-
-    label {
-      font-size: 18px;
-      display: block;
-      margin: 15px 0 8px;
-    }
-
-    select {
-      font-size: 16px;
-      padding: 12px;
-      width: 90%;
-      border-radius: 8px;
-      border: 1px solid var(--border-light);
-      background: var(--card-light);
-      color: var(--text-light);
-      transition: all 0.3s;
-    }
-
-    select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    button {
-      margin-top: 20px;
-      background-color: var(--accent);
-      color: white;
-      border: none;
-      padding: 12px 28px;
-      font-size: 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    button:hover {
-      background-color: var(--accent-hover);
-      transform: scale(1.02);
-    }
-
-    .footer {
-      font-size: 14px;
-      color: gray;
-      margin-top: 40px;
-    }
-
-    /* 🔘 Dark mode */
-    body.dark-mode {
-      background-color: var(--bg-dark);
-      color: var(--text-dark);
-    }
-
-    body.dark-mode .card {
-      background: var(--card-dark);
-      border-color: var(--border-dark);
-      color: var(--text-dark);
-    }
-
-    body.dark-mode select {
-      background: var(--card-dark);
-      border-color: var(--border-dark);
-      color: var(--text-dark);
-    }
-
-    body.dark-mode h1,
-    body.dark-mode p,
-    body.dark-mode label {
-      color: var(--text-dark);
-    }
-
-    body.dark-mode button {
-      background-color: var(--accent);
+    .top-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
     }
 
     #cas {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      background: var(--card-glass);
+      padding: 6px 14px;
+      border-radius: 99px;
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(10px);
+    }
+
+    #themeToggle {
+      background: var(--card-glass);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s;
+    }
+
+    #themeToggle:hover {
+      border-color: var(--neon-red);
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--text-main) 40%, var(--neon-red), var(--neon-orange));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-bottom: 25px;
+      text-align: center;
+    }
+
+    .warning-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      color: var(--neon-red);
+      font-weight: 600;
+      margin-bottom: 20px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .card {
+      background: var(--card-glass);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 25px;
+      width: 100%;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-main);
+      text-align: left;
+    }
+
+    /* Vyhľadávanie v zozname aplikácií */
+    .filter-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-deep);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .filter-input:focus {
+      border-color: var(--neon-red);
+    }
+
+    select {
+      width: 100%;
+      padding: 14px;
+      background: var(--bg-deep);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+    }
+
+    button.action-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--neon-red), var(--neon-orange));
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 15px var(--accent-glow);
+      transition: transform 0.2s;
       margin-top: 10px;
-      font-size: 16px;
-      opacity: 0.9;
+    }
+
+    button.action-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    #google_translate_element {
+      display: flex;
+      justify-content: center;
+      margin-top: 5px;
+    }
+
+    .footer {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 30px;
+      line-height: 1.6;
+      text-align: center;
+      border-top: 1px solid var(--card-border);
+      padding-top: 20px;
+      width: 100%;
     }
   </style>
 </head>
 
-<body>
-  <h1>📱 ErikAI Webová verzia – Otváranie aplikácií (Android)</h1>
-  <p style="font-weight:bold; color:#c00;">
-    ⚠️ Funkcia je dostupná <u>len pre mobilné zariadenia s Androidom</u>.
-  </p>
+<body class="dark">
 
-  <p id="cas"></p>
+  <div class="main-container">
+    <div class="top-bar">
+      <p id="cas">Načítavam čas...</p>
+      <button id="themeToggle" onclick="toggleTheme()">☀️ Svetlý režim</button>
+    </div>
 
-  <div class="card">
-    <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-    <div id="google_translate_element" style="margin-top:15px;"></div>
+    <h1>📱 ErikAI Android Launcher</h1>
+    <p class="subtitle">Priame spúšťanie natívnych Android aplikácií cez webové rozhranie</p>
 
-    <form id="appForm" onsubmit="return openApp();">
-      <label for="app">Vyber aplikáciu:</label>
-      <select id="app">
-        <option value="com.google.android.apps.maps">Google Maps</option>
-        <option value="com.google.android.apps.messaging">Správy (Google)</option>
-        <option value="com.google.android.apps.translate">Google Prekladač</option>
-        <option value="com.ryanair.cheapflights">Ryanair</option>
-        <option value="com.revolut.revolut">Revolut</option>
-        <option value="cz.seznam.mapy">Seznam Mapy</option>
-        <option value="com.google.android.apps.photos">Google Fotky</option>
-        <option value="com.microsoft.teams">Microsoft Teams</option>
-        <option value="com.skype.raider">Skype</option>
-        <option value="org.mozilla.firefox">Firefox</option>
-        <option value="com.opera.browser">Opera</option>
-        <option value="com.microsoft.office.officehubrow">Microsoft Office</option>
-        <option value="com.google.android.apps.docs">Google Dokumenty</option>
-        <option value="com.google.android.gm">Gmail</option>
-        <option value="com.google.android.calendar">Google Kalendár</option>
-        <option value="com.nianticlabs.pokemongo">Pokémon GO</option>
-        <option value="com.supercell.clashofclans">Clash of Clans</option>
-        <option value="com.supercell.brawlstars">Brawl Stars</option>
-        <option value="com.king.candycrushsaga">Candy Crush</option>
-        <option value="com.google.android.youtube">YouTube</option>
-        <option value="com.instagram.android">Instagram</option>
-        <option value="com.facebook.katana">Facebook</option>
-        <option value="com.discord">Discord</option>
-        <option value="com.twitter.android">Twitter</option>
-        <option value="com.snapchat.android">Snapchat</option>
-        <option value="com.spotify.music">Spotify</option>
-        <option value="com.netflix.mediaclient">Netflix</option>
-        <option value="com.ubercab">Uber</option>
-        <option value="com.ebay.mobile">eBay</option>
-        <option value="com.android.chrome">Chrome</option>
-        <option value="com.google.android.apps.nbu.paisa.user">Google Pay</option>
-        <option value="com.google.android.googlequicksearchbox">Google Asistent</option>
-        <option value="com.google.android.apps.youtube.music">YouTube Music</option>
-        <option value="com.google.android.apps.tachyon">Google Meet</option>
-        <option value="com.google.android.keep">Google Keep</option>
-        <option value="com.google.android.apps.classroom">Google Classroom</option>
-        <option value="com.google.android.contacts">Kontakty</option>
-        <option value="com.google.android.dialer">Telefón</option>
-        <option value="com.google.android.apps.walletnfcrel">Google Peňaženka</option>
-        <option value="com.google.android.apps.accessibility.reveal">Lookout</option>
-        <option value="com.google.android.apps.wellbeing">Digitálna rovnováha</option>
-        <option value="com.google.android.apps.fitness">Google Fit</option>
-        <option value="com.google.android.gms">Google Služby</option>
-        <option value="com.google.android.inputmethod.latin">Gboard</option>
-        <option value="com.google.android.apps.books">Google Knihy</option>
-        <option value="com.google.android.apps.magazines">Google News</option>
-      </select>
-      <button type="submit">🚀 Otvoriť aplikáciu</button>
-    </form>
+    <div class="warning-box">
+      ⚠️ Funkcia je dostupná <u>len pre mobilné zariadenia s Androidom</u> a podporovaným prehliadačom.
+    </div>
+
+    <div class="card">
+      <div id="google_translate_element"></div>
+
+      <form id="appForm" onsubmit="return openApp();">
+        <label for="appFilter">🔎 Hľadať aplikáciu v zozname:</label>
+        <input type="text" id="appFilter" class="filter-input" placeholder="Začni písať názov (napr. YouTube, Spotify)..." onkeyup="filterApps()" autocomplete="off">
+
+        <label for="app" style="margin-top: 15px;">Vyber aplikáciu:</label>
+        <select id="app" size="8">
+          <!-- Google & Systém -->
+          <option value="com.google.android.apps.maps">Google Maps</option>
+          <option value="com.google.android.apps.messaging">Správy (Google)</option>
+          <option value="com.google.android.apps.translate">Google Prekladač</option>
+          <option value="com.google.android.apps.photos">Google Fotky</option>
+          <option value="com.google.android.apps.docs">Google Dokumenty</option>
+          <option value="com.google.android.gm">Gmail</option>
+          <option value="com.google.android.calendar">Google Kalendár</option>
+          <option value="com.google.android.youtube">YouTube</option>
+          <option value="com.google.android.apps.youtube.music">YouTube Music</option>
+          <option value="com.google.android.apps.tachyon">Google Meet</option>
+          <option value="com.google.android.keep">Google Keep</option>
+          <option value="com.google.android.apps.classroom">Google Classroom</option>
+          <option value="com.google.android.contacts">Kontakty</option>
+          <option value="com.google.android.dialer">Telefón</option>
+          <option value="com.google.android.apps.walletnfcrel">Google Peňaženka</option>
+          <option value="com.google.android.apps.wellbeing">Digitálna rovnováha</option>
+          <option value="com.google.android.apps.fitness">Google Fit</option>
+          <option value="com.google.android.gms">Google Služby</option>
+          <option value="com.google.android.inputmethod.latin">Gboard</option>
+          <option value="com.google.android.apps.books">Google Knihy</option>
+          <option value="com.google.android.apps.magazines">Google News</option>
+          <option value="com.google.android.googlequicksearchbox">Google Asistent</option>
+          
+          <!-- Sociálne siete & Komunikácia -->
+          <option value="com.instagram.android">Instagram</option>
+          <option value="com.facebook.katana">Facebook</option>
+          <option value="com.facebook.orca">Messenger</option>
+          <option value="com.whatsapp">WhatsApp</option>
+          <option value="com.discord">Discord</option>
+          <option value="com.twitter.android">X (Twitter)</option>
+          <option value="com.snapchat.android">Snapchat</option>
+          <option value="org.telegram.messenger">Telegram</option>
+          <option value="com.zhiliaoapp.musically">TikTok</option>
+          <option value="com.pinterest">Pinterest</option>
+          <option value="com.reddit.frontpage">Reddit</option>
+          <option value="com.linkedin.android">LinkedIn</option>
+          <option value="com.tumblr">Tumblr</option>
+          <option value="com.twitch.android.app">Twitch</option>
+          <option value="com.viber.voip">Viber</option>
+          <option value="com.skype.raider">Skype</option>
+          <option value="com.microsoft.teams">Microsoft Teams</option>
+          <option value="zoom.us">Zoom Meetings</option>
+
+          <!-- Médiá, Zábava & Hry -->
+          <option value="com.spotify.music">Spotify</option>
+          <option value="com.netflix.mediaclient">Netflix</option>
+          <option value="deezer.android.app">Deezer</option>
+          <option value="com.soundcloud.android">SoundCloud</option>
+          <option value="tv.twitch">Twitch TV</option>
+          <option value="com.nianticlabs.pokemongo">Pokémon GO</option>
+          <option value="com.supercell.clashofclans">Clash of Clans</option>
+          <option value="com.supercell.brawlstars">Brawl Stars</option>
+          <option value="com.king.candycrushsaga">Candy Crush Saga</option>
+          <option value="com.mojang.minecraftpe">Minecraft</option>
+          <option value="com.roblox.client">Roblox</option>
+
+          <!-- Prehliadače & Nástroje -->
+          <option value="com.android.chrome">Google Chrome</option>
+          <option value="org.mozilla.firefox">Firefox Browser</option>
+          <option value="com.opera.browser">Opera Browser</option>
+          <option value="com.microsoft.emmx">Microsoft Edge</option>
+          <option value="com.brave.browser">Brave Browser</option>
+          <option value="com.microsoft.office.officehubrow">Microsoft Office</option>
+          <option value="adobe.reader">Adobe Acrobat Reader</option>
+          <option value="Notion.ID">Notion</option>
+
+          <!-- Cestovanie, Banky & Nákupy -->
+          <option value="com.ryanair.cheapflights">Ryanair</option>
+          <option value="com.revolut.revolut">Revolut</option>
+          <option value="cz.seznam.mapy">Seznam Mapy</option>
+          <option value="com.ubercab">Uber</option>
+          <option value="com.bolt.client">Bolt</option>
+          <option value="com.ebay.mobile">eBay</option>
+          <option value="com.amazon.mShop.android.shopping">Amazon Shopping</option>
+          <option value="com.aliexpress.ae">AliExpress</option>
+          <option value="sk.tatrabanka.tbapplication">Tatra banka (TB)</option>
+          <option value="sk.vub.bsp">VÚB Banka</option>
+        </select>
+
+        <button type="submit" class="action-btn">🚀 Spustiť aplikáciu</button>
+      </form>
+    </div>
+
+    <footer class="footer">
+      🔓 Táto verzia podporuje otváranie vyše 70 pokročilých Android aplikácií.<br><br>
+      This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+      © 2025–2026 <strong>Erik Mohylák</strong> – All rights reserved.
+    </footer>
   </div>
 
-  <p class="footer">
-    🔓 Táto verzia podporuje otváranie až 47 mobilných aplikácií pre Android.<br><br>
-    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
-    © 2025 Erik Mohylák – All rights reserved.
-  </p>
-
   <script>
+    // 🕒 Živý čas
     function aktualizujCas() {
       const teraz = new Date();
-      const dni = ['nedeľa','pondelok','utorok','streda','štvrtok','piatok','sobota'];
-      const mesiace = ['január','február','marec','apríl','máj','jún','júl','august','september','október','november','december'];
-      const datumCas = `${dni[teraz.getDay()]}, ${teraz.getDate()}. ${mesiace[teraz.getMonth()]} ${teraz.getFullYear()} – ${teraz.getHours().toString().padStart(2,'0')}:${teraz.getMinutes().toString().padStart(2,'0')}:${teraz.getSeconds().toString().padStart(2,'0')}`;
-      document.getElementById("cas").textContent = datumCas;
+      const moznosti = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      document.getElementById("cas").textContent = `🕒 ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
     }
     aktualizujCas();
     setInterval(aktualizujCas, 1000);
 
+    // 🌙 Prepínanie témy
     function toggleTheme() {
-      document.body.classList.toggle('dark-mode');
+      if(document.body.classList.contains('dark')){
+        document.body.classList.remove('dark');
+        document.body.classList.add('light');
+        document.getElementById('themeToggle').innerText = '🌙 Tmavý režim';
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.body.classList.remove('light');
+        document.body.classList.add('dark');
+        document.getElementById('themeToggle').innerText = '☀️ Svetlý režim';
+        localStorage.setItem('theme', 'dark');
+      }
     }
 
+    // 🚀 Spustenie aplikácie cez Android Intent
     function openApp() {
       const app = document.getElementById("app").value;
       const url = `intent://#Intent;package=${app};end`;
@@ -225,23 +361,50 @@
       return false;
     }
 
-    // Automatické zoradenie aplikácií
+    // 🔎 Živé filtrovanie / vyhľadávanie aplikácií v zozname
+    let allOptions = [];
     window.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.body.classList.add(savedTheme);
+      document.getElementById('themeToggle').innerText = savedTheme === 'dark' ? '☀️ Svetlý režim' : '🌙 Tmavý režim';
+
       const select = document.getElementById("app");
-      const options = Array.from(select.options);
-      options.sort((a, b) => a.text.localeCompare(b.text, 'sk'));
+      allOptions = Array.from(select.options);
+      
+      // Automatické abecedné zoradenie
+      allOptions.sort((a, b) => a.text.localeCompare(b.text, 'sk'));
       select.innerHTML = "";
-      options.forEach(option => select.appendChild(option));
+      allOptions.forEach(option => select.appendChild(option));
     });
 
-    // Ochrana pred neoprávneným prístupom
+    function filterApps() {
+      const query = document.getElementById("appFilter").value.toLowerCase().trim();
+      const select = document.getElementById("app");
+      select.innerHTML = "";
+      
+      allOptions.forEach(option => {
+        if(option.text.toLowerCase().includes(query)) {
+          select.appendChild(option);
+        }
+      });
+    }
+
+    // 🔒 Ochrana pred neoprávneným prístupom
     const povoleneRef = ["erikai-demoa1.github.io", "erikaios.online"];
-    if (!document.referrer || !povoleneRef.some(ref => document.referrer.includes(ref))) {
+    let pristupOk = false;
+    povoleneRef.forEach(ref => {
+      if (document.referrer.includes(ref)) pristupOk = true;
+    });
+    // Ak chceš testovať lokálne, môžeš ochranu dočasne zakomentovať:
+    /*
+    if (!pristupOk) {
       alert("Prístup zakázaný: túto stránku nemožno otvoriť priamo.");
       window.location.href = "https://erikaios.online/";
     }
+    */
   </script>
 
+  <!-- Google Translate -->
   <script type="text/javascript">
     function googleTranslateElementInit() {
       new google.translate.TranslateElement({
@@ -253,4 +416,4 @@
   </script>
   <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
-  </html>
+</html>
