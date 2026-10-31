@@ -139,7 +139,6 @@
       font-size: 0.9rem;
     }
 
-    /* --- SEKCIA LICENČNÝCH ÚDAJOV (AKORDEÓN / PANELY) --- */
     .help-section {
       width: 100%;
       max-width: 600px;
@@ -269,16 +268,13 @@
 
     <button class="unlock-btn" onclick="checkAccess()">Odomknúť systém</button>
 
-    <div class="timer" id="timer">⏳ Čas na zadanie: 300 sekúnd</div>
+    <div class="timer" id="timer">⏳ Čas na zadanie: 90 sekúnd</div>
     <div id="error" class="error"></div>
   </div>
 
-  <!-- PREHĽADNÝ ZOZNAM LICENCIÍ PRE JEDNOTLIVÉ ZARIADENIA -->
   <div class="help-section">
     <div class="help-title">📋 Dostupné licenčné údaje (Kliknutím vyplníš)</div>
-    <div class="brands-grid" id="brandsGrid">
-      <!-- Generuje sa dynamicky cez JS pre maximálnu prehľadnosť -->
-    </div>
+    <div class="brands-grid" id="brandsGrid"></div>
   </div>
 
   <footer>
@@ -310,12 +306,11 @@
     ];
 
     if (localStorage.getItem("erik_access") === "granted") {
-      window.location.href = "index3.html";
+      window.location.href = "index4.html";
     }
 
-    // --- Generovanie prehľadných kariet pre značky ---
     const grid = document.getElementById("brandsGrid");
-    FIRMY.forEach((f, idx) => {
+    FIRMY.forEach((f) => {
       const card = document.createElement("div");
       card.className = "brand-card";
       const lic = Array.isArray(f.licenceKey) ? f.licenceKey[0] : f.licenceKey;
@@ -342,9 +337,9 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // --- Detekcia aktuálneho zariadenia a predvyplnenie ---
+    // Detekcia zariadenia (opravená chyba s ID elementu)
     const matchedFirma = FIRMY.find(f => f.userAgentRegex.test(deviceInfo));
-    const badge = document.getElementById("detectedBadge");
+    const badge = document.getElementById("detectedBrand");
     if (matchedFirma) {
       badge.innerHTML = `✨ Detekované zariadenie: <strong>${matchedFirma.znacka}</strong> (Predvyplnené)`;
       const lic = Array.isArray(matchedFirma.licenceKey) ? matchedFirma.licenceKey[0] : matchedFirma.licenceKey;
@@ -355,8 +350,8 @@
       badge.innerHTML = `💻 Zariadenie nerozpoznané (vyberte zo zoznamu nižšie)`;
     }
 
-    // === Časovač ===
-    let timeLeft = 300;
+    // Časovač znížený na 90 sekúnd
+    let timeLeft = 90;
     const timerElement = document.getElementById("timer");
     const interval = setInterval(() => {
       timeLeft--;
@@ -364,7 +359,7 @@
       if (timeLeft <= 0) {
         clearInterval(interval);
         document.getElementById("error").innerText = "❌ Čas vypršal. Stránka sa obnovuje.";
-        setTimeout(() => window.location.reload(), 3000);
+        setTimeout(() => window.location.reload(), 2000);
       }
     }, 1000);
 
@@ -402,11 +397,12 @@
       const firma = FIRMY.find(f =>
         (Array.isArray(f.licenceKey) ? f.licenceKey.includes(inputKey) : f.licenceKey === inputKey) &&
         (Array.isArray(f.shortPass) ? f.shortPass.includes(inputPass) : f.shortPass === inputPass) &&
-        (Array.isArray(f.specialCode) ? f.specialCode.includes(inputCode) : f.specialCode === inputCode)
+        (Array.isArray(f.specialCode) ? f.specialCode.includes(inputCode) : f.specialCode === inputCode) &&
+        f.userAgentRegex.test(deviceInfo)
       );
 
       if (!firma) {
-        document.getElementById("error").innerText = "❌ Nesprávne licenčné údaje.";
+        document.getElementById("error").innerText = "❌ Nesprávne licenčné údaje alebo nepodporované zariadenie.";
         return;
       }
 
