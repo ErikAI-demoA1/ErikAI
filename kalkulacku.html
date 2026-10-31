@@ -4,99 +4,324 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ErikAI Profesionálna Vedecká Kalkulačka</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --bg-gradient: linear-gradient(135deg, #0d0d11 0%, #1a0808 100%);
+    --card-bg: rgba(20, 20, 25, 0.75);
+    --card-border: rgba(214, 40, 40, 0.2);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --primary: #d62828;
+    --primary-hover: #b71d1d;
+    --btn-bg: rgba(255, 255, 255, 0.03);
+    --btn-hover: rgba(214, 40, 40, 0.2);
+    --shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  body.light-mode {
+    --bg-gradient: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    --card-bg: rgba(255, 255, 255, 0.85);
+    --card-border: rgba(214, 40, 40, 0.3);
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --btn-bg: rgba(0, 0, 0, 0.03);
+    --btn-hover: rgba(214, 40, 40, 0.1);
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
   body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #e0e0e0, #ffffff);
-    color: #222;
-    text-align: center;
-    padding: 2rem;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg-gradient);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 15px;
+    transition: background 0.3s ease, color 0.3s ease;
   }
-  body.dark-mode { background: #121212; color: white; }
-  h1 { color: #d62828; margin-bottom: 1rem; font-weight: 700; }
-  #calcDisplay {
+
+  .top-bar {
     width: 100%;
-    max-width: 400px;
-    font-size: 2rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border: 2px solid #d62828;
-    border-radius: 12px;
-    text-align: right;
-    outline: none;
-    background: #fff;
-    color: #222;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    max-width: 480px;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 15px;
   }
-  body.dark-mode #calcDisplay { background: #1e1e1e; color: white; border-color: #ff5555; }
-  .buttons {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    max-width: 400px;
-    margin: 0 auto;
-  }
-  .buttons button {
-    padding: 1rem;
-    font-size: 1.2rem;
-    background-color: #d62828;
-    color: white;
-    border: none;
+
+  .theme-btn {
+    background: var(--btn-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text-main);
+    padding: 8px 14px;
     border-radius: 10px;
     cursor: pointer;
-    transition: 0.2s;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
   }
-  .buttons button:hover { background-color: #b71d1d; }
-  #cas { font-size: 16px; margin-top: 1rem; }
+
+  .theme-btn:hover {
+    background: var(--primary);
+    color: white;
+  }
+
+  .calculator-container {
+    width: 100%;
+    max-width: 480px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 25px;
+    box-shadow: var(--shadow);
+    margin-bottom: 30px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--primary);
+    text-align: center;
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+  }
+
+  #calcDisplay {
+    width: 100%;
+    font-size: 2.1rem;
+    font-weight: 700;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    border: 2px solid var(--card-border);
+    border-radius: 14px;
+    text-align: right;
+    outline: none;
+    background: var(--btn-bg);
+    color: var(--text-main);
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+
+  #calcDisplay:focus {
+    border-color: var(--primary);
+  }
+
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+
+  .buttons button {
+    padding: 14px 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    background-color: var(--btn-bg);
+    color: var(--text-main);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .buttons button:hover {
+    background-color: var(--btn-hover);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+  }
+
+  .buttons button.operator {
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  .buttons button.action {
+    background-color: rgba(214, 40, 40, 0.15);
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  .buttons button.action:hover {
+    background-color: var(--primary);
+    color: white;
+  }
+
+  #cas {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 15px;
+  }
+
+  /* Sekcia popisu funkcií */
+  .manual-container {
+    width: 100%;
+    max-width: 750px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(16px);
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: var(--shadow);
+    margin-bottom: 30px;
+  }
+
+  .manual-container h2 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    color: var(--primary);
+  }
+
+  .manual-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 12px;
+  }
+
+  .manual-item {
+    background: var(--btn-bg);
+    border: 1px solid var(--card-border);
+    padding: 12px 14px;
+    border-radius: 10px;
+  }
+
+  .manual-item code {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 1rem;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+
+  .manual-item p {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  footer {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.6;
+  }
 </style>
 </head>
-<body>
+<body class="dark-mode">
 
-<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-
-<h1>🧪 ErikAI Profesionálna Vedecká Kalkulačka</h1>
-<input type="text" id="calcDisplay" spellcheck="false" autocapitalize="off" autocomplete="off">
-
-<div class="buttons">
-  <button onclick="appendCalc('sin(')">sin</button>
-  <button onclick="appendCalc('cos(')">cos</button>
-  <button onclick="appendCalc('tan(')">tan</button>
-  <button onclick="appendCalc('sqrt(')">√</button>
-
-  <button onclick="appendCalc('7')">7</button>
-  <button onclick="appendCalc('8')">8</button>
-  <button onclick="appendCalc('9')">9</button>
-  <button onclick="appendCalc('/')">÷</button>
-
-  <button onclick="appendCalc('4')">4</button>
-  <button onclick="appendCalc('5')">5</button>
-  <button onclick="appendCalc('6')">6</button>
-  <button onclick="appendCalc('*')">×</button>
-
-  <button onclick="appendCalc('1')">1</button>
-  <button onclick="appendCalc('2')">2</button>
-  <button onclick="appendCalc('3')">3</button>
-  <button onclick="appendCalc('-')">−</button>
-
-  <button onclick="appendCalc('0')">0</button>
-  <button onclick="appendCalc('^')">^</button>
-  <button onclick="calculate()">=</button>
-  <button onclick="appendCalc('+')">+</button>
-
-  <button onclick="appendCalc('log(')">log</button>
-  <button onclick="appendCalc('ln(')">ln</button>
-  <button onclick="appendCalc('π')">π</button>
-  <button onclick="appendCalc('e')">e</button>
-
-  <button onclick="clearCalc()">C</button>
+<div class="top-bar">
+  <button class="theme-btn" onclick="toggleTheme()">🌓 Zmeniť režim</button>
 </div>
 
-<p id="cas"></p>
+<div class="calculator-container">
+  <h1>🧪 ErikAI Scientific Pro</h1>
+  <input type="text" id="calcDisplay" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="0">
+
+  <div class="buttons">
+    <button class="action" onclick="clearCalc()">C</button>
+    <button class="operator" onclick="appendCalc('(')">(</button>
+    <button class="operator" onclick="appendCalc(')')">)</button>
+    <button class="operator" onclick="appendCalc('%')">%</button>
+    <button class="operator" onclick="appendCalc('/')">÷</button>
+
+    <button onclick="appendCalc('sin(')">sin</button>
+    <button onclick="appendCalc('cos(')">cos</button>
+    <button onclick="appendCalc('tan(')">tan</button>
+    <button onclick="appendCalc('sqrt(')">√</button>
+    <button class="operator" onclick="appendCalc('*')">×</button>
+
+    <button onclick="appendCalc('7')">7</button>
+    <button onclick="appendCalc('8')">8</button>
+    <button onclick="appendCalc('9')">9</button>
+    <button onclick="appendCalc('^')">^</button>
+    <button class="operator" onclick="appendCalc('-')">−</button>
+
+    <button onclick="appendCalc('4')">4</button>
+    <button onclick="appendCalc('5')">5</button>
+    <button onclick="appendCalc('6')">6</button>
+    <button onclick="appendCalc('log(')">log</button>
+    <button class="operator" onclick="appendCalc('+')">+</button>
+
+    <button onclick="appendCalc('1')">1</button>
+    <button onclick="appendCalc('2')">2</button>
+    <button onclick="appendCalc('3')">3</button>
+    <button onclick="appendCalc('ln(')">ln</button>
+    <button class="action" onclick="calculate()" style="grid-row: span 2; height: auto;">=</button>
+
+    <button onclick="appendCalc('0')" style="grid-column: span 2;">0</button>
+    <button onclick="appendCalc('.')">.</button>
+    <button onclick="appendCalc('π')">π</button>
+    <button onclick="appendCalc('e')">e</button>
+  </div>
+
+  <p id="cas"></p>
+</div>
+
+<!-- Detailný prehľad a lexikón funkcií -->
+<div class="manual-container">
+  <h2>📖 Lexikón funkcií a operátorov kalkulačky</h2>
+  <div class="manual-grid">
+    <div class="manual-item">
+      <code>+ , − , × , ÷</code>
+      <p>Základné aritmetické operácie (sčítanie, odčítanie, násobenie, delenie).</p>
+    </div>
+    <div class="manual-item">
+      <code>x ^ y</code>
+      <p><strong>Mocnina:</strong> Umocní základ na zadaný exponent (napr. <code>2^3 = 8</code>).</p>
+    </div>
+    <div class="manual-item">
+      <code>√ (sqrt)</code>
+      <p><strong>Odmocnina:</strong> Vypočíta druhú odmocninu zadaného čísla (napr. <code>√16 = 4</code>).</p>
+    </div>
+    <div class="manual-item">
+      <code>sin, cos, tan</code>
+      <p><strong>Goniometrické funkcie:</strong> Počítajú sínus, kosínus a tangens v stupňoch (°).</p>
+    </div>
+    <div class="manual-item">
+      <code>log</code>
+      <p><strong>Dekadický logaritmus:</strong> Logaritmus so základom 10 (log₁₀).</p>
+    </div>
+    <div class="manual-item">
+      <code>ln</code>
+      <p><strong>Prirodzený logaritmus:</strong> Logaritmus so základom e (Eulerovo číslo).</p>
+    </div>
+    <div class="manual-item">
+      <code>π (Pi)</code>
+      <p>Konštanta Pi (≈ 3.14159) pre výpočty s kruhmi a uhlami.</p>
+    </div>
+    <div class="manual-item">
+      <code>e</code>
+      <p>Eulerovo číslo (≈ 2.71828) pre exponenciálny rast a rastové modely.</p>
+    </div>
+    <div class="manual-item">
+      <code>%</code>
+      <p><strong>Percento:</strong> Prepočet hodnoty na percento z celku.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+  To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener" style="color: var(--primary);">Creative Commons BY-NC-ND 4.0</a>.<br>
+  <strong>© 2025 Erik Mohylák – All rights reserved.</strong></p>
+</footer>
 
 <script>
 const display = document.getElementById("calcDisplay");
 
-function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+function toggleTheme() { 
+  document.body.classList.toggle('dark-mode');
+  document.body.classList.toggle('light-mode');
+}
 
 function appendCalc(value) {
   const start = display.selectionStart;
@@ -106,9 +331,10 @@ function appendCalc(value) {
   display.focus();
 }
 
-function clearCalc() { display.value = ''; }
-
-function degToRad(deg) { return deg * Math.PI / 180; }
+function clearCalc() { 
+  display.value = ''; 
+  display.focus();
+}
 
 function calculate() {
   try {
@@ -116,20 +342,37 @@ function calculate() {
       .replace(/π/g, Math.PI)
       .replace(/e/g, Math.E)
       .replace(/√\(/g, 'Math.sqrt(')
-      .replace(/sin\(/g, x => 'Math.sin(')
-      .replace(/cos\(/g, x => 'Math.cos(')
-      .replace(/tan\(/g, x => 'Math.tan(')
       .replace(/log\(/g, 'Math.log10(')
       .replace(/ln\(/g, 'Math.log(')
       .replace(/\^/g, '**');
 
-    expr = expr.replace(/Math\.sin\(([^)]+)\)/g, (_, x) => `Math.sin(${x}*Math.PI/180)`);
-    expr = expr.replace(/Math\.cos\(([^)]+)\)/g, (_, x) => `Math.cos(${x}*Math.PI/180)`);
-    expr = expr.replace(/Math\.tan\(([^)]+)\)/g, (_, x) => `Math.tan(${x}*Math.PI/180)`);
+    // Prevod stupňov na radiány pre goniometrické funkcie
+    expr = expr.replace(/sin\(([^)]+)\)/g, (_, x) => `Math.sin((${x}) * Math.PI / 180)`);
+    expr = expr.replace(/cos\(([^)]+)\)/g, (_, x) => `Math.cos((${x}) * Math.PI / 180)`);
+    expr = expr.replace(/tan\(([^)]+)\)/g, (_, x) => `Math.tan((${x}) * Math.PI / 180)`);
 
-    display.value = eval(expr);
-  } catch { display.value = "Chyba"; }
+    // Podpora pre percentá
+    expr = expr.replace(/(\d+)(%)/g, (_, num) => `${num} / 100`);
+
+    let result = eval(expr);
+    
+    // Ošetrenie desatinných miest kvôli presnosti JS
+    if (typeof result === 'number' && !Number.isInteger(result)) {
+      result = parseFloat(result.toFixed(10));
+    }
+    
+    display.value = result;
+  } catch { 
+    display.value = "Chyba výpočtu"; 
+  }
 }
+
+// Podpora pre stlačenie klávesu Enter na výpočet
+display.addEventListener('keydown', function(event) {
+  if (event.key === 'Enter') {
+    calculate();
+  }
+});
 
 // Aktuálny čas
 function aktualizujCas() {
@@ -142,10 +385,5 @@ setInterval(aktualizujCas, 1000);
 aktualizujCas();
 </script>
 
-<p style="font-size: 14px; color: gray; margin-top: 20px;">
-This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
-© 2025 Erik Mohylák – All rights reserved.
-</p>
-
 </body>
-  </html>
+</html>
