@@ -3,138 +3,356 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Platformy Menu</title>
+  <title>ErikAI OS – Platformy Menu</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #d10000;
-      --primary-hover: #990000;
-      --bg: #0f1720;
-      --card: #1e293b;
-      --text: #e6eef6;
-      --muted: #94a3b8;
+      --bg-deep: #030712;
+      --card-glass: rgba(17, 24, 39, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover-border: rgba(239, 68, 68, 0.5);
+      --neon-red: #ef4444;
+      --neon-orange: #f97316;
+      --accent-glow: rgba(239, 68, 68, 0.25);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
-      font-family: 'Inter', Arial, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-deep);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(239, 68, 68, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(249, 115, 22, 0.06) 0%, transparent 40%),
+        linear-gradient(135deg, #030712 0%, #0b0f19 100%);
+      color: var(--text-main);
       min-height: 100vh;
-    }
-
-    h1 {
-      color: var(--primary);
-      margin-bottom: 20px;
-      font-size: 28px;
-    }
-
-    .button-list {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
-      width: 100%;
-      max-width: 320px;
+      justify-content: space-between;
+      padding: 40px 20px;
+      overflow-x: hidden;
     }
 
-    a {
-      display: block;
-      background-color: var(--primary);
-      color: #fff;
-      padding: 12px 20px;
-      border-radius: 12px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 16px;
-      width: 100%;
-      text-align: center;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    /* Svetelné častice na pozadí pre 4D efekt */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-image: radial-gradient(white 1px, transparent 1px);
+      background-size: 50px 50px;
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: -1;
     }
 
-    a:hover {
-      background-color: var(--primary-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    .main-container {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ====== HEADER / STATUS BAR ====== */
+    .status-bar {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 25px;
     }
 
     #cas {
-      font-size: 16px;
-      margin-bottom: 15px;
-      color: var(--muted);
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 8px 18px;
+      border-radius: 99px;
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .os-badge {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: linear-gradient(90deg, var(--neon-red), var(--neon-orange));
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 99px;
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    h1 {
+      margin: 5px 0 8px 0;
+      font-size: 2.8rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #fff 40%, var(--neon-red), var(--neon-orange));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -1px;
+      text-align: center;
+      text-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      margin-bottom: 30px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    /* ====== CONTROLS (VYHĽADÁVANIE + PREKLAD) ====== */
+    .controls-row {
+      display: flex;
+      gap: 15px;
+      width: 100%;
+      max-width: 650px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 280px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 14px 20px 14px 45px;
+      background: var(--card-glass);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+
+    .search-box input:focus {
+      border-color: var(--neon-red);
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 1.1rem;
     }
 
     #google_translate_element {
-      margin-bottom: 20px;
+      background: var(--card-glass);
+      padding: 6px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(12px);
     }
 
-    p.footer {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 30px;
+    /* ====== MRIEŽKA TLAČIDIEL (HOLO KARTY) ====== */
+    .button-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 10px 0 40px 0;
+      width: 100%;
+    }
+
+    a.nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px;
+      background: var(--card-glass);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(16px);
+      color: var(--text-main);
+      border-radius: 16px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    a.nav-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 4px; height: 100%;
+      background: linear-gradient(to bottom, var(--neon-red), var(--neon-orange));
+      opacity: 0.4;
+      transition: opacity 0.3s;
+    }
+
+    a.nav-btn:hover {
+      transform: translateY(-5px) scale(1.01);
+      background: rgba(25, 32, 52, 0.9);
+      border-color: var(--card-hover-border);
+      box-shadow: 0 15px 35px var(--accent-glow);
+      color: #fff;
+    }
+
+    a.nav-btn:hover::before {
+      opacity: 1;
+    }
+
+    .nav-btn-text {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 2;
+    }
+
+    .nav-arrow {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      transition: transform 0.3s, color 0.3s;
+    }
+
+    a.nav-btn:hover .nav-arrow {
+      transform: translateX(4px);
+      color: var(--neon-red);
+    }
+
+    /* ====== FOOTER ====== */
+    footer {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 20px;
+      line-height: 1.7;
       text-align: center;
-      line-height: 1.4;
-      max-width: 400px;
+      border-top: 1px solid var(--card-border);
+      padding-top: 25px;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    footer a {
+      color: var(--neon-red);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .main-container > * {
+      animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @media (max-width: 768px) {
+      .button-list {
+        grid-template-columns: 1fr;
+      }
+      h1 {
+        font-size: 2.2rem;
+      }
+      body {
+        padding: 20px 12px;
+      }
     }
   </style>
 </head>
 <body>
+  
+  <div class="main-container">
+    <div class="status-bar">
+      <span class="os-badge">ErikAI OS 2027</span>
+      <p id="cas">🕓 Načítavam čas...</p>
+    </div>
 
-  <p id="cas">🕓 Aktuálny čas: </p>
+    <h1>📂 Platformy Menu</h1>
+    <p class="subtitle">Streamovacie služby, obchody a sociálne platformy ekosystému</p>
+
+    <div class="controls-row">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="liveSearch" placeholder="Rýchle vyhľadávanie platformy..." autocomplete="off">
+      </div>
+      <div id="google_translate_element"></div>
+    </div>
+
+    <script type="text/javascript">
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement({
+          pageLanguage: 'sk',
+          includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
+          layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+        }, 'google_translate_element');
+      }
+    </script>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    
+    <div class="button-list" id="platformList">
+      <a class="nav-btn" href="zoznam_straniek.html"><span class="nav-btn-text">🗂️ Zoznam ErikAI APK WEB 1</span><span class="nav-arrow">→</span></a>
+      <a class="nav-btn" href="erikai_tube.html"><span class="nav-btn-text">📹 ErikAI Tube 2</span><span class="nav-arrow">→</span></a>
+      <a class="nav-btn" href="android_apk.html"><span class="nav-btn-text">📲 ErikAI Store pre Android APK 3</span><span class="nav-arrow">→</span></a>
+      <a class="nav-btn" href="hudba.html"><span class="nav-btn-text">🔊 ErikAI Own Music 4</span><span class="nav-arrow">→</span></a>
+      <a class="nav-btn" href="erikai_own_tube.html"><span class="nav-btn-text">📹 ErikAI Own Tube 5</span><span class="nav-arrow">→</span></a>
+      <a class="nav-btn" href="perrchat.html"><span class="nav-btn-text">📩 ErikAI Perr chat 6</span><span class="nav-arrow">→</span></a>
+    </div>
+  </div>
+
+  <footer>
+    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+    To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">creativecommons.org</a><br>
+    © 2025 <strong>Erik Mohylák</strong> – All rights reserved.
+  </footer>
 
   <script>
+    // 🕒 Aktualizácia času
     function aktualizujCas() {
       const teraz = new Date();
       const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        weekday: 'long', year: 'numeric', month: 'long',
+        day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
       };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
+      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
     }
     setInterval(aktualizujCas, 1000);
     aktualizujCas();
-  </script>
 
-  <div id="google_translate_element"></div>
-  <script type="text/javascript">
-    function googleTranslateElementInit() {
-      new google.translate.TranslateElement({
-        pageLanguage: 'sk',
-        includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-      }, 'google_translate_element');
-    }
-  </script>
-  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    // 🔍 Živé filtrovanie / vyhľadávanie v platformách
+    const searchInput = document.getElementById('liveSearch');
+    const platformLinks = document.querySelectorAll('#platformList a.nav-btn');
 
-  <h1>📂 Platformy Menu</h1>
+    searchInput.addEventListener('input', function() {
+      const query = this.value.toLowerCase().trim();
+      platformLinks.forEach(link => {
+        const text = link.textContent.toLowerCase();
+        link.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+    });
 
-  <div class="button-list">
-    <a href="zoznam_straniek.html">🗂️ Zoznam ErikAI APK WEB 1</a>
-    <a href="erikai_tube.html">📹 ErikAI Tube 2</a>
-    <a href="android_apk.html">📲 ErikAI Store pre Android APK 3</a>
-    <a href="hudba.html">🔊 ErikAI Own Music 4</a>
-    <a href="erikai_own_tube.html">📹 ErikAI Own Tube 5</a>
-    <a href="perrchat.html">📩 ErikAI Perr chat 6</a>
-  </div>
-
-  <p class="footer">
-    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
-    To view a copy of this license, visit <a href="http://creativecommons.org/licenses/by-nc-nd/4.0/" style="color:var(--primary)">creativecommons.org</a><br>
-    © 2025 Erik Mohylák – All rights reserved.
-  </p>
-
-  <script>
+    // 🔒 Ochrana pred priamym otvorením
     const povoleneRef = ["erikai-demoa1.github.io", "erikaios.online"];
     let pristupOk = false;
     povoleneRef.forEach(ref => {
