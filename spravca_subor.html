@@ -3,167 +3,506 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ErikAI Správca súborov</title>
+  <title>ErikAI • File Studio Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+      --border: rgba(0, 0, 0, 0.08);
+      --shadow: 0 10px 30px rgba(0,0,0,0.04);
+      --blue: #0284c7;
+    }
+
+    body.dark-mode {
+      --bg: #07090e;
+      --card-bg: rgba(16, 22, 36, 0.85);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+      --border: rgba(255, 255, 255, 0.08);
+      --shadow: 0 15px 35px rgba(0,0,0,0.4);
+      --blue: #38bdf8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #f9f9f9;
-      padding: 20px;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 30px 15px;
+      min-height: 100vh;
+      transition: background 0.3s ease, color 0.3s ease;
     }
-    body.dark-mode { background: #121212; color: white; }
-    h1 { color: darkred; }
-    .súbor {
-      border: 1px solid #ccc;
-      margin: 15px auto;
-      padding: 10px;
-      width: 90%;
-      max-width: 400px;
-      background: #fff;
-      border-radius: 10px;
-      text-align: center;
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
     }
-    body.dark-mode .súbor { background: #1e1e1e; color: white; border: 1px solid #555; }
-    .súbor img, .súbor video, .súbor audio, .súbor iframe {
-      max-width: 100%;
-      border-radius: 8px;
+
+    /* TOPBAR */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      background: var(--card-bg);
+      padding: 15px 20px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .clock-box {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .theme-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+      transition: transform 0.2s;
+    }
+    .theme-btn:hover { transform: scale(1.1); }
+
+    h1 {
+      color: var(--text);
+      text-align: center;
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    h1 span { color: var(--accent); }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 25px;
+    }
+
+    /* DRAG & DROP ZÓNA */
+    .dropzone {
+      background: var(--card-bg);
+      border: 2px dashed var(--accent);
+      border-radius: 20px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: all 0.2s;
+      margin-bottom: 25px;
+    }
+    .dropzone:hover, .dropzone.dragover {
+      background: rgba(239, 68, 68, 0.05);
+      border-color: var(--accent-hover);
+    }
+    .dropzone p {
+      font-weight: 600;
+      font-size: 1.05rem;
       margin-bottom: 5px;
     }
-    .zmazat, .stiahni {
-      margin: 5px 5px 0 5px;
-      padding: 5px 10px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+    .dropzone span {
+      font-size: 0.85rem;
+      color: var(--muted);
     }
-    .zmazat { background: red; color: white; }
-    .zmazat:hover { background: darkred; }
-    .stiahni { background: #0d6efd; color: white; }
-    .stiahni:hover { background: #0b5ed7; }
+    #súbory { display: none; }
+
+    /* ZOZNAM SÚBOROV */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 15px;
+    }
+
+    .súbor {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 15px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .súbor:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+
+    .file-preview {
+      width: 100%;
+      height: 120px;
+      background: rgba(0,0,0,0.03);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-bottom: 10px;
+      cursor: pointer;
+      position: relative;
+    }
+    body.dark-mode .file-preview { background: rgba(255,255,255,0.03); }
+
+    .file-preview img, .file-preview video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .file-icon {
+      font-size: 2.5rem;
+    }
+
+    .file-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .file-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    button.action-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter 0.2s;
+    }
+    button.action-btn:hover { filter: brightness(1.1); }
+
+    .stiahni { background: var(--blue); color: white; }
+    .zmazat { background: var(--accent); color: white; }
+
+    /* MODÁLNE OKNO PRE NÁHĽAD */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center; align-items: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    .modal-content {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .modal-content img, .modal-content video, .modal-content iframe {
+      width: 100%;
+      max-height: 80vh;
+      background: white;
+      border-radius: 10px;
+    }
+    .close-modal {
+      position: absolute;
+      top: 10px; right: 15px;
+      background: var(--accent);
+      color: white; border: none;
+      padding: 6px 12px; border-radius: 8px;
+      cursor: pointer; font-weight: bold;
+    }
+
+    /* VYMAZAŤ VŠETKO BUTTON */
+    .footer-actions {
+      text-align: center;
+      margin-top: 30px;
+    }
     .vymazat-vsetko {
-      background-color: #333;
+      background: var(--muted);
       color: white;
-      padding: 8px 16px;
+      padding: 10px 20px;
       border: none;
-      border-radius: 5px;
-      margin-top: 20px;
+      border-radius: 12px;
+      font-weight: 600;
       cursor: pointer;
+      transition: background 0.2s;
     }
-    .vymazat-vsetko:hover { background-color: black; }
+    .vymazat-vsetko:hover { background: var(--accent); }
+
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+    }
   </style>
 </head>
-<body>
+<body class="dark-mode">
 
-<button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+<div class="container">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="clock-box" id="cas">Načítavam čas...</div>
+    <button class="theme-btn" onclick="toggleTheme()" title="Zmeniť režim">🌓</button>
+  </div>
+
+  <h1>📁 ErikAI <span>File Studio</span></h1>
+  <p class="subtitle">Lokálny správca súborov s podporou náhľadov a bezpečným úložiskom</p>
+
+  <div id="google_translate_element" style="text-align:center; margin-bottom: 20px;"></div>
+
+  <!-- DROPZONE -->
+  <div class="dropzone" id="dropzone" onclick="document.getElementById('súbory').click()">
+    <p>📂 Potiahni súbory sem alebo klikni pre výber</p>
+    <span>Podporuje obrázky, videá, audio, PDF, dokumenty a archívy</span>
+    <input type="file" id="súbory" multiple>
+  </div>
+
+  <!-- ZOZNAM -->
+  <div class="grid" id="výstup"></div>
+
+  <div class="footer-actions">
+    <button class="vymazat-vsetko" onclick="vymažVšetko()">🧹 Vymazať všetky súbory</button>
+  </div>
+
+  <footer>
+    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+    © 2026 Erik Mohylák – All rights reserved.
+  </footer>
+
+</div>
+
+<!-- MODÁLNE OKNO PRE NÁHĽAD -->
+<div class="modal" id="previewModal" onclick="closeModal()">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <button class="close-modal" onclick="closeModal()">✕ Zavrieť</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
 
 <script>
-  function toggleTheme() { document.body.classList.toggle('dark-mode'); }
-</script>
+  // === TÉMA ===
+  function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+  }
+  if (localStorage.getItem('darkMode') === 'false') {
+    document.body.classList.remove('dark-mode');
+  }
 
-<p id="cas" style="font-size: 18px;"></p>
-<script>
+  // === ČAS ===
   function aktualizujCas() {
     const teraz = new Date();
     const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'};
-    document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
+    document.getElementById('cas').innerText = `🕓 ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
   }
-  setInterval(aktualizujCas,1000);
+  setInterval(aktualizujCas, 1000);
   aktualizujCas();
-</script>
 
-<div id="google_translate_element"></div>
-<script type="text/javascript">
-function googleTranslateElementInit() {
-  new google.translate.TranslateElement({
-    pageLanguage: 'sk',
-    includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-  }, 'google_translate_element');
-}
+  // === GOOGLE TRANSLATE ===
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+      pageLanguage: 'sk',
+      includedLanguages: 'en,cs,de,fr,hu,pl,ro,ru,es,it,uk',
+      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+    }, 'google_translate_element');
+  }
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
-<h1>📁 ErikAI Správca súborov</h1>
-<p>Vyber súbory (PDF, Word, Excel, prezentácie, obrázky, audio, video alebo ostatné):</p>
-<input type="file" id="súbory" multiple>
-<div id="výstup"></div>
-<button class="vymazat-vsetko" onclick="vymažVšetko()">🧹 Vymazať všetko</button>
-
 <script>
-const vstup = document.getElementById('súbory');
-const výstup = document.getElementById('výstup');
+  const vstup = document.getElementById('súbory');
+  const výstup = document.getElementById('výstup');
+  const dropzone = document.getElementById('dropzone');
 
-function zobraziťSúbor(názov, obsah, typ) {
-  const kontajner = document.createElement("div");
-  kontajner.className = "súbor";
-  let element;
+  // Drag & Drop udalosti
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropzone.addEventListener(eventName, e => { e.preventDefault(); dropzone.classList.add('dragover'); }, false);
+  });
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropzone.addEventListener(eventName, e => { e.preventDefault(); dropzone.classList.remove('dragover'); }, false);
+  });
+  dropzone.addEventListener('drop', e => {
+    const dt = e.dataTransfer;
+    handleFiles(dt.files);
+  });
 
-  if (typ.startsWith("image/")) {
-    element = document.createElement("img"); element.src = obsah;
-  } else if (typ.startsWith("video/")) {
-    element = document.createElement("video"); element.src = obsah; element.controls = true;
-  } else if (typ.startsWith("audio/")) {
-    element = document.createElement("audio"); element.src = obsah; element.controls = true;
-  } else if (typ === "application/pdf") {
-    element = document.createElement("iframe"); element.src = obsah; element.width="100%"; element.height="400"; element.style.border="1px solid #999";
-  } else if (typ.includes("word") || typ.includes("officedocument.word") || typ.includes("excel") || typ.includes("spreadsheetml") || typ.includes("presentation")) {
-    element = document.createElement("a"); element.href = obsah; element.target="_blank"; element.textContent="📄 Otvoriť dokument"; element.style.fontWeight="bold";
-  } else {
-    element = document.createElement("div"); element.innerHTML = "<p>📦 Súbor: " + názov + "</p>";
+  vstup.addEventListener('change', () => { handleFiles(vstup.files); });
+
+  function handleFiles(files) {
+    for (const súbor of files) {
+      const čítač = new FileReader();
+      čítač.onload = (e) => {
+        const obsah = e.target.result;
+        const typ = súbor.type || "application/octet-stream";
+        const veľkosť = formatBytes(súbor.size);
+        const data = { obsah, typ, veľkosť };
+        
+        // Uloženie pod unikátnym kľúčom aby sa predišlo prepisu rovnakých názvov
+        const kľúč = 'file_' + Date.now() + '_' + súbor.name;
+        localStorage.setItem(kľúč, JSON.stringify({ name: súbor.name, ...data }));
+        zobraziťSúbor(kľúč, súbor.name, obsah, typ, veľkosť);
+      };
+      čítač.readAsDataURL(súbor);
+    }
   }
 
-  const názovEl = document.createElement("p"); názovEl.textContent = názov;
+  function zobraziťSúbor(kľúč, názov, obsah, typ, veľkosť) {
+    const kontajner = document.createElement("div");
+    kontajner.className = "súbor";
+    kontajner.id = kľúč;
 
-  const tlačidloStiahni = document.createElement("button");
-  tlačidloStiahni.textContent = "⬇️ Stiahnuť"; tlačidloStiahni.className="stiahni";
-  tlačidloStiahni.onclick = () => {
-    const a = document.createElement("a");
-    a.href = obsah; a.download = názov; a.click();
-  };
+    const previewBox = document.createElement("div");
+    previewBox.className = "file-preview";
 
-  const tlačidloZmazat = document.createElement("button");
-  tlačidloZmazat.textContent="Zmazať"; tlačidloZmazat.className="zmazat";
-  tlačidloZmazat.onclick=()=>{výstup.removeChild(kontajner); localStorage.removeItem(názov);};
+    let iconSymbol = "📦";
+    if (typ.startsWith("image/")) {
+      const img = document.createElement("img"); img.src = obsah;
+      previewBox.appendChild(img);
+    } else if (typ.startsWith("video/")) {
+      iconSymbol = "🎬";
+      const span = document.createElement("span"); span.className = "file-icon"; span.textContent = iconSymbol;
+      previewBox.appendChild(span);
+    } else if (typ.startsWith("audio/")) {
+      iconSymbol = "🎵";
+      const span = document.createElement("span"); span.className = "file-icon"; span.textContent = iconSymbol;
+      previewBox.appendChild(span);
+    } else if (typ === "application/pdf") {
+      iconSymbol = "📄";
+      const span = document.createElement("span"); span.className = "file-icon"; span.textContent = iconSymbol;
+      previewBox.appendChild(span);
+    } else {
+      const span = document.createElement("span"); span.className = "file-icon"; span.textContent = iconSymbol;
+      previewBox.appendChild(span);
+    }
 
-  kontajner.appendChild(element);
-  kontajner.appendChild(názovEl);
-  kontajner.appendChild(tlačidloStiahni);
-  kontajner.appendChild(tlačidloZmazat);
-  výstup.appendChild(kontajner);
-}
+    // Kliknutie na náhľad otvorí modal
+    previewBox.onclick = () => openPreview(obsah, typ, názov);
 
-vstup.addEventListener('change',()=> {
-  for(const súbor of vstup.files){
-    const čítač = new FileReader();
-    čítač.onload=(e)=>{
-      const obsah=e.target.result;
-      const typ=súbor.type;
-      localStorage.setItem(súbor.name, JSON.stringify({obsah,typ}));
-      zobraziťSúbor(súbor.name,obsah,typ);
+    const infoDiv = document.createElement("div");
+    infoDiv.innerHTML = `
+      <div class="file-name" title="${názov}">${názov}</div>
+      <div class="file-meta">${veľkosť}</div>
+    `;
+
+    const actionsDiv = document.createElement("div");
+    actionsDiv.className = "file-actions";
+
+    const tlačidloStiahni = document.createElement("button");
+    tlačidloStiahni.textContent = "⬇️ Stiahnuť";
+    tlačidloStiahni.className = "action-btn stiahni";
+    tlačidloStiahni.onclick = (e) => {
+      e.stopPropagation();
+      const a = document.createElement("a");
+      a.href = obsah; a.download = názov; a.click();
     };
-    čítač.readAsDataURL(súbor);
-  }
-});
 
-// Načítanie z localStorage pri refresh
-window.addEventListener('load',()=>{
-  for(let i=0;i<localStorage.length;i++){
-    const kľúč=localStorage.key(i);
-    const dáta=JSON.parse(localStorage.getItem(kľúč));
-    if(dáta?.obsah && dáta?.typ){ zobraziťSúbor(kľúč,dáta.obsah,dáta.typ); }
-  }
-});
+    const tlačidloZmazat = document.createElement("button");
+    tlačidloZmazat.textContent = "🗑️ Zmazať";
+    tlačidloZmazat.className = "action-btn zmazat";
+    tlačidloZmazat.onclick = (e) => {
+      e.stopPropagation();
+      výstup.removeChild(kontajner);
+      localStorage.removeItem(kľúč);
+    };
 
-function vymažVšetko(){
-  if(confirm("Naozaj chceš vymazať všetky súbory?")){ localStorage.clear(); výstup.innerHTML=""; }
-}
+    actionsDiv.appendChild(tlačidloStiahni);
+    actionsDiv.appendChild(tlačidloZmazat);
+
+    kontajner.appendChild(previewBox);
+    kontajner.appendChild(infoDiv);
+    kontajner.appendChild(actionsDiv);
+    výstup.prepend(kontajner);
+  }
+
+  // Načítanie z localStorage pri refresh
+  window.addEventListener('load', () => {
+    for (let i = 0; i < localStorage.length; i++) {
+      const kľúč = localStorage.key(i);
+      if (kľúč.startsWith('file_')) {
+        try {
+          const dáta = JSON.parse(localStorage.getItem(kľúč));
+          if (dáta?.obsah && dáta?.typ) {
+            zobraziťSúbor(kľúč, dáta.name || "Súbor", dáta.obsah, dáta.typ, dáta.veľkosť || "Neznáma veľkosť");
+          }
+        } catch (err) {}
+      }
+    }
+  });
+
+  function vymažVšetko() {
+    if (confirm("Naozaj chceš vymazať všetky uložené súbory?")) {
+      Object.keys(localStorage).forEach(k => { if (k.startsWith('file_')) localStorage.removeItem(k); });
+      výstup.innerHTML = "";
+    }
+  }
+
+  function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024, dm = decimals < 0 ? 0 : decimals, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+
+  // Modálne okno náhľadu
+  function openPreview(obsah, typ, názov) {
+    const modal = document.getElementById('previewModal');
+    const modalBody = document.getElementById('modalBody');
+    modalBody.innerHTML = '';
+
+    if (typ.startsWith("image/")) {
+      const img = document.createElement('img'); img.src = obsah;
+      modalBody.appendChild(img);
+    } else if (typ.startsWith("video/")) {
+      const vid = document.createElement('video'); vid.src = obsah; vid.controls = true; vid.autoplay = true;
+      modalBody.appendChild(vid);
+    } else if (typ.startsWith("audio/")) {
+      const aud = document.createElement('audio'); aud.src = obsah; aud.controls = true; aud.autoplay = true;
+      modalBody.appendChild(aud);
+    } else if (typ === "application/pdf") {
+      const iframe = document.createElement('iframe'); iframe.src = obsah; iframe.width = "100%"; iframe.height = "500px";
+      modalBody.appendChild(iframe);
+    } else {
+      modalBody.innerHTML = `<div style="padding:40px; text-align:center; color:white;"><h3>📄 Náhľad nie je dostupný pre tento formát.</h3><p>${názov}</p></div>`;
+    }
+    modal.style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('previewModal').style.display = 'none';
+    document.getElementById('modalBody').innerHTML = '';
+  }
 </script>
-
-<p style="font-size: 14px; color: gray; margin-top: 20px;">
-This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/<br>
-© 2025 Erik Mohylák – All rights reserved.
-</p>
 
 </body>
 </html>
