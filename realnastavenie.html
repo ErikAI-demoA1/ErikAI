@@ -2,110 +2,443 @@
 <html lang="sk">
 <head>
   <meta charset="UTF-8">
-  <title>ErikAI OS – Návod na nastavenia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ErikAI OS – Centrum Nastavení & Podpory</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    body { background: black; color: lime; font-family: monospace; padding: 1rem; }
-    select, option { background: black; color: lime; padding: 5px; border: 1px solid lime; }
-    .section { display: none; border: 1px solid lime; padding: 1rem; margin-top: 1rem; }
-    .visible { display: block; }
-    h2, h3 { color: lime; }
-    ul { margin-left: 1rem; }
-    li { margin: 6px 0; }
-    footer { color: gray; font-size: 13px; text-align: center; margin-top: 20px; }
-  </style>
-  <script>
-    function showSection() {
-      const value = document.getElementById("systemSelect").value;
-      document.querySelectorAll(".section").forEach(sec => sec.classList.remove("visible"));
-      document.getElementById(value).classList.add("visible");
+    :root {
+      --primary: #00ff66;
+      --primary-dim: rgba(0, 255, 102, 0.15);
+      --bg: #050805;
+      --card-bg: rgba(12, 20, 12, 0.85);
+      --border: rgba(0, 255, 102, 0.25);
+      --text: #e0ffe0;
+      --muted: #00aa44;
     }
-  </script>
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: 'Fira Code', monospace; 
+      padding: 2rem 1rem; 
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(0,255,102,0.08), transparent 70%),
+        linear-gradient(rgba(0, 255, 102, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 102, 0.03) 1px, transparent 1px);
+      background-size: 100%, 20px 20px, 20px 20px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* HEADER */
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px dashed var(--border);
+      padding-bottom: 1.5rem;
+    }
+
+    h1 { 
+      color: var(--primary); 
+      font-size: 2.2rem;
+      font-weight: 800;
+      text-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+      margin-bottom: 0.5rem;
+      letter-spacing: -1px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    /* SEARCH & CONTROLS */
+    .controls {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+      background: rgba(0,0,0,0.4);
+      padding: 1.2rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 260px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: #000;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-family: inherit;
+      outline: none;
+      box-shadow: inset 0 0 8px rgba(0,255,102,0.1);
+    }
+
+    .search-box input:focus {
+      box-shadow: 0 0 12px rgba(0,255,102,0.4);
+    }
+
+    .tab-select {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: #000;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover, .tab-btn.active {
+      background: var(--primary-dim);
+      color: var(--primary);
+      border-color: var(--primary);
+      box-shadow: 0 0 10px rgba(0,255,102,0.2);
+    }
+
+    /* GRID & CARDS */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.2rem;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--primary);
+      box-shadow: 0 6px 20px rgba(0,255,102,0.15);
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      color: var(--primary);
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-path {
+      color: #a8ffa8;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .card-details {
+      display: none;
+      margin-top: 1rem;
+      padding-top: 0.8rem;
+      border-top: 1px dashed rgba(0, 255, 102, 0.2);
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .card.expanded .card-details {
+      display: block;
+    }
+
+    .code-block {
+      background: #000;
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: var(--primary);
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+    }
+
+    .copy-btn {
+      background: var(--primary-dim);
+      border: none;
+      color: var(--primary);
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+
+    .copy-btn:hover {
+      background: var(--primary);
+      color: #000;
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 4rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 1.5rem;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 3rem;
+      color: var(--muted);
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <h2>⚙️ ErikAI OS – Návod na nastavenia</h2>
-  <label for="systemSelect">Vyber svoj systém: </label>
-  <select id="systemSelect" onchange="showSection()">
-    <option value="android">📱 Android</option>
-    <option value="ios">🍏 iOS</option>
-    <option value="windows">🖥️ Windows</option>
-    <option value="linux">🐧 Linux</option>
-    <option value="ine">💻 Iné (Huawei, Xiaomi, Samsung...)</option>
-  </select>
 
-  <!-- ANDROID -->
-  <div id="android" class="section visible">
-    <h3>📱 Android – Všetky návody</h3>
-    <ul>
-      <li><b>Wi-Fi:</b> Nastavenia > Sieť a internet > Wi-Fi</li>
-      <li><b>Bluetooth:</b> Nastavenia > Pripojené zariadenia > Bluetooth</li>
-      <li><b>Baterka:</b> Rýchla lišta > ikona baterky</li>
-      <li><b>Tapeta / pozadie:</b> Nastavenia > Displej > Tapeta</li>
-      <li><b>Tmavý režim:</b> Nastavenia > Displej > Tmavý motív</li>
-      <li><b>Mobilné dáta:</b> Nastavenia > Mobilná sieť > Mobilné dáta</li>
-      <li><b>Režim lietadlo:</b> Rýchla lišta > lietadlo</li>
-      <li><b>Zvuk / Tichý režim:</b> Nastavenia > Zvuk</li>
-      <li><b>Odtlačok prsta / Tvárové odomykanie:</b> Nastavenia > Zabezpečenie</li>
-      <li><b>Šetrenie batérie:</b> Nastavenia > Batéria > Šetrenie batérie</li>
-      <li><b>Aplikácie:</b> Nastavenia > Aplikácie</li>
-      <li><b>Súkromie:</b> Nastavenia > Súkromie</li>
-      <li><b>Aktualizácie systému:</b> Nastavenia > O telefóne > Aktualizácia systému</li>
-      <li><b>Reset:</b> Nastavenia > Systém > Možnosti obnovenia</li>
-    </ul>
+  <div class="container">
+    <header>
+      <h1>⚙️ ErikAI OS – Centrum Nastavení</h1>
+      <p class="subtitle">Interaktívna databáza systémových návodov a konfigurácií</p>
+    </header>
+
+    <!-- OVLÁDACÍ PANEL -->
+    <div class="controls">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="🔍 Vyhľadať návod (napr. Wi-Fi, Reset, Bluetooth)..." onkeyup="handleSearch()">
+      </div>
+      <div class="tab-select">
+        <button class="tab-btn active" onclick="switchTab('android')">📱 Android</button>
+        <button class="tab-btn" onclick="switchTab('ios')">🍏 iOS</button>
+        <button class="tab-btn" onclick="switchTab('windows')">🖥️ Windows</button>
+        <button class="tab-btn" onclick="switchTab('linux')">🐧 Linux</button>
+        <button class="tab-btn" onclick="switchTab('ine')">💻 Iné značky</button>
+      </div>
+    </div>
+
+    <!-- SEKCIA: ANDROID -->
+    <div id="android" class="section active">
+      <div class="grid">
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">📶 Wi-Fi & Pripojenie <span>+</span></div>
+          <div class="card-path">Nastavenia > Sieť a internet > Wi-Fi</div>
+          <div class="card-details">Vyber svoju sieť, zadaj heslo. Pre zdieľanie siete klikni na ikonu QR kódu pri vybranej sieti.</div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">🎧 Bluetooth Zariadenia <span>+</span></div>
+          <div class="card-path">Nastavenia > Pripojené zariadenia > Bluetooth</div>
+          <div class="card-details">Zapni Bluetooth a zvoľ "Spárovať nové zariadenie". Uistite sa, že slúchadlá sú v režime párovania.</div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">🔋 Šetrenie Batérie & Výkon <span>+</span></div>
+          <div class="card-path">Nastavenia > Batéria > Šetrič batérie</div>
+          <div class="card-details">Aktivuje obmedzenie aplikácií na pozadí, zníži jas a vypne vizuálne efekty pre predĺženie výdrže.</div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">🔒 Bezpečnosť & Biometria <span>+</span></div>
+          <div class="card-path">Nastavenia > Zabezpečenie > Odtlačok / Tvár</div>
+          <div class="card-details">Pridaj záložný PIN kód a naskenuj odtlačok prsta pre okamžité a bezpečné odomykanie.</div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">📱 Hotspot (Zdieľanie dát) <span>+</span></div>
+          <div class="card-path">Nastavenia > Sieť > Prenosný hotspot</div>
+          <div class="card-details">Umožní zdieľať mobilný internet vášho telefónu pre notebook alebo iné zariadenia cez Wi-Fi.</div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">🔄 Obnovenie Výrobných Nastavení <span>+</span></div>
+          <div class="card-path">Nastavenia > Systém > Možnosti obnovenia</div>
+          <div class="card-details">⚠️ Upozornenie: Tento krok vymaže všetky dáta. Pred reštartom vykonajte zálohu do účtu Google.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEKCIA: IOS -->
+    <div id="ios" class="section">
+      <div class="grid">
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">📶 Wi-Fi Pripojenie <span>+</span></div>
+          <div class="card-path">Settings > Wi-Fi</div>
+          <div class="card-details">Zapnite Wi-Fi, vyberte sieť a zadajte heslo. Pre automatické pripájanie zapnite "Auto-Join".</div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">👤 Face ID & Kód <span>+</span></div>
+          <div class="card-path">Settings > Face ID & Passcode</div>
+          <div class="card-details">Nastavte sken tváre. Môžete povoliť rozpoznávanie tváre aj s rúškom alebo dioptrickými okuliarmi.</div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">🌙 Dark Mode (Tmavý režim) <span>+</span></div>
+          <div class="card-path">Settings > Display & Brightness</div>
+          <div class="card-details">Prepnite na "Dark" pre šetrenie OLED displeja a očí, alebo nastavte automatický plán podľa západu slnka.</div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">🛡️ Súkromie a Povolenia <span>+</span></div>
+          <div class="card-path">Settings > Privacy & Security</div>
+          <div class="card-details">Spravujte povolenia pre mikrofon, kameru a polohu pre jednotlivé aplikácie.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEKCIA: WINDOWS -->
+    <div id="windows" class="section">
+      <div class="grid">
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">🌐 Sieť & Wi-Fi <span>+</span></div>
+          <div class="card-path">Nastavenia (Win + I) > Sieť a internet</div>
+          <div class="card-details">Môžete tu nastaviť pripojenie, správu známych sietí alebo zapnúť "Účtované pripojenie" pre šetrenie dát.</div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">🛡️ Windows Update <span>+</span></div>
+          <div class="card-path">Nastavenia > Aktualizácia a zabezpečenie</div>
+          <div class="card-details">Kontrola najnovších bezpečnostných záplat. Odporúčame nastaviť hodiny aktivity pre zamedzenie nečakaných reštartov.</div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">🎨 Personalizácia & Farby <span>+</span></div>
+          <div class="card-path">Nastavenia > Personalizácia > Farby</div>
+          <div class="card-details">Prepínajte medzi svetlým a tmavým režimom Windows a nastavte si akcentovú farbu systému.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEKCIA: LINUX -->
+    <div id="linux" class="section">
+      <div class="grid">
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">📦 Aktualizácia Systému <span>+</span></div>
+          <div class="card-path">APT Package Manager (Ubuntu/Debian)</div>
+          <div class="card-details">
+            Spustite v termináli pre aktualizáciu balíčkov:
+            <div class="code-block">
+              <code id="cmd1">sudo apt update && sudo apt upgrade -y</code>
+              <button class="copy-btn" onclick="copyCode('cmd1', event)">Kopírovať</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">💻 Inštalácia Aplikácie <span>+</span></div>
+          <div class="card-path">Inštalácia pomocou APT</div>
+          <div class="card-details">
+            Nahrádzajte 'nazov' požadovaným programom:
+            <div class="code-block">
+              <code id="cmd2">sudo apt install nazov</code>
+              <button class="copy-btn" onclick="copyCode('cmd2', event)">Kopírovať</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEKCIA: INÉ -->
+    <div id="ine" class="section">
+      <div class="grid">
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">🔴 Xiaomi (MIUI / HyperOS) <span>+</span></div>
+          <div class="card-path">Nastavenia > Batéria / Aplikácie</div>
+          <div class="card-details">Vypnite optimalizáciu MIUI v nastaveniach pre vývojárov, ak vám nechodia oznámenia z aplikácií.</div>
+        </div>
+
+        <div class="card" onclick="toggleCard(this)">
+          <div class="card-title">🔵 Samsung (One UI) <span>+</span></div>
+          <div class="card-path">Nastavenia > Pripojenia / Starostlivosť o zariad.</div>
+          <div class="card-details">Využite funkciu RAM Plus na rozšírenie operačnej pamäte pomocou vnútorného úložiska.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="noResults" class="no-results">
+      ❌ Nenašli sa žiadne návody pre váš výraz.
+    </div>
+
+    <footer>
+      © 2026 Erik Mohylák – ErikAI OS • Všetky práva vyhradené<br>
+      Licencované pod CC BY-NC-ND 4.0
+    </footer>
   </div>
 
-  <!-- iOS -->
-  <div id="ios" class="section">
-    <h3>🍏 iOS (Apple) – Všetky návody</h3>
-    <ul>
-      <li><b>Wi-Fi:</b> Settings > Wi-Fi</li>
-      <li><b>Bluetooth:</b> Settings > Bluetooth</li>
-      <li><b>Baterka:</b> Control Center > Flashlight</li>
-      <li><b>Dark Mode:</b> Settings > Display & Brightness</li>
-      <li><b>Face ID / Passcode:</b> Settings > Face ID & Passcode</li>
-      <li><b>Privacy:</b> Settings > Privacy & Security</li>
-      <li><b>Reset:</b> Settings > General > Transfer or Reset iPhone</li>
-    </ul>
-  </div>
+  <script>
+    function switchTab(tabId) {
+      document.getElementById('searchInput').value = '';
+      document.querySelectorAll('.card').forEach(c => c.style.display = 'block');
+      document.getElementById('noResults').style.display = 'none';
 
-  <!-- WINDOWS -->
-  <div id="windows" class="section">
-    <h3>🖥️ Windows – Všetky návody</h3>
-    <ul>
-      <li><b>Wi-Fi:</b> Nastavenia > Sieť a internet > Wi-Fi</li>
-      <li><b>Bluetooth:</b> Nastavenia > Zariadenia > Bluetooth</li>
-      <li><b>Aktualizácie:</b> Nastavenia > Aktualizácia a zabezpečenie</li>
-      <li><b>Režim napájania:</b> Nastavenia > Systém > Napájanie a spánok</li>
-      <li><b>Tmavý režim:</b> Nastavenia > Personalizácia > Farby</li>
-      <li><b>Účty:</b> Nastavenia > Účty > Informácie o vás</li>
-    </ul>
-  </div>
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
 
-  <!-- LINUX -->
-  <div id="linux" class="section">
-    <h3>🐧 Linux – Základné návody</h3>
-    <ul>
-      <li><b>Sieťové pripojenia:</b> Nastavenia > Sieť > Wi-Fi</li>
-      <li><b>Aktualizácie systému:</b> Terminál → <code>sudo apt update && sudo apt upgrade</code></li>
-      <li><b>Inštalácia aplikácie:</b> Terminál → <code>sudo apt install názov</code></li>
-      <li><b>Tmavý režim:</b> Nastavenia > Vzhľad > Tmavý motív</li>
-      <li><b>Správa používateľov:</b> Nastavenia > Používatelia</li>
-    </ul>
-  </div>
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
 
-  <!-- INÉ -->
-  <div id="ine" class="section">
-    <h3>💻 Iné značky – Rýchle návody</h3>
-    <ul>
-      <li><b>Huawei:</b> Nastavenia > Sieť > Wi-Fi / Bluetooth</li>
-      <li><b>Xiaomi:</b> Nastavenia > Wi-Fi / Batéria / Aplikácie</li>
-      <li><b>Samsung:</b> Nastavenia > Pripojenia > Wi-Fi / Bluetooth</li>
-      <li><b>Smart TV:</b> Nastavenia > Sieť / Zariadenia / Aktualizácie</li>
-    </ul>
-  </div>
+    function toggleCard(card) {
+      card.classList.toggle('expanded');
+      const span = card.querySelector('.card-title span');
+      if (span) {
+        span.textContent = card.classList.contains('expanded') ? '−' : '+';
+      }
+    }
 
-  <footer>
-    © 2025 Erik Mohylák – All rights reserved •  
-    Licensed under CC BY-NC-ND 4.0  
-  </footer>
+    function handleSearch() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const activeSection = document.querySelector('.section.active');
+      const cards = activeSection.querySelectorAll('.card');
+      let hasVisible = false;
+
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        if (text.includes(query)) {
+          card.style.display = 'block';
+          hasVisible = true;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      document.getElementById('noResults').style.display = hasVisible ? 'none' : 'block';
+    }
+
+    function copyCode(elementId, event) {
+      event.stopPropagation();
+      const codeText = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(codeText).then(() => {
+        const btn = event.target;
+        btn.innerText = 'Uložené!';
+        setTimeout(() => btn.innerText = 'Kopírovať', 2000);
+      });
+    }
+  </script>
 </body>
 </html>
