@@ -238,7 +238,6 @@
 
 <script>
   let selectedFiles = [];
-  let lastPdfBlobUrl = null;
 
   function toggleTheme() {
     document.body.classList.toggle('dark');
@@ -314,6 +313,21 @@
     return pdfBytes;
   }
 
+  // Pomocná funkcia na konverziu Uint8Array na Base64 (zaručene funguje v každom prehliadači)
+  function uint8ToBase64(u8Arr) {
+    const CHUNK_SIZE = 0x8000;
+    let index = 0;
+    let length = u8Arr.length;
+    let result = '';
+    let slice;
+    while (index < length) {
+      slice = u8Arr.subarray(index, Math.min(index + CHUNK_SIZE, length));
+      result += String.fromCharCode.apply(null, slice);
+      index += CHUNK_SIZE;
+    }
+    return btoa(result);
+  }
+
   async function generatePDF() {
     const status = document.getElementById('statusMsg');
     if (selectedFiles.length === 0) {
@@ -322,25 +336,26 @@
     }
 
     status.style.color = "var(--text)";
-    status.textContent = "⏳ Generujem súbor...";
+    status.textContent = "⏳ Generujem PDF...";
 
     try {
       const pdfBytes = await createPdfBytes();
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
-      
       let name = document.getElementById('outputName').value.trim() || "ErikAI_Dokument";
       if(!name.toLowerCase().endsWith('.pdf')) name += ".pdf";
 
-      // Spoľahlivý spôsob stiahnutia pre všetky prehliadače
+      // Použitie Base64 Data URI – 100% spoľahlivé sťahovanie v PC aj mobile
+      const base64Data = uint8ToBase64(pdfBytes);
+      const dataUri = "data:application/pdf;base64," + base64Data;
+
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
+      link.href = dataUri;
       link.download = name;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
       status.style.color = "var(--success)";
-      status.textContent = "✅ PDF bolo úspešne stiahnuté!";
+      status.textContent = "✅ PDF súbor bol úspešne stiahnutý!";
     } catch(err) {
       console.error(err);
       status.style.color = "var(--danger)";
@@ -360,22 +375,25 @@
 
     try {
       const pdfBytes = await createPdfBytes();
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
-      const blobUrl = URL.createObjectURL(blob);
+      const base64Data = uint8ToBase64(pdfBytes);
+      const dataUri = "data:application/pdf;base64," + base64Data;
 
-      // Otvorenie PDF v skrytom iframe alebo novom okne na tlač
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = blobUrl;
-      document.body.appendChild(iframe);
-      
-      iframe.onload = function() {
-        setTimeout(() => {
-          iframe.contentWindow.print();
-          status.style.color = "var(--success)";
-          status.textContent = "✅ Pripravené na tlač!";
-        }, 500);
-      };
+      // Otvorenie PDF v novom okne / karte na priamu tlač alebo uloženie cez systém
+      const win = window.open();
+      if (win) {
+        win.document.write(`
+          <html>
+            <head><title>Tlač PDF</title></head>
+            <body style="margin:0; background:#000;">
+              <embed src="${dataUri}" type="application/pdf" width="100%" height="100%" />
+            </body>
+          </html>
+        `);
+        status.style.color = "var(--success)";
+        status.textContent = "✅ Otvorené na tlač!";
+      } else {
+        alert("Prehliadač zablokoval vyskakovacie okno. Povoľte vyskakovacie okná pre túto stránku.");
+      }
     } catch(err) {
       console.error(err);
       status.style.color = "var(--danger)";
