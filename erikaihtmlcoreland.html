@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ErikAI • CoreLang Studio Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: rgba(255, 255, 255, 0.85);
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --border: rgba(15, 23, 42, 0.08);
+      --shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    body.dark-mode {
+      --bg: #030712;
+      --card-bg: rgba(15, 23, 42, 0.8);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --border: rgba(248, 250, 252, 0.08);
+      --shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.06), transparent 45%),
+        radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.04), transparent 45%);
+      color: var(--text);
+      padding: 30px 15px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background 0.4s ease, color 0.4s ease;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 15px 22px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .clock-box {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .theme-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      transition: transform 0.2s ease;
+    }
+    .theme-btn:hover { transform: scale(1.1) rotate(15deg); }
+
+    /* HEADER */
+    .header-box {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    h2 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    h2 span { color: var(--accent); }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    /* CARD STYLE */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 25px;
+      margin-bottom: 25px;
+    }
+
+    .notice {
+      background: rgba(245, 158, 11, 0.1);
+      border-left: 5px solid var(--warning);
+      padding: 14px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    textarea {
+      width: 100%;
+      height: 180px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      resize: vertical;
+      margin-bottom: 12px;
+    }
+    textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15); }
+
+    input[type="text"], select {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+    }
+    input[type="text"]:focus, select:focus { border-color: var(--accent); }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    button {
+      padding: 12px 18px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+      transition: all 0.2s ease;
+    }
+    button:hover { background: var(--accent-hover); transform: translateY(-1px); }
+
+    button.secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); box-shadow: none; }
+    button.secondary:hover { border-color: var(--accent); background: rgba(37, 99, 235, 0.05); }
+
+    button.success { background: var(--success); }
+    button.success:hover { background: #059669; }
+
+    #output {
+      margin-top: 20px;
+      padding: 20px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      color: #0f172a;
+      min-height: 100px;
+    }
+
+    pre code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+    }
+
+    details {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 15px;
+      cursor: pointer;
+    }
+    details summary { font-weight: 700; outline: none; }
+
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body class="dark-mode">
+
+<div class="container">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="clock-box" id="cas">Načítavam čas...</div>
+    <button class="theme-btn" onclick="toggleTheme()" title="Zmeniť režim">🌓</button>
+  </div>
+
+  <div class="header-box">
+    <h2>🌐 ErikAI <span>CoreLang Studio</span></h2>
+    <p class="subtitle">Pokročilý systém pre tvorbu, ukladanie a export moderných webov</p>
+  </div>
+
+  <div id="google_translate_element" style="text-align:center; margin-bottom: 20px;"></div>
+
+  <div class="notice">
+    <strong>🔐 English Notice:</strong><br>
+    Do <b>not</b> use translators or AI-generated content here. Everything must be written by you.  
+    Respect creativity and originality. ErikAI supports fair and human-made content.
+  </div>
+
+  <!-- PROJEKTOVÝ MANAŽÉR -->
+  <div class="card">
+    <h3 style="margin-bottom: 12px;">📁 Správa projektov (Neobmedzené úložisko)</h3>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
+      <select id="nazovProjektu" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+        <option value="môj_hlavný_web">môj_hlavný_web</option>
+        <option value="futbalový_portál">futbalový_portál</option>
+        <option value="testovacia_stránka">testovacia_stránka</option>
+      </select>
+      <button class="secondary" onclick="vytvorVlastnyProjekt()">➕ Nový projekt</button>
+    </div>
+    <div class="btn-group" style="margin-bottom: 0;">
+      <button onclick="ulozProjekt()">💾 Uložiť projekt</button>
+      <button class="secondary" onclick="nacitajProjekt()">📂 Načítať projekt</button>
+    </div>
+  </div>
+
+  <!-- EDITOR & ZADÁVANIE KÓDU -->
+  <div class="card">
+    <h3 style="margin-bottom: 10px;">✍️ Editor CoreLang kódov</h3>
+    <textarea id="kodEditor" placeholder="Tu píš svoj ErikAI CoreLang kód..."></textarea>
+    
+    <div class="btn-group">
+      <button onclick="startSpeechHore()">🎤 Nadiktuj kód (Hlas)</button>
+    </div>
+  </div>
+
+  <!-- NÁPOVEDA A ZNAČKY -->
+  <details>
+    <summary>📖 Zobraziť kompletný zoznam ErikAI značiek a nápovedu</summary>
+    <div style="margin-top: 12px; font-size: 0.9rem; line-height: 1.6;">
+      <p><b>Základné značky:</b></p>
+      <ul>
+        <li><code>&lt;background_color&gt;skyblue&lt;/background_color&gt;</code></li>
+        <li><code>&lt;br&gt;</code> – nový riadok</li>
+        <li>Nadpisy: <code>&lt;name_red&gt;...&lt;/name_red&gt;</code> (dostupné farby: red, blue, green, yellow, orange, pink, brown, cyan, gray, purple, black, white)</li>
+        <li>Texty: <code>&lt;text_red&gt;...&lt;/text_red&gt;</code></li>
+        <li>Boxy: <code>&lt;erikai_blue&gt;...&lt;/erikai_blue&gt;</code></li>
+        <li>Hrúbka textu: <code>&lt;thin_red&gt;...&lt;/thin_red&gt;</code>, <code>&lt;gross_red&gt;...&lt;/gross_red&gt;</code>, <code>&lt;verythin_red&gt;...&lt;/verythin_red&gt;</code>, <code>&lt;verygross_red&gt;...&lt;/verygross_red&gt;</code></li>
+        <li>Odkazy a videá: <code>&lt;odkaz&gt;https://...&lt;/odkaz&gt;</code>, <code>&lt;video&gt;https://www.youtube.com/embed/ID&lt;/video&gt;</code></li>
+      </ul>
+      <p style="margin-top: 10px;"><b>Moduly a aplikácie:</b></p>
+      <p style="font-size: 0.85rem; color: var(--muted);">
+        &lt;calendar&gt;, &lt;clockandstopwatch&gt;, &lt;alarmclock&gt;, &lt;randomgenerator&gt;, &lt;calculator&gt;, &lt;notes&gt;, &lt;recordings&gt;, &lt;cameraandvideo&gt;, &lt;qrscanner&gt;, &lt;compass&gt;, &lt;contactandcall&gt;, &lt;mail&gt;, &lt;sms&gt;, &lt;gallery&gt;, &lt;maps&gt;, &lt;filemanager&gt;, &lt;documents&gt;, &lt;pdfsk&gt;, &lt;tables&gt;, &lt;presentations&gt;, &lt;speedmeter&gt;, &lt;radio&gt;, &lt;editorvideo&gt;, &lt;qrgenerator&gt;, &lt;drawing&gt;, &lt;imagemixgenerator&gt;, &lt;weather&gt;, &lt;helpertools&gt;, &lt;erikaichatweb&gt;, &lt;erikaiopenapkweb&gt;, &lt;ownmusic&gt;, &lt;owntube&gt;, &lt;translate&gt;
+      </p>
+    </div>
+  </details>
+
+  <!-- INTERAKTÍVNE SPUSTENIE -->
+  <div class="card">
+    <h3 style="margin-bottom: 12px;">🚀 Spustenie a Export</h3>
+    <textarea id="input" placeholder="Vlož kód sem pre okamžité zobrazenie..."></textarea>
+    
+    <div class="btn-group">
+      <button onclick="render()">🖥️ Zobraziť stránku</button>
+      <button class="secondary" onclick="download()">📥 Stiahnuť ako HTML</button>
+    </div>
+
+    <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+      <input type="text" id="appName" placeholder="Názov PWA aplikácie" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+      <button class="success" onclick="stiahnutZip()">📦 Stiahnuť ako PWA (ZIP)</button>
+    </div>
+
+    <div id="output"></div>
+  </div>
+
+  <footer>
+    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+    © 2026 Erik Mohylák – All rights reserved.
+  </footer>
+
+</div>
+
+<script>
+  // === TÉMA ===
+  function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+  }
+  if (localStorage.getItem('darkMode') === 'false') {
+    document.body.classList.remove('dark-mode');
+  }
+
+  // === ČAS ===
+  function aktualizujCas() {
+    const teraz = new Date();
+    const moznosti = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    document.getElementById('cas').innerText = "🕓 " + teraz.toLocaleDateString('sk-SK', moznosti);
+  }
+  setInterval(aktualizujCas, 1000);
+  aktualizujCas();
+
+  // === GOOGLE TRANSLATE ===
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+      pageLanguage: 'sk',
+      includedLanguages: 'en,cs,de,fr,hu,pl,ro,ru,es,it,uk',
+      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+    }, 'google_translate_element');
+  }
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+<script>
+// === NEOBMEDZENÉ PROJEKTY ===
+function vytvorVlastnyProjekt() {
+  const novyNazov = prompt("Zadaj názov nového projektu:");
+  if (novyNazov && novyNazov.trim() !== "") {
+    const select = document.getElementById("nazovProjektu");
+    const option = document.createElement("option");
+    option.value = novyNazov.trim();
+    option.textContent = novyNazov.trim();
+    select.appendChild(option);
+    select.value = novyNazov.trim();
+    document.getElementById("kodEditor").value = "";
+    alert("Projekt '" + novyNazov.trim() + "' bol vytvorený.");
+  }
+}
+
+function ulozProjekt() {
+  const nazov = document.getElementById("nazovProjektu").value;
+  const obsah = document.getElementById("kodEditor").value;
+  localStorage.setItem("erikai_" + nazov, obsah);
+  alert("Projekt '" + nazov + "' bol uložený.");
+}
+
+function nacitajProjekt() {
+  const nazov = document.getElementById("nazovProjektu").value;
+  const nacitany = localStorage.getItem("erikai_" + nazov);
+  if (nacitany !== null) {
+    document.getElementById("kodEditor").value = nacitany;
+    document.getElementById("input").value = nacitany;
+    alert("Načítal sa projekt '" + nazov + "'.");
+  } else {
+    alert("Projekt '" + nazov + "' je zatiaľ prázdny.");
+  }
+}
+
+// === HLASOVÉ ZADÁVANIE ===
+function startSpeechHore() {
+  if (!('webkitSpeechRecognition' in window)) {
+    alert("Tento prehliadač nepodporuje rozpoznávanie hlasu.");
+    return;
+  }
+  const recognition = new webkitSpeechRecognition();
+  recognition.lang = "sk-SK";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.start();
+
+  recognition.onresult = function(event) {
+    const result = event.results[0][0].transcript;
+    document.getElementById("kodEditor").value += result + " ";
+    document.getElementById("input").value = document.getElementById("kodEditor").value;
+  };
+  recognition.onerror = function(event) {
+    alert("Chyba pri rozpoznávaní: " + event.error);
+  };
+}
+
+// === TRANSLATOR / RENDER ENGINE ===
+function processCoreLang(code) {
+  return code
+    .replace(/<verythin_red>(.*?)<\/verythin_red>/g, '<span style="font-weight:100; color:red;">$1</span>')
+    .replace(/<verythin_blue>(.*?)<\/verythin_blue>/g, '<span style="font-weight:100; color:blue;">$1</span>')
+    .replace(/<verythin_green>(.*?)<\/verythin_green>/g, '<span style="font-weight:100; color:green;">$1</span>')
+    .replace(/<verythin_orange>(.*?)<\/verythin_orange>/g, '<span style="font-weight:100; color:orange;">$1</span>')
+    .replace(/<verythin_purple>(.*?)<\/verythin_purple>/g, '<span style="font-weight:100; color:purple;">$1</span>')
+    .replace(/<verythin_pink>(.*?)<\/verythin_pink>/g, '<span style="font-weight:100; color:pink;">$1</span>')
+    .replace(/<verythin_yellow>(.*?)<\/verythin_yellow>/g, '<span style="font-weight:100; color:yellow;">$1</span>')
+    .replace(/<verythin_gray>(.*?)<\/verythin_gray>/g, '<span style="font-weight:100; color:gray;">$1</span>')
+    .replace(/<verythin_black>(.*?)<\/verythin_black>/g, '<span style="font-weight:100; color:black;">$1</span>')
+    .replace(/<verythin_white>(.*?)<\/verythin_white>/g, '<span style="font-weight:100; color:white;">$1</span>')
+    .replace(/<verythin_brown>(.*?)<\/verythin_brown>/g, '<span style="font-weight:100; color:brown;">$1</span>')
+    .replace(/<verythin_cyan>(.*?)<\/verythin_cyan>/g, '<span style="font-weight:100; color:cyan;">$1</span>')
+
+    .replace(/<verygross_red>(.*?)<\/verygross_red>/g, '<span style="font-weight:900; color:red;">$1</span>')
+    .replace(/<verygross_blue>(.*?)<\/verygross_blue>/g, '<span style="font-weight:900; color:blue;">$1</span>')
+    .replace(/<verygross_green>(.*?)<\/verygross_green>/g, '<span style="font-weight:900; color:green;">$1</span>')
+    .replace(/<verygross_orange>(.*?)<\/verygross_orange>/g, '<span style="font-weight:900; color:orange;">$1</span>')
+    .replace(/<verygross_purple>(.*?)<\/verygross_purple>/g, '<span style="font-weight:900; color:purple;">$1</span>')
+    .replace(/<verygross_pink>(.*?)<\/verygross_pink>/g, '<span style="font-weight:900; color:pink;">$1</span>')
+    .replace(/<verygross_yellow>(.*?)<\/verygross_yellow>/g, '<span style="font-weight:900; color:yellow;">$1</span>')
+    .replace(/<verygross_gray>(.*?)<\/verygross_gray>/g, '<span style="font-weight:900; color:gray;">$1</span>')
+    .replace(/<verygross_black>(.*?)<\/verygross_black>/g, '<span style="font-weight:900; color:black;">$1</span>')
+    .replace(/<verygross_white>(.*?)<\/verygross_white>/g, '<span style="font-weight:900; color:white;">$1</span>')
+    .replace(/<verygross_brown>(.*?)<\/verygross_brown>/g, '<span style="font-weight:900; color:brown;">$1</span>')
+    .replace(/<verygross_cyan>(.*?)<\/verygross_cyan>/g, '<span style="font-weight:900; color:cyan;">$1</span>')
+
+    .replace(/<thin_(.*?)>(.*?)<\/thin_\1>/g, '<span style="font-weight:300; color:$1;">$2</span>')
+    .replace(/<gross_(.*?)>(.*?)<\/gross_\1>/g, '<span style="font-weight:700; color:$1;">$2</span>')
+
+    .replace(/<title>(.*?)<\/title>/g, '')
+    .replace(/<background_color>(.*?)<\/background_color>/g, '')
+    .replace(/<name_(.*?)>(.*?)<\/name_\1>/g, '<h2 style="color:$1;">$2</h2>')
+    .replace(/<text_(.*?)>(.*?)<\/text_\1>/g, '<p style="color:$1;">$2</p>')
+
+    .replace(/<erikai_red>/g, '<div style="background:#e74c3c; color:white; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<erikai_black>/g, '<div style="background:black; color:white; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<erikai_blue>/g, '<div style="background:#3498db; color:white; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<erikai_yellow>/g, '<div style="background:#ffff99; color:black; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<erikai_pink>/g, '<div style="background:#ffccff; color:black; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<erikai_brown>/g, '<div style="background:#deb887; color:white; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<erikai_cyan>/g, '<div style="background:#00ffff; color:black; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<erikai_green>/g, '<div style="background:#2ecc71; color:white; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<erikai_orange>/g, '<div style="background:#ffa500; color:white; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<erikai_gray>/g, '<div style="background:gray; color:white; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<erikai_purple>/g, '<div style="background:purple; color:white; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<erikai_white>/g, '<div style="background:white; color:black; padding:15px; border-radius:10px; margin-bottom:10px;">')
+    .replace(/<\/erikai_.*?>/g, '</div>')
+
+    .replace(/<odkaz>(.*?)<\/odkaz>/g, '<a href="$1" target="_blank">$1</a>')
+    .replace(/<video>(.*?)<\/video>/g, '<iframe width="100%" height="400" src="$1" frameborder="0" allowfullscreen style="border-radius:10px;"></iframe>')
+
+    .replace(/<calendar>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/kalendar.html" width="100%" height="800px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<clockandstopwatch>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/hodiny.html" width="100%" height="650px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<alarmclock>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/budik.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<randomgenerator>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/generator_hesla_mena.html" width="100%" height="800px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<calculator>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/kalkulacku.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<notes>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/poznamky.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<recordings>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/zaznam_nahravok.html" width="100%" height="500px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<cameraandvideo>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/fotak.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<qrscanner>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/skener.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<compass>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/kompas.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<contactandcall>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/kontakt_hovor.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<mail>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/mail.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<sms>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/sms.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<gallery>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/galeria.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<maps>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/mapy.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<filemanager>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/spravca_subor.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<documents>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/dokumenty.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<pdfsk>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/pdfsk.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<tables>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/tabulky.html" width="100%" height="900px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<presentations>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/prezentacie.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<speedmeter>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/speedmeter.html" width="100%" height="500px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<radio>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/radio.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<editorvideo>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/video_editor.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<qrgenerator>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/qr.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<drawing>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/kreslenie.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<imagemixgenerator>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/generator_obrazkov.html" width="100%" height="600px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<weather>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/pocasie.html" width="100%" height="800px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<helpertools>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/nastroje.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<erikaichatweb>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/erikai-chat.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<erikaiopenapkweb>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/weberikai.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<ownmusic>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/hudba.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<owntube>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/erikai_own_tube.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>')
+    .replace(/<translate>/g, '<iframe src="https://erikai-demoa1.github.io/ErikAI/translate.html" width="100%" height="700px" style="border:1px solid #ccc; border-radius:10px;" loading="lazy"></iframe>');
+}
+
+function render() {
+  let code = document.getElementById('input').value;
+  let outputDiv = document.getElementById('output');
+
+  const bgColorMatch = code.match(/<background_color>(.*?)<\/background_color>/);
+  if (bgColorMatch) {
+    outputDiv.style.background = bgColorMatch[1];
+  } else {
+    outputDiv.style.background = "white";
+  }
+
+  outputDiv.innerHTML = processCoreLang(code);
+}
+
+function download() {
+  let code = document.getElementById('input').value;
+  let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>tvoj ErikAI</title></head><body>';
+  html += processCoreLang(code);
+  html += '</body></html>';
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'erikai_tvoja_stranka.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function stiahnutZip() {
+  let code = document.getElementById('input').value;
+  let name = document.getElementById('appName').value || 'ErikAI_App';
+  let processed = processCoreLang(code);
+
+  const indexHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${name}</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+${processed}
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.log('Service Worker zaregistrovaný.'));
+  }
+<\/script>
+</body>
+</html>`;
+
+  const manifest = {
+    name: name,
+    short_name: name,
+    start_url: "./index.html",
+    display: "standalone",
+    background_color: "#ffffff",
+    theme_color: "#2563eb",
+    icons: [{ src: "icon.png", sizes: "192x192", type: "image/png" }]
+  };
+
+  const serviceWorker = `
+self.addEventListener('fetch', function(event) {
+  event.respondWith(fetch(event.request).catch(function() {
+    return new Response('Offline');
+  }));
+});
+`;
+
+  const zip = new JSZip();
+  zip.file("index.html", indexHtml);
+  zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+  zip.file("service-worker.js", serviceWorker);
+
+  const emptyIconBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFfQJ/qrgpRQAAAABJRU5ErkJggg==";
+  zip.file("icon.png", emptyIconBase64, { base64: true });
+
+  zip.generateAsync({ type: "blob" }).then(function(blob) {
+    const a = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = `${name}_PWA.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+</script>
+
+</body>
+</html>
