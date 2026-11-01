@@ -3,151 +3,354 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🎤 ErikAI Záznam zvuku</title>
+  <title>🎤 ErikAI Voice Studio Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg-light: #f1f5f9;
+      --card-light: #ffffff;
+      --text-light: #0f172a;
+      --muted-light: #64748b;
+      --border-light: rgba(0, 0, 0, 0.08);
+      --accent: #0284c7;
+      --accent-hover: #0369a1;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+
+    body.dark-mode {
+      --bg-light: #07090e;
+      --card-light: rgba(16, 22, 36, 0.85);
+      --text-light: #f8fafc;
+      --muted-light: #94a3b8;
+      --border-light: rgba(255, 255, 255, 0.08);
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --danger: #f87171;
+      --success: #34d399;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-      background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
-      color: #222;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-light);
+      color: var(--text-light);
       text-align: center;
-      padding: 20px;
-      transition: background 0.5s, color 0.5s;
+      padding: 30px 20px;
+      min-height: 100vh;
+      transition: background 0.3s ease, color 0.3s ease;
     }
-    h2 {
-      color: #0077cc;
+
+    .container {
+      max-width: 550px;
+      margin: 0 auto;
+    }
+
+    .top-controls {
+      display: flex;
+      justify-content: flex-end;
       margin-bottom: 20px;
     }
-    .recorder {
-      display: inline-block;
-      background: white;
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+
+    .theme-btn {
+      background: var(--card-light);
+      border: 1px solid var(--border-light);
+      color: var(--text-light);
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      transition: transform 0.2s;
+    }
+    .theme-btn:hover { transform: scale(1.1); }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: var(--muted-light);
+      font-size: 0.95rem;
+      margin-bottom: 30px;
+    }
+
+    .recorder-card {
+      background: var(--card-light);
+      border: 1px solid var(--border-light);
+      padding: 30px;
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    /* Vizualizér vlny */
+    .visualizer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      height: 40px;
       margin-bottom: 20px;
     }
-    button {
-      background: #0077cc;
+
+    .bar {
+      width: 4px;
+      height: 6px;
+      background: var(--muted-light);
+      border-radius: 2px;
+      transition: height 0.1s ease;
+    }
+
+    .recording .bar {
+      background: var(--danger);
+      animation: pulseBar 0.6s infinite alternate;
+    }
+
+    @keyframes pulseBar {
+      0% { height: 10px; }
+      100% { height: 35px; }
+    }
+
+    .timer {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--muted-light);
+    }
+    .timer.active {
+      color: var(--danger);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    button.ctrl-btn {
+      background: var(--accent);
       color: white;
       border: none;
       padding: 12px 20px;
-      margin: 5px;
-      border-radius: 8px;
-      font-size: 16px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
       cursor: pointer;
-      transition: 0.3s;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
     }
-    button:hover:not(:disabled) {
-      background: #005fa3;
+
+    button.ctrl-btn:hover:not(:disabled) {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
     }
-    button:disabled {
-      background: #cccccc;
+
+    button.ctrl-btn:disabled {
+      background: var(--border-light);
+      color: var(--muted-light);
       cursor: not-allowed;
+      box-shadow: none;
     }
-    button.recording {
-      background: #d10000;
+
+    button.ctrl-btn.stop-btn {
+      background: var(--danger);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
     }
+
     audio {
-      margin-top: 15px;
       width: 100%;
-      max-width: 400px;
+      margin: 15px 0;
       border-radius: 8px;
     }
+
+    .action-links {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
     a.download-link {
-      display: inline-block;
-      margin-top: 10px;
-      padding: 10px 15px;
-      background: #00aa44;
+      display: block;
+      padding: 12px;
+      background: var(--success);
       color: white;
-      border-radius: 8px;
+      border-radius: 12px;
       text-decoration: none;
-      font-weight: bold;
-      transition: 0.3s;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+      transition: all 0.2s;
     }
     a.download-link:hover {
-      background: #007722;
+      filter: brightness(1.1);
+      transform: translateY(-1px);
     }
-    body.dark-mode {
-      background: linear-gradient(135deg, #121212, #1c1c1c);
-      color: white;
+
+    #cas {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted-light);
+      margin-top: 30px;
     }
-    body.dark-mode button {
-      background: #3399ff;
-    }
-    body.dark-mode button:hover:not(:disabled) {
-      background: #0077cc;
-    }
-    body.dark-mode a.download-link {
-      background: #22cc66;
-    }
-    body.dark-mode a.download-link:hover {
-      background: #00aa44;
+
+    footer {
+      font-size: 12px;
+      color: var(--muted-light);
+      margin-top: 30px;
+      border-top: 1px solid var(--border-light);
+      padding-top: 20px;
     }
   </style>
 </head>
-<body>
+<body class="dark-mode">
 
-  <h2>🎤 ErikAI – Nahrávanie zvuku</h2>
+  <div class="container">
+    <div class="top-controls">
+      <button class="theme-btn" onclick="toggleTheme()" title="Prepnúť režim">🌓</button>
+    </div>
 
-  <div class="recorder">
-    <button id="start">▶️ Spustiť nahrávanie</button>
-    <button id="stop" disabled>⏹️ Stop</button>
-    <button id="reset" disabled>♻️ Reset</button>
-    <br>
-    <audio id="audio" controls></audio>
-    <br>
-    <a id="download" class="download-link" href="#" download="erikai-zaznam.webm" style="display:none;">⬇️ Stiahnuť nahrávku</a>
+    <h1>🎤 ErikAI Voice Studio</h1>
+    <p class="subtitle">Profesionálny online záznamník zvuku priamo v prehliadači</p>
+
+    <div class="recorder-card" id="recorderCard">
+      <!-- Vizuálna vlnka -->
+      <div class="visualizer" id="visualizer">
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      </div>
+
+      <!-- Časovač -->
+      <div class="timer" id="timer">00:00</div>
+
+      <!-- Ovládacie tlačidlá -->
+      <div class="btn-group">
+        <button id="start" class="ctrl-btn">▶️ Štart</button>
+        <button id="stop" class="ctrl-btn stop-btn" disabled>⏹️ Stop</button>
+        <button id="reset" class="ctrl-btn" disabled>🔄 Reset</button>
+      </div>
+
+      <!-- Prehrávač -->
+      <audio id="audio" controls style="display:none;"></audio>
+
+      <!-- Sťahovanie -->
+      <div class="action-links">
+        <a id="download" class="download-link" href="#" download="erikai-zaznam.webm" style="display:none;">⬇️ Stiahnuť nahrávku</a>
+      </div>
+    </div>
+
+    <p id="cas">Načítavam čas...</p>
+
+    <footer>
+      © 2026 Erik Mohylák – ErikAI Voice Studio Pro | Creative Commons BY-NC-ND 4.0
+    </footer>
   </div>
-
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-
-  <p id="cas" style="font-size: 18px; font-weight:bold;"></p>
 
   <script>
     let mediaRecorder, chunks = [];
+    let startTime, timerInterval;
     const startBtn = document.getElementById("start");
+    const stopBtn = document.getElementById("stop");
+    const resetBtn = document.getElementById("reset");
+    const timerDisplay = document.getElementById("timer");
+    const recorderCard = document.getElementById("recorderCard");
+    const audioPlayer = document.getElementById("audio");
+    const downloadLink = document.getElementById("download");
 
+    // Spustenie nahrávania
     startBtn.onclick = async () => {
-      let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      chunks = [];
+      try {
+        let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        chunks = [];
 
-      mediaRecorder.ondataavailable = e => chunks.push(e.data);
-      mediaRecorder.onstop = () => {
-        let blob = new Blob(chunks, { type: 'audio/webm' });
-        let url = URL.createObjectURL(blob);
-        document.getElementById("audio").src = url;
-        document.getElementById("download").href = url;
-        document.getElementById("download").style.display = "inline";
-        startBtn.classList.remove("recording");
-      };
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        
+        mediaRecorder.onstop = () => {
+          let blob = new Blob(chunks, { type: 'audio/webm' });
+          let url = URL.createObjectURL(blob);
+          audioPlayer.src = url;
+          audioPlayer.style.display = "block";
+          downloadLink.href = url;
+          downloadLink.style.display = "block";
+        };
 
-      mediaRecorder.start();
-      startBtn.disabled = true;
-      startBtn.classList.add("recording");
-      document.getElementById("stop").disabled = false;
-      document.getElementById("reset").disabled = false;
+        mediaRecorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        resetBtn.disabled = false;
+        
+        recorderCard.classList.add("recording");
+        timerDisplay.classList.add("active");
+
+        // Spustenie stopiek
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+
+      } catch (err) {
+        alert("Mikrofón nie je dostupný alebo bol zablokovaný.");
+      }
     };
 
-    document.getElementById("stop").onclick = () => {
+    // Zastavenie nahrávania
+    stopBtn.onclick = () => {
       mediaRecorder.stop();
+      // Zastavenie streamu mikrofónu
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+
+      clearInterval(timerInterval);
       startBtn.disabled = false;
-      document.getElementById("stop").disabled = true;
+      stopBtn.disabled = true;
+      recorderCard.classList.remove("recording");
+      timerDisplay.classList.remove("active");
     };
 
-    document.getElementById("reset").onclick = () => {
-      document.getElementById("audio").src = "";
-      document.getElementById("download").style.display = "none";
-      document.getElementById("reset").disabled = true;
+    // Reset nahrávania
+    resetBtn.onclick = () => {
+      audioPlayer.src = "";
+      audioPlayer.style.display = "none";
+      downloadLink.style.display = "none";
+      timerDisplay.textContent = "00:00";
+      resetBtn.disabled = true;
+      stopBtn.disabled = true;
+      startBtn.disabled = false;
+      recorderCard.classList.remove("recording");
+      timerDisplay.classList.remove("active");
     };
 
+    // Formátovanie času nahrávania
+    function updateTimer() {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const seconds = String(elapsed % 60).padStart(2, '0');
+      timerDisplay.textContent = `${minutes}:${seconds}`;
+    }
+
+    // Prepínanie témy
     function toggleTheme() {
       document.body.classList.toggle('dark-mode');
     }
 
+    // Aktuálny dátum a hodiny v dolnej časti
     function aktualizujCas() {
       const teraz = new Date();
       const moznosti = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' };
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
+      document.getElementById('cas').innerText = `📅 ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
     }
     setInterval(aktualizujCas, 1000);
     aktualizujCas();
