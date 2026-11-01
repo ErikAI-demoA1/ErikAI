@@ -2,199 +2,435 @@
 <html lang="sk">
 <head>
   <meta charset="UTF-8">
-  <title>📲 ErikAI SMS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📲 ErikAI SMS Studio Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+      --border: rgba(0, 0, 0, 0.08);
+      --shadow: 0 10px 30px rgba(0,0,0,0.04);
+    }
+
+    body.dark-mode {
+      --bg: #07090e;
+      --card-bg: rgba(16, 22, 36, 0.85);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+      --border: rgba(255, 255, 255, 0.08);
+      --shadow: 0 15px 35px rgba(0,0,0,0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-      background-color: #fdfdfd;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 30px 15px;
+      min-height: 100vh;
+      transition: background 0.3s ease, color 0.3s ease;
     }
-    input, textarea {
-      width: 90%;
-      max-width: 400px;
-      padding: 10px;
-      margin: 10px auto;
-      font-size: 16px;
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
     }
-    button {
-      background-color: #e60000;
+
+    /* TOPBAR */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      background: var(--card-bg);
+      padding: 15px 20px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .clock-box {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .theme-btn {
+      background: var(--accent);
       color: white;
       border: none;
-      padding: 12px 20px;
-      font-size: 16px;
-      border-radius: 5px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
       cursor: pointer;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+      transition: transform 0.2s;
     }
-    button:hover {
-      background-color: #cc0000;
+    .theme-btn:hover { transform: scale(1.1); }
+
+    h1 {
+      color: var(--text);
+      text-align: center;
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
     }
-    .warning {
-      background-color: #fff4cc;
-      padding: 15px;
+    h1 span { color: var(--accent); }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 25px;
+    }
+
+    /* CARD */
+    .card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 30px;
+      margin-bottom: 25px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    /* DICTATE BAR */
+    .dictate-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .dictate-btn {
+      flex: 1;
+      padding: 10px;
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .dictate-btn:hover {
+      background: var(--accent);
+      color: white;
+      transform: translateY(-1px);
+    }
+    .dictate-btn.listening {
+      background: #10b981;
+      color: white;
+      border-color: #059669;
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 1; }
+      to { opacity: 0.6; }
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 4px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: var(--muted);
+      text-align: left;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
+    }
+
+    .saved-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 15px;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 10px;
       margin-top: 20px;
-      border-left: 5px solid #ffa500;
-      max-width: 500px;
-      margin-left: auto;
-      margin-right: auto;
+      flex-wrap: wrap;
+    }
+
+    button.primary-btn {
+      flex: 2;
+      padding: 14px 20px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(239,68,68,0.25);
+      transition: all 0.2s ease;
+    }
+    button.primary-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    button.secondary-btn {
+      flex: 1;
+      padding: 14px 15px;
+      background: #eab308;
+      color: black;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(234, 179, 8, 0.2);
+    }
+    button.secondary-btn:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .warning {
+      margin-top: 25px;
+      font-size: 0.88rem;
+      color: var(--text);
+      background: rgba(245, 158, 11, 0.1);
+      border-left: 4px solid #f59e0b;
+      padding: 15px;
+      border-radius: 10px;
+      line-height: 1.5;
+      text-align: left;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
     }
   </style>
 </head>
-<body>
+<body class="dark-mode">
 
-  <h1>📲 ErikAI SMS</h1>
-  <button onclick="startSpeech('cislo')">🎙️ Číslo</button>
-<button onclick="startSpeech('sprava')">🎤 Správa</button>
+<div class="container">
 
-  <script>
-function startSpeech(fieldId) {
-  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = 'sk-SK';
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-
-  recognition.onresult = function(event) {
-    const result = event.results[0][0].transcript;
-    document.getElementById(fieldId).value = result;
-  };
-
-  recognition.start();
-}
-  </script>
-
-  <form onsubmit="sendSMS(); return false;">
-    <input type="text" id="cislo" placeholder="Telefónne číslo (napr. 0904123456)" required><br>
-    <textarea id="sprava" rows="4" placeholder="Sem napíš správu..." required></textarea><br>
-    <button type="submit">📤 Odoslať SMS</button>
-  </form>
-
-  <label for="cisloSelect">📱 Vyber uložené číslo1:</label>
-<select id="cisloSelect" onchange="loadSaved('cislo', this.value)"></select>
-
-<label for="spravaSelect">💬 Vyber uloženú správu2:</label>
-<select id="spravaSelect" onchange="loadSaved('sprava', this.value)"></select>
-
-  <div style="margin-top: 10px;">
-  <button onclick="ulozData()" style="background-color:#ffcc00; padding:5px 15px;">💾 Uložiť číslo a správu</button>
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="clock-box" id="cas">Načítavam čas...</div>
+    <button class="theme-btn" onclick="toggleTheme()" title="Zmeniť režim">🌓</button>
   </div>
 
-  <script>
-function ulozData() {
-  let cislo = document.getElementById('cislo').value;
-  let sprava = document.getElementById('sprava').value;
+  <h1>📲 ErikAI <span>SMS Studio</span></h1>
+  <p class="subtitle">Rýchle odosielanie SMS s diktovaním hlasom a uloženou históriou</p>
 
-  if (!cislo || !sprava) {
-    alert("Najprv zadaj číslo a správu, ktoré chceš uložiť.");
-    return;
+  <div id="google_translate_element" style="text-align:center; margin-bottom: 20px;"></div>
+
+  <div class="card">
+    
+    <!-- HLASOVÉ DIKTOVANIE -->
+    <div class="dictate-bar">
+      <button type="button" class="dictate-btn" id="btnCislo" onclick="startSpeech('cislo', 'btnCislo')">🎙️ Diktovať číslo</button>
+      <button type="button" class="dictate-btn" id="btnSprava" onclick="startSpeech('sprava', 'btnSprava')">🎤 Diktovať správu</button>
+    </div>
+
+    <!-- FORMULÁR -->
+    <form id="smsForm" onsubmit="handleSendSMS(event)">
+      <label for="cislo">📱 Telefónne číslo:</label>
+      <input type="text" id="cislo" placeholder="Telefónne číslo (napr. 0904123456)" required>
+
+      <label for="sprava">💬 Text správy:</label>
+      <textarea id="sprava" rows="4" placeholder="Sem napíš správu..." required></textarea>
+
+      <!-- VYBER ZO ZÁLOHY -->
+      <div class="saved-group">
+        <div>
+          <label for="cisloSelect">📱 Uložené čísla:</label>
+          <select id="cisloSelect" onchange="loadSaved('cislo', this.value)"></select>
+        </div>
+        <div>
+          <label for="spravaSelect">💬 Uložené správy:</label>
+          <select id="spravaSelect" onchange="loadSaved('sprava', this.value)"></select>
+        </div>
+      </div>
+
+      <!-- HLAVNÉ TLAČIDLÁ -->
+      <div class="action-btns">
+        <button type="submit" class="primary-btn">📤 Odoslať SMS</button>
+        <button type="button" class="secondary-btn" onclick="ulozData()">💾 Uložiť údaje</button>
+      </div>
+    </form>
+
+    <div class="warning">
+      ⚠️ <strong>Upozornenie:</strong><br>
+      Aplikácia neodosiela SMS automaticky. Po kliknutí sa otvorí tvoja predvolená aplikácia na SMS správy vo vašom zariadení, kde potvrdenie manuálne odošlete.<br><br>
+      🔒 ErikAI neukladá žiadne údaje na server. Všetko prebieha <strong>lokálne a bezpečne</strong>.
+    </div>
+
+  </div>
+
+  <footer>
+    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+    © 2026 Erik Mohylák – All rights reserved.
+  </footer>
+
+</div>
+
+<script>
+  // === TÉMA ===
+  function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+  }
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark-mode');
   }
 
-  saveToStorage('cislo', cislo);
-  saveToStorage('sprava', sprava);
-  alert("Uložené!");
-}
-
-function saveToStorage(type, value) {
-  let data = JSON.parse(localStorage.getItem('saved_' + type)) || [];
-  data.unshift(value); // vloží na začiatok
-  data = [...new Set(data)].slice(0, 10); // odstráni duplikáty, ponechá max 10
-  localStorage.setItem('saved_' + type, JSON.stringify(data));
-  loadSelectOptions(type);
-}
-
-function loadSelectOptions(type) {
-  const select = document.getElementById(type + 'Select');
-  if (!select) return;
-  select.innerHTML = '<option value="">-- Vyber --</option>';
-  let data = JSON.parse(localStorage.getItem('saved_' + type)) || [];
-  data.forEach(v => {
-    const opt = document.createElement('option');
-    opt.value = v;
-    opt.textContent = v;
-    select.appendChild(opt);
-  });
-}
-
-function loadSaved(type, value) {
-  if (value) {
-    document.getElementById(type).value = value;
+  // === ČAS ===
+  function aktualizujCas() {
+    const teraz = new Date();
+    const moznosti = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    document.getElementById('cas').innerText = "🕓 " + teraz.toLocaleDateString('sk-SK', moznosti);
   }
-}
+  setInterval(aktualizujCas, 1000);
+  aktualizujCas();
 
-window.onload = function () {
-  loadSelectOptions('cislo');
-  loadSelectOptions('sprava');
-};
-  </script>
+  // === GOOGLE TRANSLATE ===
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+      pageLanguage: 'sk',
+      includedLanguages: 'en,cs,de,fr,hu,pl,ro,ru,es,it,uk',
+      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+    }, 'google_translate_element');
+  }
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
+<script>
+  // === HLASOVÉ DIKTOVANIE ===
+  function startSpeech(fieldId, btnId) {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Hlasové rozpoznávanie nie je podporované v tomto prehliadači.');
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'sk-SK';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
-  
+    const btn = document.getElementById(btnId);
+    btn.classList.add('listening');
 
-  <script>
-function saveToStorage(type, value) {
+    recognition.onresult = function(event) {
+      const result = event.results[0][0].transcript;
+      const field = document.getElementById(fieldId);
+      if (fieldId === 'sprava' && field.value) {
+        field.value += " " + result;
+      } else {
+        field.value = result;
+      }
+      btn.classList.remove('listening');
+    };
+
+    recognition.onerror = () => btn.classList.remove('listening');
+    recognition.onend = () => btn.classList.remove('listening');
+
+    recognition.start();
+  }
+
+  // === UKLADANIE A NAKLADANIE DÁT ===
+  function saveToStorage(type, value) {
     let data = JSON.parse(localStorage.getItem('saved_' + type)) || [];
-    data.unshift(value); // Pridá na začiatok
-    data = [...new Set(data)].slice(0, 10); // Unikátne, max 10
+    data.unshift(value);
+    data = [...new Set(data)].slice(0, 10);
     localStorage.setItem('saved_' + type, JSON.stringify(data));
     loadSelectOptions(type);
-}
+  }
 
-function loadSelectOptions(type) {
+  function loadSelectOptions(type) {
     const select = document.getElementById(type + 'Select');
-    select.innerHTML = '<option value="">-- Vyber --</option>';
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Vyber zo zálohy --</option>';
     let data = JSON.parse(localStorage.getItem('saved_' + type)) || [];
     data.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        select.appendChild(opt);
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      select.appendChild(opt);
     });
-}
+  }
 
-function loadSaved(type, value) {
+  function loadSaved(type, value) {
     if (value) {
-        document.getElementById(type).value = value;
+      document.getElementById(type).value = value;
     }
-}
+  }
 
-// Uloženie po odoslaní SMS:
-function sendSMS() {
-    var cislo = document.getElementById("cislo").value;
-    var sprava = document.getElementById("sprava").value;
-    if (cislo && sprava) {
-        saveToStorage('cislo', cislo);
-        saveToStorage('sprava', sprava);
-        var smsLink = "sms:" + encodeURIComponent(cislo) + "?body=" + encodeURIComponent(sprava);
-        window.location.href = smsLink;
+  function ulozData() {
+    let cislo = document.getElementById('cislo').value.trim();
+    let sprava = document.getElementById('sprava').value.trim();
+
+    if (!cislo && !sprava) {
+      alert("Najprv zadaj číslo alebo správu, ktorú chceš uložiť.");
+      return;
     }
-}
-window.onload = function () {
+
+    if (cislo) saveToStorage('cislo', cislo);
+    if (sprava) saveToStorage('sprava', sprava);
+    alert("Údaje boli úspešne uložené!");
+  }
+
+  // === ODOSLANIE SMS ===
+  function handleSendSMS(e) {
+    e.preventDefault();
+    var cislo = document.getElementById("cislo").value.trim();
+    var sprava = document.getElementById("sprava").value.trim();
+
+    if (cislo && sprava) {
+      saveToStorage('cislo', cislo);
+      saveToStorage('sprava', sprava);
+      var smsLink = "sms:" + encodeURIComponent(cislo) + "?body=" + encodeURIComponent(sprava);
+      window.location.href = smsLink;
+    }
+  }
+
+  window.onload = function () {
     loadSelectOptions('cislo');
     loadSelectOptions('sprava');
-};
-  </script>
-
-  <div class="warning">
-    ⚠️ <strong>Upozornenie:</strong><br>
-    Táto funkcia neodosiela SMS automaticky. Po kliknutí sa otvorí tvoja predvolená SMS aplikácia, kde manuálne potvrdíš odoslanie.<br><br>
-    🔒 ErikAI neukladá žiadne údaje. Všetko prebieha <strong>lokálne a bezpečne</strong>.
-  </div>
-
-  <script>
-    function sendSMS() {
-      var cislo = document.getElementById("cislo").value.trim();
-      var sprava = document.getElementById("sprava").value.trim();
-      if (cislo && sprava) {
-        var smsLink = "sms:" + encodeURIComponent(cislo) + "?body=" + encodeURIComponent(sprava);
-        window.location.href = smsLink;
-      }
-    }
-  </script>
-
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-  </p>
+  };
+</script>
 
 </body>
 </html>
