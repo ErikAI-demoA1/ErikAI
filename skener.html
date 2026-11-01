@@ -1,456 +1,370 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <title>ErikAI QR Skener</title>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ErikAI • QR Scanner Pro Studio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@zxing/library@latest"></script>
+  <!-- Knižnica na generovanie QR kódov -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
+    :root {
+      --bg-light: #f1f5f9;
+      --card-light: #ffffff;
+      --text-light: #0f172a;
+      --muted-light: #64748b;
+      --border-light: rgba(0, 0, 0, 0.08);
+
+      --bg-dark: #07090e;
+      --card-dark: rgba(16, 22, 36, 0.85);
+      --text-dark: #f8fafc;
+      --muted-dark: #94a3b8;
+      --border-dark: rgba(255, 255, 255, 0.08);
+
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+      --success: #10b981;
+      --blue: #0284c7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: Arial;
-      text-align: center;
-      padding: 20px;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-light); color: var(--text-light);
+      text-align: center; padding: 25px 15px; min-height: 100vh;
       transition: background 0.3s, color 0.3s;
     }
 
     body.dark-mode {
-      background-color: #121212;
-      color: white;
+      background: var(--bg-dark); color: var(--text-dark);
+      background-image: 
+        radial-gradient(circle at 15% 10%, rgba(239, 68, 68, 0.08), transparent 40%),
+        radial-gradient(circle at 85% 90%, rgba(2, 132, 199, 0.06), transparent 40%);
     }
 
-    video {
-      width: 100%;
-      max-width: 400px;
-      border: 2px solid red;
-      border-radius: 10px;
+    .container { max-width: 600px; margin: 0 auto; }
+
+    /* TOP BAR */
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 25px; background: var(--card-light); padding: 15px 20px;
+      border-radius: 18px; border: 1px solid var(--border-light);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+      transition: all 0.3s;
     }
+    body.dark-mode .topbar { background: var(--card-dark); border-color: var(--border-dark); }
+
+    .clock-box { font-size: 0.9rem; font-weight: 600; color: var(--muted-light); }
+    body.dark-mode .clock-box { color: var(--muted-dark); }
+
+    .theme-btn {
+      background: var(--accent); color: white; border: none;
+      width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+      font-size: 1.1rem; box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+      transition: transform 0.2s;
+    }
+    .theme-btn:hover { transform: scale(1.1); }
+
+    h2 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+    h2 span { color: var(--accent); }
+    .subtitle { color: var(--muted-light); font-size: 0.95rem; margin-bottom: 25px; }
+    body.dark-mode .subtitle { color: var(--muted-dark); }
+
+    /* PANEL / KARTY */
+    .panel {
+      background: var(--card-light); border: 1px solid var(--border-light);
+      border-radius: 20px; padding: 20px; margin-bottom: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.04);
+      transition: all 0.3s;
+    }
+    body.dark-mode .panel { background: var(--card-dark); border-color: var(--border-dark); backdrop-filter: blur(10px); }
+
+    video, #preview {
+      width: 100%; max-width: 380px; height: auto;
+      border: 2px solid var(--accent); border-radius: 14px;
+      margin: 10px auto; display: block; object-fit: cover;
+    }
+
+    #preview { display: none; }
+
+    button.main-btn {
+      margin: 8px; padding: 12px 20px; font-size: 0.95rem; font-weight: 600;
+      border: none; background: var(--accent); color: white;
+      border-radius: 12px; cursor: pointer; transition: all 0.2s;
+      box-shadow: 0 4px 15px rgba(239,68,68,0.25);
+    }
+    button.main-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+
+    button.blue-btn { background: var(--blue); box-shadow: 0 4px 15px rgba(2,132,199,0.25); }
+    button.blue-btn:hover { background: #0369a1; }
+
+    button.success-btn { background: var(--success); box-shadow: 0 4px 15px rgba(16,185,129,0.25); }
+    button.success-btn:hover { background: #059669; }
+
+    #imageInput { display: none; }
+
+    #stav { margin-top: 10px; font-size: 0.95rem; font-weight: 500; color: var(--muted-light); }
+    body.dark-mode #stav { color: var(--muted-dark); }
 
     #output {
-      margin-top: 15px;
-      font-weight: bold;
-      word-break: break-word;
+      margin-top: 15px; font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem; font-weight: 600; word-break: break-word;
+      padding: 12px; background: rgba(0,0,0,0.03); border-radius: 10px;
+      border: 1px dashed var(--border-light);
+    }
+    body.dark-mode #output { background: rgba(255,255,255,0.03); border-color: var(--border-dark); }
+
+    #actionButtons { display: none; margin-top: 15px; }
+
+    /* VYGENEROVANÝ QR KÓD (STIAHNUTIE) */
+    #qrCodeContainer {
+      margin: 15px auto; display: inline-block; padding: 12px;
+      background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
 
-    button {
-      margin: 10px;
-      padding: 10px 15px;
-      font-size: 16px;
-      border: none;
-      background: red;
-      color: white;
-      border-radius: 6px;
-      cursor: pointer;
+    /* HISTÓRIA */
+    h3 { font-size: 1.1rem; margin-bottom: 12px; text-align: left; }
+    .history-list {
+      max-height: 180px; overflow-y: auto; text-align: left;
+      display: flex; flex-direction: column; gap: 8px; padding-right: 5px;
     }
+    .history-item {
+      padding: 10px 12px; background: var(--bg-light); border-radius: 8px;
+      border: 1px solid var(--border-light); font-size: 0.85rem;
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      cursor: pointer; transition: border-color 0.2s;
+    }
+    body.dark-mode .history-item { background: #040609; border-color: var(--border-dark); }
+    .history-item:hover { border-color: var(--accent); }
+    .history-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
 
-    button:hover {
-      opacity: 0.85;
-    }
-
-    #imageInput {
-      display: none;
-    }
-
-    #preview {
-      display: none;
-      max-width: 400px;
-      width: 100%;
-      margin: 15px auto;
-      border-radius: 10px;
-      border: 2px solid red;
-    }
-
-    #actionButtons {
-      display: none;
-    }
-
-    #stav {
-      margin-top: 10px;
-      font-size: 15px;
-    }
+    footer { font-size: 13px; color: var(--muted-light); margin-top: 30px; border-top: 1px solid var(--border-light); padding-top: 20px; }
+    body.dark-mode footer { color: var(--muted-dark); border-color: var(--border-dark); }
   </style>
 </head>
 
-<body>
+<body class="dark-mode">
 
-  <!-- TÉMA -->
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
+  <div class="container">
 
-  <script>
-    function toggleTheme() {
-      document.body.classList.toggle('dark-mode');
-    }
-  </script>
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="clock-box" id="cas">Načítavam čas...</div>
+      <button class="theme-btn" onclick="toggleTheme()" title="Zmeniť režim">🌓</button>
+    </div>
 
+    <!-- GOOGLE TRANSLATE -->
+    <div id="google_translate_element" style="margin-bottom: 20px;"></div>
 
-  <!-- ČAS -->
-  <p id="cas" style="font-size: 18px;"></p>
+    <!-- NADPIS -->
+    <h2>🌍 ErikAI <span>QR Skener</span></h2>
+    <p class="subtitle">Naskenuj QR kód kamerou, obrázkom, ulož do histórie alebo vygeneruj vlastný.</p>
 
-  <script>
-    function aktualizujCas() {
+    <!-- PANEL KAMERY A OBRÁZKA -->
+    <div class="panel">
+      <video id="video" autoplay playsinline></video>
+      <img id="preview" alt="Náhľad obrázka QR kódu">
 
-      const teraz = new Date();
+      <div style="margin-top: 15px;">
+        <button class="main-btn" onclick="document.getElementById('imageInput').click()">🖼️ Vybrať obrázok</button>
+        <input type="file" id="imageInput" accept="image/*">
+      </div>
 
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
+      <div id="stav">Kamera je aktívna a hľadá QR kód...</div>
+      <div id="output">Zatiaľ nie je naskenovaný žiadny QR kód.</div>
 
-      const casText =
-        teraz.toLocaleDateString('sk-SK', moznosti);
+      <!-- AKČNÉ TLAČIDLÁ PRE VÝSLEDOK -->
+      <div id="actionButtons">
+        <button class="main-btn blue-btn" onclick="goToLink()">🌐 Prejsť na stránku</button>
+        <button class="main-btn success-btn" onclick="copyCode()">📋 Skopírovať</button>
+        <button class="main-btn" style="background:#8b5cf6;" onclick="generateQRCode()">🖼️ Vygenerovať QR</button>
+      </div>
 
-      document.getElementById('cas').innerText =
-        `🕓 Aktuálny čas: ${casText}`;
-    }
+      <!-- MIESTO PRE VYGENEROVANÝ QR KÓD -->
+      <div id="qrBox" style="display:none; margin-top: 15px;">
+        <div id="qrCodeContainer"></div>
+        <br>
+        <a id="downloadQrLink" class="main-btn success-btn" style="text-decoration:none; display:inline-block; font-size:0.85rem; padding:8px 14px;" download="erikai-qr.png">⬇️ Stiahnuť QR kód</a>
+      </div>
+    </div>
 
-    setInterval(aktualizujCas, 1000);
+    <!-- PANEL HISTÓRIE -->
+    <div class="panel">
+      <h3>📂 História naskenovaných kódov</h3>
+      <div class="history-list" id="historyList">
+        <div style="color:var(--muted-dark); font-size:0.85rem; text-align:center; padding: 10px;" id="emptyHistory">Zatiaľ žiadna história</div>
+      </div>
+    </div>
 
-    aktualizujCas();
-  </script>
-
-
-  <!-- GOOGLE TRANSLATE -->
-
-  <div id="google_translate_element"></div>
-
-  <script type="text/javascript">
-
-    function googleTranslateElementInit() {
-
-      new google.translate.TranslateElement({
-
-        pageLanguage: 'sk',
-
-        includedLanguages:
-          'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-
-        layout:
-          google.translate.TranslateElement.InlineLayout.SIMPLE
-
-      }, 'google_translate_element');
-
-    }
-
-  </script>
-
-  <script
-    src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
-  </script>
-
-
-  <!-- NADPIS -->
-
-  <h2>🌍 ErikAI QR Skener</h2>
-
-  <p>
-    📷 Naskenuj QR kód kamerou alebo 🖼️ vyber obrázok z telefónu.
-  </p>
-
-
-  <!-- KAMERA -->
-
-  <video id="video" autoplay></video>
-
-
-  <!-- VYBRAŤ OBRÁZOK -->
-
-  <br>
-
-  <button onclick="document.getElementById('imageInput').click()">
-    🖼️ Vybrať obrázok
-  </button>
-
-  <input
-    type="file"
-    id="imageInput"
-    accept="image/*"
-  />
-
-
-  <!-- NÁHĽAD OBRÁZKA -->
-
-  <img id="preview" alt="Vybraný obrázok QR kódu">
-
-
-  <!-- STAV -->
-
-  <div id="stav"></div>
-
-
-  <!-- VÝSLEDOK -->
-
-  <div id="output"></div>
-
-
-  <!-- TLAČIDLÁ -->
-
-  <div id="actionButtons">
-
-    <button onclick="goToLink()">
-      🌐 Prejsť na stránku
-    </button>
-
-    <button onclick="copyCode()">
-      📋 Skopírovať
-    </button>
+    <!-- LICENCIA -->
+    <footer>
+      This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+      © 2026 Erik Mohylák – All rights reserved.
+    </footer>
 
   </div>
 
 
   <script>
+    // === TÉMA ===
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+    }
 
+    // === AKTUÁLNY ČAS ===
+    function aktualizujCas() {
+      const teraz = new Date();
+      const moznosti = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      document.getElementById('cas').innerText = `🕓 ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
+    }
+    setInterval(aktualizujCas, 1000);
+    aktualizujCas();
+
+    // === GOOGLE TRANSLATE ===
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'sk',
+        includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+      }, 'google_translate_element');
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+  <script>
     /* =========================
-       QR SKENER
+       QR SKENER & HISTÓRIA
     ========================= */
-
-    const codeReader =
-      new ZXing.BrowserQRCodeReader();
-
-    const videoElement =
-      document.getElementById('video');
-
-    const output =
-      document.getElementById('output');
-
-    const actionButtons =
-      document.getElementById('actionButtons');
-
-    const stav =
-      document.getElementById('stav');
+    const codeReader = new ZXing.BrowserQRCodeReader();
+    const videoElement = document.getElementById('video');
+    const output = document.getElementById('output');
+    const actionButtons = document.getElementById('actionButtons');
+    const stav = document.getElementById('stav');
+    const historyList = document.getElementById('historyList');
+    const emptyHistory = document.getElementById('emptyHistory');
 
     let lastResult = '';
-
-
-    /* =========================
-       FUNKCIA VÝSLEDKU
-    ========================= */
+    let scanHistory = [];
 
     function zobrazQR(text) {
-
-      if (!text) {
-        return;
-      }
-
+      if (!text) return;
       lastResult = text;
 
-      output.textContent =
-        `✅ QR kód: ${text}`;
+      output.innerHTML = `✅ QR kód: <span style="color:var(--success);">${text}</span>`;
+      actionButtons.style.display = 'block';
+      stav.textContent = 'QR kód bol úspešne rozpoznaný!';
+      
+      // Schovať predchádzajúci generátor ak existuje
+      document.getElementById('qrBox').style.display = 'none';
 
-      actionButtons.style.display =
-        'block';
-
-      stav.textContent =
-        'QR kód bol úspešne rozpoznaný.';
-
+      addToHistory(text);
     }
 
+    function addToHistory(text) {
+      // Zabrániť duplicitnému okamžitému pridaniu
+      if (scanHistory.includes(text)) return;
+      scanHistory.unshift(text);
 
-    /* =========================
-       SKENOVANIE KAMEROU
-    ========================= */
+      if (emptyHistory) emptyHistory.style.display = 'none';
 
-    codeReader.decodeFromVideoDevice(
-      null,
-      'video',
-      (result, err) => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.innerHTML = `
+        <span class="history-text">📌 ${text}</span>
+        <button style="padding:4px 8px; font-size:0.75rem; background:var(--blue); border:none; color:white; border-radius:4px; cursor:pointer;" onclick="loadFromHistory('${encodeURIComponent(text)}')">Načítať</button>
+      `;
+      historyList.prepend(item);
+    }
 
-        if (result) {
+    function loadFromHistory(encodedText) {
+      const text = decodeURIComponent(encodedText);
+      zobrazQR(text);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
-          if (result.text !== lastResult) {
-
-            zobrazQR(result.text);
-
-          }
-
-        }
-
+    // Skenovanie kamerou
+    codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
+      if (result && result.text !== lastResult) {
+        zobrazQR(result.text);
       }
-    );
+    });
 
+    // Skenovanie nahraného obrázka
+    document.getElementById('imageInput').addEventListener('change', async function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-    /* =========================
-       SKENOVANIE OBRÁZKA
-    ========================= */
+      stav.textContent = '🔎 Hľadám QR kód v obrázku...';
+      output.textContent = '';
+      actionButtons.style.display = 'none';
+      document.getElementById('qrBox').style.display = 'none';
 
-    document
-      .getElementById('imageInput')
-      .addEventListener('change', async function(event) {
+      const imageUrl = URL.createObjectURL(file);
+      const preview = document.getElementById('preview');
+      preview.src = imageUrl;
+      preview.style.display = 'block';
+      videoElement.style.display = 'none';
 
-        const file = event.target.files[0];
-
-        if (!file) {
-          return;
+      try {
+        const result = await codeReader.decodeFromImageUrl(imageUrl);
+        if (result) {
+          zobrazQR(result.text);
         }
+      } catch (error) {
+        stav.textContent = '❌ V obrázku sa nenašiel žiadny čitateľný QR kód.';
+        output.textContent = 'Skús vybrať ostrejšiu fotografiu.';
+      }
+    });
 
-        stav.textContent =
-          '🔎 Hľadám QR kód v obrázku...';
+    // Otvoriť odkaz
+    function goToLink() {
+      if (!lastResult) return;
+      if (lastResult.startsWith('http://') || lastResult.startsWith('https://')) {
+        window.open(lastResult, '_blank');
+      } else {
+        alert('Naskenovaný text nie je webový odkaz (URL).');
+      }
+    }
 
-        output.textContent = '';
+    // Skopírovať
+    function copyCode() {
+      if (!lastResult) return;
+      navigator.clipboard.writeText(lastResult).then(() => {
+        alert('Skopírované do schránky!');
+      }).catch(() => {
+        alert('Kopírovanie zlyhalo.');
+      });
+    }
 
-        actionButtons.style.display =
-          'none';
+    // Generovať QR kód z výsledku
+    function generateQRCode() {
+      if (!lastResult) return;
+      const qrContainer = document.getElementById('qrCodeContainer');
+      qrContainer.innerHTML = ''; // Vyčistiť starý
 
-
-        /* Náhľad */
-
-        const preview =
-          document.getElementById('preview');
-
-        preview.src =
-          URL.createObjectURL(file);
-
-        preview.style.display =
-          'block';
-
-
-        try {
-
-          const imageUrl =
-            URL.createObjectURL(file);
-
-          const img =
-            new Image();
-
-          img.onload = async function() {
-
-            try {
-
-              const result =
-                await codeReader.decodeFromImageUrl(
-                  imageUrl
-                );
-
-              if (result) {
-
-                zobrazQR(result.text);
-
-              } else {
-
-                stav.textContent =
-                  '❌ QR kód sa v obrázku nenašiel.';
-
-              }
-
-            } catch (error) {
-
-              console.error(error);
-
-              stav.textContent =
-                '❌ QR kód sa v obrázku nepodarilo nájsť.';
-
-              output.textContent =
-                'Skús vybrať kvalitnejšiu alebo ostrejšiu fotografiu.';
-
-            }
-
-            URL.revokeObjectURL(imageUrl);
-
-          };
-
-          img.src = imageUrl;
-
-        } catch (error) {
-
-          console.error(error);
-
-          stav.textContent =
-            '❌ Obrázok sa nepodarilo spracovať.';
-
-        }
-
+      new QRCode(qrContainer, {
+        text: lastResult,
+        width: 180,
+        height: 180,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
       });
 
+      document.getElementById('qrBox').style.display = 'block';
 
-    /* =========================
-       OTVORIŤ ODKAZ
-    ========================= */
-
-    function goToLink() {
-
-      if (!lastResult) {
-        return;
-      }
-
-      if (
-        lastResult.startsWith('http://') ||
-        lastResult.startsWith('https://')
-      ) {
-
-        window.open(
-          lastResult,
-          '_blank'
-        );
-
-      } else {
-
-        alert(
-          'Toto nie je odkaz na stránku.'
-        );
-
-      }
-
+      // Nastaviť obrázok pre stiahnutie po chvíľke vygenerovania
+      setTimeout(() => {
+        const imgEl = qrContainer.querySelector('img');
+        if (imgEl) {
+          document.getElementById('downloadQrLink').href = imgEl.src;
+        }
+      }, 300);
     }
-
-
-    /* =========================
-       KOPÍROVAŤ
-    ========================= */
-
-    function copyCode() {
-
-      if (!lastResult) {
-        return;
-      }
-
-      navigator.clipboard
-        .writeText(lastResult)
-        .then(() => {
-
-          alert(
-            'Skopírované do schránky!'
-          );
-
-        })
-        .catch(() => {
-
-          alert(
-            'Kopírovanie sa nepodarilo.'
-          );
-
-        });
-
-    }
-
   </script>
-
-
-  <!-- LICENCIA -->
-
-  <p
-    style="
-      font-size: 14px;
-      color: gray;
-      margin-top: 20px;
-    "
-  >
-    This work is licensed under the Creative Commons
-    Attribution-NonCommercial-NoDerivatives 4.0 International License.
-    <br>
-
-    To view a copy of this license, visit
-    http://creativecommons.org/licenses/by-nc-nd/4.0/
-
-    <br>
-
-    © 2025 Erik Mohylák – All rights reserved.
-  </p>
 
 </body>
 </html>
