@@ -1,75 +1,351 @@
-<!DOCTYPE html><html lang="sk">
+<!DOCTYPE html>
+<html lang="sk">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ErikAI Kontakty</title>
+  <title>ErikAI Contact Hub Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-    input { margin: 5px; padding: 5px; }
-    button { margin: 5px; padding: 5px 10px; background-color: red; color: white; border: none; border-radius: 5px; }
-    ul { list-style: none; padding: 0; }
-    li { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+    :root {
+      --bg-light: #f1f5f9;
+      --card-light: #ffffff;
+      --text-light: #0f172a;
+      --muted-light: #64748b;
+      --border-light: rgba(0, 0, 0, 0.08);
+
+      --bg-dark: #07090e;
+      --card-dark: rgba(16, 22, 36, 0.85);
+      --text-dark: #f8fafc;
+      --muted-dark: #94a3b8;
+      --border-dark: rgba(255, 255, 255, 0.08);
+
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+      --blue: #0284c7;
+      --success: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-light); color: var(--text-light);
+      text-align: center; padding: 25px 15px; min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body.dark-mode {
+      background: var(--bg-dark); color: var(--text-dark);
+      background-image: 
+        radial-gradient(circle at 15% 10%, rgba(239, 68, 68, 0.08), transparent 40%),
+        radial-gradient(circle at 85% 90%, rgba(2, 132, 199, 0.06), transparent 40%);
+    }
+
+    .container { max-width: 600px; margin: 0 auto; }
+
+    /* TOPBAR */
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 25px; background: var(--card-light); padding: 15px 20px;
+      border-radius: 18px; border: 1px solid var(--border-light);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+      transition: all 0.3s;
+    }
+    body.dark-mode .topbar { background: var(--card-dark); border-color: var(--border-dark); }
+
+    .clock-box { font-size: 0.9rem; font-weight: 600; color: var(--muted-light); }
+    body.dark-mode .clock-box { color: var(--muted-dark); }
+
+    .theme-btn {
+      background: var(--accent); color: white; border: none;
+      width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+      font-size: 1.1rem; box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+      transition: transform 0.2s;
+    }
+    .theme-btn:hover { transform: scale(1.1); }
+
+    h2 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+    h2 span { color: var(--accent); }
+    .subtitle { color: var(--muted-light); font-size: 0.95rem; margin-bottom: 25px; }
+    body.dark-mode .subtitle { color: var(--muted-dark); }
+
+    /* PANEL */
+    .panel {
+      background: var(--card-light); border: 1px solid var(--border-light);
+      border-radius: 20px; padding: 20px; margin-bottom: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.04);
+      transition: all 0.3s; text-align: left;
+    }
+    body.dark-mode .panel { background: var(--card-dark); border-color: var(--border-dark); backdrop-filter: blur(10px); }
+
+    .panel-center { text-align: center; }
+
+    /* FORMULAR A INPUTY */
+    .input-group {
+      display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;
+    }
+
+    .input-with-voice {
+      display: flex; gap: 8px; align-items: center;
+    }
+
+    input {
+      flex: 1; padding: 12px 15px; border-radius: 12px; font-family: inherit; font-size: 0.95rem;
+      background: var(--bg-light); color: var(--text-light); border: 1px solid var(--border-light);
+      outline: none; transition: border-color 0.2s;
+    }
+    body.dark-mode input { background: #040609; color: var(--text-dark); border-color: var(--border-dark); }
+    input:focus { border-color: var(--accent); }
+
+    button.ui-btn {
+      padding: 10px 16px; font-size: 0.9rem; font-weight: 600;
+      border: none; border-radius: 10px; cursor: pointer; transition: all 0.2s;
+      color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    button.ui-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+
+    .btn-red { background: var(--accent); box-shadow: 0 4px 12px rgba(239,68,68,0.25); }
+    .btn-blue { background: var(--blue); box-shadow: 0 4px 12px rgba(2,132,199,0.25); }
+    .btn-success { background: var(--success); box-shadow: 0 4px 12px rgba(16,185,129,0.25); }
+
+    .listening { animation: pulseAnim 1s infinite alternate; }
+    @keyframes pulseAnim { from { opacity: 1; } to { opacity: 0.5; } }
+
+    /* ZOZNAM KONTAKTOV */
+    .search-box { margin-bottom: 15px; }
+    ul { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+    li {
+      margin: 10px 0; padding: 14px; border: 1px solid var(--border-light); border-radius: 12px;
+      background: var(--bg-light); display: flex; justify-content: space-between; align-items: center;
+      transition: border-color 0.2s;
+    }
+    body.dark-mode li { background: #040609; border-color: var(--border-dark); }
+    li:hover { border-color: var(--accent); }
+
+    .contact-info strong { font-size: 1.05rem; display: block; margin-bottom: 3px; }
+    .contact-info span { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--muted-light); }
+    body.dark-mode .contact-info span { color: var(--muted-dark); }
+
+    .contact-actions { display: flex; gap: 8px; align-items: center; }
+
+    .info-box {
+      background-color: rgba(255, 204, 0, 0.1); border-left: 4px solid #ffcc00;
+      padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.88rem; text-align: left;
+    }
+    body.dark-mode .info-box { background-color: rgba(255, 204, 0, 0.05); }
+
+    #importInput { display: none; }
+
+    footer { font-size: 13px; color: var(--muted-light); margin-top: 30px; border-top: 1px solid var(--border-light); padding-top: 20px; text-align: center; }
+    body.dark-mode footer { color: var(--muted-dark); border-color: var(--border-dark); }
   </style>
 </head>
-<body>
-  <h2>☎️ ErikAI Kontakty</h2>
-  <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 10px;">
-  <button onclick="hlasMeno()" style="background-color:#d32f2f; color:white;">🎤 Meno</button>
-  <button onclick="hlasTelefon()" style="background-color:#1976d2; color:white;">🎙️ Telefón</button>
-  </div>
-  <script>
-function hlasMeno() {
-  const rec = new webkitSpeechRecognition();
-  rec.lang = "sk-SK";
-  rec.onresult = function(event) {
-    document.getElementById("name").value = event.results[0][0].transcript;
-  };
-  rec.start();
-}
+<body class="dark-mode">
 
-function hlasTelefon() {
-  const rec = new webkitSpeechRecognition();
-  rec.lang = "sk-SK";
-  rec.onresult = function(event) {
-    let vyslovenyText = event.results[0][0].transcript;
-    // odstráni všetko okrem číslic
-    document.getElementById("phone").value = vyslovenyText.replace(/\D/g, '');
-  };
-  rec.start();
-}
-      </script>
-  <form id="contactForm">
-    <input id="name" placeholder="Meno" required>
-    <input id="phone" placeholder="Telefónne číslo" required>
-    <button type="submit">+ Pridať kontakt</button>
-  </form>  <ul id="contactList"></ul>  <p style="font-size: 13px; color: gray;">
-    Všetky kontakty sú uložené iba vo vašom zariadení. Neodosielajú sa na server.
-  </p>  <script>
+  <div class="container">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="clock-box" id="cas">Načítavam čas...</div>
+      <button class="theme-btn" onclick="toggleTheme()" title="Zmeniť režim">🌓</button>
+    </div>
+
+    <!-- GOOGLE TRANSLATE -->
+    <div id="google_translate_element" style="margin-bottom: 20px;"></div>
+
+    <!-- NADPIS -->
+    <h2>☎️ ErikAI <span>Contact Hub</span></h2>
+    <p class="subtitle">Inteligentný adresár s hlasovým ovládaním a lokálnym zabezpečením</p>
+
+    <!-- UPOZORNENIE -->
+    <div class="info-box">
+      <strong>ℹ️ Bezpečnostná nota:</strong> Všetky kontakty sú uložené výhradne vo vašom zariadení (LocalStorage). Neodosielajú sa na žiadny server.
+    </div>
+
+    <!-- PRIDANIE KONTAKTU S HLASOM -->
+    <div class="panel">
+      <h3 style="margin-bottom: 12px; font-size:1.1rem;">➕ Pridať nový kontakt</h3>
+      
+      <form id="contactForm">
+        <div class="input-group">
+          <div class="input-with-voice">
+            <input id="name" placeholder="Meno a priezvisko" required>
+            <button type="button" class="ui-btn btn-red" onclick="hlasMeno()" title="Diktovať meno">🎤 Meno</button>
+          </div>
+          
+          <div class="input-with-voice">
+            <input id="phone" placeholder="Telefónne číslo" required>
+            <button type="button" class="ui-btn btn-blue" onclick="hlasTelefon()" title="Diktovať číslo">🎙️ Číslo</button>
+          </div>
+        </div>
+        <button type="submit" class="ui-btn btn-success" style="width: 100%; padding: 12px; font-size:1rem;">Uložiť kontakt</button>
+      </form>
+    </div>
+
+    <!-- ZOZNAM A VYHLADAVANIE -->
+    <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; flex-wrap:wrap; gap:10px;">
+        <h3 style="font-size:1.1rem;">📖 Vaše kontakty (<span id="contactCount">0</span>)</h3>
+        <div style="display:flex; gap:6px;">
+          <button class="ui-btn btn-blue" style="font-size:0.8rem; padding:6px 10px;" onclick="exportContacts()">💾 Zálohovať</button>
+          <button class="ui-btn btn-red" style="font-size:0.8rem; padding:6px 10px;" onclick="document.getElementById('importInput').click()">📂 Obnoviť</button>
+          <input type="file" id="importInput" accept=".json" onchange="importContacts(event)">
+        </div>
+      </div>
+
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="🔍 Vyhľadať v kontaktoch..." onkeyup="filterContacts()">
+      </div>
+
+      <ul id="contactList">
+        <p style="color:var(--muted-dark); text-align:center; padding: 20px;" id="emptyMsg">Zatiaľ nemáte uložené žiadne kontakty.</p>
+      </ul>
+    </div>
+
+    <footer>
+      This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+      © 2026 Erik Mohylák – All rights reserved.
+    </footer>
+
+  </div>
+
+
+  <script>
+    // === TÉMA ===
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+    }
+
+    // === AKTUÁLNY ČAS ===
+    function aktualizujCas() {
+      const teraz = new Date();
+      const moznosti = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      document.getElementById('cas').innerText = `🕓 ${teraz.toLocaleDateString('sk-SK', moznosti)}`;
+    }
+    setInterval(aktualizujCas, 1000);
+    aktualizujCas();
+
+    // === GOOGLE TRANSLATE ===
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'sk',
+        includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+      }, 'google_translate_element');
+    }
+  </script>
+  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+  <script>
+    /* =========================
+       HLASOVÉ ROZPOZNÁVANIE
+    ========================= */
+    function hlasMeno() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('Hlasové zadávanie nie je podporované v tomto prehliadači.');
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const rec = new SpeechRecognition();
+      rec.lang = "sk-SK";
+      
+      const btn = event.target;
+      btn.classList.add("listening");
+
+      rec.onresult = function(event) {
+        document.getElementById("name").value = event.results[0][0].transcript;
+        btn.classList.remove("listening");
+      };
+      rec.onerror = () => btn.classList.remove("listening");
+      rec.onend = () => btn.classList.remove("listening");
+      rec.start();
+    }
+
+    function hlasTelefon() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('Hlasové zadávanie nie je podporované v tomto prehliadači.');
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const rec = new SpeechRecognition();
+      rec.lang = "sk-SK";
+
+      const btn = event.target;
+      btn.classList.add("listening");
+
+      rec.onresult = function(event) {
+        let vyslovenyText = event.results[0][0].transcript;
+        document.getElementById("phone").value = vyslovenyText.replace(/\D/g, '');
+        btn.classList.remove("listening");
+      };
+      rec.onerror = () => btn.classList.remove("listening");
+      rec.onend = () => btn.classList.remove("listening");
+      rec.start();
+    }
+
+    /* =========================
+       SPRÁVA KONTAKTOV
+    ========================= */
     const contactForm = document.getElementById('contactForm');
     const nameInput = document.getElementById('name');
     const phoneInput = document.getElementById('phone');
     const contactList = document.getElementById('contactList');
+    const contactCount = document.getElementById('contactCount');
 
-    function loadContacts() {
-      const contacts = JSON.parse(localStorage.getItem('contacts')) || [];
+    function getContacts() {
+      return JSON.parse(localStorage.getItem('contacts')) || [];
+    }
+
+    function saveContacts(contacts) {
+      localStorage.setItem('contacts', JSON.stringify(contacts));
+    }
+
+    function loadContacts(filterText = '') {
+      const contacts = getContacts();
       contactList.innerHTML = '';
-      contacts.forEach((contact, index) => {
+      contactCount.textContent = contacts.length;
+
+      const filtered = contacts.filter(c => 
+        c.name.toLowerCase().includes(filterText.toLowerCase()) || 
+        c.phone.includes(filterText)
+      );
+
+      if (filtered.length === 0) {
+        contactList.innerHTML = `<p style="color:var(--muted-dark); text-align:center; padding: 20px;">Žiadne kontakty sa nenašli.</p>`;
+        return;
+      }
+
+      filtered.forEach((contact, index) => {
+        // Nájdi skutočný index v pôvodnom poli kôli mazaniu
+        const originalIndex = contacts.findIndex(c => c.name === contact.name && c.phone === contact.phone);
+
         const li = document.createElement('li');
         li.innerHTML = `
-          <strong>${contact.name}</strong><br>
-          ${contact.phone}<br>
-          <a href="tel:${contact.phone}">📞 Zavolať</a>
-          <button onclick="deleteContact(${index})">❌ Zmazať</button>
+          <div class="contact-info">
+            <strong>👤 ${escapeHtml(contact.name)}</strong>
+            <span>📞 ${escapeHtml(contact.phone)}</span>
+          </div>
+          <div class="contact-actions">
+            <a href="tel:${escapeHtml(contact.phone)}" class="ui-btn btn-success" style="text-decoration:none; padding:8px 12px; font-size:0.8rem;">Zavolať</a>
+            <button class="ui-btn btn-red" style="padding:8px 12px; font-size:0.8rem;" onclick="deleteContact(${originalIndex})">Zmazať</button>
+          </div>
         `;
         contactList.appendChild(li);
       });
     }
 
+    function filterContacts() {
+      const query = document.getElementById('searchInput').value;
+      loadContacts(query);
+    }
+
     function deleteContact(index) {
-      const contacts = JSON.parse(localStorage.getItem('contacts')) || [];
-      contacts.splice(index, 1);
-      localStorage.setItem('contacts', JSON.stringify(contacts));
-      loadContacts();
+      if (confirm('Naozaj chcete zmazať tento kontakt?')) {
+        const contacts = getContacts();
+        contacts.splice(index, 1);
+        saveContacts(contacts);
+        loadContacts();
+      }
     }
 
     contactForm.addEventListener('submit', function(e) {
@@ -78,75 +354,54 @@ function hlasTelefon() {
       const phone = phoneInput.value.trim();
       if (!name || !phone) return;
 
-      const contacts = JSON.parse(localStorage.getItem('contacts')) || [];
+      const contacts = getContacts();
       contacts.push({ name, phone });
-      localStorage.setItem('contacts', JSON.stringify(contacts));
+      saveContacts(contacts);
       contactForm.reset();
       loadContacts();
     });
 
-    window.onload = loadContacts;
-  </script>
-<div style="background-color: #fff8c4; border-left: 5px solid #ffcc00; padding: 10px; margin-bottom: 15px;">
-  <strong>ℹ️ Upozornenie:</strong><br>
-  Funkcia <b>Zavolať</b> funguje len na mobilných zariadeniach s podporou telefonovania.<br>
-  Na počítači alebo zariadeniach bez telefónnej aplikácie sa volanie nemusí uskutočniť.<br>
-  Kontakty sú <b>uložené lokálne</b> a <b>neodosielajú sa</b> na žiadny server.
-
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-
-<script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
-</script>
-
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
-
-<p id="cas" style="font-size: 18px;"></p>
-
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
+    // === EXPORT / IMPORT ZÁLOHY ===
+    function exportContacts() {
+      const contacts = getContacts();
+      if (contacts.length === 0) {
+        alert('Nemáte žiadne kontakty na zálohovanie.');
+        return;
+      }
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(contacts, null, 2));
+      const dlAnchorElem = document.createElement('a');
+      dlAnchorElem.setAttribute("href", dataStr);
+      dlAnchorElem.setAttribute("download", "erikai-kontakty-zaloha.json");
+      dlAnchorElem.click();
     }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
+
+    function importContacts(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (Array.isArray(imported)) {
+            saveContacts(imported);
+            loadContacts();
+            alert('Kontakty boli úspešne obnovené zo zálohy!');
+          } else {
+            alert('Neplatný formát zálohovacieho súboru.');
+          }
+        } catch (err) {
+          alert('Nepodarilo sa prečítať súbor.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    window.onload = () => loadContacts();
   </script>
 
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
-  }
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-  </p>
-  
-</div>
 </body>
 </html>
