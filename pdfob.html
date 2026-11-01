@@ -3,501 +3,383 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ErikAI • Image-to-PDF Studio Pro</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <title>ErikAI • Image to PDF Express</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <style>
     :root {
       --bg: #f8fafc;
-      --card-bg: rgba(255, 255, 255, 0.9);
-      --text: #0f172a;
+      --card: #ffffff;
+      --text: #1e293b;
       --muted: #64748b;
-      --accent: #f43f5e;
-      --accent-hover: #e11d48;
-      --border: rgba(15, 23, 42, 0.08);
-      --shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
-      --blue: #0284c7;
-      --success: #10b981;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --border: #e2e8f0;
     }
 
-    body.dark-mode {
-      --bg: #030712;
-      --card-bg: rgba(15, 23, 42, 0.75);
+    body.dark {
+      --bg: #0f172a;
+      --card: #1e293b;
       --text: #f8fafc;
       --muted: #94a3b8;
-      --accent: #f43f5e;
-      --accent-hover: #e11d48;
-      --border: rgba(248, 250, 252, 0.08);
-      --shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-      --blue: #38bdf8;
-      --success: #34d399;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --border: #334155;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Inter', sans-serif;
-      background-color: var(--bg);
-      background-image: 
-        radial-gradient(circle at 10% 10%, rgba(244, 63, 94, 0.08), transparent 45%),
-        radial-gradient(circle at 90% 90%, rgba(2, 132, 199, 0.06), transparent 45%);
+      background: var(--bg);
       color: var(--text);
-      padding: 40px 20px;
+      padding: 20px;
       min-height: 100vh;
-      transition: background 0.4s ease, color 0.4s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background 0.3s, color 0.3s;
     }
 
-    .container {
-      max-width: 680px;
-      margin: 0 auto;
+    .app-container {
+      width: 100%;
+      max-width: 580px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
     }
 
-    /* TOPBAR */
-    .topbar {
+    .top-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 30px;
-      background: var(--card-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      padding: 16px 24px;
-      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+
+    .theme-toggle {
+      background: none;
       border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-    }
-
-    .clock-box {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--muted);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .theme-btn {
-      background: var(--accent);
-      color: white;
-      border: none;
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 10px;
       cursor: pointer;
-      font-size: 1.1rem;
-      box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3);
-      transition: all 0.2s ease;
-    }
-    .theme-btn:hover { transform: scale(1.1) rotate(15deg); }
-
-    /* HEADER */
-    .header-box {
-      text-align: center;
-      margin-bottom: 30px;
+      font-size: 0.9rem;
     }
 
     h1 {
-      font-size: 2.4rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      margin-bottom: 8px;
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 5px;
     }
-    h1 span { color: var(--accent); }
 
-    .subtitle {
+    p.sub {
       color: var(--muted);
-      font-size: 1rem;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
     }
 
-    /* CARD */
-    .card {
-      background: var(--card-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: 24px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      padding: 35px;
-      margin-bottom: 25px;
+    .form-group {
+      margin-bottom: 15px;
     }
 
     label {
       display: block;
-      margin-top: 20px;
-      margin-bottom: 8px;
-      font-weight: 700;
-      font-size: 0.9rem;
-      text-align: left;
-      letter-spacing: 0.3px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
     }
-    label:first-of-type { margin-top: 0; }
 
     input[type="text"] {
       width: 100%;
-      padding: 14px 18px;
+      padding: 12px;
       border: 1px solid var(--border);
-      border-radius: 14px;
-      font-size: 0.95rem;
-      font-family: inherit;
       background: var(--bg);
       color: var(--text);
+      border-radius: 10px;
+      font-size: 0.95rem;
       outline: none;
-      transition: all 0.2s ease;
-    }
-    input[type="text"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.15);
     }
 
-    /* DROPZONE */
-    .dropzone {
+    .upload-box {
+      border: 2px dashed var(--primary);
       background: var(--bg);
-      border: 2px dashed var(--accent);
-      border-radius: 18px;
-      padding: 30px 20px;
+      padding: 20px;
       text-align: center;
+      border-radius: 12px;
       cursor: pointer;
-      margin-top: 8px;
-      transition: all 0.2s ease;
+      margin-bottom: 15px;
+      transition: background 0.2s;
     }
-    .dropzone:hover {
-      background: rgba(244, 63, 94, 0.04);
-      transform: translateY(-2px);
+    .upload-box:hover {
+      background: rgba(37, 99, 235, 0.05);
     }
-    .dropzone p { font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
-    .dropzone span { font-size: 0.85rem; color: var(--muted); }
+    .upload-box p { font-weight: 600; font-size: 0.95rem; }
+    .upload-box span { font-size: 0.75rem; color: var(--muted); }
     #imageFiles { display: none; }
 
-    /* ZOZNAM OBRÁZKOV */
     .file-list {
-      margin-top: 20px;
-      max-height: 280px;
+      max-height: 200px;
       overflow-y: auto;
+      margin-bottom: 20px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      padding-right: 4px;
+      gap: 8px;
     }
 
-    .file-item {
+    .file-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       background: var(--bg);
       border: 1px solid var(--border);
-      padding: 10px 14px;
-      border-radius: 14px;
-      font-size: 0.88rem;
-      transition: border-color 0.2s ease;
-    }
-    .file-item:hover { border-color: var(--accent); }
-
-    .file-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      overflow: hidden;
-    }
-
-    .file-thumb {
-      width: 42px;
-      height: 42px;
-      object-fit: cover;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-    }
-
-    .file-details {
-      display: flex;
-      flex-direction: column;
-      text-align: left;
-      overflow: hidden;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
     }
 
     .file-name {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 220px;
+      max-width: 250px;
     }
 
-    .file-size {
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-
-    .file-controls {
-      display: flex;
-      gap: 6px;
-    }
-
-    button.sm-btn {
-      padding: 6px 10px;
+    .file-actions button {
+      background: none;
+      border: none;
+      cursor: pointer;
       font-size: 0.8rem;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      background: var(--muted);
-      color: white;
-      transition: filter 0.2s ease;
+      padding: 4px 6px;
+      margin-left: 2px;
+      border-radius: 4px;
     }
-    button.sm-btn:hover { filter: brightness(1.2); }
-    button.sm-btn.del { background: var(--accent); }
+    .file-actions button:hover { background: var(--border); }
+    .file-actions .del { color: var(--danger); }
 
-    /* HLAVNÉ TLAČIDLO */
-    .primary-btn {
-      width: 100%;
-      margin-top: 30px;
-      padding: 16px;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: 14px;
-      font-size: 1.05rem;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 6px 20px rgba(244, 63, 94, 0.3);
-      transition: all 0.2s ease;
-    }
-    .primary-btn:hover {
-      background: var(--accent-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(244, 63, 94, 0.4);
+    .btn-container {
+      display: flex;
+      gap: 10px;
     }
 
-    #status {
-      margin-top: 18px;
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
       font-weight: 600;
       font-size: 0.95rem;
-      color: var(--success);
+      cursor: pointer;
+      color: white;
+      transition: filter 0.2s;
+    }
+    .btn-primary { background: var(--primary); }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-print { background: var(--success); }
+    .btn-print:hover { filter: brightness(1.1); }
+
+    .status {
+      margin-top: 15px;
+      font-size: 0.9rem;
+      font-weight: 600;
       text-align: center;
-      min-height: 24px;
     }
 
     footer {
+      margin-top: 25px;
       text-align: center;
-      margin-top: 35px;
-      font-size: 0.82rem;
+      font-size: 0.75rem;
       color: var(--muted);
       border-top: 1px solid var(--border);
-      padding-top: 20px;
-      line-height: 1.5;
+      padding-top: 15px;
     }
   </style>
 </head>
-<body class="dark-mode">
+<body class="dark">
 
-<div class="container">
+<div class="app-container">
+  <div class="top-header">
+    <h1>🖼️ Image to PDF Express</h1>
+    <button class="theme-toggle" onclick="toggleTheme()">🌓 Téma</button>
+  </div>
+  <p class="sub">Preveďte obrázky na A4 PDF okamžite a bezpečne.</p>
 
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="clock-box" id="cas">Načítavam čas...</div>
-    <button class="theme-btn" onclick="toggleTheme()" title="Zmeniť režim">🌓</button>
+  <div class="form-group">
+    <label>Názov súboru:</label>
+    <input type="text" id="outputName" value="ErikAI_Dokument">
   </div>
 
-  <div class="header-box">
-    <h1>🖼️ Image-to-PDF <span>Studio</span></h1>
-    <p class="subtitle">Konvertujte JPG / PNG obrázky na profesionálny PDF dokument</p>
+  <div class="upload-box" onclick="document.getElementById('imageFiles').click()">
+    <p>📁 Kliknite pre výber obrázkov</p>
+    <span>Podporované: JPG, PNG (viac naraz)</span>
+    <input type="file" id="imageFiles" accept="image/jpeg, image/png" multiple onchange="handleFiles(event)">
   </div>
 
-  <div id="google_translate_element" style="text-align:center; margin-bottom: 25px;"></div>
-
-  <div class="card">
-    
-    <!-- NÁZOV SÚBORU -->
-    <label for="outputName">🏷️ Názov výsledného PDF súboru:</label>
-    <input type="text" id="outputName" value="ErikAI_obrazky" placeholder="Napr. moje_fotky">
-
-    <!-- VYBRAŤ OBRÁZKY -->
-    <label>📂 Výber obrázkov (JPG, PNG):</label>
-    <div class="dropzone" onclick="document.getElementById('imageFiles').click()">
-      <p>📁 Kliknite sem alebo presuňte súbory</p>
-      <span>Podporované formáty: JPG, JPEG, PNG</span>
-      <input type="file" id="imageFiles" accept="image/jpeg, image/jpg, image/png" multiple onchange="handleFileSelect(event)">
-    </div>
-
-    <!-- ZOZNAM VYBRATÝCH OBRÁZKOV -->
-    <div class="file-list" id="fileList">
-      <p style="color:var(--muted); text-align:center; font-size:0.85rem; padding: 20px;" id="emptyMsg">Zatiaľ nie sú vybrané žiadne obrázky.</p>
-    </div>
-
-    <!-- TLAČIDLO NA VYTVORENIE PDF -->
-    <button class="primary-btn" onclick="imagesToPDF()">💾 Vytvoriť a stiahnuť PDF</button>
-
-    <div id="status"></div>
-
+  <div class="file-list" id="fileList">
+    <div style="color: var(--muted); text-align: center; font-size: 0.85rem; padding: 15px;">Žiadne vybrané súbory.</div>
   </div>
+
+  <div class="btn-container">
+    <button class="btn btn-primary" onclick="generatePDF()">💾 Stiahnuť PDF</button>
+    <button class="btn btn-print" onclick="printPDF()">🖨️ Tlačiť PDF</button>
+  </div>
+
+  <div class="status" id="statusMsg"></div>
 
   <footer>
-    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
-    © 2026 Erik Mohylák – All rights reserved.
+    ErikAI Studio • © 2026 Erik Mohylák
   </footer>
-
 </div>
 
 <script>
-  // === TÉMA ===
+  let selectedFiles = [];
+  let lastPdfBlobUrl = null;
+
   function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
-  }
-  if (localStorage.getItem('darkMode') === 'false') {
-    document.body.classList.remove('dark-mode');
+    document.body.classList.toggle('dark');
   }
 
-  // === ČAS ===
-  function aktualizujCas() {
-    const teraz = new Date();
-    const moznosti = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-    document.getElementById('cas').innerText = "🕓 " + teraz.toLocaleDateString('sk-SK', moznosti);
-  }
-  setInterval(aktualizujCas, 1000);
-  aktualizujCas();
-
-  // === GOOGLE TRANSLATE ===
-  function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'sk',
-      includedLanguages: 'en,cs,de,fr,hu,pl,ro,ru,es,it,uk',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    }, 'google_translate_element');
-  }
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-<script>
-  let selectedImages = [];
-
-  function handleFileSelect(event) {
-    const files = Array.from(event.target.files);
-    files.forEach(file => {
-      if (file.type === "image/jpeg" || file.type === "image/jpg" || file.type === "image/png") {
-        selectedImages.push(file);
+  function handleFiles(e) {
+    const files = Array.from(e.target.files);
+    files.forEach(f => {
+      if(f.type.startsWith('image/')) {
+        selectedFiles.push(f);
       }
     });
-    renderFileList();
-    event.target.value = '';
+    renderList();
+    e.target.value = '';
   }
 
-  function formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  }
-
-  function renderFileList() {
-    const listContainer = document.getElementById('fileList');
-    listContainer.innerHTML = '';
-
-    if (selectedImages.length === 0) {
-      listContainer.innerHTML = `<p style="color:var(--muted); text-align:center; font-size:0.85rem; padding: 20px;" id="emptyMsg">Zatiaľ nie sú vybrané žiadne obrázky.</p>`;
+  function renderList() {
+    const container = document.getElementById('fileList');
+    if(selectedFiles.length === 0) {
+      container.innerHTML = `<div style="color: var(--muted); text-align: center; font-size: 0.85rem; padding: 15px;">Žiadne vybrané súbory.</div>`;
       return;
     }
-
-    selectedImages.forEach((file, index) => {
-      const thumbUrl = URL.createObjectURL(file);
-      const item = document.createElement('div');
-      item.className = 'file-item';
-      item.innerHTML = `
-        <div class="file-info">
-          <img src="${thumbUrl}" class="file-thumb" alt="náhľad" onload="URL.revokeObjectURL(this.src)">
-          <div class="file-details">
-            <span class="file-name">${index + 1}. ${file.name}</span>
-            <span class="file-size">${formatBytes(file.size)}</span>
+    container.innerHTML = '';
+    selectedFiles.forEach((file, index) => {
+      container.innerHTML += `
+        <div class="file-row">
+          <span class="file-name">${index + 1}. ${file.name}</span>
+          <div class="file-actions">
+            ${index > 0 ? `<button onclick="move(${index}, -1)">⬆️</button>` : ''}
+            ${index < selectedFiles.length - 1 ? `<button onclick="move(${index}, 1)">⬇️</button>` : ''}
+            <button class="del" onclick="removeFile(${index})">❌</button>
           </div>
         </div>
-        <div class="file-controls">
-          ${index > 0 ? `<button class="sm-btn" onclick="moveImage(${index}, -1)" title="Posunúť nahor">⬆️</button>` : ''}
-          ${index < selectedImages.length - 1 ? `<button class="sm-btn" onclick="moveImage(${index}, 1)" title="Posunúť nadol">⬇️</button>` : ''}
-          <button class="sm-btn del" onclick="removeImage(${index})" title="Odstrániť">🗑️</button>
-        </div>
       `;
-      listContainer.appendChild(item);
     });
   }
 
-  function moveImage(index, direction) {
-    const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= selectedImages.length) return;
-    const temp = selectedImages[index];
-    selectedImages[index] = selectedImages[newIndex];
-    selectedImages[newIndex] = temp;
-    renderFileList();
+  function move(index, dir) {
+    const target = index + dir;
+    const temp = selectedFiles[index];
+    selectedFiles[index] = selectedFiles[target];
+    selectedFiles[target] = temp;
+    renderList();
   }
 
-  function removeImage(index) {
-    selectedImages.splice(index, 1);
-    renderFileList();
+  function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    renderList();
   }
 
-  async function imagesToPDF() {
-    if (selectedImages.length === 0) {
+  async function createPdfBytes() {
+    if (selectedFiles.length === 0) return null;
+    
+    const pdfDoc = await PDFLib.PDFDocument.create();
+    for (let file of selectedFiles) {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let img = file.type === 'image/png' ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
+
+      // Štandard A4
+      const pW = 595.28, pH = 841.89, margin = 30;
+      const dims = img.scaleToFit(pW - (margin * 2), pH - (margin * 2));
+      
+      const page = pdfDoc.addPage([pW, pH]);
+      page.drawImage(img, {
+        x: (pW - dims.width) / 2,
+        y: (pH - dims.height) / 2,
+        width: dims.width,
+        height: dims.height,
+      });
+    }
+    const pdfBytes = await pdfDoc.save();
+    return pdfBytes;
+  }
+
+  async function generatePDF() {
+    const status = document.getElementById('statusMsg');
+    if (selectedFiles.length === 0) {
       alert("Najprv vyber aspoň jeden obrázok!");
       return;
     }
 
-    const statusEl = document.getElementById('status');
-    statusEl.textContent = "⏳ Generujem PDF dokument, prosím čakajte...";
-    statusEl.style.color = "var(--text)";
+    status.style.color = "var(--text)";
+    status.textContent = "⏳ Generujem súbor...";
 
     try {
-      const pdfDoc = await PDFLib.PDFDocument.create();
-
-      for (let i = 0; i < selectedImages.length; i++) {
-        const file = selectedImages[i];
-        const arrayBuffer = await file.arrayBuffer();
-        const imgBytes = new Uint8Array(arrayBuffer);
-        let img;
-
-        if (file.type === "image/jpeg" || file.type === "image/jpg") {
-            img = await pdfDoc.embedJpg(imgBytes);
-        } else if (file.type === "image/png") {
-            img = await pdfDoc.embedPng(imgBytes);
-        }
-
-        // Štandardná veľkosť A4 v bodoch (595.28 x 841.89)
-        const pageWidth = 595.28;
-        const pageHeight = 841.89;
-        const margin = 45;
-
-        const availableWidth = pageWidth - (margin * 2);
-        const availableHeight = pageHeight - (margin * 2);
-
-        const imgDims = img.scaleToFit(availableWidth, availableHeight);
-        const page = pdfDoc.addPage([pageWidth, pageHeight]);
-        
-        // Vykreslenie vycentrovaného obrázka na stránku
-        page.drawImage(img, {
-            x: (pageWidth - imgDims.width) / 2,
-            y: (pageHeight - imgDims.height) / 2,
-            width: imgDims.width,
-            height: imgDims.height,
-        });
-      }
-
-      const pdfBytes = await pdfDoc.save();
+      const pdfBytes = await createPdfBytes();
       const blob = new Blob([pdfBytes], { type: "application/pdf" });
       
-      let customName = document.getElementById('outputName').value.trim();
-      if (!customName) customName = "ErikAI_obrazky";
-      if (!customName.toLowerCase().endsWith('.pdf')) customName += ".pdf";
+      let name = document.getElementById('outputName').value.trim() || "ErikAI_Dokument";
+      if(!name.toLowerCase().endsWith('.pdf')) name += ".pdf";
 
-      const link = document.createElement("a");
+      // Spoľahlivý spôsob stiahnutia pre všetky prehliadače
+      const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = customName;
-      
+      link.download = name;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      statusEl.textContent = "✅ PDF súbor bol úspešne vytvorený a stiahnutý!";
-      statusEl.style.color = "var(--success)";
-    } catch (err) {
+      status.style.color = "var(--success)";
+      status.textContent = "✅ PDF bolo úspešne stiahnuté!";
+    } catch(err) {
       console.error(err);
-      statusEl.textContent = "❌ Chyba pri generovaní PDF dokumentu.";
-      statusEl.style.color = "var(--accent)";
+      status.style.color = "var(--danger)";
+      status.textContent = "❌ Chyba pri vytváraní PDF.";
+    }
+  }
+
+  async function printPDF() {
+    const status = document.getElementById('statusMsg');
+    if (selectedFiles.length === 0) {
+      alert("Najprv vyber aspoň jeden obrázok!");
+      return;
+    }
+
+    status.style.color = "var(--text)";
+    status.textContent = "⏳ Pripravujem tlač...";
+
+    try {
+      const pdfBytes = await createPdfBytes();
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Otvorenie PDF v skrytom iframe alebo novom okne na tlač
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = blobUrl;
+      document.body.appendChild(iframe);
+      
+      iframe.onload = function() {
+        setTimeout(() => {
+          iframe.contentWindow.print();
+          status.style.color = "var(--success)";
+          status.textContent = "✅ Pripravené na tlač!";
+        }, 500);
+      };
+    } catch(err) {
+      console.error(err);
+      status.style.color = "var(--danger)";
+      status.textContent = "❌ Chyba pri tlači.";
     }
   }
 </script>
