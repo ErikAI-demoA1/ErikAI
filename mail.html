@@ -1,284 +1,415 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ErikAI Mail</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ErikAI • Mail Studio Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f3f3f3;
+      --bg: #f1f5f9;
       --card-bg: #ffffff;
-      --text: #111;
-      --accent: #d90000;
-      --shadow: rgba(0,0,0,0.1);
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+      --border: rgba(0, 0, 0, 0.08);
+      --shadow: 0 10px 30px rgba(0,0,0,0.04);
     }
 
     body.dark-mode {
-      --bg: #121212;
-      --card-bg: #1e1e1e;
-      --text: #f0f0f0;
-      --accent: #ff5555;
-      --shadow: rgba(0,0,0,0.6);
+      --bg: #07090e;
+      --card-bg: rgba(16, 22, 36, 0.85);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #f87171;
+      --accent-hover: #ef4444;
+      --border: rgba(255, 255, 255, 0.08);
+      --shadow: 0 15px 35px rgba(0,0,0,0.4);
     }
 
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      font-family: 'Inter', sans-serif;
       background: var(--bg);
       color: var(--text);
-      margin: 0;
-      padding: 30px;
-      transition: background 0.4s, color 0.4s;
+      padding: 30px 15px;
+      min-height: 100vh;
+      transition: background 0.3s ease, color 0.3s ease;
     }
+
+    .container {
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      background: var(--card-bg);
+      padding: 15px 20px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .clock-box {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    #toggleBtn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(239,68,68,0.25);
+      transition: transform 0.2s;
+    }
+    #toggleBtn:hover { transform: scale(1.05); }
 
     h1 {
       color: var(--accent);
       text-align: center;
-      font-size: 2rem;
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.95rem;
       margin-bottom: 25px;
     }
 
+    /* CARD */
     .card {
       background: var(--card-bg);
       border-radius: 20px;
-      box-shadow: 0 10px 30px var(--shadow);
-      padding: 25px;
-      max-width: 650px;
-      margin: 20px auto;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 30px;
+      margin-bottom: 25px;
+      backdrop-filter: blur(10px);
       transition: all 0.3s ease;
     }
 
-    .card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 15px 40px var(--shadow);
+    /* DICTATE BUTTONS BAR */
+    .dictate-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .dictate-btn {
+      flex: 1;
+      min-width: 120px;
+      padding: 10px 12px;
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .dictate-btn:hover {
+      background: var(--accent);
+      color: white;
+      transform: translateY(-1px);
+    }
+    .dictate-btn.listening {
+      background: #10b981;
+      color: white;
+      border-color: #059669;
+      animation: pulse 1s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { opacity: 1; }
+      to { opacity: 0.6; }
     }
 
     label {
       display: block;
-      margin-top: 15px;
+      margin-top: 18px;
       font-weight: 600;
+      font-size: 0.9rem;
     }
 
     input, textarea, select {
       width: 100%;
-      padding: 12px;
+      padding: 12px 15px;
       margin-top: 6px;
-      border: none;
+      border: 1px solid var(--border);
       border-radius: 12px;
-      font-size: 1rem;
-      background: rgba(255,255,255,0.7);
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: var(--bg);
       color: var(--text);
-      box-shadow: inset 0 2px 6px var(--shadow);
       outline: none;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
     }
 
-    input:focus, textarea:focus {
-      box-shadow: 0 0 0 2px var(--accent);
-      background: #fff;
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
     }
 
-    button {
-      margin-top: 20px;
-      padding: 12px 20px;
+    /* ACTION BUTTONS */
+    .action-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 25px;
+      flex-wrap: wrap;
+    }
+
+    button.primary-btn {
+      flex: 2;
+      padding: 14px 20px;
       background: var(--accent);
       color: white;
       border: none;
       border-radius: 12px;
       font-size: 1rem;
+      font-weight: 700;
       cursor: pointer;
-      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(239,68,68,0.25);
+      transition: all 0.2s ease;
+    }
+    button.primary-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
     }
 
-    button:hover {
-      background: #b30000;
-      transform: scale(1.05);
-    }
-
-    #toggleBtn {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      background: var(--card-bg);
+    button.save-btn {
+      flex: 1;
+      min-width: 100px;
+      padding: 12px 14px;
+      background: var(--bg);
       color: var(--text);
-      border: 2px solid var(--accent);
-      padding: 10px 16px;
-      border-radius: 50px;
-      font-weight: bold;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 4px 10px var(--shadow);
-      transition: 0.3s;
+      transition: all 0.2s ease;
     }
-
-    #toggleBtn:hover {
-      background: var(--accent);
-      color: white;
+    button.save-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
     }
 
     .info {
       margin-top: 25px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       color: var(--text);
-      background: rgba(255, 249, 230, 0.8);
+      background: rgba(245, 158, 11, 0.1);
+      border-left: 4px solid #f59e0b;
       padding: 15px;
-      border-left: 4px solid #ffa600;
       border-radius: 10px;
+      line-height: 1.5;
     }
 
     footer {
       text-align: center;
-      margin-top: 40px;
-      font-size: 0.8rem;
-      color: gray;
+      margin-top: 30px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
     }
   </style>
 </head>
 
 <body>
-<button id="toggleBtn" onclick="toggleTheme()">🌓 Režim</button>
 
-<h1>📧 ErikAI Mail</h1>
+<div class="container">
 
-<p id="cas" style="text-align:center; font-size: 18px;"></p>
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="clock-box" id="cas">Načítavam čas...</div>
+    <button id="toggleBtn" onclick="toggleTheme()">🌓 Režim</button>
+  </div>
+
+  <h1>📧 ErikAI Mail Studio</h1>
+  <p class="subtitle">Inteligentný správca e-mailov s hlasovým diktovaním a lokálnou pamäťou</p>
+
+  <div id="google_translate_element" style="text-align:center; margin-bottom: 20px;"></div>
+
+  <div class="card">
+    
+    <!-- HLASOVÉ OVLÁDANIE -->
+    <div class="dictate-bar">
+      <button type="button" class="dictate-btn" id="btnTo" onclick="diktojEmail()">🎤 Komu</button>
+      <button type="button" class="dictate-btn" id="btnSub" onclick="diktojPredmet()">🎙️ Predmet</button>
+      <button type="button" class="dictate-btn" id="btnBody" onclick="diktojSpravu()">🗣️ Správa</button>
+    </div>
+
+    <form id="emailForm">
+      <label>📬 Komu:</label>
+      <select id="toSelect" onchange="loadSelected('to')">
+        <option value="">-- Vyber uložený e-mail --</option>
+      </select>
+      <input type="email" id="to" required placeholder="napr. meno@gmail.com">
+
+      <label>📝 Predmet:</label>
+      <select id="subjectSelect" onchange="loadSelected('subject')">
+        <option value="">-- Vyber uložený predmet --</option>
+      </select>
+      <input type="text" id="subject" placeholder="Napr. Otázka ohľadom ErikAI">
+
+      <label>💬 Správa:</label>
+      <select id="bodySelect" onchange="loadSelected('body')">
+        <option value="">-- Vyber uloženú správu --</option>
+      </select>
+      <textarea id="body" rows="6" placeholder="Sem napíš svoju správu..."></textarea>
+
+      <!-- HLAVNÉ AKCIE -->
+      <button type="submit" class="primary-btn" style="width: 100%; margin-top: 20px;">✉️ Odoslať e-mail</button>
+
+      <div class="action-group">
+        <button type="button" class="save-btn" onclick="saveField('to')">💾 Ulož e-mail</button>
+        <button type="button" class="save-btn" onclick="saveField('subject')">💾 Ulož predmet</button>
+        <button type="button" class="save-btn" onclick="saveField('body')">💾 Ulož správu</button>
+      </div>
+    </form>
+
+    <div class="info">
+      ⚠️ <strong>Upozornenie:</strong><br>
+      Aplikácia neodosiela e-mail automaticky. Po kliknutí sa otvorí predvolená e-mailová aplikácia vo vašom zariadení (Gmail, Outlook). Všetky údaje sú uložené <strong>lokálne a bezpečne</strong>.
+    </div>
+  </div>
+
+  <footer>
+    © 2026 Erik Mohylák – All rights reserved.<br>
+    Licencia: CC BY-NC-ND 4.0
+  </footer>
+
+</div>
 
 <script>
-  function aktualizujCas() {
-    const teraz = new Date();
-    const moznosti = {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    };
-    document.getElementById('cas').innerText =
-      "🕓 " + teraz.toLocaleDateString('sk-SK', moznosti);
-  }
-  setInterval(aktualizujCas, 1000);
-  aktualizujCas();
-
+  // === TÉMA ===
   function toggleTheme() {
     document.body.classList.toggle('dark-mode');
     localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
   }
-  if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
-</script>
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark-mode');
+  }
 
-<div id="google_translate_element" style="text-align:center; margin:20px;"></div>
-<script>
+  // === ČAS ===
+  function aktualizujCas() {
+    const teraz = new Date();
+    const moznosti = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    document.getElementById('cas').innerText = "🕓 " + teraz.toLocaleDateString('sk-SK', moznosti);
+  }
+  setInterval(aktualizujCas, 1000);
+  aktualizujCas();
+
+  // === GOOGLE TRANSLATE ===
   function googleTranslateElementInit() {
     new google.translate.TranslateElement({
       pageLanguage: 'sk',
-      includedLanguages: 'en,cs,de,fr,hu,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN,zh-TW,ar,tr,sv,fi,da,no,nl,pt,vi,id,el,hi,th,he,bg,hr,lt,lv,et',
+      includedLanguages: 'en,cs,de,fr,hu,pl,ro,ru,es,it,uk',
       layout: google.translate.TranslateElement.InlineLayout.SIMPLE
     }, 'google_translate_element');
   }
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
-<div class="card">
-  <button type="button" onclick="diktojEmail()">🎤 Komu</button>
-  <button type="button" onclick="diktojPredmet()">🎙️ Predmet</button>
-  <button type="button" onclick="diktojSpravu()">🗣️ Správa</button>
-
-  <form id="emailForm">
-    <label>📬 Komu:</label>
-    <select id="toSelect" onchange="loadSelected('to')">
-      <option value="">-- Vyber e-mail --</option>
-    </select>
-    <input type="email" id="to" required placeholder="napr. meno@gmail.com">
-
-    <label>📝 Predmet:</label>
-    <select id="subjectSelect" onchange="loadSelected('subject')">
-      <option value="">-- Vyber predmet --</option>
-    </select>
-    <input type="text" id="subject" placeholder="Napr. Otázka ohľadom ErikAI">
-
-    <label>💬 Správa:</label>
-    <select id="bodySelect" onchange="loadSelected('body')">
-      <option value="">-- Vyber správu --</option>
-    </select>
-    <textarea id="body" rows="6" placeholder="Sem napíš svoju správu..."></textarea>
-
-    <button type="submit">✉️ Odoslať e-mail</button>
-    <button type="button" onclick="saveField('to')">💾 Ulož e-mail</button>
-    <button type="button" onclick="saveField('subject')">💾 Ulož predmet</button>
-    <button type="button" onclick="saveField('body')">💾 Ulož správu</button>
-  </form>
-
-  <div class="info">
-    ⚠️ <strong>Upozornenie:</strong><br>
-    Táto aplikácia neodosiela e-mail automaticky. Po kliknutí sa otvorí tvoja e-mailová aplikácia (napr. Gmail, Outlook).<br>
-    🔒 Všetko prebieha <strong>lokálne a bezpečne</strong> – žiadne dáta neopúšťajú tvoj počítač.
-  </div>
-</div>
-
-<footer>
-  © 2025 Erik Mohylák – All rights reserved.<br>
-  Licencia: CC BY-NC-ND 4.0
-</footer>
-
 <script>
-function diktojEmail() {
-  const rec = new webkitSpeechRecognition();
-  rec.lang = 'sk-SK';
-  rec.onresult = e => document.getElementById("to").value = e.results[0][0].transcript;
-  rec.start();
-}
+  // === HLASOVÉ DIKTOVANIE S INDIKÁTOROM ===
+  function startVoiceDictation(inputId, btnId, isAppend = false) {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Hlasové rozpoznávanie nie je podporované v tomto prehliadači.');
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SpeechRecognition();
+    rec.lang = 'sk-SK';
+    
+    const btn = document.getElementById(btnId);
+    btn.classList.add('listening');
 
-function diktojPredmet() {
-  const rec = new webkitSpeechRecognition();
-  rec.lang = 'sk-SK';
-  rec.onresult = e => document.getElementById("subject").value = e.results[0][0].transcript;
-  rec.start();
-}
-
-function diktojSpravu() {
-  const rec = new webkitSpeechRecognition();
-  rec.lang = 'sk-SK';
-  rec.onresult = e => document.getElementById("body").value += e.results[0][0].transcript + " ";
-  rec.start();
-}
-
-function saveField(fieldId) {
-  const value = document.getElementById(fieldId).value.trim();
-  if (!value) return;
-  let stored = JSON.parse(localStorage.getItem(fieldId)) || [];
-  if (!stored.includes(value)) {
-    stored.unshift(value);
-    if (stored.length > 10) stored.pop();
-    localStorage.setItem(fieldId, JSON.stringify(stored));
-    updateSelect(fieldId);
+    rec.onresult = e => {
+      const text = e.results[0][0].transcript;
+      const field = document.getElementById(inputId);
+      if (isAppend) {
+        field.value += (field.value ? " " : "") + text + " ";
+      } else {
+        field.value = text;
+      }
+      btn.classList.remove('listening');
+    };
+    rec.onerror = () => btn.classList.remove('listening');
+    rec.onend = () => btn.classList.remove('listening');
+    rec.start();
   }
-}
 
-function updateSelect(fieldId) {
-  const select = document.getElementById(fieldId + 'Select');
-  select.innerHTML = `<option value="">-- Vyber ${fieldId} --</option>`;
-  const stored = JSON.parse(localStorage.getItem(fieldId)) || [];
-  stored.forEach(item => {
-    const option = document.createElement('option');
-    option.value = item;
-    option.textContent = item;
-    select.appendChild(option);
+  function diktojEmail() { startVoiceDictation('to', 'btnTo'); }
+  function diktojPredmet() { startVoiceDictation('subject', 'btnSub'); }
+  function diktojSpravu() { startVoiceDictation('body', 'btnBody', true); }
+
+  // === LOKÁLNA PAMÄŤ A VYBERANIE ===
+  function saveField(fieldId) {
+    const value = document.getElementById(fieldId).value.trim();
+    if (!value) return;
+    let stored = JSON.parse(localStorage.getItem(fieldId)) || [];
+    if (!stored.includes(value)) {
+      stored.unshift(value);
+      if (stored.length > 10) stored.pop();
+      localStorage.setItem(fieldId, JSON.stringify(stored));
+      updateSelect(fieldId);
+      alert('Položka bola úspešne uložená!');
+    } else {
+      alert('Táto položka už je uložená.');
+    }
+  }
+
+  function updateSelect(fieldId) {
+    const select = document.getElementById(fieldId + 'Select');
+    select.innerHTML = `<option value="">-- Vyber uložené --</option>`;
+    const stored = JSON.parse(localStorage.getItem(fieldId)) || [];
+    stored.forEach(item => {
+      const option = document.createElement('option');
+      option.value = item;
+      option.textContent = item;
+      select.appendChild(option);
+    });
+  }
+
+  function loadSelected(fieldId) {
+    const select = document.getElementById(fieldId + 'Select');
+    if (select.value) {
+      document.getElementById(fieldId).value = select.value;
+    }
+  }
+
+  ['to', 'subject', 'body'].forEach(updateSelect);
+
+  // === ODOSLANIE E-MAILU ===
+  document.getElementById("emailForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const to = document.getElementById("to").value;
+    const subject = encodeURIComponent(document.getElementById("subject").value);
+    const body = encodeURIComponent(document.getElementById("body").value);
+    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
   });
-}
-
-function loadSelected(fieldId) {
-  const select = document.getElementById(fieldId + 'Select');
-  document.getElementById(fieldId).value = select.value;
-}
-
-['to', 'subject', 'body'].forEach(updateSelect);
-
-document.getElementById("emailForm").addEventListener("submit", e => {
-  e.preventDefault();
-  const to = document.getElementById("to").value;
-  const subject = encodeURIComponent(document.getElementById("subject").value);
-  const body = encodeURIComponent(document.getElementById("body").value);
-  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
-});
 </script>
+
 </body>
 </html>
