@@ -234,13 +234,26 @@
     gap: 8px;
   }
 
+  .plot-container {
+    position: relative;
+    margin-top: 12px;
+  }
+
   .plot-canvas {
     width: 100%;
-    height: 220px;
+    height: 260px;
     background: var(--bg-deep);
     border: 1px solid var(--card-border);
     border-radius: 14px;
-    margin-top: 12px;
+  }
+
+  .plot-legend {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+    padding: 0 4px;
   }
 
   footer {
@@ -270,7 +283,7 @@
       <p>Veda • Fyzika • Vysoká škola — Pokročilý offline toolkit</p>
     </div>
   </div>
-  <div class="meta muted">Verzia: 2.0 • Lokálny režim</div>
+  <div class="meta muted">Verzia: 2.1 • Špičkový graf</div>
 </header>
 
 <main>
@@ -379,7 +392,14 @@
       </div>
     </div>
 
-    <canvas id="plotCanvas" class="plot-canvas"></canvas>
+    <div class="plot-container">
+      <canvas id="plotCanvas" class="plot-canvas"></canvas>
+      <div class="plot-legend">
+        <span id="legendMin">Min: —</span>
+        <span id="legendTitle">Priebeh funkcií</span>
+        <span id="legendMax">Max: —</span>
+      </div>
+    </div>
   </section>
 
   <!-- RIGHT: side panels -->
@@ -680,7 +700,7 @@ document.getElementById('clearChain').addEventListener('click', ()=>{
 
 function calculateFormula(pushToHistory=false){
   const formula = document.getElementById('formulaSelect').value;
-  const A = parseFloat(document.getElementById('fA::value') || document.getElementById('fA').value) || 0;
+  const A = parseFloat(document.getElementById('fA').value) || 0;
   const B = parseFloat(document.getElementById('fB').value) || 0;
   let numeric = NaN;
   let unit = '';
@@ -710,7 +730,7 @@ function calculateFormula(pushToHistory=false){
 }
 
 /* ============================
-   Sweep / Plot Canvas
+   Sweep / Plot Canvas (Profesionálny graf)
    ============================ */
 
 const canvas = document.getElementById('plotCanvas');
@@ -721,31 +741,37 @@ function resizeCanvas(){
   canvas.width = rect.width * window.devicePixelRatio;
   canvas.height = rect.height * window.devicePixelRatio;
   ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-  clearPlot();
+  drawEmptyGrid();
 }
-window.addEventListener('resize', ()=>{ resizeCanvas(); drawAxes(); });
+window.addEventListener('resize', ()=>resizeCanvas());
 resizeCanvas();
 
-function clearPlot(){
+function drawEmptyGrid(){
   const r = canvas.getBoundingClientRect();
-  ctx.clearRect(0,0,r.width,r.height);
-}
-
-function drawAxes(){
-  const r = canvas.getBoundingClientRect();
-  ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.clearRect(0, 0, r.width, r.height);
+  
+  // Background grid lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
   ctx.lineWidth = 1;
-  ctx.strokeRect(10, 10, r.width - 20, r.height - 20);
-  ctx.restore();
+  const rows = 6, cols = 8;
+  const stepX = r.width / cols;
+  const stepY = r.height / rows;
+
+  for(let i=1; i<cols; i++){
+    ctx.beginPath(); ctx.moveTo(i * stepX, 0); ctx.lineTo(i * stepX, r.height); ctx.stroke();
+  }
+  for(let j=1; j<rows; j++){
+    ctx.beginPath(); ctx.moveTo(0, j * stepY); ctx.lineTo(r.width, j * stepY); ctx.stroke();
+  }
 }
 
 function plotData(xs, ys, opts={}){
-  clearPlot();
-  drawAxes();
   const r = canvas.getBoundingClientRect();
-  const w = r.width - 40, h = r.height - 40;
-  const ox = 20, oy = 20;
+  ctx.clearRect(0, 0, r.width, r.height);
+
+  const padX = 40, padY = 30;
+  const w = r.width - padX * 2;
+  const h = r.height - padY * 2;
 
   const xmin = Math.min(...xs), xmax = Math.max(...xs);
   const ymin = Math.min(...ys), ymax = Math.max(...ys);
@@ -755,35 +781,58 @@ function plotData(xs, ys, opts={}){
   const X0 = xmin - px, X1 = xmax + px;
   const Y0 = ymin - py, Y1 = ymax + py;
 
-  ctx.save();
-  ctx.translate(ox, oy);
-
-  // grid
-  ctx.strokeStyle='rgba(255,255,255,0.03)';
-  ctx.lineWidth=1;
+  // Draw grid & axis
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+  ctx.lineWidth = 1;
   for(let i=0; i<=4; i++){
-    const yy = i * (h / 4);
-    ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(w, yy); ctx.stroke();
+    const yPos = padY + (h / 4) * i;
+    ctx.beginPath(); ctx.moveTo(padX, yPos); ctx.lineTo(r.width - padX, yPos); ctx.stroke();
+
+    // Y values text
+    const val = Y1 - (i / 4) * (Y1 - Y0);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '10px Inter';
+    ctx.fillText(formatNumber(val), 4, yPos + 4);
   }
 
-  // plot line
+  // Draw gradient fill under curve
+  ctx.save();
+  ctx.beginPath();
+  for(let i=0; i<xs.length; i++){
+    const x = padX + (xs[i] - X0) / (X1 - X0) * w;
+    const y = padY + h - ((ys[i] - Y0) / (Y1 - Y0) * h);
+    if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.lineTo(padX + w, padY + h);
+  ctx.lineTo(padX, padY + h);
+  ctx.closePath();
+
+  const grad = ctx.createLinearGradient(0, padY, 0, padY + h);
+  grad.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
+  grad.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.restore();
+
+  // Draw smooth glowing line
   ctx.beginPath();
   ctx.strokeStyle = '#ef4444';
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 3;
+  ctx.shadowColor = 'rgba(239, 68, 68, 0.5)';
+  ctx.shadowBlur = 8;
 
   for(let i=0; i<xs.length; i++){
-    const x = (xs[i] - X0) / (X1 - X0) * w;
-    const y = h - ((ys[i] - Y0) / (Y1 - Y0) * h);
+    const x = padX + (xs[i] - X0) / (X1 - X0) * w;
+    const y = padY + h - ((ys[i] - Y0) / (Y1 - Y0) * h);
     if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
   ctx.stroke();
+  ctx.shadowBlur = 0; // reset
 
-  // labels
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = '11px Inter';
-  ctx.fillText(opts.xlabel || 'x', 5, h + 16);
-  ctx.fillText(opts.ylabel || 'y', w - 60, 12);
-  ctx.restore();
+  // Update legends
+  document.getElementById('legendMin').innerText = `Min: ${formatNumber(ymin)}`;
+  document.getElementById('legendTitle').innerText = `Graf: ${opts.ylabel || 'Priebeh'}`;
+  document.getElementById('legendMax').innerText = `Max: ${formatNumber(ymax)}`;
 }
 
 document.getElementById('sweepBtn').addEventListener('click', ()=>{
@@ -806,10 +855,15 @@ document.getElementById('sweepBtn').addEventListener('click', ()=>{
     else y = x;
     ys.push(y);
   }
-  plotData(xs, ys, {xlabel:'Sweep parameter', ylabel:f});
+  plotData(xs, ys, {ylabel: f});
 });
 
-document.getElementById('clearPlot').addEventListener('click', ()=>{ clearPlot(); drawAxes(); });
+document.getElementById('clearPlot').addEventListener('click', ()=>{
+  drawEmptyGrid();
+  document.getElementById('legendMin').innerText = 'Min: —';
+  document.getElementById('legendTitle').innerText = 'Priebeh funkcií';
+  document.getElementById('legendMax').innerText = 'Max: —';
+});
 
 document.querySelectorAll('[data-plot]').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -817,15 +871,15 @@ document.querySelectorAll('[data-plot]').forEach(btn=>{
     if(id === 'KE_vs_v'){
       const xs=[], ys=[];
       for(let v=0; v<=100; v+=2){ xs.push(v); ys.push(0.5 * 1 * v * v); }
-      plotData(xs, ys, {xlabel:'Rýchlosť v (m/s)', ylabel:'KE (J)'});
+      plotData(xs, ys, {ylabel:'KE (J)'});
     } else if(id === 'E_vs_m'){
       const xs=[], ys=[];
       for(let m=0.1; m<=2; m+=0.05){ xs.push(m); ys.push(m * constants.c.value**2); }
-      plotData(xs, ys, {xlabel:'Hmotnosť m (kg)', ylabel:'Energia E (J)'});
+      plotData(xs, ys, {ylabel:'Energia (J)'});
     } else if(id === 'P_vs_F'){
       const xs=[], ys=[];
       for(let F=0; F<=500; F+=10){ xs.push(F); ys.push(F / 2); }
-      plotData(xs, ys, {xlabel:'Sila F (N)', ylabel:'Tlak P (Pa)'});
+      plotData(xs, ys, {ylabel:'Tlak (Pa)'});
     }
   });
 });
@@ -893,7 +947,7 @@ document.getElementById('shareResult').addEventListener('click', ()=>{
 });
 
 // Initial startup
-drawAxes();
+drawEmptyGrid();
 renderHistory();
 </script>
 </body>
