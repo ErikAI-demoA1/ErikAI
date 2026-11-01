@@ -3,484 +3,679 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🛠️ Nástroje - ErikAI</title>
+  <title>ErikAI • Master Suite OS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
   <style>
+    :root {
+      --bg: #f8fafc;
+      --card: rgba(255, 255, 255, 0.9);
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --border: rgba(15, 23, 42, 0.08);
+      --shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    body.dark-mode {
+      --bg: #030712;
+      --card: rgba(15, 23, 42, 0.8);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --border: rgba(248, 250, 252, 0.08);
+      --shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.06), transparent 45%),
+        radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.05), transparent 45%);
+      color: var(--text);
+      padding: 30px 15px;
+      min-height: 100vh;
+      transition: background 0.4s ease, color 0.4s ease;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      background: var(--card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 16px 24px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .clock-box {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .theme-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+      transition: transform 0.2s ease;
+    }
+    .theme-btn:hover { transform: scale(1.1) rotate(15deg); }
+
+    /* HEADER */
+    .header-box {
       text-align: center;
-      background-color: #f9f9f9;
-      padding: 20px;
+      margin-bottom: 30px;
     }
+
     h1 {
-      color: #333;
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
     }
-    a {
-      display: inline-block;
-      margin-top: 20px;
-      color: #007BFF;
-      text-decoration: none;
+    h1 span { color: var(--accent); }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
     }
-    a:hover {
-      text-decoration: underline;
+
+    /* SEARCH & FILTER BAR */
+    .controls-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      flex: 2;
+      min-width: 250px;
+      padding: 14px 18px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: var(--card);
+      color: var(--text);
+      outline: none;
+      box-shadow: var(--shadow);
+    }
+    .search-input:focus { border-color: var(--accent); }
+
+    .filter-btn {
+      padding: 12px 18px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .filter-btn.active, .filter-btn:hover {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    /* GRID MATRIX */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .tool-card {
+      background: var(--card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .tool-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent);
+    }
+
+    .tool-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+
+    .tool-icon {
+      font-size: 1.8rem;
+      background: rgba(37, 99, 235, 0.1);
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+    }
+
+    .tool-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    /* COMMON UI ELEMENTS */
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      margin-bottom: 10px;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+
+    button.ui-btn {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button.ui-btn:hover { background: var(--accent-hover); }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .calc-btn {
+      padding: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .calc-btn:hover { background: var(--accent); color: white; }
+
+    .result-box {
+      margin-top: 10px;
+      padding: 10px;
+      background: var(--bg);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      font-weight: 600;
+      word-break: break-all;
+      text-align: center;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
     }
   </style>
 </head>
-<body>
+<body class="dark-mode">
 
-  <p id="cas" style="text-align:center; font-size: 18px; color: #333;"></p>
+<div class="container">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="clock-box" id="cas">Načítavam čas...</div>
+    <div style="font-weight:700; font-size:0.9rem;">🛠️ ErikAI Master Suite OS</div>
+    <button class="theme-btn" onclick="toggleTheme()" title="Zmeniť režim">🌓</button>
+  </div>
+
+  <div class="header-box">
+    <h1>ErikAI <span>Integrated Suite</span></h1>
+    <p class="subtitle">Kompletný súbor 100% lokálnych webových nástrojov bez externých odkazov</p>
+  </div>
+
+  <div id="google_translate_element" style="text-align:center; margin-bottom: 20px;"></div>
+
+  <!-- CONTROL / SEARCH BAR -->
+  <div class="controls-bar">
+    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Vyhľadať nástroj..." onkeyup="filterTools()">
+    <button class="filter-btn active" onclick="setCategory('all', this)">Všetky</button>
+    <button class="filter-btn" onclick="setCategory('utility', this)">Utilitky</button>
+    <button class="filter-btn" onclick="setCategory('prod', this)">Produktivita</button>
+    <button class="filter-btn" onclick="setCategory('media', this)">Médiá</button>
+  </div>
+
+  <!-- GRID INSTRUMENTATION -->
+  <div class="tools-grid" id="toolsGrid">
+
+    <!-- 1. VEDECKÁ KALKULAČKA -->
+    <div class="tool-card" data-cat="prod" data-name="kalkulacka vedecka">
+      <div>
+        <div class="tool-header">
+          <div class="tool-icon">🧮</div>
+          <div class="tool-title">Vedecká Kalkulačka</div>
+        </div>
+        <input type="text" id="calcDisplay" readonly placeholder="0" style="font-family:'JetBrains Mono'; text-align:right;">
+        <div class="calc-grid">
+          <button class="calc-btn" onclick="calcInput('sin(')">sin</button>
+          <button class="calc-btn" onclick="calcInput('cos(')">cos</button>
+          <button class="calc-btn" onclick="calcInput('tan(')">tan</button>
+          <button class="calc-btn" onclick="calcClear()" style="color:var(--danger)">C</button>
+
+          <button class="calc-btn" onclick="calcInput('7')">7</button>
+          <button class="calc-btn" onclick="calcInput('8')">8</button>
+          <button class="calc-btn" onclick="calcInput('9')">9</button>
+          <button class="calc-btn" onclick="calcInput('/')">/</button>
+
+          <button class="calc-btn" onclick="calcInput('4')">4</button>
+          <button class="calc-btn" onclick="calcInput('5')">5</button>
+          <button class="calc-btn" onclick="calcInput('6')">6</button>
+          <button class="calc-btn" onclick="calcInput('*')">*</button>
+
+          <button class="calc-btn" onclick="calcInput('1')">1</button>
+          <button class="calc-btn" onclick="calcInput('2')">2</button>
+          <button class="calc-btn" onclick="calcInput('3')">3</button>
+          <button class="calc-btn" onclick="calcInput('-')">-</button>
+
+          <button class="calc-btn" onclick="calcInput('0')">0</button>
+          <button class="calc-btn" onclick="calcInput('.')">.</button>
+          <button class="calc-btn" onclick="calcCompute()" style="background:var(--accent); color:white">=</button>
+          <button class="calc-btn" onclick="calcInput('+')">+</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. GENERÁTOR HESIEL -->
+    <div class="tool-card" data-cat="utility" data-name="generator hesiel heslo">
+      <div>
+        <div class="tool-header">
+          <div class="tool-icon">🔐</div>
+          <div class="tool-title">Generátor Hesiel</div>
+        </div>
+        <label>Dĺžka hesla: <span id="passLenVal">16</span></label>
+        <input type="range" id="passLen" min="8" max="32" value="16" style="width:100%; margin-bottom:12px;" oninput="document.getElementById('passLenVal').textContent=this.value">
+        <button class="ui-btn" onclick="generatePassword()">Generovať Heslo</button>
+        <div class="result-box" id="passResult">Kliknite pre vygenerovanie</div>
+      </div>
+    </div>
+
+    <!-- 3. JEDNOTKOVÝ KONVERTOR -->
+    <div class="tool-card" data-cat="utility" data-name="konvertor jednotiek prevodnik">
+      <div>
+        <div class="tool-header">
+          <div class="tool-icon">📏</div>
+          <div class="tool-title">Jednotkový Konvertor</div>
+        </div>
+        <input type="number" id="unitVal" placeholder="Zadajte hodnotu" oninput="convertUnits()">
+        <select id="unitType" onchange="convertUnits()">
+          <option value="km_mi">Kilometre ➔ Míle</option>
+          <option value="mi_km">Míle ➔ Kilometre</option>
+          <option value="kg_lb">Kilogramy ➔ Libry</option>
+          <option value="c_f">Celzius ➔ Fahrenheit</option>
+        </select>
+        <div class="result-box" id="unitResult">Výsledok: 0</div>
+      </div>
+    </div>
+
+    <!-- 4. POZNÁMKOVÝ BLOK -->
+    <div class="tool-card" data-cat="prod" data-name="poznamkovy blok poznamky notepad">
+      <div>
+        <div class="tool-header">
+          <div class="tool-icon">📝</div>
+          <div class="tool-title">Rýchle Poznámky</div>
+        </div>
+        <textarea id="notepad" rows="5" placeholder="Sem napíšte poznámky..." oninput="saveNote()"></textarea>
+        <div style="display:flex; gap:6px;">
+          <button class="ui-btn" onclick="downloadNote()">💾 Stiahnuť</button>
+          <button class="ui-btn" style="background:var(--danger)" onclick="clearNote()">🧹 Vymazať</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. STOPKY A MEDZIČASY -->
+    <div class="tool-card" data-cat="utility" data-name="stopky casovac medzicas">
+      <div>
+        <div class="tool-header">
+          <div class="tool-icon">⏱️</div>
+          <div class="tool-title">Stopky s Medzičasom</div>
+        </div>
+        <div class="result-box" id="stopwatchDisplay" style="font-size:1.4rem; margin-bottom:10px;">00:00.00</div>
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <button class="ui-btn" onclick="startStopwatch()">Štart/Pauza</button>
+          <button class="ui-btn" style="background:var(--warning)" onclick="lapStopwatch()">Medzičas</button>
+          <button class="ui-btn" style="background:var(--danger)" onclick="resetStopwatch()">Reset</button>
+        </div>
+        <div id="lapsBox" style="max-height:80px; overflow-y:auto; font-size:0.78rem; color:var(--muted)"></div>
+      </div>
+    </div>
+
+    <!-- 6. FAREBNÝ PICKER -->
+    <div class="tool-card" data-cat="media" data-name="farby color picker paleta">
+      <div>
+        <div class="tool-header">
+          <div class="tool-icon">🎨</div>
+          <div class="tool-title">Color Picker</div>
+        </div>
+        <input type="color" id="colorPicker" value="#2563eb" style="height:45px; cursor:pointer;" onchange="updateColor()">
+        <div class="result-box" id="colorHex">HEX: #2563eb</div>
+        <div class="result-box" id="colorRgb" style="margin-top:4px;">RGB: rgb(37, 99, 235)</div>
+      </div>
+    </div>
+
+    <!-- 7. OBRÁZKOVÝ EDITOR FILTROV -->
+    <div class="tool-card" data-cat="media" data-name="editor obrazkov fotky filtre">
+      <div>
+        <div class="tool-header">
+          <div class="tool-icon">🖼️</div>
+          <div class="tool-title">Filters Studio</div>
+        </div>
+        <input type="file" id="imgFilterInput" accept="image/*" onchange="loadFilterImg(event)">
+        <div style="max-height:100px; overflow:hidden; border-radius:8px; margin-bottom:8px; text-align:center;">
+          <img id="filterPreview" style="max-width:100%; display:none;">
+        </div>
+        <label>Jas & Kontrast</label>
+        <input type="range" id="imgBrightness" min="50" max="150" value="100" oninput="applyImgFilter()">
+        <button class="ui-btn" onclick="downloadFilteredImg()">⬇️ Stiahnuť Obrázok</button>
+      </div>
+    </div>
+
+    <!-- 8. QR GENERÁTOR -->
+    <div class="tool-card" data-cat="utility" data-name="qr kod generator">
+      <div>
+        <div class="tool-header">
+          <div class="tool-icon">🧾</div>
+          <div class="tool-title">QR Generátor</div>
+        </div>
+        <input type="text" id="qrText" placeholder="Sem vložte text/odkaz" onkeyup="genQR()">
+        <div id="qrCanvasBox" style="text-align:center; margin:8px 0;"></div>
+      </div>
+    </div>
+
+    <!-- 9. BMI KALKULAČKA -->
+    <div class="tool-card" data-cat="utility" data-name="bmi kalkulacka vaha zdravie">
+      <div>
+        <div class="tool-header">
+          <div class="tool-icon">⚖️</div>
+          <div class="tool-title">BMI Kalkulačka</div>
+        </div>
+        <input type="number" id="bmiHeight" placeholder="Výška v cm (napr. 180)">
+        <input type="number" id="bmiWeight" placeholder="Hmotnosť v kg (napr. 75)">
+        <button class="ui-btn" onclick="calcBMI()">Vypočítať BMI</button>
+        <div class="result-box" id="bmiResult">BMI: --</div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+    © 2026 Erik Mohylák – All rights reserved.
+  </footer>
+
+</div>
 
 <script>
-  function aktualizujCas() {
-    const teraz = new Date();
-    const moznosti = {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    };
-    const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-    document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-  }
-
-  setInterval(aktualizujCas, 1000);
-  aktualizujCas(); // spusti hneď
-</script>
-  <h1>🛠️ Nástroje dostupné v ErikAI</h1>
-  <p>Tu môžeš pridať zoznam 50 nástrojov, zoradených podľa abecedy, kategórií alebo funkcie.</p>
-
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-
-<script>
+  // === TÉMA ===
   function toggleTheme() {
     document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
   }
-</script>
-
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
+  if (localStorage.getItem('darkMode') === 'false') {
+    document.body.classList.remove('dark-mode');
   }
-</style>
 
-  <div id="google_translate_element"></div>
-<script type="text/javascript">
+  // === ČAS ===
+  function aktualizujCas() {
+    const teraz = new Date();
+    const moznosti = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    document.getElementById('cas').innerText = "🕓 " + teraz.toLocaleDateString('sk-SK', moznosti);
+  }
+  setInterval(aktualizujCas, 1000);
+  aktualizujCas();
+
+  // === GOOGLE TRANSLATE ===
   function googleTranslateElementInit() {
     new google.translate.TranslateElement({
       pageLanguage: 'sk',
-      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
+      includedLanguages: 'en,cs,de,fr,hu,pl,ro,ru,es,it,uk',
       layout: google.translate.TranslateElement.InlineLayout.SIMPLE
     }, 'google_translate_element');
   }
 </script>
 <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  
-  <section style="margin-top: 20px;">
-  <h2>📅 Kalendár Google</h2>
-  <a href="https://calendar.google.com/" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #4285F4;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">📅 Otvoriť Kalendár Google</a>
-</section>
 
-<!-- 3️⃣ Google Maps -->
-<section style="margin-top: 20px;">
-  <h2>🌍 Google Mapy</h2>
-  <a href="https://www.google.com/maps" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #4285F4;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">🌍 Otvoriť Mapy</a>
-</section>
+<script>
+  // === FILTROVANIE NÁSTROJOV ===
+  let currentCategory = 'all';
 
-<!-- 4️⃣ Lumosity - mozgové hry -->
-<section style="margin-top: 20px;">
-  <h2>🧠 Mozgové hry(Lumosity)</h2>
-  <a href="https://www.lumosity.com/" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #4285F4;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">🧠 Zahrať si hry</a>
-</section>
+  function filterTools() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const cards = document.querySelectorAll('.tool-card');
 
-<!-- 5️⃣ PDF Editor -->
-<section style="margin-top: 20px;">
-  <h2>🗂️ Editor PDF Espace</h2>
-  <a href="https://www.pdfescape.com/" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #4285F4;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">🗂️ Upraviť PDF</a>
-</section>
+    cards.forEach(card => {
+      const name = card.getAttribute('data-name');
+      const cat = card.getAttribute('data-cat');
 
-<!-- 6️⃣ Generátor QR kódov -->
-<section style="margin-top: 20px;">
-  <h2>🧾 Generátor QR kódov</h2>
-  <a href="https://www.qr-code-generator.com/" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #4285F4;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">🧾 Vytvoriť QR kód</a>
-</section>
+      const matchesSearch = name.includes(query);
+      const matchesCat = (currentCategory === 'all' || cat === currentCategory);
 
-<!-- 7️⃣ Heslo generátor -->
-<section style="margin-top: 20px;">
-  <h2>🔐 Generátor hesiel</h2>
-  <a href="https://passwordsgenerator.net/" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #4285F4;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">🔐 Vygeneruj heslo</a>
-</section>
+      if (matchesSearch && matchesCat) {
+        card.style.display = 'flex';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
 
-<!-- 8️⃣ Periodická tabuľka -->
-<section style="margin-top: 20px;">
-  <h2>🧪 Periodická tabuľka(Ptable)</h2>
-  <a href="https://ptable.com/" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #4285F4;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">🧪 Zobraziť prvky</a>
-</section>
+  function setCategory(cat, btn) {
+    currentCategory = cat;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterTools();
+  }
 
-<!-- 9️⃣ Časové pásma -->
-<section style="margin-top: 20px;">
-  <h2>🌐 Časové pásma(Timeanddate)</h2>
-  <a href="https://www.timeanddate.com/worldclock/" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #4285F4;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">🌐 Svetový čas</a>
-</section>
+  // === 1. KALKULAČKA LOGIKA ===
+  const calcDisplay = document.getElementById('calcDisplay');
+  function calcInput(val) { calcDisplay.value += val; }
+  function calcClear() { calcDisplay.value = ''; }
+  function calcCompute() {
+    try {
+      let expr = calcDisplay.value.replace(/sin\(/g, 'Math.sin(').replace(/cos\(/g, 'Math.cos(').replace(/tan\(/g, 'Math.tan(');
+      calcDisplay.value = eval(expr);
+    } catch(e) { calcDisplay.value = 'Chyba'; }
+  }
 
-<!-- 🔟 Jednotkový konvertor -->
-<section style="margin-top: 20px;">
-  <h2>📏 Jednotkový konvertor</h2>
-  <a href="https://www.convertunits.com/" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #4285F4;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">📏 Prevod jednotiek</a>
-</section>
-    <section style="margin-top: 40px;">
-  <h2>📝 Poznámkový blok online(Anotepad)</h2>
-  <p>Jednoduchý poznámkový blok bez registrácie, ideálny na rýchle poznámky:</p>
-  <a href="https://anotepad.com/" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #4CAF50;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">
-    📝 Otvoriť poznámkový blok
-  </a>
-</section>
+  // === 2. GENERÁTOR HESIEL ===
+  function generatePassword() {
+    const len = document.getElementById('passLen').value;
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=";
+    let res = "";
+    for (let i = 0; i < len; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const box = document.getElementById('passResult');
+    box.textContent = res;
+    navigator.clipboard.writeText(res);
+  }
 
-<section style="margin-top: 40px;">
-  <h2>⏱️ Online stopky a časovač(Online-stopwatch)</h2>
-  <p>Spusti časovač, odpočítavanie alebo stopky online priamo v prehliadači:</p>
-  <a href="https://www.online-stopwatch.com/" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #FF9800;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">
-    ⏱️ Otvoriť online stopky
-  </a>
-</section>
+  // === 3. JEDNOTKOVÝ KONVERTOR ===
+  function convertUnits() {
+    const val = parseFloat(document.getElementById('unitVal').value);
+    const type = document.getElementById('unitType').value;
+    const resBox = document.getElementById('unitResult');
 
-<section style="margin-top: 40px;">
-  <h2>🔁 Jednotkový konvertor(unitconverters)</h2>
-  <p>Potrebujete previesť jednotky? Dĺžka, váha, teplota, rýchlosť a ďalšie:</p>
-  <a href="https://www.unitconverters.net/" target="_blank" style="
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #9C27B0;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;">
-    🔁 Otvoriť konvertor jednotiek
-  </a>
-</section>
-    <!-- 1. Synonymá -->
-<section style="margin-top: 40px;">
-  <h2>🔍 Vyhľadávač synonym</h2>
-  <p>Potrebujete nájsť synonymum slova? Klikni na tlačidlo a otvorí sa online slovník:</p>
-  <a href="https://www.synonym.com/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#6a5acd;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">🔍 Otvoriť synonymá</a>
-</section>
+    if (isNaN(val)) { resBox.textContent = "Výsledok: 0"; return; }
 
-<!-- 2. Lorem Ipsum -->
-<section style="margin-top: 40px;">
-  <h2>📝 Generátor Lorem Ipsum(Lipsum)</h2>
-  <p>Potrebujete výplňový text pre dizajn alebo testovanie?</p>
-  <a href="https://www.lipsum.com/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#2c3e50;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">📝 Vygeneruj Lorem Ipsum</a>
-</section>
+    let res = 0;
+    if (type === 'km_mi') res = (val * 0.621371).toFixed(2) + " mi";
+    else if (type === 'mi_km') res = (val / 0.621371).toFixed(2) + " km";
+    else if (type === 'kg_lb') res = (val * 2.20462).toFixed(2) + " lbs";
+    else if (type === 'c_f') res = ((val * 9/5) + 32).toFixed(1) + " °F";
 
-<!-- 3. Color Picker -->
-<section style="margin-top: 40px;">
-  <h2>🎨 Online výber farby(Colorpicker)</h2>
-  <p>Získajte kód farby kliknutím na interaktívny nástroj:</p>
-  <a href="https://colorpicker.me/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#16a085;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">🎨 Otvoriť výber farby</a>
-</section>
+    resBox.textContent = "Výsledok: " + res;
+  }
 
-<!-- 4. Nápady -->
-<section style="margin-top: 40px;">
-  <h2>💡 Generátor nápadov(Thisidea)</h2>
-  <p>Inšpiruj sa náhodnými nápadmi pre projekty alebo aplikácie:</p>
-  <a href="https://thisidea.works/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#8e44ad;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">💡 Otvoriť generátor nápadov</a>
-</section>
+  // === 4. POZNÁMKY ===
+  const notepad = document.getElementById('notepad');
+  notepad.value = localStorage.getItem('erikai_note') || '';
+  function saveNote() { localStorage.setItem('erikai_note', notepad.value); }
+  function clearNote() { notepad.value = ''; saveNote(); }
+  function downloadNote() {
+    const blob = new Blob([notepad.value], {type: "text/plain;charset=utf-8"});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = "erikai_poznamky.txt";
+    a.click();
+  }
 
-<!-- 5. Online tabuľky -->
-<section style="margin-top: 40px;">
-  <h2>📊 Online tabuľka(Ethercalc)</h2>
-  <p>Vytvorte si jednoduchú tabuľku bez účtu:</p>
-  <a href="https://ethercalc.net/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#27ae60;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">📊 Otvoriť tabuľku</a>
-</section>
+  // === 5. STOPKY ===
+  let timer = null, startTime = 0, elapsedTime = 0, running = false;
+  function startStopwatch() {
+    if (!running) {
+      startTime = Date.now() - elapsedTime;
+      timer = setInterval(updateStopwatch, 10);
+      running = true;
+    } else {
+      clearInterval(timer);
+      running = false;
+    }
+  }
+  function updateStopwatch() {
+    elapsedTime = Date.now() - startTime;
+    let m = Math.floor(elapsedTime / 60000);
+    let s = Math.floor((elapsedTime % 60000) / 1000);
+    let ms = Math.floor((elapsedTime % 1000) / 10);
+    document.getElementById('stopwatchDisplay').textContent = 
+      `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}.${ms.toString().padStart(2,'0')}`;
+  }
+  function resetStopwatch() {
+    clearInterval(timer); running = false; elapsedTime = 0;
+    document.getElementById('stopwatchDisplay').textContent = "00:00.00";
+    document.getElementById('lapsBox').innerHTML = "";
+  }
+  function lapStopwatch() {
+    if (running) {
+      const div = document.createElement('div');
+      div.textContent = "Medzičas: " + document.getElementById('stopwatchDisplay').textContent;
+      document.getElementById('lapsBox').prepend(div);
+    }
+  }
 
-<!-- 6. Online kreslenie -->
-<section style="margin-top: 40px;">
-  <h2>🖌️ Online kreslenie(Kleki)</h2>
-  <p>Nakresli si čokoľvek priamo v prehliadači:</p>
-  <a href="https://kleki.com/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#f39c12;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">🖌️ Otvoriť kreslenie</a>
-</section>
+  // === 6. COLOR PICKER ===
+  function updateColor() {
+    const val = document.getElementById('colorPicker').value;
+    document.getElementById('colorHex').textContent = "HEX: " + val;
+    
+    let r = parseInt(val.substr(1,2),16), g = parseInt(val.substr(3,2),16), b = parseInt(val.substr(5,2),16);
+    document.getElementById('colorRgb').textContent = `RGB: rgb(${r}, ${g}, ${b})`;
+  }
 
-<!-- 7. Generátor čiarových kódov -->
-<section style="margin-top: 40px;">
-  <h2>📦 Generátor čiarových kódov(Barcode)</h2>
-  <p>Vytvor si rýchlo vlastný čiarový kód:</p>
-  <a href="https://barcode.tec-it.com/en" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#d35400;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">📦 Vygeneruj čiarový kód</a>
-</section>
+  // === 7. OBRÁZKOVÝ EDITOR ===
+  let loadedImg = null;
+  function loadFilterImg(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const img = document.getElementById('filterPreview');
+    img.src = URL.createObjectURL(file);
+    img.style.display = 'inline-block';
+    loadedImg = img;
+  }
+  function applyImgFilter() {
+    if (!loadedImg) return;
+    const val = document.getElementById('imgBrightness').value;
+    loadedImg.style.filter = `brightness(${val}%)`;
+  }
+  function downloadFilteredImg() {
+    if (!loadedImg) return;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = loadedImg.naturalWidth;
+    canvas.height = loadedImg.naturalHeight;
+    ctx.filter = loadedImg.style.filter;
+    ctx.drawImage(loadedImg, 0, 0);
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL();
+    a.download = "erikai_filtered.png";
+    a.click();
+  }
 
-<!-- 8. Online timer s alarmom -->
-<section style="margin-top: 40px;">
-  <h2>⏰ Timer s alarmom(Online-timers)</h2>
-  <p>Odpočítavanie času s upozornením a zvukom:</p>
-  <a href="https://www.online-timers.com/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#c0392b;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">⏰ Spustiť timer</a>
-</section>
+  // === 8. QR GENERÁTOR ===
+  function genQR() {
+    const text = document.getElementById('qrText').value.trim();
+    const box = document.getElementById('qrCanvasBox');
+    box.innerHTML = '';
+    if (text) {
+      QRCode.toCanvas(text, { width: 120 }, function (err, canvas) {
+        if (!err) box.appendChild(canvas);
+      });
+    }
+  }
 
-<!-- 9. Kalkulačka BMI -->
-<section style="margin-top: 40px;">
-  <h2>⚖️ BMI kalkulačka</h2>
-  <p>Vypočítaj si index telesnej hmotnosti (BMI):</p>
-  <a href="https://www.nhs.uk/live-well/healthy-weight/bmi-calculator/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#2980b9;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">⚖️ Otvoriť BMI kalkulačku</a>
-</section>
+  // === 9. BMI KALKULAČKA ===
+  function calcBMI() {
+    const h = parseFloat(document.getElementById('bmiHeight').value) / 100;
+    const w = parseFloat(document.getElementById('bmiWeight').value);
+    const resBox = document.getElementById('bmiResult');
 
-<!-- 10. Generátor mena -->
-<section style="margin-top: 40px;">
-  <h2>👤 Generátor náhodného mena</h2>
-  <p>Potrebujete fiktívne meno pre hru, projekt alebo príklad?</p>
-  <a href="https://www.fakenamegenerator.com/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#7f8c8d;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">👤 Vygeneruj meno</a>
-</section>
-
-<!-- 11. ASCII Art generátor -->
-<section style="margin-top: 40px;">
-  <h2>🔤 ASCII Art generátor</h2>
-  <p>Napíš text a premeň ho na ASCII umenie:</p>
-  <a href="https://patorjk.com/software/taag/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#34495e;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">🔤 ASCII Text</a>
-</section>
-
-<!-- 12. Online Mind Map -->
-<section style="margin-top: 40px;">
-  <h2>🧠 Online myšlienková mapa(Mindmup)</h2>
-  <p>Vytvorte si mentálnu mapu zdarma:</p>
-  <a href="https://www.mindmup.com/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#9b59b6;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">🧠 Otvoriť mind map</a>
-</section>
-
-<!-- 13. Online meranie rýchlosti internetu -->
-<section style="margin-top: 40px;">
-  <h2>📶 Rýchlosť internetu</h2>
-  <p>Otestujte si rýchlosť vášho pripojenia:</p>
-  <a href="https://fast.com/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#95a5a6;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">📶 Otestuj rýchlosť</a>
-</section>
-
-<!-- 14. Emodži generátor -->
-<section style="margin-top: 40px;">
-  <h2>😊 Emodži generátor</h2>
-  <p>Vkladaj emodži do svojho textu rýchlo a jednoducho:</p>
-  <a href="https://emojikeyboard.io/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#ff6347;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">😊 Otvoriť emoji nástroj</a>
-</section>
-
-<!-- 15. Textový šifrovač (Base64) -->
-<section style="margin-top: 40px;">
-  <h2>🔐 Textový šifrovač</h2>
-  <p>Zakóduj alebo dekóduj text cez Base64:</p>
-  <a href="https://www.base64decode.org/" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#e67e22;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">🔐 Otvoriť šifrovač</a>
-</section>
-    <section style="margin-top: 40px;">
-  <h2>🖼️ Online editor obrázkov(photopea)</h2>
-  <p>Upravuj fotky priamo online ako vo Photoshope:</p>
-  <a href="https://www.photopea.com" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #6a1b9a; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🖼️ Otvoriť editor</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🧮 Pokročilá vedecká kalkulačka(desmos)</h2>
-  <p>Rieš matematické výpočty a rovnice online:</p>
-  <a href="https://www.desmos.com/scientific" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #0288d1; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🧮 Otvoriť kalkulačku</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🗺️ Mapa sveta(Google mapy)</h2>
-  <p>Nájdi si adresy, trasy a ulice na mape:</p>
-  <a href="https://www.google.com/maps" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #388e3c; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🗺️ Otvoriť mapu</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🧾 QR kód generátor(lepšia verzia)</h2>
-  <p>Vytvor QR kód pre text, odkaz alebo kontakt:</p>
-  <a href="https://www.qr-code-generator.com/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #7b1fa2; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🧾 Otvoriť QR generátor</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🧠 Hra na pamäť(Memozor)</h2>
-  <p>Trénuj si mozog jednoduchou pamäťovou hrou:</p>
-  <a href="https://www.memozor.com/memory-games" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #ef6c00; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🧠 Spustiť hru</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🔁 Jednotkový konvertor(lepšia verzia)</h2>
-  <p>Premeň hmotnosť, dĺžku, teplotu a ďalšie jednotky:</p>
-  <a href="https://www.unitconverters.net/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #5d4037; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🔁 Otvoriť konvertor</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>⏱️ Stopky + medzičasy(lepšia verzia)</h2>
-  <p>Spusti si online stopky s viacerými medzičasmi:</p>
-  <a href="https://www.online-stopwatch.com/lap-timer/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #1565c0; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">⏱️ Spustiť stopky</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>📅 Kalendár s poznámkami(kalendár Google)</h2>
-  <p>Plánuj si úlohy a pripomienky v Google kalendári:</p>
-  <a href="https://calendar.google.com/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #00acc1; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">📅 Otvoriť kalendár</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>📸 Online kamera (zrkadlo)</h2>
-  <p>Zapni si prednú kameru ako zrkadlo v prehliadači:</p>
-  <a href="https://www.onlinemirror.net/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #c2185b; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">📸 Otvoriť zrkadlo</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🧑‍🍳 Generátor receptov(supercook)</h2>
-  <p>Objav nové jedlá podľa toho, čo máš doma:</p>
-  <a href="https://www.supercook.com/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #6d4c41; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🧑‍🍳 Zobraziť recepty</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🔐 Generátor hesiel(lastpass)</h2>
-  <p>Vytvor si bezpečné a náhodné heslo pre účet:</p>
-  <a href="https://www.lastpass.com/password-generator" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #c62828; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🔐 Generovať heslo</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>📤 Rýchly upload súborov(wetransfer)</h2>
-  <p>Odošli veľké súbory bez prihlásenia:</p>
-  <a href="https://wetransfer.com/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #ff6f00; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">📤 Nahrať súbor</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🧭 Online kompas</h2>
-  <p>Ukáže ti svetové strany v reálnom čase:</p>
-  <a href="https://compass-app.netlify.app/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #00897b; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🧭 Otvoriť kompas</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>📚 PDF čítačka / knižnica(Pdfdrive)</h2>
-  <p>Čítaj knihy, dokumenty a PDF online zdarma:</p>
-  <a href="https://pdfdrive.com/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #3949ab; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">📚 Otvoriť knižnicu</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🎨 Online kreslenie(Jspaint)</h2>
-  <p>Nakresli si čokoľvek priamo v prehliadači:</p>
-  <a href="https://jspaint.app/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #ff8f00; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🎨 Kresliť teraz</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>📓 Markdown poznámky(Stackedit)</h2>
-  <p>Píš si poznámky vo formáte Markdown online:</p>
-  <a href="https://stackedit.io/app#" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #455a64; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">📓 Otvoriť editor</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🛒 Porovnávač cien(Heureka)</h2>
-  <p>Nájdi najlacnejší produkt na trhu:</p>
-  <a href="https://www.heureka.sk/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #2e7d32; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🛒 Otvoriť Heureka</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>📻 Online rádio(radio.garden)</h2>
-  <p>Počúvaj svetové alebo slovenské stanice:</p>
-  <a href="https://radio.garden/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #1e88e5; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">📻 Spustiť rádio</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🌦️ Počasie naživo(accuweather)</h2>
-  <p>Zisti predpoveď počasia vo svojej lokalite:</p>
-  <a href="https://www.accuweather.com/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #0277bd; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🌦️ Pozrieť počasie</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>🧪 Chemická kalkulačka(webqc)</h2>
-  <p>Vypočítaj molárnu hmotnosť a vzorce:</p>
-  <a href="https://www.webqc.org/molecular-weight-calculator.php" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #512da8; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">🧪 Spustiť kalkulačku</a>
-</section>
-
-<section style="margin-top: 40px;">
-  <h2>📖 Slovník synonym a cudzích slov(synonyms)</h2>
-  <p>Nájdi iné slová alebo významy slov online:</p>
-  <a href="https://www.synonyms.com/" target="_blank" style="display: inline-block; padding: 10px 20px; background-color: #00796b; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">📖 Otvoriť slovník</a>
-</section>
-  </section>
-    <section style="margin-top: 40px;">
-  <h2>🧮 Vedecká kalkulačka(Google kalkulačka)</h2>
-  <p>Ak potrebuješ rýchlo vypočítať niečo zložitejšie, klikni sem:</p>
-  <a href="https://www.google.com/search?q=vedecká+kalkulačka" target="_blank" class="download-button">
-    🔗 Otvoriť kalkulačku
-  </a>
-  </section>
-
-  
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-  </p>
+    if (h > 0 && w > 0) {
+      const bmi = (w / (h * h)).toFixed(1);
+      let status = "";
+      if (bmi < 18.5) status = "(Podváha)";
+      else if (bmi < 25) status = "(Normálna váha)";
+      else if (bmi < 30) status = "(Nadváha)";
+      else status = "(Obezita)";
+      resBox.textContent = `BMI: ${bmi} ${status}`;
+    } else {
+      resBox.textContent = "Zadajte platné údaje!";
+    }
+  }
+</script>
 
 </body>
 </html>
