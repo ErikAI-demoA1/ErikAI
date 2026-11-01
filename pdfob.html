@@ -406,20 +406,29 @@
         const arrayBuffer = await file.arrayBuffer();
         const imgBytes = new Uint8Array(arrayBuffer);
         let img;
-        let imgDims;
 
         if (file.type === "image/jpeg" || file.type === "image/jpg") {
             img = await pdfDoc.embedJpg(imgBytes);
-            imgDims = img.scale(1);
         } else if (file.type === "image/png") {
             img = await pdfDoc.embedPng(imgBytes);
-            imgDims = img.scale(1);
         }
 
-        const page = pdfDoc.addPage([imgDims.width, imgDims.height]);
+        // Štandardná veľkosť A4 (595.28 x 841.89 bodov)
+        const pageWidth = 595.28;
+        const pageHeight = 841.89;
+        const margin = 40;
+
+        const availableWidth = pageWidth - (margin * 2);
+        const availableHeight = pageHeight - (margin * 2);
+
+        const imgDims = img.scaleToFit(availableWidth, availableHeight);
+
+        const page = pdfDoc.addPage([pageWidth, pageHeight]);
+        
+        // Vykreslenie obrázka vycentrovaného na stránku
         page.drawImage(img, {
-            x: 0,
-            y: 0,
+            x: (pageWidth - imgDims.width) / 2,
+            y: (pageHeight - imgDims.height) / 2,
             width: imgDims.width,
             height: imgDims.height,
         });
@@ -435,7 +444,11 @@
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = customName;
+      
+      // Oprava: Pridanie do DOM, kliknutie a odstránenie, aby fungovalo stiahnutie všade
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
 
       statusEl.textContent = "✅ PDF súbor bol úspešne vytvorený a stiahnutý!";
       statusEl.style.color = "var(--success)";
