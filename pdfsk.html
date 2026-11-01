@@ -1,50 +1,412 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI PDF Zlúčenie</title>
-<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-<style>
-  body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; text-align:center; }
-  h1 { color: #1a73e8; }
-  input, button { margin: 10px; padding: 10px; font-size: 16px; }
-  button { cursor:pointer; border:none; border-radius:5px; background:#1a73e8; color:white; }
-  button:hover { background:#1558a5; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ErikAI • PDF Studio Pro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+      --border: rgba(0, 0, 0, 0.08);
+      --shadow: 0 10px 30px rgba(0,0,0,0.04);
+      --blue: #0284c7;
+      --success: #10b981;
+    }
+
+    body.dark-mode {
+      --bg: #07090e;
+      --card-bg: rgba(16, 22, 36, 0.85);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+      --border: rgba(255, 255, 255, 0.08);
+      --shadow: 0 15px 35px rgba(0,0,0,0.4);
+      --blue: #38bdf8;
+      --success: #34d399;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 30px 15px;
+      min-height: 100vh;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    .container {
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      background: var(--card-bg);
+      padding: 15px 20px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .clock-box {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .theme-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+      transition: transform 0.2s;
+    }
+    .theme-btn:hover { transform: scale(1.1); }
+
+    h1 {
+      color: var(--text);
+      text-align: center;
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    h1 span { color: var(--accent); }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 25px;
+    }
+
+    /* CARD */
+    .card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 30px;
+      margin-bottom: 25px;
+      backdrop-filter: blur(10px);
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: all 0.2s;
+    }
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
+    }
+
+    /* DROPZONE */
+    .dropzone {
+      background: var(--bg);
+      border: 2px dashed var(--accent);
+      border-radius: 16px;
+      padding: 25px;
+      text-align: center;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.2s;
+    }
+    .dropzone:hover { background: rgba(239, 68, 68, 0.05); }
+    .dropzone p { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .dropzone span { font-size: 0.8rem; color: var(--muted); }
+    #pdfFiles { display: none; }
+
+    /* ZOZNAM SÚBOROV */
+    .file-list {
+      margin-top: 15px;
+      max-height: 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+    }
+
+    .file-name {
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 250px;
+      text-align: left;
+    }
+
+    .file-controls {
+      display: flex;
+      gap: 5px;
+    }
+
+    button.sm-btn {
+      padding: 5px 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: var(--muted);
+      color: white;
+      transition: filter 0.2s;
+    }
+    button.sm-btn:hover { filter: brightness(1.2); }
+    button.sm-btn.del { background: var(--accent); }
+
+    /* HLAVNÉ TLAČIDLO */
+    .primary-btn {
+      width: 100%;
+      margin-top: 25px;
+      padding: 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(239,68,68,0.25);
+      transition: all 0.2s;
+    }
+    .primary-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    #status {
+      margin-top: 15px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--success);
+      text-align: center;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+    }
+  </style>
 </head>
-<body>
+<body class="dark-mode">
 
-<h1>📘 ErikAI PDF Zlúčenie</h1>
+<div class="container">
 
-<p>Vyber 2 alebo viac PDF súborov na zlúčenie:</p>
-<input type="file" id="pdfFiles" accept="application/pdf" multiple>
-<br>
-<button onclick="mergePDFs()">💾 Zlúčiť PDF</button>
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="clock-box" id="cas">Načítavam čas...</div>
+    <button class="theme-btn" onclick="toggleTheme()" title="Zmeniť režim">🌓</button>
+  </div>
+
+  <h1>📘 ErikAI <span>PDF Studio</span></h1>
+  <p class="subtitle">Zlučovanie viacerých PDF dokumentov s úpravou poradia a vlastným názvom</p>
+
+  <div id="google_translate_element" style="text-align:center; margin-bottom: 20px;"></div>
+
+  <div class="card">
+    
+    <!-- NÁZOV SÚBORU -->
+    <label for="outputName">🏷️ Názov výsledného súboru:</label>
+    <input type="text" id="outputName" value="ErikAI_merged" placeholder="Napr. mojasestava">
+
+    <!-- VYBRAŤ SÚBORY -->
+    <label>📂 Vyber alebo presuň PDF súbory:</label>
+    <div class="dropzone" onclick="document.getElementById('pdfFiles').click()">
+      <p>📁 Klikni sem pre výber PDF súborov</p>
+      <span>Môžeš vybrať neobmedzené množstvo súborov naraz</span>
+      <input type="file" id="pdfFiles" accept="application/pdf" multiple onchange="handleFileSelect(event)">
+    </div>
+
+    <!-- ZOZNAM VYBRATÝCH SÚBOROV S PORADÍM -->
+    <div class="file-list" id="fileList">
+      <p style="color:var(--muted); text-align:center; font-size:0.85rem; padding: 15px;" id="emptyMsg">Zatiaľ nie sú vybrané žiadne PDF súbory.</p>
+    </div>
+
+    <!-- TLAČIDLO NA ZLÚČENIE -->
+    <button class="primary-btn" onclick="mergePDFs()">💾 Zlúčiť a stiahnuť PDF</button>
+
+    <div id="status"></div>
+
+  </div>
+
+  <footer>
+    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+    © 2026 Erik Mohylák – All rights reserved.
+  </footer>
+
+</div>
 
 <script>
-async function mergePDFs() {
-    const files = document.getElementById("pdfFiles").files;
-    if (files.length < 2) return alert("Vyber aspoň 2 PDF súbory!");
+  // === TÉMA ===
+  function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+  }
+  if (localStorage.getItem('darkMode') === 'false') {
+    document.body.classList.remove('dark-mode');
+  }
 
-    const mergedPdf = await PDFLib.PDFDocument.create();
+  // === ČAS ===
+  function aktualizujCas() {
+    const teraz = new Date();
+    const moznosti = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+    document.getElementById('cas').innerText = "🕓 " + teraz.toLocaleDateString('sk-SK', moznosti);
+  }
+  setInterval(aktualizujCas, 1000);
+  aktualizujCas();
 
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+  // === GOOGLE TRANSLATE ===
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+      pageLanguage: 'sk',
+      includedLanguages: 'en,cs,de,fr,hu,pl,ro,ru,es,it,uk',
+      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+    }, 'google_translate_element');
+  }
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+<script>
+  let selectedFiles = [];
+
+  function handleFileSelect(event) {
+    const files = Array.from(event.target.files);
+    files.forEach(file => {
+      selectedFiles.push(file);
+    });
+    renderFileList();
+    // Vyčistiť input, aby sa dali pridať znova tie isté súbory ak treba
+    event.target.value = '';
+  }
+
+  function renderFileList() {
+    const listContainer = document.getElementById('fileList');
+    listContainer.innerHTML = '';
+
+    if (selectedFiles.length === 0) {
+      listContainer.innerHTML = `<p style="color:var(--muted); text-align:center; font-size:0.85rem; padding: 15px;" id="emptyMsg">Zatiaľ nie sú vybrané žiadne PDF súbory.</p>`;
+      return;
+    }
+
+    selectedFiles.forEach((file, index) => {
+      const item = document.createElement('div');
+      item.className = 'file-item';
+      item.innerHTML = `
+        <span class="file-name">${index + 1}. ${file.name}</span>
+        <div class="file-controls">
+          ${index > 0 ? `<button class="sm-btn" onclick="moveFile(${index}, -1)">⬆️</button>` : ''}
+          ${index < selectedFiles.length - 1 ? `<button class="sm-btn" onclick="moveFile(${index}, 1)">⬇️</button>` : ''}
+          <button class="sm-btn del" onclick="removeFile(${index})">🗑️</button>
+        </div>
+      `;
+      listContainer.appendChild(item);
+    });
+  }
+
+  function moveFile(index, direction) {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= selectedFiles.length) return;
+    const temp = selectedFiles[index];
+    selectedFiles[index] = selectedFiles[newIndex];
+    selectedFiles[newIndex] = temp;
+    renderFileList();
+  }
+
+  function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    renderFileList();
+  }
+
+  async function mergePDFs() {
+    if (selectedFiles.length < 2) {
+      alert("Vyber aspoň 2 PDF súbory na zlúčenie!");
+      return;
+    }
+
+    const statusEl = document.getElementById('status');
+    statusEl.textContent = "⏳ Zlučujem PDF súbory, prosím čakajte...";
+
+    try {
+      const mergedPdf = await PDFLib.PDFDocument.create();
+
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
         const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
         copiedPages.forEach(page => mergedPdf.addPage(page));
-    }
+      }
 
-    const mergedPdfBytes = await mergedPdf.save();
-    const blob = new Blob([mergedPdfBytes], { type: "application/pdf" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "ErikAI_merged.pdf";
-    link.click();
-    alert("✅ PDF úspešne zlúčené!");
-}
+      const mergedPdfBytes = await mergedPdf.save();
+      const blob = new Blob([mergedPdfBytes], { type: "application/pdf" });
+      
+      let customName = document.getElementById('outputName').value.trim();
+      if (!customName) customName = "ErikAI_merged";
+      if (!customName.toLowerCase().endsWith('.pdf')) customName += ".pdf";
+
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = customName;
+      link.click();
+
+      statusEl.textContent = "✅ PDF súbory boli úspešne zlúčené a stiahnuté!";
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "❌ Chyba pri zlučovaní PDF súborov.";
+      statusEl.style.color = "var(--accent)";
+    }
+  }
 </script>
 
 </body>
