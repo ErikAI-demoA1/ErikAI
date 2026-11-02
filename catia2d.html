@@ -67,6 +67,7 @@ button, label.file-btn, select.format-select{
 button:hover, label.file-btn:hover, select.format-select:hover{filter: brightness(1.1); transform: translateY(-1px);}
 button.ghost{background: var(--panel-bg);border:1px solid var(--border-color);color:var(--text-main);}
 button.active{background: var(--accent-blue); color:white;}
+button.danger{background: #dc2626; color:white;}
 
 select.format-select {
   background: var(--panel-bg);
@@ -129,7 +130,7 @@ input[type="file"] {
   overflow:auto;
   display:none;
   box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-  width: 370px;
+  width: 390px;
   z-index: 1000;
 }
 .panel-header{
@@ -233,7 +234,7 @@ input[type="file"] {
     <label for="fileInput" class="file-btn">📂 Otvoriť</label>
     <input type="file" id="fileInput" accept=".json" onchange="importJSON(event)">
     <button class="ghost" onclick="importFromText()" style="background:#3b82f6; color:white;" title="Vložiť projekt cez text">📋 Vložiť text</button>
-    <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Zmazať</button>
+    <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Zmazať všetko</button>
   </div>
 </header>
 
@@ -253,7 +254,7 @@ input[type="file"] {
 
 <div id="dimensionsPanel">
   <div class="panel-header">
-    <h3>Zoznam prvkov, Koty a Štýly</h3>
+    <h3>Zoznam prvkov, Koty & Štýly</h3>
     <button class="close-btn" onclick="closeDimensionsPanel()">✕</button>
   </div>
   <div id="dimsContent">Žiadne tvary</div>
@@ -632,12 +633,15 @@ function importFromText(){
 editDimsBtn.onclick=()=>{
   editMode=!editMode;
   dimsPanel.style.display=editMode?'block':'none';
+  if(editMode) editDimsBtn.classList.replace('ghost', 'active');
+  else editDimsBtn.classList.replace('active', 'ghost');
   drawAll();
 };
 
 function closeDimensionsPanel(){
   editMode = false;
   dimsPanel.style.display = 'none';
+  editDimsBtn.classList.replace('active', 'ghost');
   drawAll();
 }
 
@@ -939,6 +943,16 @@ function getShapePos(s){
   if(s.type==='text') return {x: s.x, y: s.y};
 }
 
+function deleteShape(index){
+  pushState();
+  shapes.splice(index, 1);
+  if(selectedShapeIndex === index) selectedShapeIndex = null;
+  else if(selectedShapeIndex > index) selectedShapeIndex--;
+  saveToLocalStorage();
+  drawAll();
+  logCommand(`Prvok #${index + 1} bol vymazaný.`);
+}
+
 function updateDimensionsPanel(){
   if(document.activeElement && document.activeElement.tagName === 'INPUT' && dimsPanel.contains(document.activeElement)){
     return;
@@ -955,7 +969,7 @@ function updateDimensionsPanel(){
     card.className = `shape-card ${i===selectedShapeIndex ? 'active' : ''}`;
     
     card.onclick=(e)=>{
-      if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.className !== 'close-btn'){
+      if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.className !== 'close-btn' && e.target.tagName !== 'BUTTON'){
         selectedShapeIndex=i;
         drawAll();
         logCommand(`Označený prvok #${i+1} (${s.type})`);
@@ -968,6 +982,11 @@ function updateDimensionsPanel(){
     title.style.alignItems = 'center';
     title.innerHTML=`<strong>#${i+1} (${s.type})</strong>`;
     
+    const actionsRow = document.createElement('div');
+    actionsRow.style.display = 'flex';
+    actionsRow.style.gap = '6px';
+    actionsRow.style.alignItems = 'center';
+
     const colorInp = document.createElement('input');
     colorInp.type = 'color';
     colorInp.value = s.color || (s.type==='text'?'#000000':'#10b981');
@@ -977,7 +996,17 @@ function updateDimensionsPanel(){
       saveToLocalStorage();
       drawAll();
     };
-    title.appendChild(colorInp);
+    actionsRow.appendChild(colorInp);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'danger';
+    delBtn.textContent = '🗑️ Zmazať';
+    delBtn.style.padding = '4px 8px';
+    delBtn.style.fontSize = '0.75rem';
+    delBtn.onclick = () => deleteShape(i);
+    actionsRow.appendChild(delBtn);
+
+    title.appendChild(actionsRow);
     card.appendChild(title);
 
     const pos = getShapePos(s);
