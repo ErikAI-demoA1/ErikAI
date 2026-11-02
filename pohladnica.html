@@ -73,14 +73,17 @@ button.secondary:hover {background: #219653; color:#fff;}
 .muted{color:var(--text-muted);font-size:0.8rem; margin-top: 10px; display: block; text-align: center;}
 footer{width:100%;text-align:center;color:var(--text-muted);font-size:13px;margin-top:15px}
 
-.snow, .lights, .fireworkCanvas, .hearts, .pumpkins {position:absolute;inset:0;pointer-events:none; z-index:1;}
+.snow, .lights, .fireworkCanvas {position:absolute;inset:0;pointer-events:none; z-index:1;}
 .lights .bulb{position:absolute;border-radius:50%;box-shadow:0 0 18px rgba(255,255,255,0.06);}
 
+/* Opravená tlačová štýl šablóna */
 @media print{
-  body{background:white;padding:0; color:black;}
-  .panel,.previewWrap{display:none}
-  .card{box-shadow:none;border-radius:0; border:none;}
+  body{background:white !important;padding:0 !important;color:black !important;}
+  .panel,.previewWrap > div:not(#card), button{display:none !important;}
+  .previewWrap {display: block !important; padding:0 !important; width: 100% !important;}
+  .card{box-shadow:none !important; border-radius:0 !important; border:none !important; position:relative !important; margin:0 auto !important;}
 }
+
 @media (max-width:980px){
   body{flex-direction:column;align-items:stretch}
   .panel{width:100%}
@@ -127,7 +130,7 @@ footer{width:100%;text-align:center;color:var(--text-muted);font-size:13px;margi
 <input id="headline" value="Veselé sviatky a šťastný nový rok!"/>
 
 <label>Podnadpis / Správička</label>
-<textarea id="subtitle">Nech je tvoj rok naplnený radosťou, úsmevom a splnenými snnmi.</textarea>
+<textarea id="subtitle">Nech je tvoj rok naplnený radosťou, úsmevom a splnenými snami.</textarea>
 
 <label>Text na zadnú stranu (pre tlač)</label>
 <textarea id="backText">Milá rodina a priatelia,\n\nprajem vám krásne prežitie sviatkov a veľa zdravia a úspechov v novom roku!\n\nS láskou,</textarea>
@@ -153,7 +156,7 @@ footer{width:100%;text-align:center;color:var(--text-muted);font-size:13px;margi
 </div>
 
 <div class="controlsRow">
-<button id="downloadPng" class="secondary">⬇️ Stiahnuť PNG</button>
+<button id="downloadPng" class="secondary">⬇️ Stiahnuť zobrazenú stranu (PNG)</button>
 <button id="printBtn" class="secondary">🖨️ Tlačiť / PDF</button>
 </div>
 
@@ -181,7 +184,7 @@ footer{width:100%;text-align:center;color:var(--text-muted);font-size:13px;margi
 </div>
 <div style="width:36%;text-align:right;color:#021;font-size:0.95rem; border-left: 2px dashed #ccc; padding-left: 15px;">
 <div style="font-weight:bold; margin-bottom:15px;">Známka</div>
-<div style="border:1px dashed #999; width:60px; height:70px; margin-left:auto; margin-bottom:20px; display:flex; align-items:center; justifyContent:center; color:#777; font-size:11px;">Miesto na známku</div>
+<div style="border:1px dashed #999; width:60px; height:70px; margin-left:auto; margin-bottom:20px; display:flex; align-items:center; justify-content:center; color:#777; font-size:11px;">Miesto na známku</div>
 <div><b>Adresa príjemcu:</b></div>
 <div style="margin-top:15px; color:#555; line-height: 1.6;">
 Meno Priezvisko<br>
@@ -193,8 +196,8 @@ Ulica 123/4<br>
 </div>
 
 </div>
-<div style="margin-top: 15px; display:flex; gap:10px;">
-  <button onclick="toggleCardFace()" class="secondary" style="margin-top:0; padding:8px 16px;">🔄 Otočiť pohľadnicu (Predná / Zadná strana)</button>
+<div style="margin-top: 15px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+  <button onclick="toggleCardFace()" class="secondary" style="margin-top:0; padding:10px 20px; width:auto;">🔄 Otočiť pohľadnicu (Predná / Zadná strana)</button>
 </div>
 </div>
 
@@ -205,8 +208,12 @@ let isBackVisible = false;
 
 function toggleCardFace(){
   isBackVisible = !isBackVisible;
-  document.getElementById('frontFace').style.display = isBackVisible ? 'none' : 'flex';
-  document.getElementById('backFace').style.display = isBackVisible ? 'block' : 'none';
+  const front = document.getElementById('frontFace');
+  const back = document.getElementById('backFace');
+  
+  front.style.display = isBackVisible ? 'none' : 'flex';
+  back.style.display = isBackVisible ? 'block' : 'none';
+  
   if(isBackVisible){
     snowLayer.style.display='none';
     lightsLayer.style.display='none';
@@ -221,9 +228,6 @@ function applySizeToCardForPrint(){
   const mm=map[sizeSel.value]||map['A6'];
   card.setAttribute('data-print-w-mm',mm.w);
   card.setAttribute('data-print-h-mm',mm.h);
-  const baseW=127;
-  const scale=mm.w/baseW;
-  card.style.transform=`scale(${Math.min(1.0,0.95*scale)})`;
 }
 applySizeToCardForPrint();
 
@@ -291,7 +295,7 @@ function makeLights(){
   }
 }
 
-// --- fireworks / confetti / particles ---
+// --- fireworks ---
 function makeFireworks(mode='fireworks'){
   const c=fwCanvas;
   const ctx=c.getContext('2d');
@@ -305,9 +309,9 @@ function makeFireworks(mode='fireworks'){
     const cy=Math.random()*c.height*0.5+c.height*0.15;
     const count=20+Math.floor(Math.random()*30);
     let baseHue=Math.random()*360;
-    if(mode==='valentines') baseHue=340; // ružová/červená
-    if(mode==='halloween') baseHue=30;  // oranžová/fialová
-    if(mode==='success') baseHue=50;    // zlatá
+    if(mode==='valentines') baseHue=340;
+    if(mode==='halloween') baseHue=30;
+    if(mode==='success') baseHue=50;
 
     for(let i=0;i<count;i++){
       const angle=Math.random()*Math.PI*2;
@@ -372,23 +376,14 @@ function applySettings(){
   cancelAnimationFrame(fwCanvas._r||0);
 
   const theme=holiday.value;
-  if(theme==='christmas'){
+  if(theme==='christmas' && !isBackVisible){
     snowLayer.style.display='block';
     lightsLayer.style.display='block';
     makeSnow();
     makeLights();
-  } else if(theme==='newyear' || theme==='birthday'){
+  } else if((theme==='newyear' || theme==='birthday' || theme==='valentines' || theme==='halloween' || theme==='success') && !isBackVisible){
     fwCanvas.style.display='block';
-    makeFireworks('fireworks');
-  } else if(theme==='valentines'){
-    fwCanvas.style.display='block';
-    makeFireworks('valentines');
-  } else if(theme==='halloween'){
-    fwCanvas.style.display='block';
-    makeFireworks('halloween');
-  } else if(theme==='success'){
-    fwCanvas.style.display='block';
-    makeFireworks('success');
+    makeFireworks(theme==='newyear'||theme==='birthday'?'fireworks':theme);
   }
 
   applySizeToCardForPrint();
@@ -400,48 +395,29 @@ sizeSel.addEventListener('change',applySizeToCardForPrint);
 
 // --- download PNG ---
 downloadPng.addEventListener('click',function(){
-  const originalFace = isBackVisible;
-  if(isBackVisible) toggleCardFace(); // Uistime sa, že exportujeme prednú stranu, alebo obe podľa potreby. Exportujeme aktuálne zobrazenú stranu.
-
-  setTimeout(() => {
-    const w=card.clientWidth,h=card.clientHeight;
-    const canvas=document.createElement('canvas');
-    canvas.width=w*2;canvas.height=h*2;
-    
-    html2canvas(card,{canvas:canvas,scale:2,backgroundColor:null}).then(function(canvasResult){
-      canvasResult.toBlob(function(blob){
-        const a=document.createElement('a');
-        a.href=URL.createObjectURL(blob);
-        a.download='erikai_pohladnica.png';
-        a.click();
-        setTimeout(()=>URL.revokeObjectURL(a.href),1500);
-      });
+  const sideName = isBackVisible ? 'zadna_strana' : 'predna_strana';
+  const w=card.clientWidth,h=card.clientHeight;
+  const canvas=document.createElement('canvas');
+  canvas.width=w*2;canvas.height=h*2;
+  
+  html2canvas(card,{canvas:canvas,scale:2,backgroundColor:null}).then(function(canvasResult){
+    canvasResult.toBlob(function(blob){
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=`erikai_pohladnica_${sideName}.png`;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1500);
     });
-  }, 100);
+  });
 });
 
 // --- print ---
 printBtn.addEventListener('click',function(){
-  const mmW=card.getAttribute('data-print-w-mm')||105,mmH=card.getAttribute('data-print-h-mm')||148;
-  const style=document.createElement('style');
-  style.id='print-size-style';
-  style.textContent=`
-    @page{size: ${mmW}mm ${mmH}mm; margin:0mm;}
-    @media print{
-      body *{visibility:hidden !important}
-      #card{visibility:visible !important;position:absolute !important;left:0;top:0;width:${mmW}mm !important;height:${mmH}mm !important;transform:none !important; box-shadow:none !important;}
-    }
-  `;
-  document.head.appendChild(style);
-  setTimeout(()=>{
-    window.print();
-    setTimeout(()=>{style.remove()},500);
-  },250);
+  window.print();
 });
 
 applySettings();
 </script>
-<!-- html2canvas pre export do PNG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </body>
 </html>
