@@ -46,7 +46,7 @@
         align-items: flex-start;
       }
       .sidebar { 
-        width: 300px; 
+        width: 310px; 
         flex-shrink: 0; 
       }
       .main-area {
@@ -123,8 +123,9 @@
     
     input[type="color"] { width: 44px; height: 32px; border: none; border-radius: 6px; cursor: pointer; background: transparent; }
     input[type="range"] { width: 100%; accent-color: var(--accent); }
-    input[type="number"] { background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); color: inherit; padding: 6px; border-radius: 6px; text-align: center; font-size: 13px; }
-    .light-mode input[type="number"] { background: rgba(0,0,0,0.05); }
+    input[type="number"], select { background: rgba(0,0,0,0.2); border: 1px solid var(--panel-border); color: inherit; padding: 6px; border-radius: 6px; text-align: center; font-size: 13px; width: 100%; }
+    .light-mode input[type="number"], .light-mode select { background: rgba(0,0,0,0.05); color: #000; }
+    option { background: #111827; color: white; }
 
     .small { font-size: 12px; opacity: 0.8; }
     pre { background: rgba(0,0,0,0.25); padding: 8px; border-radius: 6px; overflow: auto; max-height: 120px; font-size: 11px; font-family: monospace; }
@@ -206,7 +207,7 @@
       </div>
       
       <div class="panel">
-        <h3>Výber</h3>
+        <h3>Výber & Transformácia</h3>
         <div id="selInfo" style="margin-bottom: 8px;"><div class="small">Žiadny výber</div></div>
         <div style="display:flex; gap:4px; flex-wrap:wrap;">
           <button class="toolbtn" id="deleteBtn">Zmazať</button>
@@ -218,10 +219,23 @@
       </div>
       
       <div class="panel">
-        <h3>Plátno</h3>
+        <h3>Plátno & Formát</h3>
+        <div style="margin-bottom: 8px;">
+          <label class="small">ISO Formát papiera:</label>
+          <select id="paperPreset" style="margin-top: 4px;">
+            <option value="">Vlastný rozmer...</option>
+            <option value="A6">A6 (1240 × 1748 px)</option>
+            <option value="A5">A5 (1748 × 2480 px)</option>
+            <option value="A4" selected>A4 (2480 × 3508 px - zmenšené)</option>
+            <option value="A3">A3 (3508 × 4960 px)</option>
+            <option value="A2">A2 (4960 × 7016 px)</option>
+            <option value="A1">A1 (7016 × 9933 px)</option>
+            <option value="A0">A0 (9933 × 14043 px)</option>
+          </select>
+        </div>
         <div style="display:flex; gap:6px; margin-bottom:8px;">
-          <input type="number" id="canvasW" placeholder="Šírka" value="800" style="flex:1;">
-          <input type="number" id="canvasH" placeholder="Výška" value="500" style="flex:1;">
+          <input type="number" id="canvasW" placeholder="Šírka" value="800">
+          <input type="number" id="canvasH" placeholder="Výška" value="500">
           <button class="toolbtn" id="setCanvasBtn" style="flex:unset; padding:6px 12px;">OK</button>
         </div>
         <button class="toolbtn" id="clearBtn" style="width:100%; margin-bottom:6px; display:block;">Vymazať plátno</button>
@@ -277,6 +291,8 @@ const ctx = main.getContext('2d');
 let tool = 'select';
 let drawing = false;
 let dragging = false;
+let resizing = false;
+let resizeHandle = null;
 let selectedId = null;
 let dragOffset = {x:0, y:0};
 let color = '#000000';
@@ -285,15 +301,33 @@ let objects = [];
 let strokes = [];
 let pendingShape = null;
 
+// Paper Presets (skalované pre pohodlnú prácu v prehliadači)
+const paperSizes = {
+  A6: {w: 420, h: 595},
+  A5: {w: 595, h: 842},
+  A4: {w: 800, h: 1131},
+  A3: {w: 900, h: 1273},
+  A2: {w: 1000, h: 1414},
+  A1: {w: 1000, h: 1414},
+  A0: {w: 1000, h: 1414}
+};
+
+$('paperPreset').addEventListener('change', (e) => {
+  const val = e.target.value;
+  if(paperSizes[val]) {
+    $('canvasW').value = paperSizes[val].w;
+    $('canvasH').value = paperSizes[val].h;
+    resizeCanvas(paperSizes[val].w, paperSizes[val].h);
+  }
+});
+
 function initCanvas() {
-  const width = 800;
-  const height = 500;
-  
+  resizeCanvas(800, 500);
+}
+
+function resizeCanvas(width, height) {
   raster.width = main.width = width;
   raster.height = main.height = height;
-  
-  rCtx.clearRect(0, 0, width, height);
-  ctx.clearRect(0, 0, width, height);
   
   rCtx.fillStyle = '#ffffff';
   rCtx.fillRect(0, 0, width, height);
@@ -397,6 +431,40 @@ function createShape(type, pos){
 
 function genId(){ return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
 
+// Získanie rohových úchytov (handles) pre transformáciu
+function getHandles(o) {
+  let bx = o.x, by = o.y, bw = 0, bh = 0;
+  if(o.type==='rect') { bw = o.w; bh = o.h; }
+  else if(o.type==='circle') { bx = o.x; by = o.y; bw = o.r*2; bh = o.r*2; }
+  else if(o.type==='line') { 
+    bx = Math.min(o.x, o.x2); by = Math.min(o.y, o.y2); 
+    bw = Math.abs(o.x2 - o.x); bh = Math.abs(o.y2 - o.y); 
+  }
+  else if(o.type==='text') {
+    ctx.font = `${o.fontSize||22}px Inter, Arial`;
+    bw = ctx.measureText(o.text).width;
+    bh = o.fontSize || 22;
+    by = o.y - bh;
+  }
+  return {
+    nw: {x: bx, y: by},
+    ne: {x: bx + bw, y: by},
+    se: {x: bx + bw, y: by + bh},
+    sw: {x: bx, y: by + bh}
+  };
+}
+
+function hitTestHandle(x, y, o) {
+  const h = getHandles(o);
+  const radius = 8;
+  for(let key in h) {
+    let dx = x - h[key].x;
+    let dy = y - h[key].y;
+    if(dx*dx + dy*dy <= radius*radius) return key;
+  }
+  return null;
+}
+
 function hitTest(x,y){
   for(let i=objects.length-1; i>=0; i--){
     const o = objects[i];
@@ -443,10 +511,6 @@ function renderAll(){
       ctx.strokeStyle = o.color || '#000';
       if(o.fill){ ctx.fillStyle=o.fill; ctx.fillRect(o.x,o.y,o.w,o.h); }
       ctx.strokeRect(o.x,o.y,o.w,o.h);
-      if(o.id===selectedId){ 
-        ctx.setLineDash([5,5]); ctx.strokeStyle = '#3b82f6';
-        ctx.strokeRect(o.x-4,o.y-4,o.w+8,o.h+8); 
-      }
     } else if(o.type==='circle'){
       ctx.lineWidth = o.stroke || Math.max(2, sizeVal/1.2);
       ctx.strokeStyle = o.color || '#000';
@@ -454,27 +518,44 @@ function renderAll(){
       ctx.arc(o.x+o.r,o.y+o.r,o.r,0,Math.PI*2);
       if(o.fill){ ctx.fillStyle=o.fill; ctx.fill(); }
       ctx.stroke();
-      if(o.id===selectedId){ 
-        ctx.setLineDash([5,5]); ctx.strokeStyle = '#3b82f6';
-        ctx.strokeRect(o.x-4,o.y-4,o.r*2+8,o.r*2+8); 
-      }
     } else if(o.type==='line'){
       ctx.lineWidth = o.stroke || Math.max(2, sizeVal/1.2);
       ctx.strokeStyle = o.color || '#000';
       ctx.beginPath(); ctx.moveTo(o.x,o.y); ctx.lineTo(o.x2,o.y2); ctx.stroke();
-      if(o.id===selectedId){ 
-        ctx.setLineDash([5,5]); ctx.strokeStyle = '#3b82f6';
-        ctx.strokeRect(Math.min(o.x,o.x2)-4,Math.min(o.y,o.y2)-4,Math.abs(o.x2-o.x)+8,Math.abs(o.y2-o.y)+8); 
-      }
     } else if(o.type==='text'){
       ctx.fillStyle = o.color || '#000'; 
       ctx.font = `${o.fontSize||22}px Inter, Arial`; 
       ctx.fillText(o.text,o.x,o.y);
-      if(o.id===selectedId){ 
-        const w = ctx.measureText(o.text).width;
-        ctx.setLineDash([5,5]); ctx.strokeStyle = '#3b82f6';
-        ctx.strokeRect(o.x-4,o.y-o.fontSize-4,w+8,o.fontSize+8); 
+    }
+
+    if(o.id===selectedId){ 
+      const h = getHandles(o);
+      ctx.setLineDash([5,5]); ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1.5;
+      
+      let bx = o.x, by = o.y, bw = 0, bh = 0;
+      if(o.type==='rect') { bw = o.w; bh = o.h; }
+      else if(o.type==='circle') { bx = o.x; by = o.y; bw = o.r*2; bh = o.r*2; }
+      else if(o.type==='line') { 
+        bx = Math.min(o.x, o.x2); by = Math.min(o.y, o.y2); 
+        bw = Math.abs(o.x2 - o.x); bh = Math.abs(o.y2 - o.y); 
       }
+      else if(o.type==='text') {
+        const w = ctx.measureText(o.text).width;
+        bw = w; bh = o.fontSize || 22; by = o.y - bh;
+      }
+      ctx.strokeRect(bx-3, by-3, bw+6, bh+6);
+      
+      // Kreslenie rohových úchytov pre zmenu veľkosti
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#3b82f6';
+      Object.values(h).forEach(pt => {
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 5, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
     }
     ctx.restore();
   }
@@ -498,6 +579,18 @@ function onDown(e){
   }
   
   if(tool==='select'){
+    if(selectedId) {
+      const o = objects.find(x => x.id === selectedId);
+      if(o && !o.locked) {
+        const handle = hitTestHandle(pos.x, pos.y, o);
+        if(handle) {
+          resizing = true;
+          resizeHandle = handle;
+          return;
+        }
+      }
+    }
+    
     selectedId = hitTest(pos.x,pos.y);
     if(selectedId){
       const o = objects.find(x=>x.id===selectedId);
@@ -532,6 +625,27 @@ function onMove(e){
     return;
   }
   
+  if(resizing && selectedId) {
+    const o = objects.find(x => x.id === selectedId);
+    if(o) {
+      if(o.type === 'rect') {
+        if(resizeHandle === 'se') { o.w = Math.max(10, pos.x - o.x); o.h = Math.max(10, pos.y - o.y); }
+        if(resizeHandle === 'nw') { 
+          let right = o.x + o.w, bottom = o.y + o.h;
+          o.x = Math.min(pos.x, right - 10); o.y = Math.min(pos.y, bottom - 10);
+          o.w = right - o.x; o.h = bottom - o.y;
+        }
+      } else if(o.type === 'circle') {
+        if(resizeHandle === 'se') { o.r = Math.max(5, (pos.x - o.x)/2); }
+      } else if(o.type === 'line') {
+        if(resizeHandle === 'se') { o.x2 = pos.x; o.y2 = pos.y; }
+        if(resizeHandle === 'nw') { o.x = pos.x; o.y = pos.y; }
+      }
+      renderAll();
+    }
+    return;
+  }
+  
   if(dragging && selectedId){
     const o = objects.find(x=>x.id===selectedId);
     if(o && !o.locked){
@@ -551,6 +665,7 @@ function onUp(e){
     rCtx.strokeStyle = color;
   }
   if(dragging) dragging=false;
+  if(resizing) resizing=false;
 }
 
 raster.addEventListener('mousedown', onDown);
@@ -637,12 +752,10 @@ $('setCanvasBtn').addEventListener('click', ()=>{
   const h = Math.max(50, parseInt($('canvasH').value)||500);
   
   const data = raster.toDataURL();
-  raster.width = w; raster.height = h;
-  main.width = w; main.height = h;
+  resizeCanvas(w, h);
   
   const img = new Image();
   img.onload = ()=>{ 
-    rCtx.clearRect(0,0,raster.width,raster.height); 
     rCtx.drawImage(img,0,0); 
     renderAll(); 
   }
@@ -684,7 +797,7 @@ function loadProject(){
     objects = payload.objects || [];
     const img = new Image();
     img.onload = ()=>{ 
-      rCtx.clearRect(0,0,raster.width,raster.height); 
+      resizeCanvas(payload.meta ? payload.meta.w : img.width, payload.meta ? payload.meta.h : img.height);
       rCtx.drawImage(img,0,0); 
       renderAll(); 
       updateSelInfo(); 
@@ -718,7 +831,7 @@ function updateProjectsList(){
       objects = p.objects||[]; 
       const img = new Image(); 
       img.onload=()=>{ 
-        rCtx.clearRect(0,0,raster.width,raster.height); 
+        resizeCanvas(p.meta ? p.meta.w : img.width, p.meta ? p.meta.h : img.height);
         rCtx.drawImage(img,0,0); 
         renderAll(); 
       }; 
@@ -785,7 +898,15 @@ $('uploadProject').addEventListener('change', function(){
     try{
       const payload = JSON.parse(e.target.result);
       objects = payload.objects||[];
-      const img = new Image(); img.onload=()=>{ rCtx.clearRect(0,0,raster.width,raster.height); rCtx.drawImage(img,0,0); renderAll(); updateProjectsList(); alert('Projekt načítaný'); }; img.src = payload.rasterData||'';
+      const img = new Image(); 
+      img.onload=()=>{ 
+        resizeCanvas(payload.meta ? payload.meta.w : img.width, payload.meta ? payload.meta.h : img.height);
+        rCtx.drawImage(img,0,0); 
+        renderAll(); 
+        updateProjectsList(); 
+        alert('Projekt načítaný'); 
+      }; 
+      img.src = payload.rasterData||'';
     }catch(err){ alert('Neplatný JSON'); }
   };
   reader.readAsText(file);
