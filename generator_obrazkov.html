@@ -113,6 +113,20 @@
     transform: translateY(-2px);
   }
 
+  button.secondary-btn {
+    background: #444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  button.secondary-btn:hover {
+    background: #555;
+  }
+
   #vysledok {
     margin-top: 20px;
   }
@@ -153,12 +167,14 @@
 
 <div class="container">
   <h1>🧠 ErikAI Generátor Obrazomix – Blesková verzia</h1>
-  <div class="subtitle">Rýchle miešanie a aplikovanie cyberpunkových efektov bez čakania</div>
+  <div class="subtitle">Rýchle miešanie obrázkov a aplikovanie cyberpunkových efektov bez čakania</div>
 
   <div class="control-group">
-    <label>📁 Vyber obrázky (aspoň 2):</label>
-    <input type="file" id="obrazok1" accept="image/*" multiple onchange="showThumbnails(event)">
+    <label>📁 Vyber obrázky (môžeš pridávať aj postupne):</label>
+    <input type="file" id="obrazokInput" accept="image/*" multiple onchange="handleFiles(event)">
+    <button class="secondary-btn" onclick="clearImages()">🗑️ Vymazať nahrané obrázky</button>
     <div class="thumbnails" id="thumbContainer"></div>
+    <div id="imageCountInfo" style="font-size:0.85rem; color:var(--text-muted); margin-top:8px;">Nahraté obrázky: 0</div>
   </div>
 
   <div class="control-group">
@@ -188,40 +204,56 @@
 </div>
 
 <script>
+let allImagesArray = [];
 let objectUrls = [];
 
-function showThumbnails(e) {
+function handleFiles(e) {
+  const newFiles = Array.from(e.target.files);
+  allImagesArray = allImagesArray.concat(newFiles);
+  updateThumbnails();
+}
+
+function updateThumbnails() {
   const container = document.getElementById("thumbContainer");
   container.innerHTML = "";
-  objectUrls.forEach(url => URL.revokeObjectURL(url)); // vyčistenie pamäte
+  objectUrls.forEach(url => URL.revokeObjectURL(url));
   objectUrls = [];
 
-  Array.from(e.target.files).forEach(file => {
+  allImagesArray.forEach(file => {
     const url = URL.createObjectURL(file);
     objectUrls.push(url);
     const img = document.createElement("img");
     img.src = url;
     container.appendChild(img);
   });
+
+  document.getElementById("imageCountInfo").innerText = `Nahraté obrázky: ${allImagesArray.length}`;
+}
+
+function clearImages() {
+  allImagesArray = [];
+  updateThumbnails();
+  document.getElementById("obrazokInput").value = "";
+  document.getElementById("vysledok").innerHTML = "";
+  document.getElementById("download").style.display = "none";
 }
 
 function kombinujProfi() {
-  const files = document.getElementById("obrazok1").files;
   const efekt = document.getElementById("efekt").value;
   const opacity = parseInt(document.getElementById("opacityRange").value) / 100;
   const downloadLink = document.getElementById("download");
   const resultDiv = document.getElementById("vysledok");
 
-  if(files.length < 2){
-    resultDiv.innerHTML = "<p style='color:var(--border-red); font-weight:bold;'>⚠️ Prosím, vyber aspoň 2 obrázky!</p>";
+  if(allImagesArray.length < 2){
+    resultDiv.innerHTML = "<p style='color:var(--border-red); font-weight:bold;'>⚠️ Prosím, vyber najskôr aspoň 2 obrázky!</p>";
     downloadLink.style.display = "none";
     return;
   }
 
-  resultDiv.innerHTML = "<p style='color:var(--accent-yellow);'>⚡ Hotovo okamžite...</p>";
+  resultDiv.innerHTML = "<p style='color:var(--accent-yellow);'>⚡ Generujem okamžite...</p>";
 
-  // Náhodný výber dvoch súborov bleskovou metódou
-  const shuffled = Array.from(files).sort(() => 0.5 - Math.random());
+  // Náhodný výber dvoch súborov z našej pamäte
+  const shuffled = [...allImagesArray].sort(() => 0.5 - Math.random());
   const url1 = URL.createObjectURL(shuffled[0]);
   const url2 = URL.createObjectURL(shuffled[1]);
 
