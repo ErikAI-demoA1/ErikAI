@@ -230,7 +230,7 @@ function handleFiles(e) {
   }
 
   updateThumbnails();
-  e.target.value = ''; // Úplný reset inputu, aby fungoval aj opakovaný výber
+  e.target.value = '';
 }
 
 function updateThumbnails() {
@@ -264,60 +264,49 @@ function kombinujProfi() {
   const downloadLink = document.getElementById("download");
   const resultDiv = document.getElementById("vysledok");
 
-  if(allImagesArray.length < 2){
-    resultDiv.innerHTML = "<p style='color:var(--border-red); font-weight:bold;'>⚠️ Prosím, vyber najskôr aspoň 2 obrázky! Ak sa tak stalo, vymaž ich a skús to znova.</p>";
+  if (allImagesArray.length < 2) {
+    resultDiv.innerHTML = "<p style='color:var(--border-red); font-weight:bold;'>⚠️ Prosím, vyber najskôr aspoň 2 obrázky!</p>";
     downloadLink.style.display = "none";
     return;
   }
 
   resultDiv.innerHTML = "<p style='color:var(--accent-yellow);'>⚡ Generujem okamžite...</p>";
 
+  // Náhodný výber dvoch rôznych obrázkov z poľa
   const shuffled = [...allImagesArray].sort(() => 0.5 - Math.random());
-  const url1 = URL.createObjectURL(shuffled[0]);
-  const url2 = URL.createObjectURL(shuffled[1]);
+  const file1 = shuffled[0];
+  const file2 = shuffled[1];
 
-  const img1 = new Image(); 
-  const img2 = new Image();
+  const reader1 = new FileReader();
+  const reader2 = new FileReader();
 
-  let loadedCount = 0;
-  let hasError = false;
+  reader1.onload = function(e1) {
+    reader2.onload = function(e2) {
+      const img1 = new Image();
+      const img2 = new Image();
 
-  function checkReady() {
-    if (hasError) return;
-    loadedCount++;
-    if (loadedCount === 2) {
-      processCanvas(img1, img2, efekt, opacity);
-      URL.revokeObjectURL(url1);
-      URL.revokeObjectURL(url2);
-    }
-  }
-
-  function handleError() {
-    if (!hasError) {
-      hasError = true;
-      resultDiv.innerHTML = "<p style='color:var(--border-red); font-weight:bold;'>⚠️ Nastala chyba pri načítavaní obrázkov. Skús iné súbory.</p>";
-      URL.revokeObjectURL(url1);
-      URL.revokeObjectURL(url2);
-    }
-  }
-
-  img1.onload = checkReady;
-  img2.onload = checkReady;
-  img1.onerror = handleError;
-  img2.onerror = handleError;
-
-  img1.src = url1;
-  img2.src = url2;
+      img1.onload = function() {
+        img2.onload = function() {
+          processCanvas(img1, img2, efekt, opacity);
+        };
+        img2.src = e2.target.result;
+      };
+      img1.src = e1.target.result;
+    };
+    reader2.readAsDataURL(file2);
+  };
+  reader1.readAsDataURL(file1);
 }
 
 function processCanvas(img1, img2, efekt, opacity) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
+  // Pevné a stabilné rozlíšenie pre plátno (napr. max 1000px šírka)
   let maxWidth = 1000;
-  let w = Math.max(img1.naturalWidth || img1.width, img2.naturalWidth || img2.width);
-  let h = Math.max(img1.naturalHeight || img1.height, img2.naturalHeight || img2.height);
-  
+  let w = Math.max(img1.width, img2.width);
+  let h = Math.max(img1.height, img2.height);
+
   if (w > maxWidth) {
     h = Math.round((maxWidth / w) * h);
     w = maxWidth;
@@ -326,18 +315,20 @@ function processCanvas(img1, img2, efekt, opacity) {
   canvas.width = w;
   canvas.height = h;
 
+  // Nakreslenie prvého obrázka
   ctx.drawImage(img1, 0, 0, w, h);
   ctx.globalAlpha = opacity;
 
+  // Aplikovanie vybraného efektu a premiešanie druhého obrázka
   switch(efekt){
     case "glitch":
       ctx.drawImage(img2, 0, 0, w, h);
-      for(let i=0; i<20; i++){
+      for(let i = 0; i < 20; i++){
         const x = Math.random() * w;
         const y = Math.random() * h;
         const bw = Math.random() * 80;
         const bh = Math.random() * 8;
-        ctx.drawImage(canvas, x, y, bw, bh, x + (Math.random()*16 - 8), y, bw, bh);
+        ctx.drawImage(canvas, x, y, bw, bh, x + (Math.random() * 16 - 8), y, bw, bh);
       }
       break;
 
@@ -362,7 +353,7 @@ function processCanvas(img1, img2, efekt, opacity) {
       break;
 
     case "kaleidoskop":
-      for(let i=0; i<6; i++){
+      for(let i = 0; i < 6; i++){
         ctx.save();
         ctx.translate(w/2, h/2);
         ctx.rotate((Math.PI/3) * i);
@@ -376,12 +367,12 @@ function processCanvas(img1, img2, efekt, opacity) {
       ctx.translate(30, 20);
       ctx.rotate(0.1);
       ctx.drawImage(img2, 0, 0, w, h);
-      ctx.setTransform(1,0,0,1,0,0);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       break;
 
     case "palette":
       const palettes = [["#ff4d4d","#f1c40f"], ["#2ecc71","#3498db"], ["#9b59b6","#e74c3c"]];
-      const pal = palettes[Math.floor(Math.random()*palettes.length)];
+      const pal = palettes[Math.floor(Math.random() * palettes.length)];
       ctx.globalCompositeOperation = "color";
       ctx.fillStyle = pal[0]; 
       ctx.fillRect(0, 0, w, h);
