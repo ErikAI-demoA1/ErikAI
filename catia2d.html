@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 2D CAD — Professional Edition</title>
+<title>ErikAI Pro 2D CAD — Advanced Styling & Angles</title>
 <style>
 :root{
   --bg-color: #121216;
@@ -108,7 +108,7 @@ button.active{background: var(--accent-blue); color:white;}
   overflow:auto;
   display:none;
   box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-  width: 320px;
+  width: 330px;
   z-index: 1000;
 }
 #dimensionsPanel h3{margin:0 0 8px 0;color:var(--accent-green);font-size:0.95rem;}
@@ -136,7 +136,7 @@ button.active{background: var(--accent-blue); color:white;}
   color: var(--text-muted);
 }
 .input-row input{
-  width: 65px;
+  width: 60px;
   padding: 4px;
   border-radius: 4px;
   border: 1px solid var(--border-color);
@@ -145,7 +145,15 @@ button.active{background: var(--accent-blue); color:white;}
   font-size: 0.85rem;
 }
 .input-row input[type="text"]{
-  width: 130px;
+  width: 110px;
+}
+.input-row input[type="color"]{
+  width: 32px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: transparent;
 }
 </style>
 </head>
@@ -184,7 +192,7 @@ button.active{background: var(--accent-blue); color:white;}
 </div>
 
 <div id="dimensionsPanel">
-  <h3>Zoznam prvkov a Koty</h3>
+  <h3>Zoznam prvkov, Koty a Štýly</h3>
   <div id="dimsContent">Žiadne tvary</div>
 </div>
 
@@ -277,22 +285,18 @@ function clearAll(){
   drawAll();
 }
 
-// Opravený export obrázka s viditeľným pozadím
 function exportImage(){
-  // Vytvoríme dočasný plátno pre čistý export bez mriežky
   const exportCanvas = document.createElement('canvas');
   exportCanvas.width = 4000;
   exportCanvas.height = 4000;
   const eCtx = exportCanvas.getContext('2d');
   
-  // Biele/tmavé pozadie pre export
   eCtx.fillStyle = '#0b0d13';
   eCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
-  // Vykreslíme všetky tvary
   shapes.forEach((s, i)=>{
-    eCtx.strokeStyle = (i === selectedShapeIndex) ? '#3b82f6' : '#10b981';
-    eCtx.lineWidth = 2;
+    eCtx.strokeStyle = s.color || '#10b981';
+    eCtx.lineWidth = (i === selectedShapeIndex) ? 3 : 2;
     eCtx.beginPath();
 
     if(s.type==='line'){
@@ -302,11 +306,11 @@ function exportImage(){
     }else if(s.type==='rect'){
       eCtx.rect(s.x, s.y, s.w, s.h);
     }else if(s.type==='text'){
-      eCtx.fillStyle = '#ffffff';
-      eCtx.font = '16px monospace';
+      eCtx.fillStyle = s.color || '#ffffff';
+      eCtx.font = `${s.size || 16}px monospace`;
       eCtx.fillText(s.text, s.x, s.y);
     }
-    eCtx.stroke();
+    if(s.type !== 'text') eCtx.stroke();
 
     // Koty
     eCtx.fillStyle='#94a3b8'; eCtx.font='12px monospace';
@@ -325,7 +329,7 @@ function exportImage(){
   link.download='erikai_cad_vykres.png';
   link.href = exportCanvas.toDataURL('image/png');
   link.click();
-  logCommand("Výkres úspešne exportovaný ako PNG obrazok!");
+  logCommand("Výkres úspešne exportovaný ako PNG obrázok!");
 }
 
 function exportJSON(){
@@ -358,7 +362,7 @@ function drawAll(){
   drawGrid();
 
   shapes.forEach((s, i)=>{
-    ctx.strokeStyle = (i === selectedShapeIndex) ? '#3b82f6' : '#10b981';
+    ctx.strokeStyle = (i === selectedShapeIndex) ? '#3b82f6' : (s.color || '#10b981');
     ctx.lineWidth = (i === selectedShapeIndex) ? 3 : 2;
     ctx.beginPath();
 
@@ -369,11 +373,11 @@ function drawAll(){
     }else if(s.type==='rect'){
       ctx.rect(s.x, s.y, s.w, s.h);
     }else if(s.type==='text'){
-      ctx.fillStyle = (i === selectedShapeIndex) ? '#3b82f6' : '#ffffff';
-      ctx.font = '16px monospace';
+      ctx.fillStyle = (i === selectedShapeIndex) ? '#3b82f6' : (s.color || '#ffffff');
+      ctx.font = `${s.size || 16}px monospace`;
       ctx.fillText(s.text, s.x, s.y);
     }
-    ctx.stroke();
+    if(s.type !== 'text') ctx.stroke();
 
     drawDimension(s);
   });
@@ -403,7 +407,10 @@ function drawDimension(s){
   if(s.type==='line'){
     const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
     const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1);
-    ctx.fillText(`${len} mm`, midX+6, midY-6);
+    const angleRad = Math.atan2(s.y2-s.y1, s.x2-s.x1);
+    let angleDeg = Math.round(angleRad * (180 / Math.PI));
+    if(angleDeg < 0) angleDeg += 360;
+    ctx.fillText(`${len} mm (${angleDeg}°)`, midX+6, midY-6);
   }else if(s.type==='rect'){
     ctx.fillText(`W:${Math.abs(s.w).toFixed(1)} H:${Math.abs(s.h).toFixed(1)}`, s.x+s.w/2-20, s.y+s.h/2);
   }else if(s.type==='circle'){
@@ -435,7 +442,7 @@ function findShapeAt(x, y){
       let maxY = Math.max(s.y, s.y+s.h);
       if(x >= minX - 5 && x <= maxX + 5 && y >= minY - 5 && y <= maxY + 5) return i;
     }else if(s.type==='text'){
-      if(Math.abs(x - s.x) < 40 && Math.abs(y - s.y) < 20) return i;
+      if(Math.abs(x - s.x) < 50 && Math.abs(y - s.y) < 25) return i;
     }
   }
   return null;
@@ -480,7 +487,7 @@ function handleStart(clientX, clientY){
     pushState();
     const txt = prompt("Zadajte text / poznámku:", "Poznámka 1");
     if(txt){
-      shapes.push({type:'text', text:txt, x:p.x, y:p.y});
+      shapes.push({type:'text', text:txt, x:p.x, y:p.y, color:'#ffffff', size:16});
       logCommand(`Pridaný text: "${txt}"`);
       drawAll();
     }
@@ -495,11 +502,11 @@ function handleStart(clientX, clientY){
   pushState();
   let shape=null;
   if(tool==='line'){
-    shape={type:'line', x1:startPt.x, y1:startPt.y, x2:p.x, y2:p.y};
+    shape={type:'line', x1:startPt.x, y1:startPt.y, x2:p.x, y2:p.y, color:'#10b981'};
   }else if(tool==='circle'){
-    shape={type:'circle', cx:startPt.x, cy:startPt.y, r:Math.hypot(p.x-startPt.x, p.y-startPt.y)};
+    shape={type:'circle', cx:startPt.x, cy:startPt.y, r:Math.hypot(p.x-startPt.x, p.y-startPt.y), color:'#10b981'};
   }else if(tool==='rect'){
-    shape={type:'rect', x:startPt.x, y:startPt.y, w:p.x-startPt.x, h:p.y-startPt.y};
+    shape={type:'rect', x:startPt.x, y:startPt.y, w:p.x-startPt.x, h:p.y-startPt.y, color:'#10b981'};
   }
 
   if(shape) shapes.push(shape);
@@ -592,7 +599,6 @@ function getShapePos(s){
   if(s.type==='text') return {x: s.x, y: s.y};
 }
 
-// Panel vlastností s možnosťou kliknutia na kartu a výberu tvaru
 function updateDimensionsPanel(){
   if(document.activeElement && document.activeElement.tagName === 'INPUT' && dimsPanel.contains(document.activeElement)){
     return;
@@ -608,7 +614,6 @@ function updateDimensionsPanel(){
     const card=document.createElement('div');
     card.className = `shape-card ${i===selectedShapeIndex ? 'active' : ''}`;
     
-    // Kliknutím na kartu v paneli sa tvar okamžite označí modro na plátne
     card.onclick=(e)=>{
       if(e.target.tagName !== 'INPUT'){
         selectedShapeIndex=i;
@@ -618,7 +623,21 @@ function updateDimensionsPanel(){
     };
 
     const title=document.createElement('div');
+    title.style.display = 'flex';
+    title.style.justifyContent = 'space-between';
+    title.style.alignItems = 'center';
     title.innerHTML=`<strong>#${i+1} (${s.type})</strong>`;
+    
+    // Výber farby
+    const colorInp = document.createElement('input');
+    colorInp.type = 'color';
+    colorInp.value = s.color || (s.type==='text'?'#ffffff':'#10b981');
+    colorInp.onchange = (e) => {
+      pushState();
+      s.color = e.target.value;
+      drawAll();
+    };
+    title.appendChild(colorInp);
     card.appendChild(title);
 
     // Pozícia X a Y
@@ -641,21 +660,39 @@ function updateDimensionsPanel(){
       if(!isNaN(val)){ moveShapeToPos(s, getShapePos(s).x, val); drawAll(); }
     };
 
-    // Rozmery alebo Text
+    // Rozmery, Úhol alebo Text
     const dimRow = document.createElement('div');
     dimRow.className = 'input-row';
 
     if(s.type==='line'){
       const len = Math.hypot(s.x2-s.x1, s.y2-s.y1).toFixed(1);
-      dimRow.innerHTML = `<label>Dĺžka:</label><input type="number" value="${len}" data-type="len">`;
-      const inp = dimRow.querySelector('input');
-      inp.onchange = (e) => {
+      const angleRad = Math.atan2(s.y2-s.y1, s.x2-s.x1);
+      let angleDeg = Math.round(angleRad * (180 / Math.PI));
+      if(angleDeg < 0) angleDeg += 360;
+
+      dimRow.innerHTML = `<label>Dĺžka:</label><input type="number" value="${len}" data-type="len">` +
+                         `<label>Uhol (°):</label><input type="number" value="${angleDeg}" data-type="angle">`;
+      const inps = dimRow.querySelectorAll('input');
+      
+      inps[0].onchange = (e) => {
         pushState();
         const val = parseFloat(e.target.value);
         if(!isNaN(val) && val > 0){
-          const angle = Math.atan2(s.y2-s.y1, s.x2-s.x1);
-          s.x2 = s.x1 + val * Math.cos(angle);
-          s.y2 = s.y1 + val * Math.sin(angle);
+          const currentAngle = Math.atan2(s.y2-s.y1, s.x2-s.x1);
+          s.x2 = s.x1 + val * Math.cos(currentAngle);
+          s.y2 = s.y1 + val * Math.sin(currentAngle);
+          drawAll();
+        }
+      };
+
+      inps[1].onchange = (e) => {
+        pushState();
+        const deg = parseFloat(e.target.value);
+        if(!isNaN(deg)){
+          const rad = deg * (Math.PI / 180);
+          const currentLen = Math.hypot(s.x2-s.x1, s.y2-s.y1);
+          s.x2 = s.x1 + currentLen * Math.cos(rad);
+          s.y2 = s.y1 + currentLen * Math.sin(rad);
           drawAll();
         }
       };
@@ -682,12 +719,18 @@ function updateDimensionsPanel(){
         if(!isNaN(val) && val > 0){ s.r = val; drawAll(); }
       };
     }else if(s.type==='text'){
-      dimRow.innerHTML = `<label>Text:</label><input type="text" value="${s.text}" data-type="text">`;
-      const inp = dimRow.querySelector('input');
-      inp.onchange = (e) => {
+      dimRow.innerHTML = `<label>Text:</label><input type="text" value="${s.text}" data-type="text">` +
+                         `<label>Px:</label><input type="number" value="${s.size || 16}" data-type="size">`;
+      const inps = dimRow.querySelectorAll('input');
+      inps[0].onchange = (e) => {
         pushState();
         s.text = e.target.value;
         drawAll();
+      };
+      inps[1].onchange = (e) => {
+        pushState();
+        const val = parseInt(e.target.value);
+        if(!isNaN(val) && val > 0){ s.size = val; drawAll(); }
       };
     }
 
