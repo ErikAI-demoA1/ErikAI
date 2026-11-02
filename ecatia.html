@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ErikAI Pro 2D CAD — AutoCAD Style + Move & Real-time Dims</title>
+<title>ErikAI Pro 2D CAD — AutoCAD Style (Opravené)</title>
 <style>
 :root{
   --bg-color: #121216;
@@ -37,7 +37,6 @@ header{
 }
 .panel{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 
-/* Kontajner pre plátno s posuvníkmi pre veľké výkresy */
 #canvasContainer {
   flex: 1;
   overflow: auto;
@@ -61,7 +60,6 @@ button:hover{filter: brightness(1.1); transform: translateY(-1px);}
 button.ghost{background: var(--panel-bg);border:1px solid var(--border-color);color:var(--text-main);}
 button.active{background: var(--accent-blue); color:white;}
 
-/* Príkazový riadok */
 #commandLineContainer{
   background: #090b10;
   border-top: 1px solid var(--border-color);
@@ -94,10 +92,10 @@ button.active{background: var(--accent-blue); color:white;}
 
 .info{padding:4px 15px;background: var(--panel-bg);font-size:0.85rem;color:var(--text-muted);border-top:1px solid var(--border-color);}
 
-#dimensionsPanel{position:fixed;top:60px;right:15px;background:var(--panel-bg);border:1px solid var(--border-color);padding:15px;border-radius:12px;max-height:80vh;overflow:auto;display:none;box-shadow: 0 10px 30px rgba(0,0,0,0.6);width: 280px; z-index: 100;}
+#dimensionsPanel{position:fixed;top:60px;right:15px;background:var(--panel-bg);border:1px solid var(--border-color);padding:15px;border-radius:12px;max-height:80vh;overflow:auto;display:none;box-shadow: 0 10px 30px rgba(0,0,0,0.6);width: 300px; z-index: 100;}
 #dimensionsPanel h3{margin:0 0 10px 0;color:var(--accent-green);font-size:1rem;}
 #dimensionsPanel div{margin-bottom:8px;font-size:0.9rem;}
-#dimensionsPanel input{width:80px;padding:4px;border-radius:4px;border:1px solid var(--border-color);background:#121216;color:white;}
+#dimensionsPanel input{width:85px;padding:4px;border-radius:4px;border:1px solid var(--border-color);background:#121216;color:white;}
 </style>
 </head>
 <body>
@@ -155,7 +153,6 @@ let isMoving=false;
 let moveShapeIndex=null;
 let moveOffset={x:0, y:0};
 
-// DOM elementy
 const info=document.getElementById('info');
 const dimsPanel=document.getElementById('dimensionsPanel');
 const dimsContent=document.getElementById('dimsContent');
@@ -170,10 +167,13 @@ function logCommand(text){
   commandHistory.scrollTop=commandHistory.scrollHeight;
 }
 
-// Výber nástroja
 function setTool(t){
   tool=t;
-  document.querySelectorAll('header button').forEach(b=>{if(!b.getAttribute('onclick')?.includes('export') && !b.getAttribute('onclick')?.includes('clear')) b.classList.replace('active','ghost');});
+  document.querySelectorAll('header button').forEach(b=>{
+    if(!b.getAttribute('onclick')?.includes('export') && !b.getAttribute('onclick')?.includes('clear')) {
+      b.classList.replace('active','ghost');
+    }
+  });
   if(t==='line') document.getElementById('lineBtn').classList.replace('ghost','active');
   if(t==='circle') document.getElementById('circleBtn').classList.replace('ghost','active');
   if(t==='rect') document.getElementById('rectBtn').classList.replace('ghost','active');
@@ -183,7 +183,6 @@ function setTool(t){
   drawAll();
 }
 
-// Ovládanie príkazového riadku
 commandInput.onkeydown=(e)=>{
   if(e.key==='Enter'){
     const val=commandInput.value.trim().toLowerCase();
@@ -200,7 +199,6 @@ commandInput.onkeydown=(e)=>{
   }
 };
 
-// Undo / Redo
 function pushState(){
   undoStack.push(JSON.parse(JSON.stringify(shapes)));
   redoStack=[];
@@ -229,14 +227,15 @@ function clearAll(){
   drawAll();
 }
 
-// Exporty
+// Opravený export obrázka (PNG)
 function exportImage(){
   const link=document.createElement('a');
   link.download='erikai_cad_drawing.png';
-  link.href=canvas.toDataURL();
+  link.href = canvas.toDataURL('image/png');
   link.click();
-  logCommand("Obrázok exportovaný ako PNG");
+  logCommand("Obrázok úspešne exportovaný ako PNG");
 }
+
 function exportJSON(){
   const link=document.createElement('a');
   link.download='erikai_cad_drawing.json';
@@ -251,7 +250,6 @@ editDimsBtn.onclick=()=>{
   drawAll();
 };
 
-// Kreslenie mriežky pre veľké plátno
 function drawGrid(){
   const step=40;
   ctx.strokeStyle='rgba(255,255,255,0.04)';
@@ -264,7 +262,6 @@ function drawGrid(){
   }
 }
 
-// Vykreslenie všetkého
 function drawAll(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawGrid();
@@ -286,7 +283,6 @@ function drawAll(){
     drawDimension(s);
   });
 
-  // Živý náhľad pri kreslení
   if(startPt && tool !== 'move'){
     ctx.strokeStyle='rgba(16, 185, 129, 0.6)';
     ctx.lineWidth=2;
@@ -307,7 +303,6 @@ function drawAll(){
   if(editMode) updateDimensionsPanel();
 }
 
-// Kóty a rozmery priamo na plátne
 function drawDimension(s){
   ctx.fillStyle='#94a3b8'; ctx.font='12px monospace';
   if(s.type==='line'){
@@ -321,7 +316,6 @@ function drawDimension(s){
   }
 }
 
-// Snapovanie ku gridu
 function snap(x, y){
   const gridStep = 20;
   return {
@@ -330,18 +324,22 @@ function snap(x, y){
   };
 }
 
-// Kontrola, či klikol na určitý tvar (pre nástroj MOVE)
+// Vylepšená presná detekcia tvarov pre nástroj MOVE
 function findShapeAt(x, y){
   for(let i = shapes.length - 1; i >= 0; i--){
     let s = shapes[i];
     if(s.type==='line'){
       const d = distToSegment({x, y}, {x:s.x1, y:s.y1}, {x:s.x2, y:s.y2});
-      if(d < 10) return i;
+      if(d < 15) return i;
     }else if(s.type==='circle'){
-      if(Math.abs(Math.hypot(x-s.cx, y-s.cy) - s.r) < 10) return i;
+      const dist = Math.hypot(x - s.cx, y - s.cy);
+      if(Math.abs(dist - s.r) < 15 || dist < s.r) return i;
     }else if(s.type==='rect'){
-      if(x >= Math.min(s.x, s.x+s.w) && x <= Math.max(s.x, s.x+s.w) &&
-         y >= Math.min(s.y, s.y+s.h) && y <= Math.max(s.y, s.y+s.h)) return i;
+      let minX = Math.min(s.x, s.x+s.w);
+      let maxX = Math.max(s.x, s.x+s.w);
+      let minY = Math.min(s.y, s.y+s.h);
+      let maxY = Math.max(s.y, s.y+s.h);
+      if(x >= minX - 5 && x <= maxX + 5 && y >= minY - 5 && y <= maxY + 5) return i;
     }
   }
   return null;
@@ -355,7 +353,6 @@ function distToSegment(p, a, b) {
   return Math.hypot(p.x - (a.x + t*(b.x - a.x)), p.y - (a.y + t*(b.y - a.y)));
 }
 
-// Myš - Interakcia
 canvas.onmousedown=(e)=>{
   const rect=canvas.getBoundingClientRect();
   const x=e.clientX - rect.left + container.scrollLeft;
@@ -375,6 +372,9 @@ canvas.onmousedown=(e)=>{
       else if(s.type==='circle') moveOffset={x: x - s.cx, y: y - s.cy};
       else if(s.type==='rect') moveOffset={x: x - s.x, y: y - s.y};
       logCommand(`Začatý presun tvaru #${hitIdx+1}`);
+      drawAll();
+    } else {
+      selectedShapeIndex = null;
       drawAll();
     }
     return;
@@ -453,7 +453,6 @@ canvas.oncontextmenu=(e)=>{
   }
 };
 
-// Mazanie klávesom Delete
 window.onkeydown=(e)=>{
   if(e.key==='Delete' && selectedShapeIndex!==null){
     pushState();
@@ -464,7 +463,7 @@ window.onkeydown=(e)=>{
   }
 };
 
-// Panel vlastností s REÁLNOU živou aktualizáciou kot a rozmerov
+// Opravený panel vlastností a živých úprav kót bez zacyklenia
 function updateDimensionsPanel(){
   dimsContent.innerHTML='';
   if(shapes.length===0){
@@ -479,12 +478,14 @@ function updateDimensionsPanel(){
     div.onclick=()=>{ selectedShapeIndex=i; drawAll(); };
 
     div.innerHTML=`<strong>#${i+1} (${s.type})</strong><br>`;
+    
     if(s.type==='line'){
       const inp=document.createElement('input'); inp.type='number'; inp.value=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1);
+      
+      inp.onfocus=()=>pushState(); // Uloženie stavu pred začiatkom úpravy
       inp.oninput=(e)=>{
-        pushState();
         const len=parseFloat(e.target.value);
-        if(!isNaN(len)){
+        if(!isNaN(len) && len > 0){
           const angle=Math.atan2(s.y2-s.y1, s.x2-s.x1);
           s.x2=s.x1 + len * Math.cos(angle);
           s.y2=s.y1 + len * Math.sin(angle);
@@ -494,25 +495,27 @@ function updateDimensionsPanel(){
       div.appendChild(document.createTextNode('Dĺžka: ')); div.appendChild(inp);
     }else if(s.type==='rect'){
       const inpW=document.createElement('input'); inpW.type='number'; inpW.value=Math.abs(s.w).toFixed(1);
+      inpW.onfocus=()=>pushState();
       inpW.oninput=(e)=>{ 
-        pushState(); 
         const val=parseFloat(e.target.value);
         if(!isNaN(val)) { s.w=val*(s.w<0?-1:1); drawAll(); }
       };
+
       const inpH=document.createElement('input'); inpH.type='number'; inpH.value=Math.abs(s.h).toFixed(1);
+      inpH.onfocus=()=>pushState();
       inpH.oninput=(e)=>{ 
-        pushState(); 
         const val=parseFloat(e.target.value);
         if(!isNaN(val)) { s.h=val*(s.h<0?-1:1); drawAll(); }
       };
+
       div.appendChild(document.createTextNode('Š: ')); div.appendChild(inpW);
       div.appendChild(document.createTextNode(' V: ')); div.appendChild(inpH);
     }else if(s.type==='circle'){
       const inpR=document.createElement('input'); inpR.type='number'; inpR.value=s.r.toFixed(1);
+      inpR.onfocus=()=>pushState();
       inpR.oninput=(e)=>{ 
-        pushState(); 
         const val=parseFloat(e.target.value);
-        if(!isNaN(val)) { s.r=val; drawAll(); }
+        if(!isNaN(val) && val > 0) { s.r=val; drawAll(); }
       };
       div.appendChild(document.createTextNode('Polomer: ')); div.appendChild(inpR);
     }
