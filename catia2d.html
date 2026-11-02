@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 2D CAD — Advanced Styling & Angles</title>
+<title>ErikAI Pro 2D CAD — Professional Edition + Cloud/File Sync</title>
 <style>
 :root{
   --bg-color: #121216;
@@ -172,7 +172,9 @@ button.active{background: var(--accent-blue); color:white;}
   </div>
   <div class="panel">
     <button id="exportImg" class="ghost" onclick="exportImage()">📷 PNG</button>
-    <button id="exportJSON" class="ghost" onclick="exportJSON()">💾 JSON</button>
+    <button id="exportJSON" class="ghost" onclick="exportJSON()">💾 Uložiť</button>
+    <button id="importJSONBtn" class="ghost" onclick="document.getElementById('fileInput').click()">📂 Otvoriť</button>
+    <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importJSON(event)">
     <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Zmazať</button>
   </div>
 </header>
@@ -226,10 +228,28 @@ function logCommand(text){
   commandHistory.scrollTop=commandHistory.scrollHeight;
 }
 
+// Automatické ukladanie do pamäte prehliadača (LocalStorage) pri každej zmene
+function saveToLocalStorage(){
+  localStorage.setItem('erikai_cad_autosave', JSON.stringify(shapes));
+}
+
+// Načítanie pri štarte
+function loadFromLocalStorage(){
+  const saved = localStorage.getItem('erikai_cad_autosave');
+  if(saved){
+    try{
+      shapes = JSON.parse(saved);
+      logCommand("Načtený posledný uložený projekt z pamäte.");
+    }catch(e){
+      console.error("Chyba pri načítaní autosave", e);
+    }
+  }
+}
+
 function setTool(t){
   tool=t;
   document.querySelectorAll('header button').forEach(b=>{
-    if(!b.getAttribute('onclick')?.includes('export') && !b.getAttribute('onclick')?.includes('clear')) {
+    if(!b.getAttribute('onclick')?.includes('export') && !b.getAttribute('onclick')?.includes('clear') && !b.getAttribute('onclick')?.includes('import')) {
       b.classList.replace('active','ghost');
     }
   });
@@ -263,11 +283,13 @@ commandInput.onkeydown=(e)=>{
 function pushState(){
   undoStack.push(JSON.parse(JSON.stringify(shapes)));
   redoStack=[];
+  saveToLocalStorage();
 }
 function undo(){
   if(undoStack.length){
     redoStack.push(JSON.parse(JSON.stringify(shapes)));
     shapes=undoStack.pop();
+    saveToLocalStorage();
     drawAll();
   }
 }
@@ -275,6 +297,7 @@ function redo(){
   if(redoStack.length){
     undoStack.push(JSON.parse(JSON.stringify(shapes)));
     shapes=redoStack.pop();
+    saveToLocalStorage();
     drawAll();
   }
 }
@@ -282,6 +305,7 @@ function clearAll(){
   pushState();
   shapes=[];
   selectedShapeIndex=null;
+  saveToLocalStorage();
   drawAll();
 }
 
@@ -312,7 +336,6 @@ function exportImage(){
     }
     if(s.type !== 'text') eCtx.stroke();
 
-    // Koty
     eCtx.fillStyle='#94a3b8'; eCtx.font='12px monospace';
     if(s.type==='line'){
       const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
@@ -329,14 +352,43 @@ function exportImage(){
   link.download='erikai_cad_vykres.png';
   link.href = exportCanvas.toDataURL('image/png');
   link.click();
-  logCommand("Výkres úspešne exportovaný ako PNG obrázok!");
+  logCommand("Výkres exportovaný ako PNG obrázok!");
 }
 
+// Uloženie výkresu do súboru (.json) pre prenos do iného zariadenia
 function exportJSON(){
-  const link=document.createElement('a');
-  link.download='erikai_cad.json';
-  link.href='data:text/json,'+encodeURIComponent(JSON.stringify({shapes}));
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({shapes}, null, 2));
+  const link = document.createElement('a');
+  link.download = 'erikai_cad_projekt.json';
+  link.href = dataStr;
   link.click();
+  logCommand("Projekt úspešne stiahnutý do súboru (.json)!");
+}
+
+// Načítanie výkresu zo súboru (.json) na pokračovanie v práci
+function importJSON(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      if(data.shapes && Array.isArray(data.shapes)){
+        pushState();
+        shapes = data.shapes;
+        selectedShapeIndex = null;
+        saveToLocalStorage();
+        drawAll();
+        logCommand("Projekt úspešne načítaný zo súboru!");
+      }else{
+        alert("Neplatný formát CAD súboru.");
+      }
+    }catch(err){
+      alert("Chyba pri čítaní súboru.");
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // Reset inputu
 }
 
 editDimsBtn.onclick=()=>{
@@ -488,6 +540,7 @@ function handleStart(clientX, clientY){
     const txt = prompt("Zadajte text / poznámku:", "Poznámka 1");
     if(txt){
       shapes.push({type:'text', text:txt, x:p.x, y:p.y, color:'#ffffff', size:16});
+      saveToLocalStorage();
       logCommand(`Pridaný text: "${txt}"`);
       drawAll();
     }
@@ -511,6 +564,7 @@ function handleStart(clientX, clientY){
 
   if(shape) shapes.push(shape);
   startPt=null;
+  saveToLocalStorage();
   drawAll();
 }
 
@@ -551,6 +605,7 @@ function handleMove(clientX, clientY){
 function handleEnd(){
   if(isMoving){
     isMoving=false;
+    saveToLocalStorage();
   }
 }
 
@@ -590,6 +645,7 @@ function moveShapeToPos(s, newX, newY){
     s.x = newX;
     s.y = newY;
   }
+  saveToLocalStorage();
 }
 
 function getShapePos(s){
@@ -628,19 +684,18 @@ function updateDimensionsPanel(){
     title.style.alignItems = 'center';
     title.innerHTML=`<strong>#${i+1} (${s.type})</strong>`;
     
-    // Výber farby
     const colorInp = document.createElement('input');
     colorInp.type = 'color';
     colorInp.value = s.color || (s.type==='text'?'#ffffff':'#10b981');
     colorInp.onchange = (e) => {
       pushState();
       s.color = e.target.value;
+      saveToLocalStorage();
       drawAll();
     };
     title.appendChild(colorInp);
     card.appendChild(title);
 
-    // Pozícia X a Y
     const pos = getShapePos(s);
     const posRow = document.createElement('div');
     posRow.className = 'input-row';
@@ -660,7 +715,6 @@ function updateDimensionsPanel(){
       if(!isNaN(val)){ moveShapeToPos(s, getShapePos(s).x, val); drawAll(); }
     };
 
-    // Rozmery, Úhol alebo Text
     const dimRow = document.createElement('div');
     dimRow.className = 'input-row';
 
@@ -681,6 +735,7 @@ function updateDimensionsPanel(){
           const currentAngle = Math.atan2(s.y2-s.y1, s.x2-s.x1);
           s.x2 = s.x1 + val * Math.cos(currentAngle);
           s.y2 = s.y1 + val * Math.sin(currentAngle);
+          saveToLocalStorage();
           drawAll();
         }
       };
@@ -693,6 +748,7 @@ function updateDimensionsPanel(){
           const currentLen = Math.hypot(s.x2-s.x1, s.y2-s.y1);
           s.x2 = s.x1 + currentLen * Math.cos(rad);
           s.y2 = s.y1 + currentLen * Math.sin(rad);
+          saveToLocalStorage();
           drawAll();
         }
       };
@@ -703,12 +759,12 @@ function updateDimensionsPanel(){
       inps[0].onchange = (e) => {
         pushState();
         const val = parseFloat(e.target.value);
-        if(!isNaN(val)){ s.w = val * (s.w < 0 ? -1 : 1); drawAll(); }
+        if(!isNaN(val)){ s.w = val * (s.w < 0 ? -1 : 1); saveToLocalStorage(); drawAll(); }
       };
       inps[1].onchange = (e) => {
         pushState();
         const val = parseFloat(e.target.value);
-        if(!isNaN(val)){ s.h = val * (s.h < 0 ? -1 : 1); drawAll(); }
+        if(!isNaN(val)){ s.h = val * (s.h < 0 ? -1 : 1); saveToLocalStorage(); drawAll(); }
       };
     }else if(s.type==='circle'){
       dimRow.innerHTML = `<label>Polomer:</label><input type="number" value="${s.r.toFixed(1)}" data-type="r">`;
@@ -716,7 +772,7 @@ function updateDimensionsPanel(){
       inp.onchange = (e) => {
         pushState();
         const val = parseFloat(e.target.value);
-        if(!isNaN(val) && val > 0){ s.r = val; drawAll(); }
+        if(!isNaN(val) && val > 0){ s.r = val; saveToLocalStorage(); drawAll(); }
       };
     }else if(s.type==='text'){
       dimRow.innerHTML = `<label>Text:</label><input type="text" value="${s.text}" data-type="text">` +
@@ -725,12 +781,13 @@ function updateDimensionsPanel(){
       inps[0].onchange = (e) => {
         pushState();
         s.text = e.target.value;
+        saveToLocalStorage();
         drawAll();
       };
       inps[1].onchange = (e) => {
         pushState();
         const val = parseInt(e.target.value);
-        if(!isNaN(val) && val > 0){ s.size = val; drawAll(); }
+        if(!isNaN(val) && val > 0){ s.size = val; saveToLocalStorage(); drawAll(); }
       };
     }
 
@@ -739,6 +796,8 @@ function updateDimensionsPanel(){
   });
 }
 
+// Naštartovanie a načítanie uložených dát
+loadFromLocalStorage();
 drawAll();
 </script>
 </body>
