@@ -41,12 +41,12 @@ header{
 
 #canvasContainer {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
   position: relative;
   background: #0b0d13;
-  touch-action: auto;
+  touch-action: none;
 }
-canvas{background:#0b0d13;display:block;cursor:crosshair;}
+canvas{background:#0b0d13;display:block;cursor:crosshair;transform-origin: 0 0;}
 
 button, label.file-btn, select.format-select{
   padding:8px 12px;
@@ -187,7 +187,13 @@ input[type="file"] {
     <button id="rectBtn" class="ghost" onclick="setTool('rect')">⬜ Obdĺžnik</button>
     <button id="textBtn" class="ghost" onclick="setTool('text')">🔤 Text</button>
     <button id="moveBtn" class="ghost" onclick="setTool('move')">🚚 Presun</button>
+    <button id="panBtn" class="ghost" onclick="setTool('pan')">✋ Posun plátna</button>
     
+    <!-- Ovládanie Zoomu -->
+    <button class="ghost" onclick="zoomIn()" title="Priblížiť">➕</button>
+    <button class="ghost" onclick="zoomOut()" title="Oddialiť">➖</button>
+    <button class="ghost" onclick="resetZoom()" title="Reset zobrazenia">1:1</button>
+
     <!-- Výber formátu výkresu -->
     <select id="paperFormat" class="format-select" onchange="changePaperFormat()">
       <option value="infinite">📄 Nekonečné plátno</option>
@@ -247,7 +253,13 @@ let isMoving=false;
 let moveShapeIndex=null;
 let moveOffset={x:0, y:0};
 
-// Definícia formátov papiera v pixeloch (mierka: 1 mm = 3.5 px pre pohodlné kreslenie)
+// Premenné pre Zoom a Pan (posun plátna)
+let scale = 1;
+let panX = 0;
+let panY = 0;
+let isPanning = false;
+let panStart = {x: 0, y: 0};
+
 const paperFormats = {
   'infinite': {w: 4000, h: 4000, name: 'Nekonečné plátno'},
   'A4_portrait': {w: 735, h: 1040, name: 'A4 Na výšku'},
@@ -282,7 +294,7 @@ function loadFromLocalStorage(){
     try{
       const data = JSON.parse(saved);
       if(Array.isArray(data)){
-        shapes = data; // starší formát
+        shapes = data;
       } else {
         shapes = data.shapes || [];
         if(data.format && paperFormats[data.format]){
@@ -314,10 +326,30 @@ function changePaperFormat(){
   logCommand(`Zmenený formát výkresu: ${paperFormats[currentFormatKey].name}`);
 }
 
+function zoomIn(){
+  scale = Math.min(scale * 1.25, 5);
+  updateTransform();
+}
+function zoomOut(){
+  scale = Math.max(scale / 1.25, 0.2);
+  updateTransform();
+}
+function resetZoom(){
+  scale = 1;
+  panX = 0;
+  panY = 0;
+  updateTransform();
+  logCommand("Zobrazenie resetované (1:1)");
+}
+
+function updateTransform(){
+  canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+}
+
 function setTool(t){
   tool=t;
   document.querySelectorAll('header button').forEach(b=>{
-    if(!b.getAttribute('onclick')?.includes('export') && !b.getAttribute('onclick')?.includes('clear') && !b.getAttribute('onclick')?.includes('importFromText') && !b.getAttribute('onclick')?.includes('printBlueprint')) {
+    if(!b.getAttribute('onclick')?.includes('export') && !b.getAttribute('onclick')?.includes('clear') && !b.getAttribute('onclick')?.includes('importFromText') && !b.getAttribute('onclick')?.includes('printBlueprint') && !b.getAttribute('onclick')?.includes('zoom') && !b.getAttribute('onclick')?.includes('resetZoom')) {
       b.classList.replace('active','ghost');
     }
   });
@@ -326,6 +358,8 @@ function setTool(t){
   if(t==='rect') document.getElementById('rectBtn').classList.replace('ghost','active');
   if(t==='text') document.getElementById('textBtn').classList.replace('ghost','active');
   if(t==='move') document.getElementById('moveBtn').classList.replace('ghost','active');
+  if(t==='pan') document.getElementById('panBtn').classList.replace('ghost','active');
+  
   startPt=null;
   logCommand(`Nástroj: ${t.toUpperCase()}`);
   drawAll();
@@ -341,6 +375,7 @@ commandInput.onkeydown=(e)=>{
     else if(val==='rect' || val==='r') setTool('rect');
     else if(val==='text' || val==='t') setTool('text');
     else if(val==='move' || val==='m') setTool('move');
+    else if(val==='pan') setTool('pan');
     else if(val==='undo') undo();
     else if(val==='redo') redo();
     else if(val==='clear') clearAll();
@@ -377,14 +412,12 @@ function clearAll(){
   drawAll();
 }
 
-// Generovanie plátna pre export/tlač podľa zvoleného formátu alebo obsahu
 function generateBlueprintCanvas(){
   const fmt = paperFormats[currentFormatKey];
   let width = fmt.w;
   let height = fmt.h;
 
   if(currentFormatKey === 'infinite' && shapes.length > 0){
-    // Pre nekonečné plátno spravíme orez podľa obsahu
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     shapes.forEach(s=>{
       if(s.type==='line'){
@@ -413,20 +446,13 @@ function generateBlueprintCanvas(){
   bCanvas.height = height;
   const bCtx = bCanvas.getContext('2d');
 
-  // Biele pozadie výkresu
   bCtx.fillStyle = '#ffffff';
   bCtx.fillRect(0, 0, width, height);
 
-  // Ak je to pevný formát (A4/A3), nakreslíme pekný technický rámček
   if(currentFormatKey !== 'infinite'){
     bCtx.strokeStyle = '#cbd5e1';
     bCtx.lineWidth = 1;
     bCtx.strokeRect(20, 20, width - 40, height - 40);
-  }
-
-  bCtx.save();
-  if(currentFormatKey === 'infinite'){
-    // Posun ak treba
   }
 
   shapes.forEach((s)=>{
@@ -462,7 +488,6 @@ function generateBlueprintCanvas(){
     }
   });
 
-  bCtx.restore();
   return bCanvas;
 }
 
@@ -584,7 +609,6 @@ function drawGrid(){
     ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
   }
 
-  // Ak je zvolený formát papiera, nakreslíme jemný obrys formátu priamo na pracovnú plochu
   if(currentFormatKey !== 'infinite'){
     ctx.strokeStyle='rgba(59, 130, 246, 0.4)';
     ctx.lineWidth=2;
@@ -621,7 +645,7 @@ function drawAll(){
     drawDimension(s);
   });
 
-  if(startPt && tool !== 'move' && tool !== 'text'){
+  if(startPt && tool !== 'move' && tool !== 'pan' && tool !== 'text'){
     ctx.strokeStyle='rgba(16, 185, 129, 0.6)';
     ctx.lineWidth=2;
     ctx.setLineDash([4, 4]);
@@ -695,14 +719,25 @@ function distToSegment(p, a, b) {
   return Math.hypot(p.x - (a.x + t*(b.x - a.x)), p.y - (a.y + t*(b.y - a.y)));
 }
 
+function getCanvasPoint(clientX, clientY){
+  const rect = canvas.getBoundingClientRect();
+  const x = (clientX - rect.left) / scale;
+  const y = (clientY - rect.top) / scale;
+  return {x, y};
+}
+
 function handleStart(clientX, clientY){
-  const rect=canvas.getBoundingClientRect();
-  const x = clientX - rect.left + container.scrollLeft;
-  const y = clientY - rect.top + container.scrollTop;
-  const p = snap(x, y);
+  if(tool === 'pan'){
+    isPanning = true;
+    panStart = {x: clientX - panX, y: clientY - panY};
+    return;
+  }
+
+  const pt = getCanvasPoint(clientX, clientY);
+  const p = snap(pt.x, pt.y);
 
   if(tool === 'move'){
-    const hitIdx = findShapeAt(x, y);
+    const hitIdx = findShapeAt(pt.x, pt.y);
     if(hitIdx !== null){
       pushState();
       isMoving = true;
@@ -710,10 +745,10 @@ function handleStart(clientX, clientY){
       selectedShapeIndex = hitIdx;
       
       let s = shapes[hitIdx];
-      if(s.type==='line') moveOffset={x: x - s.x1, y: y - s.y1};
-      else if(s.type==='circle') moveOffset={x: x - s.cx, y: y - s.cy};
-      else if(s.type==='rect') moveOffset={x: x - s.x, y: y - s.y};
-      else if(s.type==='text') moveOffset={x: x - s.x, y: y - s.y};
+      if(s.type==='line') moveOffset={x: pt.x - s.x1, y: pt.y - s.y1};
+      else if(s.type==='circle') moveOffset={x: pt.x - s.cx, y: pt.y - s.cy};
+      else if(s.type==='rect') moveOffset={x: pt.x - s.x, y: pt.y - s.y};
+      else if(s.type==='text') moveOffset={x: pt.x - s.x, y: pt.y - s.y};
       drawAll();
     } else {
       selectedShapeIndex = null;
@@ -756,10 +791,15 @@ function handleStart(clientX, clientY){
 }
 
 function handleMove(clientX, clientY){
-  const rect=canvas.getBoundingClientRect();
-  const x = clientX - rect.left + container.scrollLeft;
-  const y = clientY - rect.top + container.scrollTop;
-  currentMouse = snap(x, y);
+  if(isPanning){
+    panX = clientX - panStart.x;
+    panY = clientY - panStart.y;
+    updateTransform();
+    return;
+  }
+
+  const pt = getCanvasPoint(clientX, clientY);
+  currentMouse = snap(pt.x, pt.y);
 
   info.textContent=`X: ${currentMouse.x}, Y: ${currentMouse.y} | Nástroj: ${tool.toUpperCase()}`;
 
@@ -768,19 +808,19 @@ function handleMove(clientX, clientY){
     if(s.type==='line'){
       const dx = s.x2 - s.x1;
       const dy = s.y2 - s.y1;
-      s.x1 = x - moveOffset.x;
-      s.y1 = y - moveOffset.y;
+      s.x1 = pt.x - moveOffset.x;
+      s.y1 = pt.y - moveOffset.y;
       s.x2 = s.x1 + dx;
       s.y2 = s.y1 + dy;
     }else if(s.type==='circle'){
-      s.cx = x - moveOffset.x;
-      s.cy = y - moveOffset.y;
+      s.cx = pt.x - moveOffset.x;
+      s.cy = pt.y - moveOffset.y;
     }else if(s.type==='rect'){
-      s.x = x - moveOffset.x;
-      s.y = y - moveOffset.y;
+      s.x = pt.x - moveOffset.x;
+      s.y = pt.y - moveOffset.y;
     }else if(s.type==='text'){
-      s.x = x - moveOffset.x;
-      s.y = y - moveOffset.y;
+      s.x = pt.x - moveOffset.x;
+      s.y = pt.y - moveOffset.y;
     }
     drawAll();
     return;
@@ -790,6 +830,9 @@ function handleMove(clientX, clientY){
 }
 
 function handleEnd(){
+  if(isPanning){
+    isPanning = false;
+  }
   if(isMoving){
     isMoving=false;
     saveToLocalStorage();
