@@ -186,7 +186,6 @@
     <div class="thumbnails" id="thumbContainer"></div>
     <div id="imageCountInfo" style="font-size:0.85rem; color:var(--text-muted); margin-top:8px;">Nahraté obrázky: 0</div>
     
-    <!-- Upozornenie pre používateľa -->
     <div class="tip-box">
       💡 <b>Tip:</b> Ak by výber obrázkov na prvý pokus nereagoval, klikni na „Vymazať nahrané obrázky“ a skús ich vybrať znova.
     </div>
@@ -231,7 +230,7 @@ function handleFiles(e) {
   }
 
   updateThumbnails();
-  e.target.value = '';
+  e.target.value = ''; // Úplný reset inputu, aby fungoval aj opakovaný výber
 }
 
 function updateThumbnails() {
@@ -281,7 +280,10 @@ function kombinujProfi() {
   const img2 = new Image();
 
   let loadedCount = 0;
+  let hasError = false;
+
   function checkReady() {
+    if (hasError) return;
     loadedCount++;
     if (loadedCount === 2) {
       processCanvas(img1, img2, efekt, opacity);
@@ -290,8 +292,19 @@ function kombinujProfi() {
     }
   }
 
+  function handleError() {
+    if (!hasError) {
+      hasError = true;
+      resultDiv.innerHTML = "<p style='color:var(--border-red); font-weight:bold;'>⚠️ Nastala chyba pri načítavaní obrázkov. Skús iné súbory.</p>";
+      URL.revokeObjectURL(url1);
+      URL.revokeObjectURL(url2);
+    }
+  }
+
   img1.onload = checkReady;
   img2.onload = checkReady;
+  img1.onerror = handleError;
+  img2.onerror = handleError;
 
   img1.src = url1;
   img2.src = url2;
@@ -302,10 +315,11 @@ function processCanvas(img1, img2, efekt, opacity) {
   const ctx = canvas.getContext("2d");
 
   let maxWidth = 1000;
-  let w = Math.max(img1.width, img2.width);
-  let h = Math.max(img1.height, img2.height);
+  let w = Math.max(img1.naturalWidth || img1.width, img2.naturalWidth || img2.width);
+  let h = Math.max(img1.naturalHeight || img1.height, img2.naturalHeight || img2.height);
+  
   if (w > maxWidth) {
-    h = (maxWidth / w) * h;
+    h = Math.round((maxWidth / w) * h);
     w = maxWidth;
   }
 
