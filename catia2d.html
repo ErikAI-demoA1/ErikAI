@@ -48,7 +48,7 @@ header{
 }
 canvas{background:#0b0d13;display:block;cursor:crosshair;}
 
-button, label.file-btn{
+button, label.file-btn, select.format-select{
   padding:8px 12px;
   border:none;
   border-radius:8px;
@@ -64,9 +64,17 @@ button, label.file-btn{
   justify-content: center;
   text-decoration: none;
 }
-button:hover, label.file-btn:hover{filter: brightness(1.1); transform: translateY(-1px);}
+button:hover, label.file-btn:hover, select.format-select:hover{filter: brightness(1.1); transform: translateY(-1px);}
 button.ghost{background: var(--panel-bg);border:1px solid var(--border-color);color:var(--text-main);}
 button.active{background: var(--accent-blue); color:white;}
+
+select.format-select {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-family: inherit;
+  outline: none;
+}
 
 label.file-btn {
   background: var(--panel-bg);
@@ -179,6 +187,16 @@ input[type="file"] {
     <button id="rectBtn" class="ghost" onclick="setTool('rect')">⬜ Obdĺžnik</button>
     <button id="textBtn" class="ghost" onclick="setTool('text')">🔤 Text</button>
     <button id="moveBtn" class="ghost" onclick="setTool('move')">🚚 Presun</button>
+    
+    <!-- Výber formátu výkresu -->
+    <select id="paperFormat" class="format-select" onchange="changePaperFormat()">
+      <option value="infinite">📄 Nekonečné plátno</option>
+      <option value="A4_portrait">📄 A4 Na výšku (210×297)</option>
+      <option value="A4_landscape" selected>📄 A4 Na šírku (297×210)</option>
+      <option value="A3_portrait">📄 A3 Na výšku (297×420)</option>
+      <option value="A3_landscape">📄 A3 Na šírku (420×297)</option>
+    </select>
+
     <button id="undoBtn" class="ghost" onclick="undo()">↩️</button>
     <button id="redoBtn" class="ghost" onclick="redo()">↪️</button>
     <button id="editDimsBtn" class="ghost">📋 Koty & Výkres</button>
@@ -229,12 +247,23 @@ let isMoving=false;
 let moveShapeIndex=null;
 let moveOffset={x:0, y:0};
 
+// Definícia formátov papiera v pixeloch (mierka: 1 mm = 3.5 px pre pohodlné kreslenie)
+const paperFormats = {
+  'infinite': {w: 4000, h: 4000, name: 'Nekonečné plátno'},
+  'A4_portrait': {w: 735, h: 1040, name: 'A4 Na výšku'},
+  'A4_landscape': {w: 1040, h: 735, name: 'A4 Na šírku'},
+  'A3_portrait': {w: 1040, h: 1470, name: 'A3 Na výšku'},
+  'A3_landscape': {w: 1470, h: 1040, name: 'A3 Na šírku'}
+};
+let currentFormatKey = 'A4_landscape';
+
 const info=document.getElementById('info');
 const dimsPanel=document.getElementById('dimensionsPanel');
 const dimsContent=document.getElementById('dimsContent');
 const editDimsBtn=document.getElementById('editDimsBtn');
 const commandHistory=document.getElementById('commandHistory');
 const commandInput=document.getElementById('commandInput');
+const paperFormatSelect=document.getElementById('paperFormat');
 
 function logCommand(text){
   const div=document.createElement('div');
@@ -244,19 +273,45 @@ function logCommand(text){
 }
 
 function saveToLocalStorage(){
-  localStorage.setItem('erikai_cad_autosave', JSON.stringify(shapes));
+  localStorage.setItem('erikai_cad_autosave', JSON.stringify({shapes, format: currentFormatKey}));
 }
 
 function loadFromLocalStorage(){
   const saved = localStorage.getItem('erikai_cad_autosave');
   if(saved){
     try{
-      shapes = JSON.parse(saved);
+      const data = JSON.parse(saved);
+      if(Array.isArray(data)){
+        shapes = data; // starší formát
+      } else {
+        shapes = data.shapes || [];
+        if(data.format && paperFormats[data.format]){
+          currentFormatKey = data.format;
+          paperFormatSelect.value = currentFormatKey;
+        }
+      }
+      applyPaperSize();
       logCommand("Projekt úspešne obnovený z pamäte.");
     }catch(e){
       console.error("Chyba pri načítaní autosave", e);
     }
+  } else {
+    applyPaperSize();
   }
+}
+
+function applyPaperSize(){
+  const fmt = paperFormats[currentFormatKey];
+  canvas.width = fmt.w;
+  canvas.height = fmt.h;
+  drawAll();
+}
+
+function changePaperFormat(){
+  currentFormatKey = paperFormatSelect.value;
+  applyPaperSize();
+  saveToLocalStorage();
+  logCommand(`Zmenený formát výkresu: ${paperFormats[currentFormatKey].name}`);
 }
 
 function setTool(t){
@@ -322,47 +377,57 @@ function clearAll(){
   drawAll();
 }
 
-// Pomocná funkcia na vytvorenie presne orezaného plátna s bielym pozadím pre tlač a export
+// Generovanie plátna pre export/tlač podľa zvoleného formátu alebo obsahu
 function generateBlueprintCanvas(){
-  if(shapes.length === 0) return null;
+  const fmt = paperFormats[currentFormatKey];
+  let width = fmt.w;
+  let height = fmt.h;
 
-  // Vypočítame minimálne a maximálne súradnice všetkých tvarov, aby sme zistili presnú veľkosť výkresu
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  shapes.forEach(s=>{
-    if(s.type==='line'){
-      minX = Math.min(minX, s.x1, s.x2); minY = Math.min(minY, s.y1, s.y2);
-      maxX = Math.max(maxX, s.x1, s.x2); maxY = Math.max(maxY, s.y1, s.y2);
-    }else if(s.type==='circle'){
-      minX = Math.min(minX, s.cx - s.r); minY = Math.min(minY, s.cy - s.r);
-      maxX = Math.max(maxX, s.cx + s.r); maxY = Math.max(maxY, s.cy + s.r);
-    }else if(s.type==='rect'){
-      minX = Math.min(minX, s.x, s.x + s.w); minY = Math.min(minY, s.y, s.y + s.h);
-      maxX = Math.max(maxX, s.x, s.x + s.w); maxY = Math.max(maxY, s.y, s.y + s.h);
-    }else if(s.type==='text'){
-      minX = Math.min(minX, s.x); minY = Math.min(minY, s.y - 20);
-      maxX = Math.max(maxX, s.x + 100); maxY = Math.max(maxY, s.y + 10);
-    }
-  });
-
-  const padding = 60; // Okolo výkresu necháme pekný okraj
-  minX -= padding; minY -= padding;
-  maxX += padding; maxY += padding;
-
-  const width = Math.max(400, maxX - minX);
-  const height = Math.max(400, maxY - minY);
+  if(currentFormatKey === 'infinite' && shapes.length > 0){
+    // Pre nekonečné plátno spravíme orez podľa obsahu
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    shapes.forEach(s=>{
+      if(s.type==='line'){
+        minX = Math.min(minX, s.x1, s.x2); minY = Math.min(minY, s.y1, s.y2);
+        maxX = Math.max(maxX, s.x1, s.x2); maxY = Math.max(maxY, s.y1, s.y2);
+      }else if(s.type==='circle'){
+        minX = Math.min(minX, s.cx - s.r); minY = Math.min(minY, s.cy - s.r);
+        maxX = Math.max(maxX, s.cx + s.r); maxY = Math.max(maxY, s.cy + s.r);
+      }else if(s.type==='rect'){
+        minX = Math.min(minX, s.x, s.x + s.w); minY = Math.min(minY, s.y, s.y + s.h);
+        maxX = Math.max(maxX, s.x, s.x + s.w); maxY = Math.max(maxY, s.y, s.y + s.h);
+      }else if(s.type==='text'){
+        minX = Math.min(minX, s.x); minY = Math.min(minY, s.y - 20);
+        maxX = Math.max(maxX, s.x + 100); maxY = Math.max(maxY, s.y + 10);
+      }
+    });
+    const padding = 60;
+    minX -= padding; minY -= padding;
+    maxX += padding; maxY += padding;
+    width = Math.max(400, maxX - minX);
+    height = Math.max(400, maxY - minY);
+  }
 
   const bCanvas = document.createElement('canvas');
   bCanvas.width = width;
   bCanvas.height = height;
   const bCtx = bCanvas.getContext('2d');
 
-  // Profesionálne čisté biele pozadie pre tlač a výkres
+  // Biele pozadie výkresu
   bCtx.fillStyle = '#ffffff';
   bCtx.fillRect(0, 0, width, height);
 
-  // Vykreslíme tvary posunuté tak, aby začínali od [0, 0] orezania
+  // Ak je to pevný formát (A4/A3), nakreslíme pekný technický rámček
+  if(currentFormatKey !== 'infinite'){
+    bCtx.strokeStyle = '#cbd5e1';
+    bCtx.lineWidth = 1;
+    bCtx.strokeRect(20, 20, width - 40, height - 40);
+  }
+
   bCtx.save();
-  bCtx.translate(-minX, -minY);
+  if(currentFormatKey === 'infinite'){
+    // Posun ak treba
+  }
 
   shapes.forEach((s)=>{
     bCtx.strokeStyle = s.color || '#10b981';
@@ -382,7 +447,6 @@ function generateBlueprintCanvas(){
     }
     if(s.type !== 'text') bCtx.stroke();
 
-    // Koty a popisy na bielom výkrese
     bCtx.fillStyle='#475569'; bCtx.font='12px monospace';
     if(s.type==='line'){
       const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
@@ -403,23 +467,15 @@ function generateBlueprintCanvas(){
 }
 
 function exportImage(){
-  if(shapes.length === 0){
-    alert("Žiadne tvary na export.");
-    return;
-  }
   const bCanvas = generateBlueprintCanvas();
   const link=document.createElement('a');
-  link.download='erikai_cad_vykres.png';
+  link.download=`erikai_cad_${currentFormatKey}.png`;
   link.href = bCanvas.toDataURL('image/png');
   link.click();
-  logCommand("Výkres úspešne exportovaný ako PNG s bielym pozadím!");
+  logCommand("Výkres úspešne exportovaný ako PNG!");
 }
 
 function printBlueprint(){
-  if(shapes.length === 0){
-    alert("Žiadne tvary na tlač.");
-    return;
-  }
   const bCanvas = generateBlueprintCanvas();
   const dataUrl = bCanvas.toDataURL('image/png');
 
@@ -443,7 +499,7 @@ function printBlueprint(){
 }
 
 function exportJSON(){
-  const jsonText = JSON.stringify({shapes}, null, 2);
+  const jsonText = JSON.stringify({shapes, format: currentFormatKey}, null, 2);
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonText);
   const link = document.createElement('a');
   link.download = 'erikai_cad_projekt.json';
@@ -466,6 +522,11 @@ function importJSON(event){
       if(data.shapes && Array.isArray(data.shapes)){
         pushState();
         shapes = data.shapes;
+        if(data.format && paperFormats[data.format]){
+          currentFormatKey = data.format;
+          paperFormatSelect.value = currentFormatKey;
+        }
+        applyPaperSize();
         selectedShapeIndex = null;
         saveToLocalStorage();
         drawAll();
@@ -489,6 +550,11 @@ function importFromText(){
     if(data.shapes && Array.isArray(data.shapes)){
       pushState();
       shapes = data.shapes;
+      if(data.format && paperFormats[data.format]){
+        currentFormatKey = data.format;
+        paperFormatSelect.value = currentFormatKey;
+      }
+      applyPaperSize();
       selectedShapeIndex = null;
       saveToLocalStorage();
       drawAll();
@@ -516,6 +582,17 @@ function drawGrid(){
   }
   for(let y=0; y<canvas.height; y+=step){
     ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+
+  // Ak je zvolený formát papiera, nakreslíme jemný obrys formátu priamo na pracovnú plochu
+  if(currentFormatKey !== 'infinite'){
+    ctx.strokeStyle='rgba(59, 130, 246, 0.4)';
+    ctx.lineWidth=2;
+    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+    ctx.fillStyle='rgba(59, 130, 246, 0.6)';
+    ctx.font='12px monospace';
+    ctx.fillText(`Formát: ${paperFormats[currentFormatKey].name}`, 20, 30);
   }
 }
 
@@ -859,7 +936,7 @@ function updateDimensionsPanel(){
           s.x2 = s.x1 + currentLen * Math.cos(rad);
           s.y2 = s.y1 + currentLen * Math.sin(rad);
           saveToLocalStorage();
-      drawAll();
+          drawAll();
         }
       };
     }else if(s.type==='rect'){
@@ -907,7 +984,6 @@ function updateDimensionsPanel(){
 }
 
 loadFromLocalStorage();
-drawAll();
 </script>
 </body>
 </html>
