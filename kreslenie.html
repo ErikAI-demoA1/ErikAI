@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Erakai - Kresliaca App (Tlačové ISO formáty)</title>
+  <title>Erakai - Kresliaca App (Zoom & ISO Formáty)</title>
   <style>
     :root {
       --bg-gradient: linear-gradient(135deg, #071026 0%, #0d1b3e 100%);
@@ -35,7 +35,7 @@
       display: flex; 
       flex-direction: column;
       gap: 16px; 
-      max-width: 1400px; 
+      max-width: 1500px; 
       width: 100%;
       margin: 0 auto;
     }
@@ -54,7 +54,11 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 600px;
+        min-height: 70vh;
+        background: rgba(0,0,0,0.2);
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
       }
     }
     
@@ -89,26 +93,31 @@
       font-size: 13px;
       font-weight: 500;
       flex: 1;
-      min-width: 65px;
+      min-width: 55px;
       text-align: center;
     }
     .toolbtn:hover { background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.4); }
     .toolbtn.active { background: var(--accent); border-color: var(--accent); color: white; box-shadow: 0 0 12px rgba(59,130,246,0.4); }
     
-    /* PLÁTNO A RESPONZÍVNY KONTAJNER */
-    .canvas-container { 
-      position: relative; 
-      background: white; 
-      border-radius: 12px; 
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-      border: 1px solid var(--panel-border);
+    /* RESPONZÍVNY KONTAJNER VOĽNÉHO POHYBU (ZOOM & PAN) */
+    .viewport-wrapper {
       width: 100%;
-      max-width: 800px;
-      max-height: 75vh;
+      height: 75vh;
+      overflow: hidden;
+      position: relative;
       display: flex;
       justify-content: center;
       align-items: center;
+      cursor: grab;
+    }
+
+    .canvas-container { 
+      position: absolute; 
+      background: white; 
+      border-radius: 4px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      transform-origin: center center;
+      transition: transform 0.05s ease-out;
     }
     
     #raster, #main { 
@@ -195,6 +204,20 @@
           <button class="toolbtn" data-tool="text">Text</button>
         </div>
       </div>
+
+      <div class="panel">
+        <h3>Priblíženie & Pohyb (Zoom)</h3>
+        <div style="display:flex; gap:4px; align-items:center; margin-bottom:8px;">
+          <button class="toolbtn" id="zoomOut">-</button>
+          <span id="zoomVal" style="font-size:12px; font-weight:bold; width:55px; text-align:center;">100%</span>
+          <button class="toolbtn" id="zoomIn">+</button>
+          <button class="toolbtn" id="zoomReset">Reset</button>
+        </div>
+        <div>
+          <input type="range" id="zoomSlider" min="10" max="500" value="100">
+        </div>
+        <div class="small" style="margin-top:6px; opacity:0.7;">💡 Drž <b>Space</b> pre posun plátna</div>
+      </div>
       
       <div class="panel">
         <h3>Vlastnosti</h3>
@@ -268,9 +291,11 @@
     </div>
     
     <div class="main-area">
-      <div id="viewportContainer" class="canvas-container">
-        <canvas id="raster" width="2480" height="3508"></canvas>
-        <canvas id="main" width="2480" height="3508"></canvas>
+      <div id="viewportWrapper" class="viewport-wrapper">
+        <div id="canvasBox" class="canvas-container">
+          <canvas id="raster" width="2480" height="3508"></canvas>
+          <canvas id="main" width="2480" height="3508"></canvas>
+        </div>
       </div>
     </div>
   </div>
@@ -296,11 +321,19 @@ const raster = $('raster');
 const main = $('main');
 const rCtx = raster.getContext('2d');
 const ctx = main.getContext('2d');
+const canvasBox = $('canvasBox');
+const viewportWrapper = $('viewportWrapper');
 
 let tool = 'select';
 let drawing = false;
 let dragging = false;
 let resizing = false;
+let isPanning = false;
+let spacePressed = false;
+let panStart = { x: 0, y: 0 };
+let panOffset = { x: 0, y: 0 };
+let zoomScale = 1.0;
+
 let resizeHandle = null;
 let selectedId = null;
 let dragOffset = {x:0, y:0};
@@ -310,7 +343,6 @@ let objects = [];
 let strokes = [];
 let pendingShape = null;
 
-// Skutočné plné tlačové rozmery v 300 DPI pre ISO formáty
 const isoPaperSizes = {
   A0: { w: 9933, h: 14043 },
   A1: { w: 7016, h: 9933 },
@@ -323,10 +355,69 @@ const isoPaperSizes = {
 
 let currentOrientation = 'portrait';
 
-// Koeficient mierky podľa šírky plátna, aby brush a rohy boli proporcionálne bez ohľadu na A4/A0
 function getScaleFactor() {
-  return raster.width / 2480; // Vzťah k A4 šírke
+  return raster.width / 2480;
 }
+
+function updateTransform() {
+  canvasBox.style.transform = `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`;
+  $('zoomVal').textContent = `${Math.round(zoomScale * 100)}%`;
+  $('zoomSlider').value = Math.round(zoomScale * 100);
+}
+
+function setZoom(val) {
+  zoomScale = Math.max(0.1, Math.min(5, val));
+  updateTransform();
+}
+
+$('zoomIn').addEventListener('click', () => setZoom(zoomScale + 0.15));
+$('zoomOut').addEventListener('click', () => setZoom(zoomScale - 0.15));
+$('zoomReset').addEventListener('click', () => { zoomScale = 0.25; panOffset = {x:0, y:0}; updateTransform(); });
+$('zoomSlider').addEventListener('input', (e) => setZoom(e.target.value / 100));
+
+viewportWrapper.addEventListener('wheel', (e) => {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.05 : 0.05;
+    setZoom(zoomScale + delta);
+  }
+}, { passive: false });
+
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && !spacePressed && document.activeElement.tagName !== 'INPUT') {
+    spacePressed = true;
+    viewportWrapper.style.cursor = 'grab';
+  }
+});
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'Space') {
+    spacePressed = false;
+    viewportWrapper.style.cursor = 'default';
+  }
+});
+
+viewportWrapper.addEventListener('mousedown', (e) => {
+  if (spacePressed || e.button === 1) {
+    isPanning = true;
+    panStart = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+    viewportWrapper.style.cursor = 'grabbing';
+  }
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (isPanning) {
+    panOffset.x = e.clientX - panStart.x;
+    panOffset.y = e.clientY - panStart.y;
+    updateTransform();
+  }
+});
+
+window.addEventListener('mouseup', () => {
+  if (isPanning) {
+    isPanning = false;
+    viewportWrapper.style.cursor = spacePressed ? 'grab' : 'default';
+  }
+});
 
 $('paperPreset').addEventListener('change', (e) => {
   const val = e.target.value;
@@ -370,6 +461,7 @@ function applyPaperSize(width, height) {
 
 function initCanvas() {
   applyPaperSize(2480, 3508);
+  setZoom(0.25); // Automatické prispôsobenie obrazovke pri štarte
 }
 
 function resizeCanvas(width, height) {
@@ -378,9 +470,8 @@ function resizeCanvas(width, height) {
   raster.width = main.width = width;
   raster.height = main.height = height;
   
-  // Zachovanie fyzického pomeru strán plátna v CSS kontajneri
-  const viewport = $('viewportContainer');
-  viewport.style.aspectRatio = `${width} / ${height}`;
+  canvasBox.style.width = width + 'px';
+  canvasBox.style.height = height + 'px';
 
   rCtx.fillStyle = '#ffffff';
   rCtx.fillRect(0, 0, width, height);
@@ -407,12 +498,6 @@ function setTool(t){
   document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
   const targetBtn = document.querySelector(`[data-tool="${t}"]`);
   if(targetBtn) targetBtn.classList.add('active');
-  
-  if(t === 'draw' || t === 'eraser'){
-    main.style.cursor = 'crosshair';
-  } else {
-    main.style.cursor = 'default';
-  }
 }
 
 $('colorPicker').addEventListener('input', e => { 
@@ -468,7 +553,7 @@ function createShape(type, pos){
         type: 'text',
         x: pos.x, y: pos.y,
         text: text,
-        fontSize: Math.round(50 * getScaleFactor()),
+        fontSize: Math.round(60 * getScaleFactor()),
         color: color,
         locked: false
       };
@@ -503,9 +588,9 @@ function getHandles(o) {
     bw = Math.abs(o.x2 - o.x); bh = Math.abs(o.y2 - o.y); 
   }
   else if(o.type==='text') {
-    ctx.font = `${o.fontSize||(50*getScaleFactor())}px Inter, Arial`;
+    ctx.font = `${o.fontSize||(60*getScaleFactor())}px Inter, Arial`;
     bw = ctx.measureText(o.text).width;
-    bh = o.fontSize || (50*getScaleFactor());
+    bh = o.fontSize || (60*getScaleFactor());
     by = o.y - bh;
   }
   return {
@@ -518,7 +603,7 @@ function getHandles(o) {
 
 function hitTestHandle(x, y, o) {
   const h = getHandles(o);
-  const radius = Math.max(15, 25 * getScaleFactor());
+  const radius = Math.max(20, 30 * getScaleFactor());
   for(let key in h) {
     let dx = x - h[key].x;
     let dy = y - h[key].y;
@@ -587,7 +672,7 @@ function renderAll(){
       ctx.beginPath(); ctx.moveTo(o.x,o.y); ctx.lineTo(o.x2,o.y2); ctx.stroke();
     } else if(o.type==='text'){
       ctx.fillStyle = o.color || '#000'; 
-      ctx.font = `${o.fontSize||(50*sf)}px Inter, Arial`; 
+      ctx.font = `${o.fontSize||(60*sf)}px Inter, Arial`; 
       ctx.fillText(o.text,o.x,o.y);
     }
 
@@ -606,11 +691,10 @@ function renderAll(){
       }
       else if(o.type==='text') {
         const w = ctx.measureText(o.text).width;
-        bw = w; bh = o.fontSize || (50*sf); by = o.y - bh;
+        bw = w; bh = o.fontSize || (60*sf); by = o.y - bh;
       }
       ctx.strokeRect(bx - 8*sf, by - 8*sf, bw + 16*sf, bh + 16*sf);
       
-      // Úchytové body
       ctx.setLineDash([]);
       ctx.fillStyle = '#3b82f6';
       const handleRadius = Math.max(12, 16 * sf);
@@ -628,6 +712,7 @@ function renderAll(){
 }
 
 function onDown(e){
+  if(isPanning || spacePressed) return;
   const pos = getCanvasPos(e);
   
   if(tool==='draw'){
@@ -678,6 +763,7 @@ function onDown(e){
 }
 
 function onMove(e){
+  if(isPanning) return;
   const pos = getCanvasPos(e);
   
   if(tool==='draw' && drawing){
@@ -945,7 +1031,7 @@ $('exportBtn').addEventListener('click', ()=>{
       tctx.strokeStyle = o.color||'#000';
       tctx.beginPath(); tctx.moveTo(o.x,o.y); tctx.lineTo(o.x2,o.y2); tctx.stroke();
     } else if(o.type==='text'){
-      tctx.fillStyle = o.color||'#000'; tctx.font = `${o.fontSize||(50*sf)}px Inter, Arial`; tctx.fillText(o.text,o.x,o.y);
+      tctx.fillStyle = o.color||'#000'; tctx.font = `${o.fontSize||(60*sf)}px Inter, Arial`; tctx.fillText(o.text,o.x,o.y);
     }
     tctx.restore();
   }
