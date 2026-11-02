@@ -2,57 +2,198 @@
 <html lang="sk">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🌐 ErikAI Netradičný online prehliadač</title>
   <style>
-    body {
-      background-color: #000;
-      color: #fff;
-      font-family: sans-serif;
-      text-align: center;
-      padding: 2rem;
+    :root {
+      --bg-color: #0b0b0b;
+      --card-bg: #141414;
+      --border-red: #e74c3c;
+      --border-green: #2ecc71;
+      --accent-yellow: #f1c40f;
+      --text-main: #ffffff;
+      --text-muted: #aaaaaa;
     }
-    input, button {
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      text-align: center;
+      padding: 2rem 1rem;
+      margin: 0;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 2px solid var(--border-green);
+      border-radius: 16px;
+      padding: 2.5rem;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+    }
+
+    h1 {
+      color: var(--accent-yellow);
+      margin-bottom: 0.5rem;
+      font-size: 1.8rem;
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .search-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      margin-top: 1.5rem;
+    }
+
+    input[type="text"] {
       font-size: 1.1rem;
-      padding: 10px;
-      margin: 10px;
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #fff;
+      width: 100%;
+      max-width: 500px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent-yellow);
+    }
+
+    button.search-btn {
+      font-size: 1.1rem;
+      padding: 12px 24px;
       border-radius: 10px;
       border: none;
-      width: 60%;
-    }
-    button {
-      background-color: #00bb55;
+      background-color: var(--border-red);
       color: white;
       cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s, transform 0.2s;
+      width: 100%;
+      max-width: 500px;
     }
+
+    button.search-btn:hover {
+      background-color: #c0392b;
+      transform: translateY(-2px);
+    }
+
+    .quick-tags {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin: 15px 0;
+    }
+
+    .tag {
+      background: #1a1a1a;
+      border: 1px solid #444;
+      color: var(--accent-yellow);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tag:hover {
+      background: var(--accent-yellow);
+      color: #000;
+      border-color: var(--accent-yellow);
+    }
+
+    .notice-box {
+      background: #2a2000;
+      color: #f1c40f;
+      padding: 12px;
+      border-left: 5px solid var(--accent-yellow);
+      margin-top: 20px;
+      border-radius: 6px;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    .results {
+      margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .results h2 {
+      color: var(--accent-yellow);
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 5px;
+    }
+
     .results a {
       display: block;
-      color: #00ccff;
-      margin: 6px 0;
-      font-size: 1.1rem;
+      color: #ffffff;
+      background-color: #1a1a1a;
+      padding: 12px 16px;
+      border-radius: 8px;
       text-decoration: none;
+      font-size: 1.05rem;
+      border-left: 4px solid var(--border-green);
+      transition: all 0.2s ease;
+      text-align: left;
     }
+
     .results a:hover {
-      text-decoration: underline;
+      background-color: #262626;
+      border-left-color: var(--accent-yellow);
+      padding-left: 20px;
+      color: var(--accent-yellow);
     }
-    h2 {
-      margin-top: 2rem;
-      color: #00ffff;
+
+    .footer {
+      font-size: 13px;
+      color: gray;
+      margin-top: 30px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
-  <h1>🌐 ErikAI Netradičný online prehliadač</h1>
-  <p>Zadaj, čo chceš vyhľadať (napr. Erik Mohylák):</p>
-  <input type="text" id="query" placeholder="Napíš, čo chceš nájsť...">
-  <button onclick="search()">🔍 Vyhľadať</button>
+  <div class="container">
+    <h1>🌐 ErikAI Netradičný online prehliadač</h1>
+    <p>Zadaj výraz, ktorý chceš vyhľadať na webe:</p>
+    
+    <div class="search-box">
+      <input type="text" id="query" placeholder="Napíš, čo chceš nájsť..." onkeypress="handleKey(event)">
+      <button class="search-btn" onclick="search()">🔍 Vyhľadať</button>
+    </div>
 
-  <p style="color:#88ccff; font-size: 0.95rem;">
-  ℹ️ <strong>Nápoveda:</strong> Ak napíšeš <strong>"ErikAI"</strong>, zobrazí sa 100 najznámejších prehliadačov sveta.  
-  Pri akomkoľvek inom výraze sa zobrazí ponuka výsledkov z Google, YouTube, Wikipédie, Máp a ďalších.
-  </p>
+    <!-- Rýchle tlačidlá -->
+    <div class="quick-tags">
+      <span class="tag" onclick="quickSearch('Erik Mohylák')">Erik Mohylák</span>
+      <span class="tag" onclick="quickSearch('ErikAI')">ErikAI</span>
+      <span class="tag" onclick="quickSearch('YouTube')">YouTube</span>
+      <span class="tag" onclick="quickSearch('JavaScript')">JavaScript</span>
+      <span class="tag" onclick="quickSearch('GitHub')">GitHub</span>
+    </div>
 
-  <div class="results" id="results"></div>
+    <div class="notice-box">
+      ℹ️ <strong>Nápoveda:</strong> Ak napíšeš <strong>"ErikAI"</strong>, zobrazí sa kompletný zoznam 100 najznámejších prehliadačov sveta. Pri inom výraze sa ti okamžite ponúknu rýchle odkazy na Google, YouTube, Wikipédiu, GitHub a ďalšie.
+    </div>
+
+    <div class="results" id="results"></div>
+  </div>
 
   <script>
     const browserList = [
@@ -71,6 +212,17 @@
       "TenFourFox", "Polarity Browser", "Uzbl", "Midnight Browser"
     ];
 
+    function handleKey(e) {
+      if (e.key === 'Enter') {
+        search();
+      }
+    }
+
+    function quickSearch(text) {
+      document.getElementById("query").value = text;
+      search();
+    }
+
     function search() {
       const q = document.getElementById("query").value.trim();
       const qLower = q.toLowerCase();
@@ -80,7 +232,7 @@
       if (!q) return;
 
       if (qLower.includes("erikai")) {
-        div.innerHTML = `<h2>🌐 Prehliadače ErikAI:</h2>`;
+        div.innerHTML = `<h2>🌐 Prehliadače ErikAI (Zoznam 100+):</h2>`;
         browserList.forEach(name => {
           const url = `https://www.google.com/search?q=${encodeURIComponent(name + ' browser')}`;
           div.innerHTML += `<a href="${url}" target="_blank">🌐 ${name}</a>`;
@@ -88,14 +240,17 @@
       } else {
         const encoded = encodeURIComponent(q);
         const engines = [
-          { name: "🔍 Google – Výsledky", url: `https://www.google.com/search?q=${encoded}` },
-          { name: "🦆 DuckDuckGo", url: `https://duckduckgo.com/?q=${encoded}` },
-          { name: "📺 YouTube", url: `https://www.youtube.com/results?search_query=${encoded}` },
-          { name: "📚 Wikipédia", url: `https://sk.wikipedia.org/wiki/Špeciálne:Hľadať?search=${encoded}` },
-          { name: "🖼️ Obrázky", url: `https://www.google.com/search?tbm=isch&q=${encoded}` },
-          { name: "📰 Správy", url: `https://www.google.com/search?tbm=nws&q=${encoded}` },
+          { name: "🔍 Google – Výsledky vyhľadávania", url: `https://www.google.com/search?q=${encoded}` },
+          { name: "🦆 DuckDuckGo (Súkromné vyhľadávanie)", url: `https://duckduckgo.com/?q=${encoded}` },
+          { name: "📺 YouTube – Videá", url: `https://www.youtube.com/results?search_query=${encoded}` },
+          { name: "📚 Wikipédia – Encyklopédia", url: `https://sk.wikipedia.org/wiki/Špeciálne:Hľadať?search=${encoded}` },
+          { name: "🖼️ Google Obrázky", url: `https://www.google.com/search?tbm=isch&q=${encoded}` },
+          { name: "📰 Google Správy", url: `https://www.google.com/search?tbm=nws&q=${encoded}` },
           { name: "🗺️ Google Mapy", url: `https://www.google.com/maps/search/${encoded}` },
-          { name: "📘 Knihy", url: `https://www.google.com/search?tbm=bks&q=${encoded}` }
+          { name: "📘 Google Knihy", url: `https://www.google.com/search?tbm=bks&q=${encoded}` },
+          { name: "💻 GitHub – Kód a projekty", url: `https://github.com/search?q=${encoded}` },
+          { name: "💬 Stack Overflow – Programovanie", url: `https://stackoverflow.com/search?q=${encoded}` },
+          { name: "📌 Pinterest – Nápady a obrázky", url: `https://www.pinterest.com/search/pins/?q=${encoded}` }
         ];
         div.innerHTML = `<h2>🔽 Výsledky pre: <i>${q}</i></h2>`;
         engines.forEach(engine => {
@@ -104,11 +259,11 @@
       }
     }
   </script>
-  <p style="font-size: 14px; color: gray; margin-top: 20px;">
-  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.  
-To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/  
-© 2025 Erik Mohylák – All rights reserved.
-</p>
+
+  <div class="footer">
+    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+    © 2025 Erik Mohylák – All rights reserved.
+  </div>
 
 </body>
 </html>
