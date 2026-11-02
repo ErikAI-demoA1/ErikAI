@@ -3,191 +3,360 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ErikAI Luxus MIX OS</title>
+<title>🚀 ErikAI Luxus MIX OS - Universe</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-  /* --- Reset a základ --- */
-  * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-  body { background: #0b0b0b; color: #fff; overflow: hidden; }
+  :root {
+    --bg-dark: #07090e;
+    --accent-orange: #ff5500;
+    --accent-glow: rgba(255, 85, 0, 0.4);
+    --panel-bg: rgba(18, 24, 38, 0.85);
+    --border-color: rgba(255, 255, 255, 0.12);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+  }
 
-  /* --- Iframe plná obrazovka --- */
-  #contentFrame { position: absolute; top:0; left:0; width:100%; height:100%; border:none; }
+  /* --- Reset a Základ --- */
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', 'Segoe UI', sans-serif; }
+  body { background: var(--bg-dark); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; }
 
-  /* --- Menu ikony --- */
+  /* --- Ambientné Pozadie --- */
+  .ambient-glow {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%);
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  /* --- Úvodný Splash Screen (keď nie je načítaný iframe) --- */
+  #welcomeScreen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    text-align: center;
+    padding: 20px;
+  }
+  #welcomeScreen h1 {
+    font-size: 2.8rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ffffff 40%, var(--accent-orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+  }
+  #welcomeScreen p {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    max-width: 500px;
+    line-height: 1.6;
+  }
+
+  /* --- Iframe Plná Obrazovka --- */
+  #contentFrame { 
+    position: absolute; 
+    top: 0; left: 0; 
+    width: 100%; height: 100%; 
+    border: none; 
+    z-index: 2;
+    background: transparent;
+  }
+
+  /* --- Horná Lišta Statusov & Indikátor --- */
+  .top-bar {
+    position: fixed;
+    top: 15px; left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(16px);
+    border-radius: 30px;
+    padding: 6px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .active-app-tag {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent-orange);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .active-app-tag::before {
+    content: '';
+    width: 8px; height: 8px;
+    background: var(--accent-orange);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--accent-orange);
+  }
+
+  /* --- Menu Ikony --- */
   .menuIcon {
     position: fixed;
     top: 15px;
-    width: 55px; height: 55px;
-    background: linear-gradient(135deg,#ff7f50,#ff4500);
-    border-radius: 50%;
+    width: 50px; height: 50px;
+    background: linear-gradient(135deg, #ff6b35, #ff3300);
+    border-radius: 14px;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 0 18px rgba(255,69,0,0.8);
-    transition: transform 0.3s, box-shadow 0.3s;
+    box-shadow: 0 4px 20px rgba(255, 51, 0, 0.5);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1000;
+    border: 1px solid rgba(255,255,255,0.2);
   }
-  .menuIcon:hover { transform: scale(1.1); box-shadow: 0 0 28px rgba(255,140,0,0.9); }
+  .menuIcon:hover { 
+    transform: translateY(-2px) scale(1.05); 
+    box-shadow: 0 6px 28px rgba(255, 85, 0, 0.8); 
+  }
   #menuLeft { left: 20px; }
   #menuRight { right: 20px; }
-  .menuIcon::before { content: "≡"; font-size: 28px; font-weight: bold; }
+  .menuIcon::before { content: "⚡"; font-size: 22px; color: #fff; }
 
-  /* --- Dropdown menu --- */
+  /* --- Dropdown Menu --- */
   .dropdown {
     position: fixed;
     top: 75px; 
-    background: rgba(20,20,20,0.98);
-    border: 1px solid #ff4500;
-    border-radius: 12px;
-    max-height: 80vh;
+    background: rgba(11, 15, 25, 0.95);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    max-height: 75vh;
+    width: 280px;
     overflow-y: auto;
     display: none;
     z-index: 1000;
     padding: 12px;
-    min-width: 200px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7);
   }
-  .dropdown a {
-    display: block;
+  
+  .dropdown-search {
+    width: 100%;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: rgba(255,255,255,0.05);
     color: #fff;
-    padding: 8px 12px;
+    font-size: 0.85rem;
+    outline: none;
+  }
+  .dropdown-search:focus {
+    border-color: var(--accent-orange);
+  }
+
+  .dropdown-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .dropdown a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text-primary);
+    padding: 10px 12px;
     text-decoration: none;
-    border-radius: 6px;
-    transition: background 0.2s;
+    border-radius: 8px;
+    font-size: 0.9rem;
     font-weight: 500;
+    transition: all 0.2s;
   }
   .dropdown a:hover {
-    background: rgba(255,69,0,0.5);
+    background: rgba(255, 85, 0, 0.2);
+    color: #fff;
+    padding-left: 16px;
   }
   #dropdownLeft { left: 20px; }
   #dropdownRight { right: 20px; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
 </style>
 </head>
 <body>
 
-<!-- Iframe -->
+<div class="ambient-glow"></div>
+
+<!-- Úvodná Obrazovka -->
+<div id="welcomeScreen">
+  <h1>ErikAI MIX OS Universe</h1>
+  <p>Vyberte ľubovoľnú aplikáciu z ponuky menu pre okamžité spustenie modulu.</p>
+</div>
+
+<!-- Iframe pre načítanie stránok -->
 <iframe id="contentFrame" src=""></iframe>
 
-<!-- Menu ikony -->
-<div id="menuLeft" class="menuIcon"></div>
-<div id="menuRight" class="menuIcon"></div>
+<!-- Horný Status Bar -->
+<div class="top-bar">
+  <div class="active-app-tag" id="appTag">ErikAI Universe System</div>
+</div>
+
+<!-- Menu Ikony -->
+<div id="menuLeft" class="menuIcon" title="Otvoriť Menu"></div>
+<div id="menuRight" class="menuIcon" title="Otvoriť Menu"></div>
 
 <!-- Dropdowny -->
-<div id="dropdownLeft" class="dropdown"></div>
-<div id="dropdownRight" class="dropdown"></div>
+<div id="dropdownLeft" class="dropdown">
+  <input type="text" class="dropdown-search" placeholder="🔍 Vyhľadať aplikáciu..." oninput="filterMenu(this)">
+  <div class="dropdown-list"></div>
+</div>
+
+<div id="dropdownRight" class="dropdown">
+  <input type="text" class="dropdown-search" placeholder="🔍 Vyhľadať aplikáciu..." oninput="filterMenu(this)">
+  <div class="dropdown-list"></div>
+</div>
 
 <script>
-// --- Tu môžeš ľahko meniť názvy, ktoré sa zobrazia ---
+// --- Zoznam všetkých požadovaných HTML modulov ---
 const htmlFiles = [
-  {file:"01zaklad.html", name:"01ZákladyHTML"},
-  {file:"02nadpisy.html", name:"02Nadpisy"},
-  {file:"03odkazy.html", name:"03Odkazy"},
-  {file:"04zoznamy.html", name:"04Zoznamy"},
-  {file:"05cssstyll.html", name:"05CSS Štýly"},
-  {file:"06javascript.html", name:"06JavaScript"},
-  {file:"07formular.html", name:"07Formuláre"},
-  {file:"08obrazkyavidea.html", name:"08Obrázky & Video"},
-  {file:"09tlacidlastyl.html", name:"09Tlačidlá & Štýl"},
-  {file:"10dizajn.html", name:"10Dizajn"},
-  {file:"11efekty.html", name:"11Efekty"},
-  {file:"12profil.html", name:"12Profil"},
-  {file:"13kalkulacka.html", name:"13Kalkulačka"},
-  {file:"14github.html", name:"14GitHub"},
-  {file:"android_apk.html", name:"Android Store APK"},
-  {file:"budik.html", name:"Budík"},
-  {file:"coc.html", name:"Big Coc"},
-  {file:"create_pwa.html", name:"Create easy PWA"},
-  {file:"dama.html", name:"Dáma"},
-  {file:"dokumenty.html", name:"Dokumenty"},
-  {file:"emoji.html", name:"MixEmoji"},
-  {file:"erikai-chat.html", name:"ErikAI Chat"},
-  {file:"erikai_kniha-html.html", name:"Kniha HTML"},
-  {file:"erikai_own_tube.html", name:"ErikAI Own Tube"},
-  {file:"erikai_tube.html", name:"ErikAI Tube"},
-  {file:"erikaiapkstudio.html", name:"Erik APK Studio"},
-  {file:"erikaicorelang.html", name:"ErikAI Core lang"},
-  {file:"eriktv.html", name:"Erik TV"},
-  {file:"erikvyh.html", name:"Vyhľadávanie"},
-  {file:"format.html", name:"Formát"},
-  {file:"fotak.html", name:"Fotenie"},
-  {file:"galeria.html", name:"Galéria"},
-  {file:"generator_hesla_mena.html", name:"Generator nahodnosti"},
-  {file:"generator_obrazkov.html", name:"Generator Obrazomix"},
-  {file:"grafy.html", name:"Grafy"},
-  {file:"hodiny.html", name:"Hodiny"},
-  {file:"hra.html", name:"Piškvorky"},
-  {file:"hudba.html", name:"Hudba"},
-  {file:"kalendar.html", name:"Kalendár"},
-  {file:"kalkulacku.html", name:"Kalkulačku"},
-  {file:"kompas.html", name:"Kompas"},
-  {file:"kontakt_hovor.html", name:"Kontakt & Hovor"},
-  {file:"kreslenie.html", name:"Kreslenie"},
-  {file:"kvantovy.html", name:"Kvantový"},
-  {file:"ludo.html", name:"Ludo"},
-  {file:"mail.html", name:"Mail"},
-  {file:"mapy.html", name:"Mapy"},
-  {file:"memorymatch.html", name:"Memory Match"},
-  {file:"minicoc.html", name:"Mini Coc"},
-  {file:"mixnastroje.html", name:"Mix Nástroje"},
-  {file:"nastroje.html", name:"Nástroje"},
-  {file:"nudzove.html", name:"Núdzové"},
-  {file:"onlineprehliadac.html", name:"Online Prehliadač"},
-  {file:"pdfob.html", name:"PDF OB"},
-  {file:"pdfsk.html", name:"PDFSK"},
-  {file:"perrchat.html", name:"PerrChat"},
-  {file:"pocasie.html", name:"Počasie"},
-  {file:"poznamky.html", name:"Poznámky"},
-  {file:"prevodjednotiek.html", name:"Prevod Jednotiek"},
-  {file:"prezentacie.html", name:"Prezentácie"},
-  {file:"qr.html", name:"QR"},
-  {file:"radio.html", name:"Rádio"},
-  {file:"reakciahra.html", name:"Reakcia Hra"},
-  {file:"realnastavenie.html", name:"Reálne Nastavenie"},
-  {file:"remixsong.html", name:"Remix Song"},
-  {file:"sachy.html", name:"Šachy"},
-  {file:"skener.html", name:"Skener"},
-  {file:"sms.html", name:"SMS"},
-  {file:"speedmeter.html", name:"Speed Meter"},
-  {file:"spravca_subor.html", name:"Správca Súbor"},
-  {file:"spravy.html", name:"Správy"},
-  {file:"support.html", name:"Support"},
-  {file:"tabulky.html", name:"Tabuľky"},
-  {file:"taprace.html", name:"TapRace"},
-  {file:"translate.html", name:"Translate"},
-  {file:"univerzal.html", name:"Univerzál"},
-  {file:"video_editor.html", name:"Video Editor"},
-  {file:"vzorce.html", name:"Vzorce"},
-  {file:"weberikai.html", name:"Web open ErikAI"},
-  {file:"writesped.html", name:"WriteSped"},
-  {file:"zaznam_nahravok.html", name:"Záznam Nahrávok"},
-  {file:"hry_menu.html", name:"Hry Menu"},
-  {file:"index2.html", name:"ErikAI OS(info)"},
-  {file:"index3.html", name:"ErikAI OS (hlavný)"},
-  {file:"nastroje_menu.html", name:"Nástroje Menu"},
-  {file:"platformy.html", name:"Platformy menu"},
-  {file:"prehliadac.html", name:"Interný Prehliadač"},
-  {file:"programy_menu.html", name:"Programy Menu"},
-  {file:"ukazka.html", name:"Ukážka(len tak)"},
-  {file:"zakladne_nastavenie.html", name:"Základné Nastavenie menu"},
-  {file:"komplet_os.html", name:"Exkluzívne stiahnutie ErikAI OS "},
-  {file:"zoznam_straniek.html", name:"Zoznam Stránok APK"},
-  {file:"erikai_enginepro.html", name:"EnginePRO"},
-  {file:"erikaienginecss.html", name:"EngineCSS"},
-  {file:"erikairocketsk.html", name:"RocketSK"},
-  {file:"index4.html", name:"welcome 2026🥹"},
-  {file:"kvantovy.html", name:"Kvantovy počítač (demo?)"},
-  {file:"univerzal.html", name:"Univerzal (demo?)"}
+  {file: "realnastavenie.html", name: "⚙️ Návod Nastavenie"},
+  {file: "pocasie.html", name: "🌞 Počasie"},
+  {file: "kalendar.html", name: "📑 Kalendár"},
+  {file: "hodiny.html", name: "⏱️ Hodiny & Stopky"},
+  {file: "budik.html", name: "⏰ Budík"},
+  {file: "erikai-chat.html", name: "🤖 ErikAI Web Chat"},
+  {file: "weberikai.html", name: "🤖 Web Open ErikAI"},
+  {file: "kalkulacku.html", name: "🧮 Kalkulačka Pro"},
+  {file: "poznamky.html", name: "📝 Poznámky"},
+  {file: "zaznam_nahravok.html", name: "🔊 Záznam Nahrávok"},
+  {file: "fotak.html", name: "📸 Fotoaparát & Video"},
+  {file: "skener.html", name: "📹 QR Skener"},
+  {file: "kompas.html", name: "🧭 Kompas"},
+  {file: "kontakt_hovor.html", name: "☎️ Kontakty & Hovory"},
+  {file: "mail.html", name: "📨 E-mail"},
+  {file: "sms.html", name: "🪪 SMS Spravy"},
+  {file: "galeria.html", name: "🪟 Galéria"},
+  {file: "mapy.html", name: "🗺️ Mapy"},
+  {file: "spravca_subor.html", name: "🗂️ Správca Súborov"},
+  {file: "dokumenty.html", name: "📃 Dokumenty"},
+  {file: "pdfsk.html", name: "📕 PDF Editor"},
+  {file: "tabulky.html", name: "📊 Tabuľky"},
+  {file: "prezentacie.html", name: "📖 Prezentácie"},
+  {file: "speedmeter.html", name: "🚄 Speedmeter"},
+  {file: "radio.html", name: "📻 Rádio"},
+  {file: "video_editor.html", name: "🎞️ Editor Videa"},
+  {file: "qr.html", name: "📹 QR Generátor"},
+  {file: "kreslenie.html", name: "📝 Kreslenie"},
+  {file: "translate.html", name: "🌐 Prekladač"},
+  {file: "erikvv.html", name: "📺 ErikAI TV"},
+  {file: "spravy.html", name: "📺 Správy a Noviny"},
+  {file: "nudzove.html", name: "🗂️ Núdzové Info"},
+  {file: "support.html", name: "🗂️ Podpora"},
+  {file: "erikaicorelang.html", name: "🌐 Erikai CoreLang"},
+  {file: "create_pwa.html", name: "🌐 Tvorba PWA"},
+  {file: "hra.html", name: "💻 Piškvorky"},
+  {file: "sachy.html", name: "💻 Šachy"},
+  {file: "dama.html", name: "💻 Dáma"},
+  {file: "ludo.html", name: "⚔️ Ultra Arena"},
+  {file: "minicoc.html", name: "🥊 Mini COC"},
+  {file: "coc.html", name: "🥊 Big COC"},
+  {file: "reakciahra.html", name: "⚡ Reakcia Hra"},
+  {file: "writesped.html", name: "⌨️ Writespeed"},
+  {file: "taprace.html", name: "🏎️ Tap Race"},
+  {file: "memorymatch.html", name: "🎴 Memory Match"},
+  {file: "nastroje.html", name: "👀 Pomocné Nástroje"},
+  {file: "generator_hesla_mena.html", name: "👤 Generátor Hesiel & Mien"},
+  {file: "ukazka.html", name: "👀 Ukážka Modul"},
+  {file: "generator_obrazkov.html", name: "🫂 Obrazomix Generátor"},
+  {file: "erikai_tube.html", name: "📹 ErikAI Tube"},
+  {file: "android_apk.html", name: "📲 Android APK Store"},
+  {file: "hudba.html", name: "🔊 Hudobný Prehrávač"},
+  {file: "erikai_own_tube.html", name: "📹 Own Tube"},
+  {file: "perrchat.html", name: "📩 Perr Chat"},
+  {file: "erikai_kniha-html.html", name: "📘 ErikAI Kniha HTML"},
+  {file: "eriktvv.html", name: "📺 Erik TV Studio"},
+  {file: "erikvyh.html", name: "🔍 Vyhľadávanie Modul"},
+  {file: "pdfob.html", name: "🖼️ Obrázky do PDF"},
+  {file: "emoji.html", name: "😍 Emojimix"},
+  {file: "remixsong.html", name: "🎵 Remix Song Modul"},
+  {file: "prevodjednotiek.html", name: "📐 Prevod Jednotiek"},
+  {file: "vzorce.html", name: "🧮 Vzorce"},
+  {file: "grafy.html", name: "📈 Grafy"},
+  {file: "erikaiapkstudio.html", name: "⚙️ APK Studio"},
+  {file: "mixnastroje.html", name: "🫂 Mix Nástroje Pro"},
+  {file: "erikai_enginepro.html", name: "🚀 EnginePRO"},
+  {file: "erikaienginecss.html", name: "🎨 EngineCSS"},
+  {file: "erikairocketsk.html", name: "🚀 RocketSK Modul"},
+  {file: "index4.html", name: "✨ Welcome 2027"},
+  {file: "kvantovy.html", name: "⚛️ Kvantový Počítač Demo"},
+  {file: "komplet_os.html", name: "⚙️ Exkluzívny ErikAI OS Store"},
+  {file: "univerzal.html", name: "🫂 ErikAI Univerzál Demo"},
+  {file: "4ai.html", name: "🤖 4AI Engine"},
+  {file: "ai1.html", name: "🧠 Core AI 1"},
+  {file: "ai2.html", name: "🧠 Core AI 2"},
+  {file: "ai3.html", name: "🧠 Core AI 3"},
+  {file: "c1ai.html", name: "⚡ C1 Neural Engine"},
+  {file: "d3ai.html", name: "🔮 D3 Vision AI"},
+  {file: "detektor.html", name: "🔍 Detektor & Senzory"},
+  {file: "dsc002.html", name: "📊 DSC Modul"},
+  {file: "ecatia.html", name: "🌌 Ecatia System"},
+  {file: "elek1.html", name: "⚡ Elektronika Schémy"},
+  {file: "erik_mohylak.html", name: "👤 Profil Erik Mohylák"},
+  {file: "erikai2026.html", name: "🪐 ErikAI 2026 Core"},
+  {file: "erikfifa.html", name: "⚽ ErikAI FIFA"},
+  {file: "esinumerik.html", name: "🔢 EsiNumerik"},
+  {file: "film.html", name: "🎬 Kino & Filmy"},
+  {file: "film4.html", name: "🍿 Film Studio 4"},
+  {file: "film5_opravena.html", name: "🎞️ Film Studio 5"},
+  {file: "formaty.html", name: "📁 Konvertor Formátov"},
+  {file: "g2ai.html", name: "🤖 G2 AI Lab"},
+  {file: "game1.html", name: "🎮 Mini Game 1"},
+  {file: "geo1.html", name: "🌍 Geo System"},
+  {file: "lens3.html", name: "🔍 Lens 3D"},
+  {file: "love.html", name: "❤️ Love Tester"},
+  {file: "luxuss.html", name: "💎 Premium Luxus"},
+  {file: "napad.html", name: "💡 Generátor Nápadov"},
+  {file: "nekonecne1.html", name: "♾️ Nekonečné Moduly 1"},
+  {file: "pohladnica.html", name: "💌 Generátor Pohľadníc"},
+  {file: "pozadie.html", name: "🖼️ Prispôsobenie Pozadia"},
+  {file: "rell.html", name: "🔄 Rell Modul"},
+  {file: "skener_a4.html", name: "📄 Skener A4"},
+  {file: "styl1.html", name: "🎨 Štýly & Témy"},
+  {file: "vizitka.html", name: "🪪 Tvorba Vizitiek"},
+  {file: "catia2d.html", name: "🎨 CATIA 2D"},
+  {file: "erikaihtmlcoreland.html", name: "🪪 Erikai CoreLand"}
 ];
 
 function populateDropdown(dropdown){
-  dropdown.innerHTML = "";
-  htmlFiles.forEach(item=>{
+  const listContainer = dropdown.querySelector('.dropdown-list');
+  listContainer.innerHTML = "";
+  htmlFiles.forEach(item => {
     const a = document.createElement('a');
     a.href = "#";
-    a.textContent = item.name; // zobrazovaný názov
-    a.addEventListener('click', e=>{
+    a.textContent = item.name;
+    a.setAttribute('data-file', item.file);
+    a.addEventListener('click', e => {
       e.preventDefault();
-      document.getElementById('contentFrame').src = "https://rawcdn.githack.com/ErikAI-demoA1/ErikAI/main/"+item.file;
+      document.getElementById('welcomeScreen').style.display = 'none';
+      document.getElementById('contentFrame').src = "https://rawcdn.githack.com/ErikAI-demoA1/ErikAI/main/" + item.file;
+      document.getElementById('appTag').textContent = item.name;
+      dropdownLeft.style.display = 'none';
+      dropdownRight.style.display = 'none';
     });
-    dropdown.appendChild(a);
+    listContainer.appendChild(a);
   });
+}
+
+function filterMenu(input) {
+  const filter = input.value.toLowerCase();
+  const list = input.nextElementSibling;
+  const items = list.getElementsByTagName('a');
+  for (let i = 0; i < items.length; i++) {
+    const text = items[i].textContent || items[i].innerText;
+    items[i].style.display = text.toLowerCase().indexOf(filter) > -1 ? "flex" : "none";
+  }
 }
 
 const menuLeft = document.getElementById('menuLeft');
@@ -195,24 +364,32 @@ const menuRight = document.getElementById('menuRight');
 const dropdownLeft = document.getElementById('dropdownLeft');
 const dropdownRight = document.getElementById('dropdownRight');
 
-menuLeft.addEventListener('click', ()=>{ dropdownLeft.style.display = dropdownLeft.style.display==='block' ? 'none':'block'; });
-menuRight.addEventListener('click', ()=>{ dropdownRight.style.display = dropdownRight.style.display==='block' ? 'none':'block'; });
+menuLeft.addEventListener('click', () => { 
+  dropdownRight.style.display = 'none';
+  dropdownLeft.style.display = dropdownLeft.style.display === 'block' ? 'none' : 'block'; 
+});
+
+menuRight.addEventListener('click', () => { 
+  dropdownLeft.style.display = 'none';
+  dropdownRight.style.display = dropdownRight.style.display === 'block' ? 'none' : 'block'; 
+});
 
 populateDropdown(dropdownLeft);
 populateDropdown(dropdownRight);
 </script>
 
-    <script>
-    const povoleneRef = ["erikai-demoa1.github.io", "erikaios.online"];
-    let pristupOk = false;
-    povoleneRef.forEach(ref => {
-      if (document.referrer.includes(ref)) pristupOk = true;
-    });
-    if (!pristupOk) {
-      alert("Prístup zakázaný: túto stránku nemožno otvoriť priamo.");
-      window.location.href = "https://erikaios.online/";
-    }
-    </script>
+<script>
+  // Kontrola Referrer
+  const povoleneRef = ["erikai-demoa1.github.io", "erikaios.online"];
+  let pristupOk = false;
+  povoleneRef.forEach(ref => {
+    if (document.referrer.includes(ref)) pristupOk = true;
+  });
+  if (!pristupOk) {
+    alert("Prístup zakázaný: túto stránku nemožno otvoriť priamo.");
+    window.location.href = "https://erikaios.online/";
+  }
+</script>
 
 </body>
 </html>
