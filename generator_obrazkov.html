@@ -208,9 +208,18 @@ let allImagesArray = [];
 let objectUrls = [];
 
 function handleFiles(e) {
-  const newFiles = Array.from(e.target.files);
-  allImagesArray = allImagesArray.concat(newFiles);
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+
+  // Pridanie nových súborov do globálneho poľa
+  for (let i = 0; i < files.length; i++) {
+    allImagesArray.push(files[i]);
+  }
+
   updateThumbnails();
+  
+  // Okamžité vyčistenie inputu, aby fungoval aj ďalší výber na prvýkrát
+  e.target.value = '';
 }
 
 function updateThumbnails() {
@@ -252,7 +261,7 @@ function kombinujProfi() {
 
   resultDiv.innerHTML = "<p style='color:var(--accent-yellow);'>⚡ Generujem okamžite...</p>";
 
-  // Náhodný výber dvoch súborov z našej pamäte
+  // Náhodný výber dvoch súborov z pamäte
   const shuffled = [...allImagesArray].sort(() => 0.5 - Math.random());
   const url1 = URL.createObjectURL(shuffled[0]);
   const url2 = URL.createObjectURL(shuffled[1]);
@@ -281,7 +290,6 @@ function processCanvas(img1, img2, efekt, opacity) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
-  // Optimalizácia veľkosti pre maximálnu rýchlosť spracovania
   let maxWidth = 1000;
   let w = Math.max(img1.width, img2.width);
   let h = Math.max(img1.height, img2.height);
