@@ -68,6 +68,7 @@ button:hover, label.file-btn:hover, select.format-select:hover{filter: brightnes
 button.ghost{background: var(--panel-bg);border:1px solid var(--border-color);color:var(--text-main);}
 button.active{background: var(--accent-blue); color:white;}
 button.danger{background: #dc2626; color:white;}
+button.warning{background: #f59e0b; color:black;}
 
 select.format-select {
   background: var(--panel-bg);
@@ -130,7 +131,7 @@ input[type="file"] {
   overflow:auto;
   display:none;
   box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-  width: 390px;
+  width: 410px;
   z-index: 1000;
 }
 .panel-header{
@@ -543,19 +544,8 @@ function generateBlueprintCanvas(){
     if(s.type !== 'text') bCtx.stroke();
     bCtx.setLineDash([]);
 
-    const fontSize = s.fontSize || 12;
-    bCtx.fillStyle='#475569'; bCtx.font=`${fontSize}px monospace`;
-    if(s.type==='line'){
-      const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
-      const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1);
-      const angleRad = Math.atan2(s.y2-s.y1, s.x2-s.x1);
-      let angleDeg = Math.round(angleRad * (180 / Math.PI));
-      if(angleDeg < 0) angleDeg += 360;
-      bCtx.fillText(`${len} mm (${angleDeg}°)`, midX+6, midY-6);
-    }else if(s.type==='rect'){
-      bCtx.fillText(`W:${Math.abs(s.w).toFixed(1)} H:${Math.abs(s.h).toFixed(1)}`, s.x+s.w/2-20, s.y+s.h/2);
-    }else if(s.type==='circle'){
-      bCtx.fillText(`R:${s.r.toFixed(1)}`, s.cx, s.cy - s.r - 6);
+    if(!s.hideDim){
+      drawDimensionOnContext(bCtx, s);
     }
   });
 
@@ -731,7 +721,9 @@ function drawAll(){
     if(s.type !== 'text') ctx.stroke();
     ctx.setLineDash([]);
 
-    drawDimension(s);
+    if(!s.hideDim){
+      drawDimensionOnContext(ctx, s);
+    }
   });
 
   if(startPt && tool !== 'move' && tool !== 'pan' && tool !== 'text'){
@@ -754,21 +746,23 @@ function drawAll(){
   if(editMode) updateDimensionsPanel();
 }
 
-function drawDimension(s){
+function drawDimensionOnContext(targetCtx, s){
   const fontSize = s.fontSize || 12;
-  ctx.fillStyle='#94a3b8'; ctx.font=`${fontSize}px monospace`;
-  ctx.setLineDash([]);
+  targetCtx.fillStyle = (targetCtx === ctx) ? '#94a3b8' : '#475569';
+  targetCtx.font = `${fontSize}px monospace`;
+  targetCtx.setLineDash([]);
+
   if(s.type==='line'){
     const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
     const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1);
     const angleRad = Math.atan2(s.y2-s.y1, s.x2-s.x1);
     let angleDeg = Math.round(angleRad * (180 / Math.PI));
     if(angleDeg < 0) angleDeg += 360;
-    ctx.fillText(`${len} mm (${angleDeg}°)`, midX+6, midY-6);
+    targetCtx.fillText(`${len} mm (${angleDeg}°)`, midX+6, midY-6);
   }else if(s.type==='rect'){
-    ctx.fillText(`W:${Math.abs(s.w).toFixed(1)} H:${Math.abs(s.h).toFixed(1)}`, s.x+s.w/2-20, s.y+s.h/2);
+    targetCtx.fillText(`W:${Math.abs(s.w).toFixed(1)} H:${Math.abs(s.h).toFixed(1)}`, s.x+s.w/2-20, s.y+s.h/2);
   }else if(s.type==='circle'){
-    ctx.fillText(`R:${s.r.toFixed(1)}`, s.cx, s.cy - s.r - 6);
+    targetCtx.fillText(`R:${s.r.toFixed(1)}`, s.cx, s.cy - s.r - 6);
   }
 }
 
@@ -868,11 +862,11 @@ function handleStart(clientX, clientY){
   pushState();
   let shape=null;
   if(tool==='line'){
-    shape={type:'line', x1:startPt.x, y1:startPt.y, x2:p.x, y2:p.y, color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12};
+    shape={type:'line', x1:startPt.x, y1:startPt.y, x2:p.x, y2:p.y, color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12, hideDim:false};
   }else if(tool==='circle'){
-    shape={type:'circle', cx:startPt.x, cy:startPt.y, r:Math.hypot(p.x-startPt.x, p.y-startPt.y), color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12};
+    shape={type:'circle', cx:startPt.x, cy:startPt.y, r:Math.hypot(p.x-startPt.x, p.y-startPt.y), color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12, hideDim:false};
   }else if(tool==='rect'){
-    shape={type:'rect', x:startPt.x, y:startPt.y, w:p.x-startPt.x, h:p.y-startPt.y, color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12};
+    shape={type:'rect', x:startPt.x, y:startPt.y, w:p.x-startPt.x, h:p.y-startPt.y, color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12, hideDim:false};
   }
 
   if(shape) shapes.push(shape);
@@ -1030,6 +1024,22 @@ function updateDimensionsPanel(){
       drawAll();
     };
     actionsRow.appendChild(colorInp);
+
+    if(s.type !== 'text'){
+      const dimToggleBtn = document.createElement('button');
+      dimToggleBtn.className = s.hideDim ? 'warning' : 'ghost';
+      dimToggleBtn.textContent = s.hideDim ? '👁️ Zobraziť kótu' : '🙈 Skryť kótu';
+      dimToggleBtn.style.padding = '4px 8px';
+      dimToggleBtn.style.fontSize = '0.75rem';
+      dimToggleBtn.onclick = () => {
+        pushState();
+        s.hideDim = !s.hideDim;
+        saveToLocalStorage();
+        drawAll();
+        updateDimensionsPanel();
+      };
+      actionsRow.appendChild(dimToggleBtn);
+    }
 
     const delBtn = document.createElement('button');
     delBtn.className = 'danger';
