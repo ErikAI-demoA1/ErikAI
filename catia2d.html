@@ -129,7 +129,7 @@ input[type="file"] {
   overflow:auto;
   display:none;
   box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-  width: 330px;
+  width: 350px;
   z-index: 1000;
 }
 #dimensionsPanel h3{margin:0 0 8px 0;color:var(--accent-green);font-size:0.95rem;}
@@ -157,7 +157,7 @@ input[type="file"] {
   color: var(--text-muted);
 }
 .input-row input{
-  width: 60px;
+  width: 55px;
   padding: 4px;
   border-radius: 4px;
   border: 1px solid var(--border-color);
@@ -166,7 +166,7 @@ input[type="file"] {
   font-size: 0.85rem;
 }
 .input-row input[type="text"]{
-  width: 110px;
+  width: 100px;
 }
 .input-row input[type="color"]{
   width: 32px;
@@ -253,7 +253,6 @@ let isMoving=false;
 let moveShapeIndex=null;
 let moveOffset={x:0, y:0};
 
-// Premenné pre Zoom a Pan (posun plátna)
 let scale = 1;
 let panX = 0;
 let panY = 0;
@@ -473,7 +472,8 @@ function generateBlueprintCanvas(){
     }
     if(s.type !== 'text') bCtx.stroke();
 
-    bCtx.fillStyle='#475569'; bCtx.font='12px monospace';
+    const fontSize = s.fontSize || 12;
+    bCtx.fillStyle='#475569'; bCtx.font=`${fontSize}px monospace`;
     if(s.type==='line'){
       const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
       const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1);
@@ -666,7 +666,8 @@ function drawAll(){
 }
 
 function drawDimension(s){
-  ctx.fillStyle='#94a3b8'; ctx.font='12px monospace';
+  const fontSize = s.fontSize || 12;
+  ctx.fillStyle='#94a3b8'; ctx.font=`${fontSize}px monospace`;
   if(s.type==='line'){
     const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
     const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1);
@@ -777,11 +778,11 @@ function handleStart(clientX, clientY){
   pushState();
   let shape=null;
   if(tool==='line'){
-    shape={type:'line', x1:startPt.x, y1:startPt.y, x2:p.x, y2:p.y, color:'#10b981'};
+    shape={type:'line', x1:startPt.x, y1:startPt.y, x2:p.x, y2:p.y, color:'#10b981', fontSize:12};
   }else if(tool==='circle'){
-    shape={type:'circle', cx:startPt.x, cy:startPt.y, r:Math.hypot(p.x-startPt.x, p.y-startPt.y), color:'#10b981'};
+    shape={type:'circle', cx:startPt.x, cy:startPt.y, r:Math.hypot(p.x-startPt.x, p.y-startPt.y), color:'#10b981', fontSize:12};
   }else if(tool==='rect'){
-    shape={type:'rect', x:startPt.x, y:startPt.y, w:p.x-startPt.x, h:p.y-startPt.y, color:'#10b981'};
+    shape={type:'rect', x:startPt.x, y:startPt.y, w:p.x-startPt.x, h:p.y-startPt.y, color:'#10b981', fontSize:12};
   }
 
   if(shape) shapes.push(shape);
@@ -955,7 +956,8 @@ function updateDimensionsPanel(){
       if(angleDeg < 0) angleDeg += 360;
 
       dimRow.innerHTML = `<label>Dĺžka:</label><input type="number" value="${len}" data-type="len">` +
-                         `<label>Uhol (°):</label><input type="number" value="${angleDeg}" data-type="angle">`;
+                         `<label>Uhol (°):</label><input type="number" value="${angleDeg}" data-type="angle">` +
+                         `<label>Kota (px):</label><input type="number" value="${s.fontSize || 12}" data-type="fontsize">`;
       const inps = dimRow.querySelectorAll('input');
       
       inps[0].onchange = (e) => {
@@ -982,9 +984,20 @@ function updateDimensionsPanel(){
           drawAll();
         }
       };
+
+      inps[2].onchange = (e) => {
+        pushState();
+        const val = parseInt(e.target.value);
+        if(!isNaN(val) && val > 4){
+          s.fontSize = val;
+          saveToLocalStorage();
+          drawAll();
+        }
+      };
     }else if(s.type==='rect'){
       dimRow.innerHTML = `<label>Šírka:</label><input type="number" value="${Math.abs(s.w).toFixed(1)}" data-type="w">` +
-                         `<label>Výška:</label><input type="number" value="${Math.abs(s.h).toFixed(1)}" data-type="h">`;
+                         `<label>Výška:</label><input type="number" value="${Math.abs(s.h).toFixed(1)}" data-type="h">` +
+                         `<label>Kota (px):</label><input type="number" value="${s.fontSize || 12}" data-type="fontsize">`;
       const inps = dimRow.querySelectorAll('input');
       inps[0].onchange = (e) => {
         pushState();
@@ -996,13 +1009,32 @@ function updateDimensionsPanel(){
         const val = parseFloat(e.target.value);
         if(!isNaN(val)){ s.h = val * (s.h < 0 ? -1 : 1); saveToLocalStorage(); drawAll(); }
       };
+      inps[2].onchange = (e) => {
+        pushState();
+        const val = parseInt(e.target.value);
+        if(!isNaN(val) && val > 4){
+          s.fontSize = val;
+          saveToLocalStorage();
+          drawAll();
+        }
+      };
     }else if(s.type==='circle'){
-      dimRow.innerHTML = `<label>Polomer:</label><input type="number" value="${s.r.toFixed(1)}" data-type="r">`;
-      const inp = dimRow.querySelector('input');
-      inp.onchange = (e) => {
+      dimRow.innerHTML = `<label>Polomer:</label><input type="number" value="${s.r.toFixed(1)}" data-type="r">` +
+                         `<label>Kota (px):</label><input type="number" value="${s.fontSize || 12}" data-type="fontsize">`;
+      const inps = dimRow.querySelectorAll('input');
+      inps[0].onchange = (e) => {
         pushState();
         const val = parseFloat(e.target.value);
         if(!isNaN(val) && val > 0){ s.r = val; saveToLocalStorage(); drawAll(); }
+      };
+      inps[1].onchange = (e) => {
+        pushState();
+        const val = parseInt(e.target.value);
+        if(!isNaN(val) && val > 4){
+          s.fontSize = val;
+          saveToLocalStorage();
+          drawAll();
+        }
       };
     }else if(s.type==='text'){
       dimRow.innerHTML = `<label>Text:</label><input type="text" value="${s.text}" data-type="text">` +
