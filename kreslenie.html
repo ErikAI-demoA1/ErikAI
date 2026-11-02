@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Erakai - Kresliaca App</title>
+  <title>Erakai - Kresliaca App (ISO Formáty & Vektory)</title>
   <style>
     :root {
       --bg-gradient: linear-gradient(135deg, #071026 0%, #0d1b3e 100%);
@@ -35,7 +35,7 @@
       display: flex; 
       flex-direction: column;
       gap: 16px; 
-      max-width: 1240px; 
+      max-width: 1400px; 
       width: 100%;
       margin: 0 auto;
     }
@@ -46,13 +46,15 @@
         align-items: flex-start;
       }
       .sidebar { 
-        width: 310px; 
+        width: 320px; 
         flex-shrink: 0; 
       }
       .main-area {
         flex: 1;
         display: flex;
         justify-content: center;
+        align-items: center;
+        min-height: 600px;
       }
     }
     
@@ -93,7 +95,7 @@
     .toolbtn:hover { background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.4); }
     .toolbtn.active { background: var(--accent); border-color: var(--accent); color: white; box-shadow: 0 0 12px rgba(59,130,246,0.4); }
     
-    /* CANVAS CONTAINER */
+    /* CANVAS CONTAINER WITH DYNAMIC ASPECT RATIO */
     .canvas-container { 
       position: relative; 
       background: white; 
@@ -102,20 +104,20 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.4);
       border: 1px solid var(--panel-border);
       width: 100%;
-      max-width: 800px;
-      height: 500px;
-    }
-    
-    @media (max-width: 767px) {
-      .canvas-container { height: 400px; }
+      max-width: 850px;
+      max-height: 80vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     
     #raster, #main { 
       position: absolute; 
       top: 0; 
       left: 0; 
+      width: 100%;
+      height: 100%;
       display: block;
-      cursor: crosshair;
       touch-action: none;
     }
     #raster { z-index: 1; }
@@ -197,7 +199,7 @@
       <div class="panel">
         <h3>Vlastnosti</h3>
         <div style="margin-bottom:12px; display: flex; align-items: center; justify-content: space-between;">
-          <label class="small">Farba:</label>
+          <label class="small">Farba čiary / textu:</label>
           <input type="color" id="colorPicker" value="#000000">
         </div>
         <div>
@@ -207,7 +209,7 @@
       </div>
       
       <div class="panel">
-        <h3>Výber & Transformácia</h3>
+        <h3>Výber & Úpravy</h3>
         <div id="selInfo" style="margin-bottom: 8px;"><div class="small">Žiadny výber</div></div>
         <div style="display:flex; gap:4px; flex-wrap:wrap;">
           <button class="toolbtn" id="deleteBtn">Zmazať</button>
@@ -219,25 +221,32 @@
       </div>
       
       <div class="panel">
-        <h3>Plátno & Formát</h3>
+        <h3>Plátno & Formát Papiera</h3>
         <div style="margin-bottom: 8px;">
-          <label class="small">ISO Formát papiera:</label>
+          <label class="small">ISO Formát (300 DPI):</label>
           <select id="paperPreset" style="margin-top: 4px;">
-            <option value="">Vlastný rozmer...</option>
-            <option value="A6">A6 (1240 × 1748 px)</option>
-            <option value="A5">A5 (1748 × 2480 px)</option>
-            <option value="A4" selected>A4 (2480 × 3508 px - zmenšené)</option>
-            <option value="A3">A3 (3508 × 4960 px)</option>
-            <option value="A2">A2 (4960 × 7016 px)</option>
-            <option value="A1">A1 (7016 × 9933 px)</option>
+            <option value="A4" selected>A4 (2480 × 3508 px)</option>
             <option value="A0">A0 (9933 × 14043 px)</option>
+            <option value="A1">A1 (7016 × 9933 px)</option>
+            <option value="A2">A2 (4960 × 7016 px)</option>
+            <option value="A3">A3 (3508 × 4960 px)</option>
+            <option value="A5">A5 (1748 × 2480 px)</option>
+            <option value="A6">A6 (1240 × 1748 px)</option>
+            <option value="custom">Vlastné rozmery...</option>
           </select>
         </div>
+
         <div style="display:flex; gap:6px; margin-bottom:8px;">
-          <input type="number" id="canvasW" placeholder="Šírka" value="800">
-          <input type="number" id="canvasH" placeholder="Výška" value="500">
+          <button class="toolbtn active" id="btnPortrait">Portrét 📄</button>
+          <button class="toolbtn" id="btnLandscape">Krajinka 🖼️</button>
+        </div>
+
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <input type="number" id="canvasW" placeholder="Šírka" value="2480">
+          <input type="number" id="canvasH" placeholder="Výška" value="3508">
           <button class="toolbtn" id="setCanvasBtn" style="flex:unset; padding:6px 12px;">OK</button>
         </div>
+
         <button class="toolbtn" id="clearBtn" style="width:100%; margin-bottom:6px; display:block;">Vymazať plátno</button>
         <button class="toolbtn" id="themeToggle" style="width:100%; display:block;">Prepnúť tému</button>
       </div>
@@ -259,9 +268,9 @@
     </div>
     
     <div class="main-area">
-      <div class="canvas-container">
-        <canvas id="raster" width="800" height="500"></canvas>
-        <canvas id="main" width="800" height="500"></canvas>
+      <div id="viewportContainer" class="canvas-container">
+        <canvas id="raster" width="2480" height="3508"></canvas>
+        <canvas id="main" width="2480" height="3508"></canvas>
       </div>
     </div>
   </div>
@@ -270,9 +279,9 @@
     <div class="modal">
       <h3 id="modalTitle" style="margin-bottom: 12px; color: white;">Pridať tvar</h3>
       <div id="modalContent">
-        <input type="number" id="mWidth" placeholder="Šírka" value="100">
-        <input type="number" id="mHeight" placeholder="Výška" value="80">
-        <input type="number" id="mRadius" placeholder="Polomer" value="50">
+        <input type="number" id="mWidth" placeholder="Šírka" value="300">
+        <input type="number" id="mHeight" placeholder="Výška" value="200">
+        <input type="number" id="mRadius" placeholder="Polomer" value="150">
       </div>
       <div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end;">
         <button class="toolbtn" id="modalCancel" style="background: rgba(255,255,255,0.1);">Zrušiť</button>
@@ -301,34 +310,73 @@ let objects = [];
 let strokes = [];
 let pendingShape = null;
 
-// Paper Presets (skalované pre pohodlnú prácu v prehliadači)
-const paperSizes = {
-  A6: {w: 420, h: 595},
-  A5: {w: 595, h: 842},
-  A4: {w: 800, h: 1131},
-  A3: {w: 900, h: 1273},
-  A2: {w: 1000, h: 1414},
-  A1: {w: 1000, h: 1414},
-  A0: {w: 1000, h: 1414}
+// Presné ISO rozmery v pixeloch (pri štandarde 300 DPI pre kvalitnú tlač)
+const isoPaperSizes = {
+  A0: { w: 9933, h: 14043 },
+  A1: { w: 7016, h: 9933 },
+  A2: { w: 4960, h: 7016 },
+  A3: { w: 3508, h: 4960 },
+  A4: { w: 2480, h: 3508 },
+  A5: { w: 1748, h: 2480 },
+  A6: { w: 1240, h: 1748 }
 };
+
+let currentOrientation = 'portrait';
 
 $('paperPreset').addEventListener('change', (e) => {
   const val = e.target.value;
-  if(paperSizes[val]) {
-    $('canvasW').value = paperSizes[val].w;
-    $('canvasH').value = paperSizes[val].h;
-    resizeCanvas(paperSizes[val].w, paperSizes[val].h);
+  if(isoPaperSizes[val]) {
+    applyPaperSize(isoPaperSizes[val].w, isoPaperSizes[val].h);
   }
 });
 
+$('btnPortrait').addEventListener('click', () => {
+  currentOrientation = 'portrait';
+  $('btnPortrait').classList.add('active');
+  $('btnLandscape').classList.remove('active');
+  const w = Math.min(parseInt($('canvasW').value), parseInt($('canvasH').value));
+  const h = Math.max(parseInt($('canvasW').value), parseInt($('canvasH').value));
+  applyPaperSize(w, h);
+});
+
+$('btnLandscape').addEventListener('click', () => {
+  currentOrientation = 'landscape';
+  $('btnLandscape').classList.add('active');
+  $('btnPortrait').classList.remove('active');
+  const w = Math.max(parseInt($('canvasW').value), parseInt($('canvasH').value));
+  const h = Math.min(parseInt($('canvasW').value), parseInt($('canvasH').value));
+  applyPaperSize(w, h);
+});
+
+function applyPaperSize(width, height) {
+  let targetW = width;
+  let targetH = height;
+
+  if(currentOrientation === 'landscape' && targetW < targetH) {
+    targetW = height; targetH = width;
+  } else if(currentOrientation === 'portrait' && targetW > targetH) {
+    targetW = height; targetH = width;
+  }
+
+  $('canvasW').value = targetW;
+  $('canvasH').value = targetH;
+  resizeCanvas(targetW, targetH);
+}
+
 function initCanvas() {
-  resizeCanvas(800, 500);
+  applyPaperSize(2480, 3508);
 }
 
 function resizeCanvas(width, height) {
+  const oldRaster = raster.toDataURL();
+
   raster.width = main.width = width;
   raster.height = main.height = height;
   
+  // Nastavenie aspect-ratio pre responzívny výhľad plátna
+  const viewport = $('viewportContainer');
+  viewport.style.aspectRatio = `${width} / ${height}`;
+
   rCtx.fillStyle = '#ffffff';
   rCtx.fillRect(0, 0, width, height);
   
@@ -336,8 +384,13 @@ function resizeCanvas(width, height) {
   rCtx.lineJoin = 'round';
   rCtx.strokeStyle = color;
   rCtx.lineWidth = sizeVal;
-  
-  renderAll();
+
+  const img = new Image();
+  img.onload = () => {
+    rCtx.drawImage(img, 0, 0);
+    renderAll();
+  };
+  img.src = oldRaster;
 }
 
 document.querySelectorAll('[data-tool]').forEach(btn => {
@@ -347,14 +400,13 @@ document.querySelectorAll('[data-tool]').forEach(btn => {
 function setTool(t){
   tool = t;
   document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-  document.querySelector(`[data-tool="${t}"]`).classList.add('active');
+  const targetBtn = document.querySelector(`[data-tool="${t}"]`);
+  if(targetBtn) targetBtn.classList.add('active');
   
   if(t === 'draw' || t === 'eraser'){
     main.style.cursor = 'crosshair';
-    raster.style.cursor = 'crosshair';
   } else {
     main.style.cursor = 'default';
-    raster.style.cursor = 'default';
   }
 }
 
@@ -410,7 +462,7 @@ function createShape(type, pos){
         type: 'text',
         x: pos.x, y: pos.y,
         text: text,
-        fontSize: 22,
+        fontSize: Math.round(main.width * 0.03),
         color: color,
         locked: false
       };
@@ -431,7 +483,6 @@ function createShape(type, pos){
 
 function genId(){ return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
 
-// Získanie rohových úchytov (handles) pre transformáciu
 function getHandles(o) {
   let bx = o.x, by = o.y, bw = 0, bh = 0;
   if(o.type==='rect') { bw = o.w; bh = o.h; }
@@ -441,9 +492,9 @@ function getHandles(o) {
     bw = Math.abs(o.x2 - o.x); bh = Math.abs(o.y2 - o.y); 
   }
   else if(o.type==='text') {
-    ctx.font = `${o.fontSize||22}px Inter, Arial`;
+    ctx.font = `${o.fontSize||30}px Inter, Arial`;
     bw = ctx.measureText(o.text).width;
-    bh = o.fontSize || 22;
+    bh = o.fontSize || 30;
     by = o.y - bh;
   }
   return {
@@ -456,7 +507,7 @@ function getHandles(o) {
 
 function hitTestHandle(x, y, o) {
   const h = getHandles(o);
-  const radius = 8;
+  const radius = Math.max(12, main.width * 0.012);
   for(let key in h) {
     let dx = x - h[key].x;
     let dy = y - h[key].y;
@@ -477,7 +528,7 @@ function hitTest(x,y){
     }
     if(o.type==='line'){
       const d = distToSegment(x,y, o.x,o.y, o.x2,o.y2);
-      if(d < 10) return o.id;
+      if(d < 15) return o.id;
     }
     if(o.type==='text'){
       ctx.font = `${o.fontSize}px Inter, Arial`;
@@ -507,30 +558,30 @@ function renderAll(){
   for(const o of objects){
     ctx.save();
     if(o.type==='rect'){
-      ctx.lineWidth = o.stroke || Math.max(2, sizeVal/1.2);
+      ctx.lineWidth = o.stroke || Math.max(3, sizeVal);
       ctx.strokeStyle = o.color || '#000';
       if(o.fill){ ctx.fillStyle=o.fill; ctx.fillRect(o.x,o.y,o.w,o.h); }
       ctx.strokeRect(o.x,o.y,o.w,o.h);
     } else if(o.type==='circle'){
-      ctx.lineWidth = o.stroke || Math.max(2, sizeVal/1.2);
+      ctx.lineWidth = o.stroke || Math.max(3, sizeVal);
       ctx.strokeStyle = o.color || '#000';
       ctx.beginPath(); 
       ctx.arc(o.x+o.r,o.y+o.r,o.r,0,Math.PI*2);
       if(o.fill){ ctx.fillStyle=o.fill; ctx.fill(); }
       ctx.stroke();
     } else if(o.type==='line'){
-      ctx.lineWidth = o.stroke || Math.max(2, sizeVal/1.2);
+      ctx.lineWidth = o.stroke || Math.max(3, sizeVal);
       ctx.strokeStyle = o.color || '#000';
       ctx.beginPath(); ctx.moveTo(o.x,o.y); ctx.lineTo(o.x2,o.y2); ctx.stroke();
     } else if(o.type==='text'){
       ctx.fillStyle = o.color || '#000'; 
-      ctx.font = `${o.fontSize||22}px Inter, Arial`; 
+      ctx.font = `${o.fontSize||30}px Inter, Arial`; 
       ctx.fillText(o.text,o.x,o.y);
     }
 
     if(o.id===selectedId){ 
       const h = getHandles(o);
-      ctx.setLineDash([5,5]); ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1.5;
+      ctx.setLineDash([8,6]); ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = Math.max(2, main.width*0.0015);
       
       let bx = o.x, by = o.y, bw = 0, bh = 0;
       if(o.type==='rect') { bw = o.w; bh = o.h; }
@@ -541,16 +592,17 @@ function renderAll(){
       }
       else if(o.type==='text') {
         const w = ctx.measureText(o.text).width;
-        bw = w; bh = o.fontSize || 22; by = o.y - bh;
+        bw = w; bh = o.fontSize || 30; by = o.y - bh;
       }
-      ctx.strokeRect(bx-3, by-3, bw+6, bh+6);
+      ctx.strokeRect(bx-4, by-4, bw+8, bh+8);
       
-      // Kreslenie rohových úchytov pre zmenu veľkosti
+      // Rohové uzly
       ctx.setLineDash([]);
       ctx.fillStyle = '#3b82f6';
+      const handleRadius = Math.max(8, main.width * 0.006);
       Object.values(h).forEach(pt => {
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 5, 0, Math.PI*2);
+        ctx.arc(pt.x, pt.y, handleRadius, 0, Math.PI*2);
         ctx.fill();
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
@@ -629,17 +681,19 @@ function onMove(e){
     const o = objects.find(x => x.id === selectedId);
     if(o) {
       if(o.type === 'rect') {
-        if(resizeHandle === 'se') { o.w = Math.max(10, pos.x - o.x); o.h = Math.max(10, pos.y - o.y); }
+        if(resizeHandle === 'se') { o.w = Math.max(20, pos.x - o.x); o.h = Math.max(20, pos.y - o.y); }
         if(resizeHandle === 'nw') { 
           let right = o.x + o.w, bottom = o.y + o.h;
-          o.x = Math.min(pos.x, right - 10); o.y = Math.min(pos.y, bottom - 10);
+          o.x = Math.min(pos.x, right - 20); o.y = Math.min(pos.y, bottom - 20);
           o.w = right - o.x; o.h = bottom - o.y;
         }
       } else if(o.type === 'circle') {
-        if(resizeHandle === 'se') { o.r = Math.max(5, (pos.x - o.x)/2); }
+        if(resizeHandle === 'se') { o.r = Math.max(10, (pos.x - o.x)/2); }
       } else if(o.type === 'line') {
         if(resizeHandle === 'se') { o.x2 = pos.x; o.y2 = pos.y; }
         if(resizeHandle === 'nw') { o.x = pos.x; o.y = pos.y; }
+      } else if(o.type === 'text') {
+        if(resizeHandle === 'se') { o.fontSize = Math.max(12, Math.round(pos.y - o.y + 30)); }
       }
       renderAll();
     }
@@ -668,35 +722,30 @@ function onUp(e){
   if(resizing) resizing=false;
 }
 
-raster.addEventListener('mousedown', onDown);
-raster.addEventListener('mousemove', onMove);
-window.addEventListener('mouseup', onUp);
-
-raster.addEventListener('touchstart', onDown);
-raster.addEventListener('touchmove', onMove);
-window.addEventListener('touchend', onUp);
-
 main.addEventListener('mousedown', onDown);
 main.addEventListener('mousemove', onMove);
+window.addEventListener('mouseup', onUp);
+
 main.addEventListener('touchstart', onDown);
 main.addEventListener('touchmove', onMove);
+window.addEventListener('touchend', onUp);
 
 $('modalCancel').addEventListener('click', ()=>{ $('modalBg').style.display='none'; pendingShape=null; });
 $('modalOk').addEventListener('click', ()=>{
   if(!pendingShape){ $('modalBg').style.display='none'; return; }
-  const w = parseFloat($('mWidth').value)||100;
-  const h = parseFloat($('mHeight').value)||80;
-  const r = parseFloat($('mRadius').value)||50;
+  const w = parseFloat($('mWidth').value)||300;
+  const h = parseFloat($('mHeight').value)||200;
+  const r = parseFloat($('mRadius').value)||150;
   const pos = pendingShape;
   
   if(pos.type==='rect'){ 
-    const o={id:genId(),type:'rect',x:pos.x,y:pos.y,w:w,h:h,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; 
+    const o={id:genId(),type:'rect',x:pos.x,y:pos.y,w:w,h:h,color:color,stroke:Math.max(3,sizeVal),locked:false}; 
     objects.push(o); selectedId=o.id; 
   } else if(pos.type==='circle'){ 
-    const o={id:genId(),type:'circle',x:pos.x,y:pos.y,r:r,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; 
+    const o={id:genId(),type:'circle',x:pos.x,y:pos.y,r:r,color:color,stroke:Math.max(3,sizeVal),locked:false}; 
     objects.push(o); selectedId=o.id; 
   } else if(pos.type==='line'){ 
-    const o={id:genId(),type:'line',x:pos.x,y:pos.y,x2:pos.x+w,y2:pos.y+h,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; 
+    const o={id:genId(),type:'line',x:pos.x,y:pos.y,x2:pos.x+w,y2:pos.y+h,color:color,stroke:Math.max(3,sizeVal),locked:false}; 
     objects.push(o); selectedId=o.id; 
   }
   $('modalBg').style.display='none'; pendingShape=null; renderAll(); updateProjectsList(); updateSelInfo();
@@ -748,18 +797,10 @@ $('sendBack').addEventListener('click', ()=>{
 });
 
 $('setCanvasBtn').addEventListener('click', ()=>{
-  const w = Math.max(50, parseInt($('canvasW').value)||800);
-  const h = Math.max(50, parseInt($('canvasH').value)||500);
-  
-  const data = raster.toDataURL();
-  resizeCanvas(w, h);
-  
-  const img = new Image();
-  img.onload = ()=>{ 
-    rCtx.drawImage(img,0,0); 
-    renderAll(); 
-  }
-  img.src = data;
+  const w = Math.max(100, parseInt($('canvasW').value)||2480);
+  const h = Math.max(100, parseInt($('canvasH').value)||3508);
+  $('paperPreset').value = "custom";
+  applyPaperSize(w, h);
 });
 
 $('clearBtn').addEventListener('click', ()=>{
@@ -777,7 +818,7 @@ $('clearBtn').addEventListener('click', ()=>{
 function saveProject(){
   const name = prompt('Názov projektu:','moj_projekt');
   if(!name) return;
-  const payload = { objects, rasterData: raster.toDataURL('image/png'), meta:{savedAt:Date.now(), w:raster.width, h:raster.height} };
+  const payload = { objects, rasterData: raster.toDataURL('image/png'), meta:{savedAt:Date.now(), w:raster.width, h:raster.height, orientation: currentOrientation} };
   localStorage.setItem('erakai_proj_'+name, JSON.stringify(payload));
   updateProjectsList(); 
   alert('Uložené: '+name);
@@ -797,7 +838,12 @@ function loadProject(){
     objects = payload.objects || [];
     const img = new Image();
     img.onload = ()=>{ 
-      resizeCanvas(payload.meta ? payload.meta.w : img.width, payload.meta ? payload.meta.h : img.height);
+      if(payload.meta) {
+        currentOrientation = payload.meta.orientation || 'portrait';
+        applyPaperSize(payload.meta.w, payload.meta.h);
+      } else {
+        applyPaperSize(img.width, img.height);
+      }
       rCtx.drawImage(img,0,0); 
       renderAll(); 
       updateSelInfo(); 
@@ -811,7 +857,7 @@ $('loadBtn').addEventListener('click', loadProject);
 function updateProjectsList(){
   const cont = $('projects'); cont.innerHTML='';
   const keys = Object.keys(localStorage).filter(k=>k.startsWith('erakai_proj_'));
-  if(keys.length===0){ cont.innerHTML='<div class="small" style="margin-top:4px">Žiadne</div>'; return; }
+  if(keys.length===0){ cont.innerHTML='<div class="small" style="margin-top:4px">Žiadne projekty</div>'; return; }
   keys.forEach(k=>{
     const name = k.replace('erakai_proj_','');
     const row = document.createElement('div'); 
@@ -831,7 +877,12 @@ function updateProjectsList(){
       objects = p.objects||[]; 
       const img = new Image(); 
       img.onload=()=>{ 
-        resizeCanvas(p.meta ? p.meta.w : img.width, p.meta ? p.meta.h : img.height);
+        if(p.meta) {
+          currentOrientation = p.meta.orientation || 'portrait';
+          applyPaperSize(p.meta.w, p.meta.h);
+        } else {
+          applyPaperSize(img.width, img.height);
+        }
         rCtx.drawImage(img,0,0); 
         renderAll(); 
       }; 
@@ -861,32 +912,32 @@ $('exportBtn').addEventListener('click', ()=>{
   for(const o of objects){
     tctx.save();
     if(o.type==='rect'){
-      tctx.lineWidth = o.stroke||Math.max(2,sizeVal/1.2);
+      tctx.lineWidth = o.stroke||Math.max(3,sizeVal);
       tctx.strokeStyle = o.color||'#000';
       if(o.fill){ tctx.fillStyle=o.fill; tctx.fillRect(o.x,o.y,o.w,o.h); }
       tctx.strokeRect(o.x,o.y,o.w,o.h);
     } else if(o.type==='circle'){
-      tctx.lineWidth = o.stroke||Math.max(2,sizeVal/1.2);
+      tctx.lineWidth = o.stroke||Math.max(3,sizeVal);
       tctx.strokeStyle = o.color||'#000';
       tctx.beginPath(); tctx.arc(o.x+o.r,o.y+o.r,o.r,0,Math.PI*2);
       if(o.fill){ tctx.fillStyle=o.fill; tctx.fill(); }
       tctx.stroke();
     } else if(o.type==='line'){
-      tctx.lineWidth = o.stroke||Math.max(2,sizeVal/1.2);
+      tctx.lineWidth = o.stroke||Math.max(3,sizeVal);
       tctx.strokeStyle = o.color||'#000';
       tctx.beginPath(); tctx.moveTo(o.x,o.y); tctx.lineTo(o.x2,o.y2); tctx.stroke();
     } else if(o.type==='text'){
-      tctx.fillStyle = o.color||'#000'; tctx.font = `${o.fontSize||22}px Inter, Arial`; tctx.fillText(o.text,o.x,o.y);
+      tctx.fillStyle = o.color||'#000'; tctx.font = `${o.fontSize||30}px Inter, Arial`; tctx.fillText(o.text,o.x,o.y);
     }
     tctx.restore();
   }
   
   const url = tmp.toDataURL('image/png');
-  const a = document.createElement('a'); a.href = url; a.download = 'erakai_canvas.png'; a.click();
+  const a = document.createElement('a'); a.href = url; a.download = `erakai_export_${$('paperPreset').value}.png`; a.click();
 });
 
 $('downloadProject').addEventListener('click', ()=>{
-  const data = { objects, rasterData: raster.toDataURL('image/png'), meta:{w:raster.width,h:raster.height} };
+  const data = { objects, rasterData: raster.toDataURL('image/png'), meta:{w:raster.width,h:raster.height, orientation: currentOrientation} };
   const blob = new Blob([JSON.stringify(data)],{type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'erakai_project.json'; a.click();
 });
@@ -900,7 +951,12 @@ $('uploadProject').addEventListener('change', function(){
       objects = payload.objects||[];
       const img = new Image(); 
       img.onload=()=>{ 
-        resizeCanvas(payload.meta ? payload.meta.w : img.width, payload.meta ? payload.meta.h : img.height);
+        if(payload.meta) {
+          currentOrientation = payload.meta.orientation || 'portrait';
+          applyPaperSize(payload.meta.w, payload.meta.h);
+        } else {
+          applyPaperSize(img.width, img.height);
+        }
         rCtx.drawImage(img,0,0); 
         renderAll(); 
         updateProjectsList(); 
