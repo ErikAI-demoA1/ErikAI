@@ -127,6 +127,16 @@
     background: #555;
   }
 
+  .tip-box {
+    background: rgba(241, 196, 15, 0.1);
+    border-left: 3px solid var(--accent-yellow);
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    color: var(--accent-yellow);
+    border-radius: 4px;
+    margin-top: 10px;
+  }
+
   #vysledok {
     margin-top: 20px;
   }
@@ -167,7 +177,7 @@
 
 <div class="container">
   <h1>🧠 ErikAI Generátor Obrazomix – Blesková verzia</h1>
-  <div class="subtitle">Rýchle miešanie obrázkov a aplikovanie cyberpunkových efektov bez čakania</div>
+  <div class="subtitle">Rýchle miešanie obrázkov a aplikowanie cyberpunkových efektov bez čakania</div>
 
   <div class="control-group">
     <label>📁 Vyber obrázky (môžeš pridávať aj postupne):</label>
@@ -175,6 +185,11 @@
     <button class="secondary-btn" onclick="clearImages()">🗑️ Vymazať nahrané obrázky</button>
     <div class="thumbnails" id="thumbContainer"></div>
     <div id="imageCountInfo" style="font-size:0.85rem; color:var(--text-muted); margin-top:8px;">Nahraté obrázky: 0</div>
+    
+    <!-- Upozornenie pre používateľa -->
+    <div class="tip-box">
+      💡 <b>Tip:</b> Ak by výber obrázkov na prvý pokus nereagoval, klikni na „Vymazať nahrané obrázky“ a skús ich vybrať znova.
+    </div>
   </div>
 
   <div class="control-group">
@@ -211,14 +226,11 @@ function handleFiles(e) {
   const files = e.target.files;
   if (!files || files.length === 0) return;
 
-  // Pridanie nových súborov do globálneho poľa
   for (let i = 0; i < files.length; i++) {
     allImagesArray.push(files[i]);
   }
 
   updateThumbnails();
-  
-  // Okamžité vyčistenie inputu, aby fungoval aj ďalší výber na prvýkrát
   e.target.value = '';
 }
 
@@ -254,14 +266,13 @@ function kombinujProfi() {
   const resultDiv = document.getElementById("vysledok");
 
   if(allImagesArray.length < 2){
-    resultDiv.innerHTML = "<p style='color:var(--border-red); font-weight:bold;'>⚠️ Prosím, vyber najskôr aspoň 2 obrázky!</p>";
+    resultDiv.innerHTML = "<p style='color:var(--border-red); font-weight:bold;'>⚠️ Prosím, vyber najskôr aspoň 2 obrázky! Ak sa tak stalo, vymaž ich a skús to znova.</p>";
     downloadLink.style.display = "none";
     return;
   }
 
   resultDiv.innerHTML = "<p style='color:var(--accent-yellow);'>⚡ Generujem okamžite...</p>";
 
-  // Náhodný výber dvoch súborov z pamäte
   const shuffled = [...allImagesArray].sort(() => 0.5 - Math.random());
   const url1 = URL.createObjectURL(shuffled[0]);
   const url2 = URL.createObjectURL(shuffled[1]);
