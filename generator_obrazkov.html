@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🧠 ErikAI Generátor Obrazomix – Master Pro</title>
+<title>🧠 ErikAI Generátor Obrazomix – Lightning Fast Pro</title>
 <style>
   :root {
     --bg-color: #0b0b0b;
@@ -152,17 +152,17 @@
 <body>
 
 <div class="container">
-  <h1>🧠 ErikAI Generátor Obrazomix Master Pro</h1>
-  <div class="subtitle">Pokročilý nástroj na miešanie, prekrývanie a aplikovanie cyberpunkových efektov</div>
+  <h1>🧠 ErikAI Generátor Obrazomix – Blesková verzia</h1>
+  <div class="subtitle">Rýchle miešanie a aplikovanie cyberpunkových efektov bez čakania</div>
 
   <div class="control-group">
-    <label>📁 Nahraj 2 alebo viac obrázkov:</label>
+    <label>📁 Vyber obrázky (aspoň 2):</label>
     <input type="file" id="obrazok1" accept="image/*" multiple onchange="showThumbnails(event)">
     <div class="thumbnails" id="thumbContainer"></div>
   </div>
 
   <div class="control-group">
-    <label>🎨 Vyber umelecký efekt:</label>
+    <label>🎨 Vyber efekt:</label>
     <select id="efekt">
       <option value="glitch">⚡ Glitch efekt</option>
       <option value="neon">💡 Cyberpunk Neon</option>
@@ -177,150 +177,175 @@
   </div>
 
   <div class="control-group">
-    <label>🎚️ Intenzita / Priehľadnosť druhého obrázka (<span id="opacityVal">70</span>%):</label>
+    <label>🎚️ Intenzita prelínania (<span id="opacityVal">70</span>%):</label>
     <input type="range" id="opacityRange" min="10" max="100" value="70" oninput="document.getElementById('opacityVal').innerText=this.value">
   </div>
 
-  <button class="main-btn" onclick="kombinujProfi()">🧠 Spustiť Obrazomix</button>
+  <button class="main-btn" onclick="kombinujProfi()">⚡ Okamžite kombinovať</button>
 
   <div id="vysledok"></div>
   <a id="download" href="#" download="erikai_mix.png" style="display:none;">⬇️ Stiahnuť vygenerovaný obrázok</a>
 </div>
 
 <script>
+let objectUrls = [];
+
 function showThumbnails(e) {
   const container = document.getElementById("thumbContainer");
   container.innerHTML = "";
+  objectUrls.forEach(url => URL.revokeObjectURL(url)); // vyčistenie pamäte
+  objectUrls = [];
+
   Array.from(e.target.files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      const img = document.createElement("img");
-      img.src = ev.target.result;
-      container.appendChild(img);
-    }
-    reader.readAsDataURL(file);
+    const url = URL.createObjectURL(file);
+    objectUrls.push(url);
+    const img = document.createElement("img");
+    img.src = url;
+    container.appendChild(img);
   });
 }
 
 function kombinujProfi() {
-  const files = Array.from(document.getElementById("obrazok1").files);
+  const files = document.getElementById("obrazok1").files;
   const efekt = document.getElementById("efekt").value;
   const opacity = parseInt(document.getElementById("opacityRange").value) / 100;
   const downloadLink = document.getElementById("download");
   const resultDiv = document.getElementById("vysledok");
 
   if(files.length < 2){
-    resultDiv.innerHTML = "<p style='color:var(--border-red); font-weight:bold;'>⚠️ Prosím, nahraj aspoň 2 obrázky!</p>";
+    resultDiv.innerHTML = "<p style='color:var(--border-red); font-weight:bold;'>⚠️ Prosím, vyber aspoň 2 obrázky!</p>";
     downloadLink.style.display = "none";
     return;
   }
 
-  resultDiv.innerHTML = "<p style='color:var(--accent-yellow);'>⏳ Generujem umelecké dielo...</p>";
+  resultDiv.innerHTML = "<p style='color:var(--accent-yellow);'>⚡ Hotovo okamžite...</p>";
 
-  const selectedFiles = files.sort(() => 0.5 - Math.random()).slice(0, 2);
-  const reader1 = new FileReader();
-  const reader2 = new FileReader();
+  // Náhodný výber dvoch súborov bleskovou metódou
+  const shuffled = Array.from(files).sort(() => 0.5 - Math.random());
+  const url1 = URL.createObjectURL(shuffled[0]);
+  const url2 = URL.createObjectURL(shuffled[1]);
 
-  reader1.onload = e1 => {
-    reader2.onload = e2 => {
-      const img1 = new Image(); img1.src = e1.target.result;
-      const img2 = new Image(); img2.src = e2.target.result;
+  const img1 = new Image(); 
+  const img2 = new Image();
 
-      img1.onload = () => img2.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        canvas.width = Math.max(img1.width, img2.width, 800);
-        canvas.height = Math.max(img1.height, img2.height, 600);
+  img1.src = url1;
+  img2.src = url2;
 
-        // Vykreslenie podkladu
-        ctx.drawImage(img1, 0, 0, canvas.width, canvas.height);
-        ctx.globalAlpha = opacity;
+  let loadedCount = 0;
+  function checkReady() {
+    loadedCount++;
+    if (loadedCount === 2) {
+      processCanvas(img1, img2, efekt, opacity);
+      URL.revokeObjectURL(url1);
+      URL.revokeObjectURL(url2);
+    }
+  }
 
-        switch(efekt){
-          case "glitch":
-            ctx.drawImage(img2, 0, 0, canvas.width, canvas.height);
-            for(let i=0; i<30; i++){
-              const x = Math.random() * canvas.width;
-              const y = Math.random() * canvas.height;
-              const w = Math.random() * 100;
-              const h = Math.random() * 10;
-              ctx.drawImage(canvas, x, y, w, h, x + (Math.random()*20 - 10), y, w, h);
-            }
-            break;
+  img1.onload = checkReady;
+  img2.onload = checkReady;
+}
 
-          case "neon":
-            ctx.globalCompositeOperation = "lighter";
-            ctx.shadowColor = "#0ff";
-            ctx.shadowBlur = 50;
-            ctx.drawImage(img2, 0, 0, canvas.width, canvas.height);
-            ctx.globalCompositeOperation = "source-over";
-            break;
+function processCanvas(img1, img2, efekt, opacity) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
 
-          case "double":
-            ctx.globalCompositeOperation = "screen";
-            ctx.drawImage(img2, 0, 0, canvas.width, canvas.height);
-            ctx.globalCompositeOperation = "source-over";
-            break;
+  // Optimalizácia veľkosti pre maximálnu rýchlosť spracovania
+  let maxWidth = 1000;
+  let w = Math.max(img1.width, img2.width);
+  let h = Math.max(img1.height, img2.height);
+  if (w > maxWidth) {
+    h = (maxWidth / w) * h;
+    w = maxWidth;
+  }
 
-          case "blurcontrast":
-            ctx.filter = "blur(6px) contrast(1.5)";
-            ctx.drawImage(img2, 0, 0, canvas.width, canvas.height);
-            ctx.filter = "none";
-            break;
+  canvas.width = w;
+  canvas.height = h;
 
-          case "kaleidoskop":
-            for(let i=0; i<8; i++){
-              ctx.save();
-              ctx.translate(canvas.width/2, canvas.height/2);
-              ctx.rotate((Math.PI/4) * i);
-              ctx.globalAlpha = 0.3;
-              ctx.drawImage(img2, -canvas.width/4, -canvas.height/4, canvas.width/2, canvas.height/2);
-              ctx.restore();
-            }
-            break;
+  ctx.drawImage(img1, 0, 0, w, h);
+  ctx.globalAlpha = opacity;
 
-          case "chaos":
-            ctx.translate(50, 30);
-            ctx.rotate(0.15);
-            ctx.drawImage(img2, 0, 0, canvas.width, canvas.height);
-            ctx.setTransform(1,0,0,1,0,0);
-            break;
+  switch(efekt){
+    case "glitch":
+      ctx.drawImage(img2, 0, 0, w, h);
+      for(let i=0; i<20; i++){
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const bw = Math.random() * 80;
+        const bh = Math.random() * 8;
+        ctx.drawImage(canvas, x, y, bw, bh, x + (Math.random()*16 - 8), y, bw, bh);
+      }
+      break;
 
-          case "palette":
-            const palettes = [["#ff4d4d","#f1c40f"], ["#2ecc71","#3498db"], ["#9b59b6","#e74c3c"], ["#00ffff","#ff00ff"]];
-            const pal = palettes[Math.floor(Math.random()*palettes.length)];
-            ctx.globalCompositeOperation = "color";
-            ctx.fillStyle = pal[0]; 
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img2, 0, 0, canvas.width, canvas.height);
-            ctx.globalCompositeOperation = "source-over";
-            break;
+    case "neon":
+      ctx.globalCompositeOperation = "lighter";
+      ctx.shadowColor = "#0ff";
+      ctx.shadowBlur = 30;
+      ctx.drawImage(img2, 0, 0, w, h);
+      ctx.globalCompositeOperation = "source-over";
+      break;
 
-          case "pixel":
-            const size = 15;
-            ctx.drawImage(img2, 0, 0, canvas.width/size, canvas.height/size);
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(canvas, 0, 0, canvas.width/size, canvas.height/size, 0, 0, canvas.width, canvas.height);
-            ctx.imageSmoothingEnabled = true;
-            break;
+    case "double":
+      ctx.globalCompositeOperation = "screen";
+      ctx.drawImage(img2, 0, 0, w, h);
+      ctx.globalCompositeOperation = "source-over";
+      break;
 
-          case "invert":
-            ctx.filter = "invert(100%) hue-rotate(180deg)";
-            ctx.drawImage(img2, 0, 0, canvas.width, canvas.height);
-            ctx.filter = "none";
-            break;
-        }
+    case "blurcontrast":
+      ctx.filter = "blur(4px) contrast(1.4)";
+      ctx.drawImage(img2, 0, 0, w, h);
+      ctx.filter = "none";
+      break;
 
-        ctx.globalAlpha = 1;
-        const dataURL = canvas.toDataURL("image/png");
-        resultDiv.innerHTML = `<img src="${dataURL}" alt="Mix obrázkov">`;
-        downloadLink.href = dataURL;
-        downloadLink.style.display = "inline-block";
-      };
-    };
-    reader2.readAsDataURL(selectedFiles[1]);
-  };
-  reader1.readAsDataURL(selectedFiles[0]);
+    case "kaleidoskop":
+      for(let i=0; i<6; i++){
+        ctx.save();
+        ctx.translate(w/2, h/2);
+        ctx.rotate((Math.PI/3) * i);
+        ctx.globalAlpha = 0.35;
+        ctx.drawImage(img2, -w/4, -h/4, w/2, h/2);
+        ctx.restore();
+      }
+      break;
+
+    case "chaos":
+      ctx.translate(30, 20);
+      ctx.rotate(0.1);
+      ctx.drawImage(img2, 0, 0, w, h);
+      ctx.setTransform(1,0,0,1,0,0);
+      break;
+
+    case "palette":
+      const palettes = [["#ff4d4d","#f1c40f"], ["#2ecc71","#3498db"], ["#9b59b6","#e74c3c"]];
+      const pal = palettes[Math.floor(Math.random()*palettes.length)];
+      ctx.globalCompositeOperation = "color";
+      ctx.fillStyle = pal[0]; 
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img2, 0, 0, w, h);
+      ctx.globalCompositeOperation = "source-over";
+      break;
+
+    case "pixel":
+      const size = 12;
+      ctx.drawImage(img2, 0, 0, w/size, h/size);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(canvas, 0, 0, w/size, h/size, 0, 0, w, h);
+      ctx.imageSmoothingEnabled = true;
+      break;
+
+    case "invert":
+      ctx.filter = "invert(100%) hue-rotate(180deg)";
+      ctx.drawImage(img2, 0, 0, w, h);
+      ctx.filter = "none";
+      break;
+  }
+
+  ctx.globalAlpha = 1;
+  const dataURL = canvas.toDataURL("image/png", 0.9);
+  
+  document.getElementById("vysledok").innerHTML = `<img src="${dataURL}" alt="Mix obrázkov">`;
+  const downloadLink = document.getElementById("download");
+  downloadLink.href = dataURL;
+  downloadLink.style.display = "inline-block";
 }
 </script>
 
