@@ -61,10 +61,10 @@ button.secondary:hover {background: #219653; color:#fff;}
 
 .previewWrap{flex:1;min-width:360px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px}
 
-/* Dynamická pohľadnica kontajner – prispôsobuje sa pomerom strán zvoleného formátu */
+/* Dynamická pohľadnica kontajner */
 .card{
   width: 800px;
-  height: 533px; /* Predvolený pomer pre A6 na šírku */
+  height: 533px;
   border-radius: 16px;
   overflow: hidden;
   position: relative;
@@ -73,6 +73,8 @@ button.secondary:hover {background: #219653; color:#fff;}
   display: block;
   border: 2px solid rgba(255,255,255,0.1);
   transition: width 0.3s ease, height 0.3s ease;
+  -webkit-print-color-adjust: exact; /* Vynútenie tlače farieb a prechodov v prehliadači */
+  print-color-adjust: exact;
 }
 
 /* Predná strana */
@@ -137,29 +139,37 @@ button.secondary:hover {background: #219653; color:#fff;}
 .snow, .lights, .fireworkCanvas {position:absolute;inset:0;pointer-events:none; z-index:1;}
 .lights .bulb{position:absolute;border-radius:50%;box-shadow:0 0 18px rgba(255,255,255,0.06);}
 
-/* Perfektná tlač v reálnom formáte bez deformácií */
+/* Perfektná tlač v reálnom formáte so zachovaním farieb a pozadia */
 @media print{
   @page {
-    size: auto;
-    margin: 0mm;
+    size: landscape;
+    margin: 0;
   }
-  body{background:white !important;padding:0 !important;color:black !important;}
-  .panel, .previewWrap > div:not(#card), button, .controlsRow {display:none !important;}
-  .previewWrap {display: block !important; padding:0 !important; width: 100% !important; margin:0 !important;}
-  
-  .card{
-    box-shadow:none !important; 
-    border-radius:0 !important; 
-    border:none !important; 
-    position:absolute !important; 
-    left:0 !important; 
-    top:0 !important; 
-    width: 100vw !important; 
-    height: 100vh !important; 
-    max-width: none !important;
-    max-height: none !important;
-    transform: none !important;
+  body {
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  .panel, .previewWrap > div:not(#card), button, .controlsRow, footer, .muted {
+    display: none !important;
+  }
+  .previewWrap {
+    display: block !important;
+    padding: 0 !important;
     margin: 0 !important;
+    width: 100% !important;
+  }
+  .card {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 
@@ -233,7 +243,7 @@ button.secondary:hover {background: #219653; color:#fff;}
 <button id="printBtn" class="secondary">🖨️ Tlačiť pohľadnicu</button>
 </div>
 
-<span class="muted">Tip: Vyber požadovaný formát a všetko sa automaticky prispôsobí na milimeter presne.</span>
+<span class="muted">Tip: V nastaveniach tlače v prehliadači nezabudni zapnúť možnosť „Grafika na pozadí“ (Background graphics).</span>
 <footer>© 2026 ErikAI — Všetky práva vyhradené</footer>
 </div>
 
@@ -310,12 +320,11 @@ function toggleCardFace(){
 }
 
 function applySizeToCardForPrint(){
-  // Presné pomery strán pre výškovo/šírkové formáty (na šírku)
   const map = {
-    'A6': { w: 780, h: 552 },     // 148 x 105 mm
-    '5x7': { w: 780, h: 555 },    // 7 x 5 in
-    'A5fold': { w: 820, h: 578 }, // 210 x 148 mm
-    'DL': { w: 840, h: 396 }      // 210 x 99 mm
+    'A6': { w: 780, h: 552 },
+    '5x7': { w: 780, h: 555 },
+    'A5fold': { w: 820, h: 578 },
+    'DL': { w: 840, h: 396 }
   };
   const dim = map[sizeSel.value] || map['A6'];
   card.style.width = dim.w + 'px';
