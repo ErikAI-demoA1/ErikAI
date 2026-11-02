@@ -2,8 +2,8 @@
 <html lang="sk">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ErikAI Pro 2D CAD — AutoCAD Style (Opravené)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>ErikAI Pro 2D CAD — Mobile & PC Ready</title>
 <style>
 :root{
   --bg-color: #121216;
@@ -24,35 +24,39 @@ body{
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  touch-action: none; /* Zabráni predvolenému posúvaniu celej stránky na mobile */
 }
 header{
-  padding: 10px 15px;
+  padding: 8px 10px;
   background: var(--panel-bg);
   border-bottom: 1px solid var(--border-color);
   display:flex;
-  gap:10px;
+  gap:6px;
   align-items:center;
   flex-wrap:wrap;
   justify-content: space-between;
+  z-index: 10;
 }
-.panel{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.panel{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
 
 #canvasContainer {
   flex: 1;
   overflow: auto;
   position: relative;
   background: #0b0d13;
+  touch-action: auto; /* Povoliť skrolovanie kontajnera */
 }
 canvas{background:#0b0d13;display:block;cursor:crosshair;}
 
 button{
-  padding:8px 14px;
+  padding:8px 12px;
   border:none;
   border-radius:8px;
   background: var(--accent-green);
   color:#000;
   font-weight: bold;
   cursor:pointer;
+  font-size: 0.9rem;
   transition: all 0.2s;
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
@@ -63,22 +67,22 @@ button.active{background: var(--accent-blue); color:white;}
 #commandLineContainer{
   background: #090b10;
   border-top: 1px solid var(--border-color);
-  padding: 8px 15px;
+  padding: 6px 12px;
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 #commandHistory{
-  height: 40px;
+  height: 30px;
   overflow-y: auto;
   color: var(--text-muted);
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-#commandInputRow{display: flex; align-items: center; gap: 8px;}
+#commandInputRow{display: flex; align-items: center; gap: 6px;}
 #commandPrompt{color: var(--accent-green); font-weight: bold;}
 #commandInput{
   flex: 1;
@@ -86,16 +90,30 @@ button.active{background: var(--accent-blue); color:white;}
   border: none;
   color: white;
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 0.9rem;
   outline: none;
 }
 
-.info{padding:4px 15px;background: var(--panel-bg);font-size:0.85rem;color:var(--text-muted);border-top:1px solid var(--border-color);}
+.info{padding:4px 12px;background: var(--panel-bg);font-size:0.8rem;color:var(--text-muted);border-top:1px solid var(--border-color);}
 
-#dimensionsPanel{position:fixed;top:60px;right:15px;background:var(--panel-bg);border:1px solid var(--border-color);padding:15px;border-radius:12px;max-height:80vh;overflow:auto;display:none;box-shadow: 0 10px 30px rgba(0,0,0,0.6);width: 300px; z-index: 100;}
-#dimensionsPanel h3{margin:0 0 10px 0;color:var(--accent-green);font-size:1rem;}
-#dimensionsPanel div{margin-bottom:8px;font-size:0.9rem;}
-#dimensionsPanel input{width:85px;padding:4px;border-radius:4px;border:1px solid var(--border-color);background:#121216;color:white;}
+#dimensionsPanel{
+  position:fixed;
+  top:55px;
+  right:10px;
+  background:var(--panel-bg);
+  border:1px solid var(--border-color);
+  padding:12px;
+  border-radius:12px;
+  max-height:75vh;
+  overflow:auto;
+  display:none;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+  width: 260px;
+  z-index: 1000;
+}
+#dimensionsPanel h3{margin:0 0 8px 0;color:var(--accent-green);font-size:0.95rem;}
+#dimensionsPanel div{margin-bottom:8px;font-size:0.85rem;}
+#dimensionsPanel input{width:75px;padding:4px;border-radius:4px;border:1px solid var(--border-color);background:#121216;color:white;font-size:0.9rem;}
 </style>
 </head>
 <body>
@@ -105,15 +123,15 @@ button.active{background: var(--accent-blue); color:white;}
     <button id="lineBtn" class="active" onclick="setTool('line')">📏 Čiara</button>
     <button id="circleBtn" class="ghost" onclick="setTool('circle')">⭕ Kruh</button>
     <button id="rectBtn" class="ghost" onclick="setTool('rect')">⬜ Obdĺžnik</button>
-    <button id="moveBtn" class="ghost" onclick="setTool('move')">🚚 Presunúť</button>
-    <button id="undoBtn" class="ghost" onclick="undo()">↩️ Undo</button>
-    <button id="redoBtn" class="ghost" onclick="redo()">↪️ Redo</button>
-    <button id="editDimsBtn" class="ghost">📋 Koty a Vlastnosti</button>
+    <button id="moveBtn" class="ghost" onclick="setTool('move')">🚚 Presun</button>
+    <button id="undoBtn" class="ghost" onclick="undo()">↩️</button>
+    <button id="redoBtn" class="ghost" onclick="redo()">↪️</button>
+    <button id="editDimsBtn" class="ghost">📋 Koty</button>
   </div>
   <div class="panel">
     <button id="exportImg" class="ghost" onclick="exportImage()">📷 PNG</button>
     <button id="exportJSON" class="ghost" onclick="exportJSON()">💾 JSON</button>
-    <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Vymazať vše</button>
+    <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Zmazať</button>
   </div>
 </header>
 
@@ -121,13 +139,13 @@ button.active{background: var(--accent-blue); color:white;}
   <canvas id="cadCanvas" width="4000" height="4000"></canvas>
 </div>
 
-<div class="info" id="info">Súradnice: X: 0, Y: 0 | Nástroj: Čiara</div>
+<div class="info" id="info">X: 0, Y: 0 | Nástroj: Čiara</div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>Zadajte príkaz alebo vyberte nástroj z panelu...</div></div>
+  <div id="commandHistory"><div>Systém pripravený pre PC aj Mobil...</div></div>
   <div id="commandInputRow">
-    <span id="commandPrompt">Command:</span>
-    <input type="text" id="commandInput" placeholder="napíš napr. 'line', 'move', 'undo'..." autocomplete="off">
+    <span id="commandPrompt">&gt;</span>
+    <input type="text" id="commandInput" placeholder="Príkaz (line, move, undo)..." autocomplete="off">
   </div>
 </div>
 
@@ -148,7 +166,6 @@ let currentMouse={x:0, y:0};
 let selectedShapeIndex=null;
 let editMode=false;
 
-// Premenné pre presun (Move)
 let isMoving=false;
 let moveShapeIndex=null;
 let moveOffset={x:0, y:0};
@@ -179,7 +196,7 @@ function setTool(t){
   if(t==='rect') document.getElementById('rectBtn').classList.replace('ghost','active');
   if(t==='move') document.getElementById('moveBtn').classList.replace('ghost','active');
   startPt=null;
-  logCommand(`Zvolený nástroj: ${t.toUpperCase()}`);
+  logCommand(`Nástroj: ${t.toUpperCase()}`);
   drawAll();
 }
 
@@ -195,7 +212,7 @@ commandInput.onkeydown=(e)=>{
     else if(val==='undo') undo();
     else if(val==='redo') redo();
     else if(val==='clear') clearAll();
-    else logCommand(`Neznámy príkaz: ${val}`);
+    else logCommand(`Neznámy príkaz`);
   }
 };
 
@@ -207,7 +224,6 @@ function undo(){
   if(undoStack.length){
     redoStack.push(JSON.parse(JSON.stringify(shapes)));
     shapes=undoStack.pop();
-    logCommand("Undo vykonané");
     drawAll();
   }
 }
@@ -215,7 +231,6 @@ function redo(){
   if(redoStack.length){
     undoStack.push(JSON.parse(JSON.stringify(shapes)));
     shapes=redoStack.pop();
-    logCommand("Redo vykonané");
     drawAll();
   }
 }
@@ -223,25 +238,21 @@ function clearAll(){
   pushState();
   shapes=[];
   selectedShapeIndex=null;
-  logCommand("Všetky tvary vymazané");
   drawAll();
 }
 
-// Opravený export obrázka (PNG)
 function exportImage(){
   const link=document.createElement('a');
-  link.download='erikai_cad_drawing.png';
+  link.download='erikai_cad.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
-  logCommand("Obrázok úspešne exportovaný ako PNG");
 }
 
 function exportJSON(){
   const link=document.createElement('a');
-  link.download='erikai_cad_drawing.json';
+  link.download='erikai_cad.json';
   link.href='data:text/json,'+encodeURIComponent(JSON.stringify({shapes}));
   link.click();
-  logCommand("Projekt exportovaný ako JSON");
 }
 
 editDimsBtn.onclick=()=>{
@@ -324,7 +335,6 @@ function snap(x, y){
   };
 }
 
-// Vylepšená presná detekcia tvarov pre nástroj MOVE
 function findShapeAt(x, y){
   for(let i = shapes.length - 1; i >= 0; i--){
     let s = shapes[i];
@@ -353,11 +363,12 @@ function distToSegment(p, a, b) {
   return Math.hypot(p.x - (a.x + t*(b.x - a.x)), p.y - (a.y + t*(b.y - a.y)));
 }
 
-canvas.onmousedown=(e)=>{
+// Spoločná logika pre stlačenie (PC aj Mobil)
+function handleStart(clientX, clientY){
   const rect=canvas.getBoundingClientRect();
-  const x=e.clientX - rect.left + container.scrollLeft;
-  const y=e.clientY - rect.top + container.scrollTop;
-  const p=snap(x, y);
+  const x = clientX - rect.left + container.scrollLeft;
+  const y = clientY - rect.top + container.scrollTop;
+  const p = snap(x, y);
 
   if(tool === 'move'){
     const hitIdx = findShapeAt(x, y);
@@ -371,7 +382,6 @@ canvas.onmousedown=(e)=>{
       if(s.type==='line') moveOffset={x: x - s.x1, y: y - s.y1};
       else if(s.type==='circle') moveOffset={x: x - s.cx, y: y - s.cy};
       else if(s.type==='rect') moveOffset={x: x - s.x, y: y - s.y};
-      logCommand(`Začatý presun tvaru #${hitIdx+1}`);
       drawAll();
     } else {
       selectedShapeIndex = null;
@@ -380,39 +390,33 @@ canvas.onmousedown=(e)=>{
     return;
   }
 
-  if(e.button === 0){
-    if(!startPt){
-      startPt=p;
-      logCommand(`Začiatočný bod: (${p.x}, ${p.y})`);
-      return;
-    }
-
-    pushState();
-    let shape=null;
-    if(tool==='line'){
-      shape={type:'line', x1:startPt.x, y1:startPt.y, x2:p.x, y2:p.y};
-      logCommand(`Vytvorená čiara`);
-    }else if(tool==='circle'){
-      shape={type:'circle', cx:startPt.x, cy:startPt.y, r:Math.hypot(p.x-startPt.x, p.y-startPt.y)};
-      logCommand(`Vytvorený kruh`);
-    }else if(tool==='rect'){
-      shape={type:'rect', x:startPt.x, y:startPt.y, w:p.x-startPt.x, h:p.y-startPt.y};
-      logCommand(`Vytvorený obdĺžnik`);
-    }
-
-    if(shape) shapes.push(shape);
-    startPt=null;
-    drawAll();
+  if(!startPt){
+    startPt=p;
+    return;
   }
-};
 
-canvas.onmousemove=(e)=>{
+  pushState();
+  let shape=null;
+  if(tool==='line'){
+    shape={type:'line', x1:startPt.x, y1:startPt.y, x2:p.x, y2:p.y};
+  }else if(tool==='circle'){
+    shape={type:'circle', cx:startPt.x, cy:startPt.y, r:Math.hypot(p.x-startPt.x, p.y-startPt.y)};
+  }else if(tool==='rect'){
+    shape={type:'rect', x:startPt.x, y:startPt.y, w:p.x-startPt.x, h:p.y-startPt.y};
+  }
+
+  if(shape) shapes.push(shape);
+  startPt=null;
+  drawAll();
+}
+
+function handleMove(clientX, clientY){
   const rect=canvas.getBoundingClientRect();
-  const x=e.clientX - rect.left + container.scrollLeft;
-  const y=e.clientY - rect.top + container.scrollTop;
+  const x = clientX - rect.left + container.scrollLeft;
+  const y = clientY - rect.top + container.scrollTop;
   currentMouse = snap(x, y);
 
-  info.textContent=`Súradnice: X: ${currentMouse.x}, Y: ${currentMouse.y} | Nástroj: ${tool.toUpperCase()}`;
+  info.textContent=`X: ${currentMouse.x}, Y: ${currentMouse.y} | Nástroj: ${tool.toUpperCase()}`;
 
   if(isMoving && moveShapeIndex !== null){
     let s = shapes[moveShapeIndex];
@@ -435,35 +439,35 @@ canvas.onmousemove=(e)=>{
   }
 
   if(startPt) drawAll();
-};
+}
 
-canvas.onmouseup=()=>{
+function handleEnd(){
   if(isMoving){
     isMoving=false;
-    logCommand("Presun dokončený");
+  }
+}
+
+// Myš udalosti
+canvas.onmousedown=(e)=>{ if(e.button===0) handleStart(e.clientX, e.clientY); };
+canvas.onmousemove=(e)=> handleMove(e.clientX, e.clientY);
+canvas.onmouseup=()=> handleEnd();
+
+// Dotykové udalosti pre mobily a tablety
+canvas.ontouchstart=(e)=>{
+  if(e.touches.length === 1){
+    handleStart(e.touches[0].clientX, e.touches[0].clientY);
+    e.preventDefault();
   }
 };
-
-canvas.oncontextmenu=(e)=>{
-  e.preventDefault();
-  if(startPt){
-    startPt=null;
-    logCommand("Kreslenie zrušené");
-    drawAll();
+canvas.ontouchmove=(e)=>{
+  if(e.touches.length === 1){
+    handleMove(e.touches[0].clientX, e.touches[0].clientY);
+    e.preventDefault();
   }
 };
+canvas.ontouchend=()=> handleEnd();
 
-window.onkeydown=(e)=>{
-  if(e.key==='Delete' && selectedShapeIndex!==null){
-    pushState();
-    logCommand(`Vymazaný tvar #${selectedShapeIndex+1}`);
-    shapes.splice(selectedShapeIndex, 1);
-    selectedShapeIndex=null;
-    drawAll();
-  }
-};
-
-// Opravený panel vlastností a živých úprav kót bez zacyklenia
+// Panel vlastností s reálnou aktualizáciou kót
 function updateDimensionsPanel(){
   dimsContent.innerHTML='';
   if(shapes.length===0){
@@ -481,8 +485,7 @@ function updateDimensionsPanel(){
     
     if(s.type==='line'){
       const inp=document.createElement('input'); inp.type='number'; inp.value=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1);
-      
-      inp.onfocus=()=>pushState(); // Uloženie stavu pred začiatkom úpravy
+      inp.onfocus=()=>pushState();
       inp.oninput=(e)=>{
         const len=parseFloat(e.target.value);
         if(!isNaN(len) && len > 0){
