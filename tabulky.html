@@ -3,51 +3,307 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI Tabuľky 3.0</title>
+<title>📊 ErikAI Tabuľky 4.0 (Excel Pro)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-  body { font-family: Arial, sans-serif; padding: 20px; background: #f0f4f8; }
-  h1 { color: #1e90ff; }
-  table { border-collapse: collapse; margin-top: 20px; width: 100%; }
-  th, td { border: 1px solid #ccc; min-width: 50px; height: 30px; text-align: center; }
-  input[type="text"] { width: 100%; height: 100%; border: none; padding: 5px; box-sizing: border-box; text-align: center; }
-  input[type="number"] { width: 60px; }
-  .controls, .saved-list { margin-top: 20px; }
-  .controls button, .controls input[type="file"] { margin-right: 10px; padding: 10px; cursor:pointer; border:none; border-radius:5px; background:#1e90ff; color:white; }
-  .controls button:hover { background:#1558a5; }
-  .active-cell { background-color: #e6f7ff; }
-  body.dark-mode { background-color: #121212; color: white; }
+  :root {
+    --bg-color: #0b0b0b;
+    --card-bg: #141414;
+    --border-red: #e74c3c;
+    --border-green: #2ecc71;
+    --accent-yellow: #f1c40f;
+    --text-main: #ffffff;
+    --text-muted: #aaaaaa;
+    --header-bg: #1f1f1f;
+  }
+
+  body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    padding: 1.5rem; 
+    background: var(--bg-color); 
+    color: var(--text-main); 
+    margin: 0;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--card-bg);
+    border: 2px solid var(--border-green);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+  }
+
+  h1 { 
+    color: var(--accent-yellow); 
+    margin-top: 0;
+    text-align: center;
+    font-size: 1.8rem;
+  }
+
+  .subhead {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Toolbar a Ovládanie */
+  .toolbar, .formula-bar, .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    background: #1a1a1a;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    margin-bottom: 10px;
+  }
+
+  .toolbar button, .controls-row button {
+    background: #262626;
+    color: #fff;
+    border: 1px solid #444;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: bold;
+    transition: all 0.2s;
+  }
+
+  .toolbar button:hover, .controls-row button:hover {
+    background: var(--border-red);
+    border-color: var(--border-red);
+  }
+
+  .formula-bar input[type="text"] {
+    flex-grow: 1;
+    padding: 6px 10px;
+    background: #111;
+    color: #00ffcc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 1rem;
+  }
+
+  .cell-address {
+    background: #222;
+    color: var(--accent-yellow);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    min-width: 45px;
+    text-align: center;
+    border: 1px solid #444;
+  }
+
+  input[type="number"], input[type="text"].input-std {
+    padding: 6px;
+    background: #111;
+    color: #fff;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+
+  /* Tabuľka */
+  .table-wrapper {
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #333;
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+
+  table { 
+    border-collapse: collapse; 
+    width: 100%; 
+    background: #141414;
+  }
+
+  th, td { 
+    border: 1px solid #2a2a2a; 
+    min-width: 90px; 
+    height: 32px; 
+    text-align: center; 
+    padding: 0;
+  }
+
+  th {
+    background: var(--header-bg);
+    color: var(--accent-yellow);
+    font-weight: bold;
+    font-size: 0.85rem;
+    user-select: none;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  td.row-header {
+    background: var(--header-bg);
+    color: var(--accent-yellow);
+    font-weight: bold;
+    font-size: 0.85rem;
+    width: 40px;
+    min-width: 40px;
+    user-select: none;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+  }
+
+  table input { 
+    width: 100%; 
+    height: 100%; 
+    border: none; 
+    padding: 4px 8px; 
+    box-sizing: border-box; 
+    text-align: inherit; 
+    background: transparent;
+    color: #fff;
+    font-size: 0.9rem;
+    outline: none;
+  }
+
+  table input:focus, .active-cell { 
+    background-color: #1e3a29 !important; 
+    box-shadow: inset 0 0 0 2px var(--border-green);
+  }
+
+  /* Spodné tlačidlá */
+  .action-btn {
+    background: var(--border-red) !important;
+  }
+
+  .secondary-btn {
+    background: #27ae60 !important;
+  }
+
+  .saved-list { 
+    margin-top: 20px; 
+    background: #1a1a1a;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #333;
+  }
+
+  .saved-list h3 {
+    color: var(--accent-yellow);
+    margin-top: 0;
+  }
+
+  .saved-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #222;
+    padding: 8px 12px;
+    margin: 5px 0;
+    border-radius: 4px;
+    border-left: 3px solid var(--border-green);
+  }
+
+  .status-bar {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: var(--accent-yellow);
+    display: flex;
+    gap: 20px;
+    background: #111;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #222;
+  }
+
+  .footer {
+    font-size: 12px;
+    color: gray;
+    margin-top: 25px;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
 
-<h1>📊 ErikAI Tabuľky 3.0</h1>
+<div class="container">
+  <h1>📊 ErikAI Tabuľky 4.0 Pro</h1>
+  <div class="subhead">Excelový editor s podporou vzorcov (=SUM, =AVERAGE), CSV a XLSX exportom</div>
 
-<label>Počet riadkov: <input type="number" id="rowCount" value="10" min="1" max="100"></label>
-<label>Počet stĺpcov: <input type="number" id="colCount" value="10" min="1" max="100"></label>
-<button onclick="createTable()">🆕 Vytvoriť tabuľku</button>
-<br><br>
-<label>Vybrať CSV/Excel: <input type="file" id="fileInput" accept=".csv, .xlsx"></label>
-<br><br>
-<label>Názov tabuľky: <input type="text" id="tableName" placeholder="napr. moja_tabulka"></label>
+  <!-- Riadok pre vytváranie a veľkosť -->
+  <div class="controls-row">
+    <label>Riadky: <input type="number" id="rowCount" value="15" min="1" max="200" class="input-std"></label>
+    <label>Stĺpce: <input type="number" id="colCount" value="10" min="1" max="50" class="input-std"></label>
+    <button onclick="createTable()">🆕 Obnoviť tabuľku</button>
+    <button onclick="addRow()">➕ Pridať riadok</button>
+    <button onclick="addColumn()">➕ Pridať stĺpec</button>
+    <label style="margin-left:auto;">Import (.csv, .xlsx): <input type="file" id="fileInput" accept=".csv, .xlsx"></label>
+  </div>
 
-<table id="spreadsheet"></table>
+  <!-- Formátovacia lišta -->
+  <div class="toolbar">
+    <button onclick="applyStyle('fontWeight', 'bold')"><b>B</b></button>
+    <button onclick="applyStyle('fontStyle', 'italic')"><i>I</i></button>
+    <button onclick="applyStyle('textDecoration', 'underline')"><u>U</u></button>
+    <button onclick="applyStyle('textAlign', 'left')">⬅ Vľavo</button>
+    <button onclick="applyStyle('textAlign', 'center')">🎯 Na stred</button>
+    <button onclick="applyStyle('textAlign', 'right')">➡️ Vpravo</button>
+    <select onchange="applyStyle('color', this.value); this.value='';" style="background:#262626; color:#fff; padding:6px; border-radius:6px; border:1px solid #444;">
+      <option value="">🎨 Farba písma...</option>
+      <option value="#ffffff">Biela</option>
+      <option value="#2ecc71">Zelená</option>
+      <option value="#e74c3c">Červená</option>
+      <option value="#f1c40f">Žltá</option>
+      <option value="#3498db">Modrá</option>
+    </select>
+  </div>
 
-<div class="controls">
-  <button onclick="saveTable()">💾 Uložiť projekt</button>
-  <button onclick="loadTable()">📂 Načítať projekt</button>
-  <button onclick="exportCSV()">📃 Export CSV</button>
-  <button onclick="exportHTML()">📄 Export HTML</button>
-  <button onclick="clearTable()" style="background-color:#f44336;">🔧 Vymazať tabuľku</button>
-</div>
+  <!-- Vzorcový riadok (Formula Bar) -->
+  <div class="formula-bar">
+    <div class="cell-address" id="currentCellAddress">A1</div>
+    <span style="color:var(--accent-yellow); font-weight:bold;">fx</span>
+    <input type="text" id="formulaInput" placeholder="Zadaj hodnotu alebo vzorec (napr. =SUM(A1:A5))" oninput="onFormulaInputChange(this.value)">
+  </div>
 
-<div class="saved-list">
-  <h3>📂 Uložené projekty:</h3>
-  <div id="savedTables"></div>
+  <!-- Wrapper tabuľky -->
+  <div class="table-wrapper">
+    <table id="spreadsheet"></table>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span id="statSum">Súčet: 0</span>
+    <span id="statAvg">Priemer: 0</span>
+    <span id="statCount">Počet buniek: 0</span>
+  </div>
+
+  <!-- Tlačidlá akcií -->
+  <div class="controls-row" style="margin-top:15px;">
+    <input type="text" id="tableName" placeholder="Názov tabuľky (napr. Rozpočet)" class="input-std" style="width:200px;">
+    <button class="action-btn" onclick="saveTable()">💾 Uložiť projekt</button>
+    <button class="action-btn" onclick="loadTable()">📂 Načítať projekt</button>
+    <button class="secondary-btn" onclick="exportXLSX()">📊 Export XLSX (Excel)</button>
+    <button class="secondary-btn" onclick="exportCSV()">📃 Export CSV</button>
+    <button class="secondary-btn" onclick="exportHTML()">📄 Export HTML</button>
+    <button onclick="clearTable()" style="background:#c0392b; margin-left:auto;">🗑️ Vyčistiť</button>
+  </div>
+
+  <!-- Uložené projekty -->
+  <div class="saved-list">
+    <h3>📂 Uložené tabuľky v pamäti:</h3>
+    <div id="savedTables"></div>
+  </div>
 </div>
 
 <script>
-let rows = 10, cols = 10;
+let rows = 15, cols = 10;
+let activeInput = null;
+const formulaData = {}; // Ukladá originálne vzorce (napr. =SUM(A1:A5))
 
 function toColumnName(n) {
   let name = "";
@@ -58,41 +314,196 @@ function toColumnName(n) {
   return name;
 }
 
+function fromColumnName(name) {
+  let col = 0;
+  for (let i = 0; i < name.length; i++) {
+    col = col * 26 + (name.charCodeAt(i) - 64);
+  }
+  return col - 1;
+}
+
 function createTable() {
-  rows = parseInt(document.getElementById('rowCount').value);
-  cols = parseInt(document.getElementById('colCount').value);
+  rows = parseInt(document.getElementById('rowCount').value) || 10;
+  cols = parseInt(document.getElementById('colCount').value) || 10;
   const table = document.getElementById("spreadsheet");
   table.innerHTML = "";
 
+  // Hlavička stĺpcov
   const header = table.insertRow();
-  header.insertCell();
+  const corner = header.insertCell();
+  corner.className = "row-header";
+
   for (let c = 0; c < cols; c++) {
     const cell = header.insertCell();
     cell.textContent = toColumnName(c);
-    cell.style.fontWeight = "bold";
   }
 
+  // Riadky a bunky
   for (let r = 1; r <= rows; r++) {
     const row = table.insertRow();
     const rowHeader = row.insertCell();
     rowHeader.textContent = r;
-    rowHeader.style.fontWeight = "bold";
+    rowHeader.className = "row-header";
 
     for (let c = 0; c < cols; c++) {
       const cell = row.insertCell();
       const input = document.createElement("input");
       input.type = "text";
-      input.dataset.cell = toColumnName(c) + r;
-      input.addEventListener("focus", e => e.target.classList.add("active-cell"));
-      input.addEventListener("blur", e => e.target.classList.remove("active-cell"));
+      const cellId = toColumnName(c) + r;
+      input.dataset.cell = cellId;
+
+      input.addEventListener("focus", (e) => onCellFocus(e.target));
+      input.addEventListener("blur", (e) => onCellBlur(e.target));
       cell.appendChild(input);
+    }
+  }
+  updateStats();
+}
+
+function addRow() {
+  rows++;
+  document.getElementById('rowCount').value = rows;
+  createTable();
+}
+
+function addColumn() {
+  cols++;
+  document.getElementById('colCount').value = cols;
+  createTable();
+}
+
+function onCellFocus(input) {
+  activeInput = input;
+  document.getElementById("currentCellAddress").innerText = input.dataset.cell;
+  const rawValue = formulaData[input.dataset.cell] || input.value;
+  document.getElementById("formulaInput").value = rawValue;
+}
+
+function onCellBlur(input) {
+  const cellId = input.dataset.cell;
+  const val = input.value.trim();
+
+  if (val.startsWith("=")) {
+    formulaData[cellId] = val;
+    evaluateFormulas();
+  } else {
+    delete formulaData[cellId];
+  }
+  updateStats();
+}
+
+function onFormulaInputChange(val) {
+  if (!activeInput) return;
+  activeInput.value = val;
+  const cellId = activeInput.dataset.cell;
+  if (val.startsWith("=")) {
+    formulaData[cellId] = val;
+  } else {
+    delete formulaData[cellId];
+  }
+}
+
+// Matematické vzorce
+function evaluateFormulas() {
+  for (let cellId in formulaData) {
+    const formula = formulaData[cellId];
+    const input = document.querySelector(`[data-cell='${cellId}']`);
+    if (!input) continue;
+
+    try {
+      input.value = parseFormula(formula);
+    } catch (e) {
+      input.value = "#ERR!";
     }
   }
 }
 
-// CSV/Excel import
+function parseFormula(expr) {
+  let clean = expr.substring(1).toUpperCase();
+
+  // SUM(A1:A5)
+  clean = clean.replace(/SUM\((.*?)\)/g, (match, p1) => computeRange(p1, arr => arr.reduce((a, b) => a + b, 0)));
+  // AVERAGE(A1:A5)
+  clean = clean.replace(/AVERAGE\((.*?)\)/g, (match, p1) => computeRange(p1, arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0));
+  // MIN(A1:A5)
+  clean = clean.replace(/MIN\((.*?)\)/g, (match, p1) => computeRange(p1, arr => Math.min(...arr)));
+  // MAX(A1:A5)
+  clean = clean.replace(/MAX\((.*?)\)/g, (match, p1) => computeRange(p1, arr => Math.max(...arr)));
+  // COUNT(A1:A5)
+  clean = clean.replace(/COUNT\((.*?)\)/g, (match, p1) => computeRange(p1, arr => arr.length));
+
+  // Nahradenie buniek ich hodnotami
+  clean = clean.replace(/([A-Z]+[0-9]+)/g, (match, p1) => {
+    const targetCell = document.querySelector(`[data-cell='${p1}']`);
+    if (!targetCell) return 0;
+    const val = parseFloat(targetCell.value);
+    return isNaN(val) ? 0 : val;
+  });
+
+  return eval(clean);
+}
+
+function computeRange(rangeStr, func) {
+  const parts = rangeStr.split(":");
+  let values = [];
+
+  if (parts.length === 2) {
+    const match1 = parts[0].match(/([A-Z]+)([0-9]+)/);
+    const match2 = parts[1].match(/([A-Z]+)([0-9]+)/);
+
+    const startCol = fromColumnName(match1[1]);
+    const startRow = parseInt(match1[2]);
+    const endCol = fromColumnName(match2[1]);
+    const endRow = parseInt(match2[2]);
+
+    for (let r = Math.min(startRow, endRow); r <= Math.max(startRow, endRow); r++) {
+      for (let c = Math.min(startCol, endCol); c <= Math.max(startCol, endCol); c++) {
+        const cellId = toColumnName(c) + r;
+        const input = document.querySelector(`[data-cell='${cellId}']`);
+        if (input) {
+          const val = parseFloat(input.value);
+          if (!isNaN(val)) values.push(val);
+        }
+      }
+    }
+  } else {
+    // Čiarkou oddelené bunky A1,A2,A3
+    const cells = rangeStr.split(",");
+    cells.forEach(c => {
+      const input = document.querySelector(`[data-cell='${c.trim()}']`);
+      if (input) {
+        const val = parseFloat(input.value);
+        if (!isNaN(val)) values.push(val);
+      }
+    });
+  }
+  return func(values);
+}
+
+function applyStyle(prop, val) {
+  if (activeInput) {
+    activeInput.style[prop] = val;
+  }
+}
+
+function updateStats() {
+  let sum = 0, count = 0;
+  document.querySelectorAll("table input").forEach(input => {
+    const val = parseFloat(input.value);
+    if (!isNaN(val)) {
+      sum += val;
+      count++;
+    }
+  });
+  document.getElementById("statSum").innerText = `Súčet: ${sum.toFixed(2)}`;
+  document.getElementById("statAvg").innerText = `Priemer: ${count ? (sum / count).toFixed(2) : 0}`;
+  document.getElementById("statCount").innerText = `Počet číselných buniek: ${count}`;
+}
+
+// Import súborov
 document.getElementById("fileInput").addEventListener("change", function (e) {
   const file = e.target.files[0];
+  if (!file) return;
   const reader = new FileReader();
   reader.onload = function (e) {
     const data = new Uint8Array(e.target.result);
@@ -100,23 +511,96 @@ document.getElementById("fileInput").addEventListener("change", function (e) {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const parsed = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
+    document.getElementById('rowCount').value = Math.max(parsed.length, 10);
+    document.getElementById('colCount').value = Math.max(parsed[0] ? parsed[0].length : 10, 10);
     createTable();
+
     parsed.forEach((row, r) => {
       row.forEach((val, c) => {
-        if (r < rows && c < cols) {
-          const cell = document.querySelector(`[data-cell='${toColumnName(c)}${r+1}']`);
-          cell.value = val;
-        }
+        const cell = document.querySelector(`[data-cell='${toColumnName(c)}${r+1}']`);
+        if (cell) cell.value = val;
       });
     });
+    updateStats();
   };
   reader.readAsArrayBuffer(file);
 });
 
-// Save/load project
+// Ukladanie a Načítanie
 function saveTable() {
-  const name = document.getElementById("tableName").value || "tabulka";
+  const name = document.getElementById("tableName").value.trim() || "tabulka";
   const data = [];
+  const styles = {};
+
+  for (let r = 1; r <= rows; r++) {
+    const row = [];
+    for (let c = 0; c < cols; c++) {
+      const cellId = toColumnName(c) + r;
+      const cell = document.querySelector(`[data-cell='${cellId}']`);
+      row.push(formulaData[cellId] || cell.value);
+
+      if (cell.style.cssText) {
+        styles[cellId] = cell.style.cssText;
+      }
+    }
+    data.push(row);
+  }
+
+  localStorage.setItem("tabulka_" + name, JSON.stringify({ rows, cols, data, styles, formulaData }));
+  refreshSavedList();
+  alert(`✅ Projekt "${name}" bol úspešne uložený!`);
+}
+
+function loadTable(customName) {
+  const name = customName || document.getElementById("tableName").value.trim();
+  const raw = localStorage.getItem("tabulka_" + name);
+  if (!raw) return alert("Tabuľka nebola nájdená.");
+
+  const project = JSON.parse(raw);
+  document.getElementById("tableName").value = name;
+  document.getElementById("rowCount").value = project.rows;
+  document.getElementById("colCount").value = project.cols;
+  createTable();
+
+  project.data.forEach((row, r) => {
+    row.forEach((val, c) => {
+      const cellId = toColumnName(c) + (r + 1);
+      const cell = document.querySelector(`[data-cell='${cellId}']`);
+      if (cell) {
+        if (val && String(val).startsWith("=")) {
+          formulaData[cellId] = val;
+        } else {
+          cell.value = val;
+        }
+      }
+    });
+  });
+
+  if (project.styles) {
+    for (let cellId in project.styles) {
+      const cell = document.querySelector(`[data-cell='${cellId}']`);
+      if (cell) cell.style.cssText = project.styles[cellId];
+    }
+  }
+
+  evaluateFormulas();
+  updateStats();
+}
+
+function clearTable() {
+  document.querySelectorAll("table input").forEach(cell => {
+    cell.value = "";
+    cell.style.cssText = "";
+  });
+  for (let key in formulaData) delete formulaData[key];
+  updateStats();
+}
+
+// Exporty
+function exportXLSX() {
+  const wb = XLSX.utils.book_new();
+  const data = [];
+
   for (let r = 1; r <= rows; r++) {
     const row = [];
     for (let c = 0; c < cols; c++) {
@@ -125,28 +609,10 @@ function saveTable() {
     }
     data.push(row);
   }
-  localStorage.setItem("tabulka_" + name, JSON.stringify({rows, cols, data}));
-  refreshSavedList();
-  alert("✅ Projekt uložený");
-}
 
-function loadTable() {
-  const name = document.getElementById("tableName").value;
-  const project = JSON.parse(localStorage.getItem("tabulka_" + name));
-  if (!project) return alert("Tabuľka nebola nájdená.");
-  document.getElementById("rowCount").value = project.rows;
-  document.getElementById("colCount").value = project.cols;
-  createTable();
-  project.data.forEach((row, r) => {
-    row.forEach((val, c) => {
-      const cell = document.querySelector(`[data-cell='${toColumnName(c)}${r+1}']`);
-      cell.value = val;
-    });
-  });
-}
-
-function clearTable() {
-  document.querySelectorAll("input[type='text']").forEach(cell => cell.value = "");
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  XLSX.writeFile(wb, (document.getElementById("tableName").value || "tabulka") + ".xlsx");
 }
 
 function exportCSV() {
@@ -159,7 +625,7 @@ function exportCSV() {
     }
     csv += row.join(",") + "\n";
   }
-  const blob = new Blob([csv], { type: "text/csv" });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = (document.getElementById("tableName").value || "tabulka") + ".csv";
@@ -169,17 +635,9 @@ function exportCSV() {
 function exportHTML() {
   const table = document.getElementById("spreadsheet").cloneNode(true);
   table.querySelectorAll("input").forEach(input => {
-    input.outerHTML = `<td>${input.value}</td>`;
+    input.outerHTML = `<td style="${input.style.cssText}">${input.value}</td>`;
   });
-  const style = `
-    <style>
-      table { border-collapse: collapse; width: 100%; }
-      th, td { border: 1px solid #ccc; min-width: 50px; height: 30px; text-align: center; }
-      th { font-weight: bold; background:#e6f7ff; }
-      td { background:#ffffff; }
-    </style>
-  `;
-  const htmlContent = `<html><head><meta charset="UTF-8">${style}</head><body>${table.outerHTML}</body></html>`;
+  const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>table{border-collapse:collapse;} td,th{border:1px solid #ccc; padding:6px; min-width:60px; text-align:center;}</style></head><body>${table.outerHTML}</body></html>`;
   const blob = new Blob([htmlContent], { type: "text/html" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
@@ -191,27 +649,44 @@ function refreshSavedList() {
   const saved = Object.keys(localStorage).filter(k => k.startsWith("tabulka_"));
   const list = document.getElementById("savedTables");
   list.innerHTML = "";
+
+  if (saved.length === 0) {
+    list.innerHTML = "<span style='color:var(--text-muted); font-size:0.85rem;'>Žiadne meuložené tabuľky.</span>";
+    return;
+  }
+
   saved.forEach(k => {
     const name = k.replace("tabulka_", "");
     const div = document.createElement("div");
-    div.innerHTML = `<button onclick='loadSaved("${name}")'>${name}</button> <button onclick='deleteSaved("${name}")' style='color:red'>❌</button>`;
+    div.className = "saved-item";
+    div.innerHTML = `
+      <span style="font-weight:bold; cursor:pointer;" onclick="loadTable('${name}')">📊 ${name}</span>
+      <div>
+        <button onclick="loadTable('${name}')" style="background:#27ae60; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">📂 Otvoriť</button>
+        <button onclick="deleteSaved('${name}')" style="background:#e74c3c; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">🗑️ Vymazať</button>
+      </div>
+    `;
     list.appendChild(div);
   });
 }
 
-function loadSaved(name) {
-  document.getElementById("tableName").value = name;
-  loadTable();
-}
-
 function deleteSaved(name) {
-  localStorage.removeItem("tabulka_" + name);
-  refreshSavedList();
+  if (confirm(`Naozaj vymazať projekt "${name}"?`)) {
+    localStorage.removeItem("tabulka_" + name);
+    refreshSavedList();
+  }
 }
 
+// Inicializácia
 createTable();
 refreshSavedList();
 </script>
 
+<div class="footer">
+  This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+  © 2026 Erik Mohylák – All rights reserved.
+</div>
+
+</div>
 </body>
 </html>
