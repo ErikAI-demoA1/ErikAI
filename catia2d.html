@@ -120,8 +120,8 @@ input[type="file"] {
 
 #dimensionsPanel{
   position:fixed;
-  top:55px;
-  right:10px;
+  top:60px;
+  right:20px;
   background:var(--panel-bg);
   border:1px solid var(--border-color);
   padding:12px;
@@ -138,6 +138,14 @@ input[type="file"] {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+  cursor: grab;
+  user-select: none;
+  background: rgba(255,255,255,0.03);
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.panel-header:active{
+  cursor: grabbing;
 }
 #dimensionsPanel h3{margin:0;color:var(--accent-green);font-size:0.95rem;}
 .close-btn{
@@ -253,7 +261,7 @@ input[type="file"] {
 </div>
 
 <div id="dimensionsPanel">
-  <div class="panel-header">
+  <div class="panel-header" id="panelHeader">
     <h3>Zoznam prvkov, Koty & Štýly</h3>
     <button class="close-btn" onclick="closeDimensionsPanel()">✕</button>
   </div>
@@ -293,11 +301,36 @@ let currentFormatKey = 'A4_landscape';
 
 const info=document.getElementById('info');
 const dimsPanel=document.getElementById('dimensionsPanel');
+const panelHeader=document.getElementById('panelHeader');
 const dimsContent=document.getElementById('dimsContent');
 const editDimsBtn=document.getElementById('editDimsBtn');
 const commandHistory=document.getElementById('commandHistory');
 const commandInput=document.getElementById('commandInput');
 const paperFormatSelect=document.getElementById('paperFormat');
+
+// Presúvanie panelu vlastností myšou
+let isDraggingPanel = false;
+let panelDragOffset = {x: 0, y: 0};
+
+panelHeader.onmousedown = (e) => {
+  if(e.target.tagName === 'BUTTON') return;
+  isDraggingPanel = true;
+  const rect = dimsPanel.getBoundingClientRect();
+  panelDragOffset.x = e.clientX - rect.left;
+  panelDragOffset.y = e.clientY - rect.top;
+  e.preventDefault();
+};
+
+window.onmousemove = (e) => {
+  if(!isDraggingPanel) return;
+  dimsPanel.style.left = (e.clientX - panelDragOffset.x) + 'px';
+  dimsPanel.style.top = (e.clientY - panelDragOffset.y) + 'px';
+  dimsPanel.style.right = 'auto';
+};
+
+window.onmouseup = () => {
+  isDraggingPanel = false;
+};
 
 function logCommand(text){
   const div=document.createElement('div');
