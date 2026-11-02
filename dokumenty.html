@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>📄 ErikAI Študentský Word Pro</title>
-<!-- Knižnica na čítanie .docx (Word) súborov z PC -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
   :root {
@@ -107,13 +106,14 @@
     border-color: var(--accent-yellow);
   }
 
-  /* Pravý WYSIWYG editor namiesto obyčajného textarea */
+  /* Živý vizuálny editor (contenteditable) */
   #editor { 
     width: 100%; 
-    height: 380px; 
+    min-height: 350px; 
+    max-height: 500px;
     padding: 15px; 
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-    font-size: 1.05rem;
+    font-family: Arial, sans-serif; 
+    font-size: 1rem;
     background: #1a1a1a; 
     color: #fff; 
     border: 1px solid #333; 
@@ -121,7 +121,7 @@
     overflow-y: auto;
     box-sizing: border-box;
     outline: none;
-    line-height: 1.5;
+    text-align: left;
   }
   #editor:focus {
     border-color: var(--border-green);
@@ -262,7 +262,7 @@
     body { background: white; color: black; }
     .toolbar, .file-section, .stats-bar, .action-buttons, .doc-list-container, .footer, h1, .subtitle { display: none; }
     .container { border: none; box-shadow: none; max-width: 100%; padding: 0; }
-    #editor { border: none; width: 100%; height: auto; background: white; color: black; padding: 0; }
+    #editor { border: none; width: 100%; height: auto; background: white; color: black; }
   }
 </style>
 </head>
@@ -270,41 +270,46 @@
 
 <div class="container">
   <h1>📄 ErikAI Študentský Word Pro</h1>
-  <div class="subtitle">Skutočný formátovaný editor na poznámky, referáty a Word (.docx) súbory</div>
+  <div class="subtitle">Študentský editor na poznámky, referáty a otváranie Word (.docx) súborov</div>
 
-  <!-- Nástrojová lišta -->
+  <!-- Nástrojová lišta pre formátovanie -->
   <div class="toolbar">
-    <button onclick="document.execCommand('bold', false, null)"><b>B</b></button>
-    <button onclick="document.execCommand('italic', false, null)"><i>I</i></button>
-    <button onclick="document.execCommand('underline', false, null)"><u>U</u></button>
-    <button onclick="document.execCommand('formatBlock', false, '<h2>')">📌 Nadpis</button>
-    <button onclick="document.execCommand('justifyCenter', false, null)">🎯 Na stred</button>
-    <button onclick="document.execCommand('insertUnorderedList', false, null)">📋 Odrážky</button>
-    <select onchange="document.execCommand('foreColor', false, this.value); this.value='';">
+    <button onclick="applyFormat('bold')"><b>B</b> (Tučné)</button>
+    <button onclick="applyFormat('italic')"><i>I</i> (Kurzíva)</button>
+    <button onclick="applyFormat('underline')"><u>U</u> (Podčiarknuté)</button>
+    <button onclick="applyFormat('formatBlock', '<h2>')">📌 Nadpis</button>
+    <button onclick="applyFormat('justifyCenter')">🎯 Na stred</button>
+    <button onclick="applyFormat('justifyLeft')">⬅️ Vľavo</button>
+    <button onclick="applyFormat('insertUnorderedList')">📋 Odrážky</button>
+    
+    <!-- Rozšírený výber farieb textu -->
+    <select onchange="applyColor(this.value); this.value='';">
       <option value="">🎨 Farba textu...</option>
-      <option value="red">Červená</option>
-      <option value="green">Zelená</option>
-      <option value="blue">Modrá</option>
-      <option value="yellow">Žltá</option>
+      <option value="#e74c3c">🔴 Červená</option>
+      <option value="#2ecc71">🟢 Zelená</option>
+      <option value="#3498db">🔵 Modrá</option>
+      <option value="#f1c40f">🟡 Žltá</option>
+      <option value="#9b59b6">🟣 Fialová</option>
+      <option value="#e67e22">🟠 Oranžová</option>
+      <option value="#ffffff">⚪ Biela</option>
     </select>
   </div>
 
   <input type="text" id="docName" placeholder="Zadaj názov dokumentu (napr. Dejepis - Referát)">
   
-  <!-- Sekcia pre nahrávanie súborov a obrázkov -->
   <div class="file-section">
     <label>📂 Otvoriť existujúci Word (.docx) alebo textový (.txt) súbor z PC:</label>
     <input type="file" id="docFileInput" accept=".docx, .txt">
   </div>
 
   <div class="file-section">
-    <label>🖼️ Pridať obrázky do dokumentu:</label>
+    <label>🖼️ Pridať obrázky / prílohy do dokumentu:</label>
     <input type="file" id="imageInput" accept="image/*" multiple>
     <div class="preview" id="imagePreview"></div>
   </div>
 
-  <!-- Živý formátovaný editor -->
-  <div id="editor" contenteditable="true" oninput="updateStats()" placeholder="Tu píš text svojho dokumentu..."></div>
+  <!-- Editor s podporou živého formátovania -->
+  <div id="editor" contenteditable="true" oninput="updateStats()"></div>
 
   <!-- Študentské počítadlá -->
   <div class="stats-bar">
@@ -333,6 +338,20 @@
 const editor = document.getElementById("editor");
 const docNameInput = document.getElementById("docName");
 const imagePreview = document.getElementById("imagePreview");
+
+// Aplikácia formátovania (Tučné, Kurzíva, Zarovnanie, Odrážky)
+function applyFormat(command, value = null) {
+  document.execCommand(command, false, value);
+  editor.focus();
+  updateStats();
+}
+
+// Spôsob aplikovania farieb (funguje na označený text aj na novopísaný)
+function applyColor(color) {
+  if (!color) return;
+  document.execCommand('foreColor', false, color);
+  editor.focus();
+}
 
 // Načítanie súboru DOCX alebo TXT z počítača
 document.getElementById("docFileInput").addEventListener("change", function(e) {
@@ -367,10 +386,10 @@ document.getElementById("docFileInput").addEventListener("change", function(e) {
   }
 });
 
-// Počítadlá pre študentov (berú čistý text bez HTML tagov)
+// Počítadlá (čítajú čistý text z editora)
 function updateStats() {
   const text = editor.innerText.trim();
-  const words = text ? text.split(/\s+/).length : 0;
+  const words = text ? text.split(/\s+/).filter(w => w.length > 0).length : 0;
   const chars = text.length;
   const pages = (words / 250).toFixed(1);
   const readTime = Math.ceil(words / 200);
@@ -381,7 +400,7 @@ function updateStats() {
   document.getElementById("readTime").innerText = `Čas čítania: ${readTime} min`;
 }
 
-// Pridanie obrázkov do preview
+// Náhľad pridaných obrázkov
 document.getElementById("imageInput").addEventListener("change", function() {
   const files = Array.from(this.files);
   files.forEach(file => {
@@ -432,7 +451,7 @@ function nacitajDokument(customName) {
   
   const obj = JSON.parse(data);
   docNameInput.value = name;
-  editor.innerHTML = obj.html;
+  editor.innerHTML = obj.html || "";
   imagePreview.innerHTML = '';
   
   if (obj.images) {
@@ -478,7 +497,7 @@ function vymazDokument(customName) {
   }
 }
 
-// Stiahnutie TXT (čistý text bez tagov)
+// Stiahnutie TXT (čistý text)
 function stiahniTXT() {
   const blob = new Blob([editor.innerText], { type: 'text/plain;charset=utf-8' });
   const link = document.createElement('a');
@@ -487,7 +506,7 @@ function stiahniTXT() {
   link.click();
 }
 
-// Stiahnutie DOCX (Word kompatibilný formát so zachovaným štýlom a obrázkami)
+// Stiahnutie DOCX (HTML so štýlmi otvorené vo Worde)
 function stiahniDOCX() {
   const images = Array.from(imagePreview.querySelectorAll("img")).map(img => `<br><img src="${img.src}" style="max-width:500px;"><br>`).join("");
   const content = `
@@ -517,7 +536,7 @@ function stiahniHTML() {
   link.click();
 }
 
-// Tlač a export do PDF
+// Tlač do PDF
 function tlacDokument() {
   window.print();
 }
