@@ -3,215 +3,526 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Mini CAD — Line, Circle, Rectangle</title>
+<title>ErikAI Pro 2D CAD — AutoCAD Style</title>
 <style>
-body{margin:0;font-family:sans-serif;background:#111;color:#eee;}
-header{padding:8px;background:#222;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
-canvas{background:#1a1a1a;display:block;margin:0 auto;border:1px solid #333;}
-button{padding:6px 10px;border:none;border-radius:5px;background:#34d399;color:#000;cursor:pointer;}
-button.ghost{background:#222;border:1px solid #555;color:#eee;}
-.panel{padding:8px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
-.info{padding:4px;color:#ccc;}
-input[type=number]{width:60px;}
-#dimensionsPanel{position:fixed;top:10px;right:10px;background:#222;padding:10px;border-radius:5px;max-height:90vh;overflow:auto;display:none;}
-#dimensionsPanel h3{margin:0 0 5px 0;color:#34d399;}
-#dimensionsPanel div{margin-bottom:5px;}
+:root{
+  --bg-color: #121216;
+  --panel-bg: #1e222d;
+  --border-color: #2e364f;
+  --accent-green: #10b981;
+  --accent-blue: #3b82f6;
+  --text-main: #ffffff;
+  --text-muted: #94a3b8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-color);
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+header{
+  padding: 10px 15px;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border-color);
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content: space-between;
+}
+.panel{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+canvas{background:#0b0d13;display:block;cursor:crosshair;flex:1;}
+button{
+  padding:8px 14px;
+  border:none;
+  border-radius:8px;
+  background: var(--accent-green);
+  color:#000;
+  font-weight: bold;
+  cursor:pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+button:hover{filter: brightness(1.1); transform: translateY(-1px);}
+button.ghost{background: var(--panel-bg);border:1px solid var(--border-color);color:var(--text-main);}
+button.active{background: var(--accent-blue); color:white;}
+
+/* Príkazový riadok v štýle AutoCADu */
+#commandLineContainer{
+  background: #090b10;
+  border-top: 1px solid var(--border-color);
+  padding: 8px 15px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#commandHistory{
+  height: 45px;
+  overflow-y: auto;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#commandInputRow{display: flex; align-items: center; gap: 8px;}
+#commandPrompt{color: var(--accent-green); font-weight: bold;}
+#commandInput{
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+}
+
+.info{padding:4px 15px;background: var(--panel-bg);font-size:0.85rem;color:var(--text-muted);border-top:1px solid var(--border-color);}
+
+#dimensionsPanel{position:fixed;top:60px;right:15px;background:var(--panel-bg);border:1px solid var(--border-color);padding:15px;border-radius:12px;max-height:80vh;overflow:auto;display:none;box-shadow: 0 10px 30px rgba(0,0,0,0.6);width: 250px;}
+#dimensionsPanel h3{margin:0 0 10px 0;color:var(--accent-green);font-size:1rem;}
+#dimensionsPanel div{margin-bottom:8px;font-size:0.9rem;}
+#dimensionsPanel input{width:70px;padding:4px;border-radius:4px;border:1px solid var(--border-color);background:#121216;color:white;}
 </style>
 </head>
 <body>
+
 <header>
   <div class="panel">
-    <button id="lineBtn">Čiara</button>
-    <button id="circleBtn">Kruh</button>
-    <button id="rectBtn">Obdĺžnik</button>
-    <button id="undoBtn" class="ghost">Undo</button>
-    <button id="redoBtn" class="ghost">Redo</button>
-    <button id="exportImg" class="ghost">Export obrázok</button>
-    <button id="exportJSON" class="ghost">Export JSON</button>
-    <button id="editDimsBtn" class="ghost">vypnúť/zapnúť koty</button>
+    <button id="lineBtn" class="active" onclick="setTool('line')">📏 Čiara</button>
+    <button id="circleBtn" class="ghost" onclick="setTool('circle')">⭕ Kruh</button>
+    <button id="rectBtn" class="ghost" onclick="setTool('rect')">⬜ Obdĺžnik</button>
+    <button id="undoBtn" class="ghost" onclick="undo()">↩️ Undo</button>
+    <button id="redoBtn" class="ghost" onclick="redo()">↪️ Redo</button>
+    <button id="editDimsBtn" class="ghost">📋 Koty a Vlastnosti</button>
+  </div>
+  <div class="panel">
+    <button id="exportImg" class="ghost" onclick="exportImage()">📷 PNG</button>
+    <button id="exportJSON" class="ghost" onclick="exportJSON()">💾 JSON</button>
+    <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Vymazať vše</button>
   </div>
 </header>
-<canvas id="cadCanvas" width="1200" height="800"></canvas>
-<div class="info" id="info">Vybratý nástroj: Čiara | Nulový bod: (0,0)</div>
+
+<canvas id="cadCanvas"></canvas>
+
+<div class="info" id="info">Súradnice: X: 0, Y: 0 | Mierka: 1.0x | Nástroj: Čiara</div>
+
+<div id="commandLineContainer">
+  <div id="commandHistory"><div>Zadajte príkaz alebo vyberte nástroj z panelu...</div></div>
+  <div id="commandInputRow">
+    <span id="commandPrompt">Command:</span>
+    <input type="text" id="commandInput" placeholder="napíš napr. 'line', 'circle', 'undo'..." autocomplete="off">
+  </div>
+</div>
 
 <div id="dimensionsPanel">
-  <h3>Kóty</h3>
+  <h3>Vlastnosti tvarov</h3>
   <div id="dimsContent">Žiadne tvary</div>
 </div>
 
 <script>
 const canvas=document.getElementById('cadCanvas');
 const ctx=canvas.getContext('2d');
+
+// Prispôsobenie plátna na celú obrazovku
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight - 130;
+  drawAll();
+}
+window.onresize = resizeCanvas;
+
 let shapes=[],undoStack=[],redoStack=[];
 let tool='line';
 let startPt=null;
-let origin={x:100,y:100};
+let currentMouse={x:0, y:0};
+let selectedShapeIndex=null;
 let editMode=false;
 
-// DOM
+// Transformácia kamery (Pan & Zoom)
+let pan={x:0, y:0};
+let zoom=1;
+let isPanning=false;
+let panStart={x:0, y:0};
+
+// DOM elementy
 const info=document.getElementById('info');
 const dimsPanel=document.getElementById('dimensionsPanel');
 const dimsContent=document.getElementById('dimsContent');
 const editDimsBtn=document.getElementById('editDimsBtn');
+const commandHistory=document.getElementById('commandHistory');
+const commandInput=document.getElementById('commandInput');
 
-// Nástroje
-document.getElementById('lineBtn').onclick=()=>tool='line';
-document.getElementById('circleBtn').onclick=()=>tool='circle';
-document.getElementById('rectBtn').onclick=()=>tool='rect';
+function logCommand(text){
+  const div=document.createElement('div');
+  div.textContent=`> ${text}`;
+  commandHistory.appendChild(div);
+  commandHistory.scrollTop=commandHistory.scrollHeight;
+}
 
-// Toggle edit mode
+// Výber nástroja
+function setTool(t){
+  tool=t;
+  document.querySelectorAll('header button').forEach(b=>{if(!b.getAttribute('onclick')?.includes('export') && !b.getAttribute('onclick')?.includes('clear')) b.classList.replace('active','ghost');});
+  if(t==='line') document.getElementById('lineBtn').classList.replace('ghost','active');
+  if(t==='circle') document.getElementById('circleBtn').classList.replace('ghost','active');
+  if(t==='rect') document.getElementById('rectBtn').classList.replace('ghost','active');
+  startPt=null;
+  logCommand(`Zvolený nástroj: ${t.toUpperCase()}`);
+  drawAll();
+}
+
+// Ovládanie príkazového riadku (AutoCAD štýl)
+commandInput.onkeydown=(e)=>{
+  if(e.key==='Enter'){
+    const val=commandInput.value.trim().toLowerCase();
+    logCommand(val);
+    commandInput.value='';
+    if(val==='line' || val==='l') setTool('line');
+    else if(val==='circle' || val==='c') setTool('circle');
+    else if(val==='rect' || val==='r') setTool('rect');
+    else if(val==='undo') undo();
+    else if(val==='redo') redo();
+    else if(val==='clear') clearAll();
+    else logCommand(`Neznámy príkaz: ${val}`);
+  }
+};
+
+// Undo / Redo
+function pushState(){
+  undoStack.push(JSON.parse(JSON.stringify(shapes)));
+  redoStack=[];
+}
+function undo(){
+  if(undoStack.length){
+    redoStack.push(JSON.parse(JSON.stringify(shapes)));
+    shapes=undoStack.pop();
+    logCommand("Undo vykonané");
+    drawAll();
+  }
+}
+function redo(){
+  if(redoStack.length){
+    undoStack.push(JSON.parse(JSON.stringify(shapes)));
+    shapes=redoStack.pop();
+    logCommand("Redo vykonané");
+    drawAll();
+  }
+}
+function clearAll(){
+  pushState();
+  shapes=[];
+  selectedShapeIndex=null;
+  logCommand("Všetky tvary vymazané");
+  drawAll();
+}
+
+// Exporty
+function exportImage(){
+  const link=document.createElement('a');
+  link.download='erikai_cad_drawing.png';
+  link.href=canvas.toDataURL();
+  link.click();
+  logCommand("Obrázok exportovaný ako PNG");
+}
+function exportJSON(){
+  const link=document.createElement('a');
+  link.download='erikai_cad_drawing.json';
+  link.href='data:text/json,'+encodeURIComponent(JSON.stringify({shapes}));
+  link.click();
+  logCommand("Projekt exportovaný ako JSON");
+}
+
 editDimsBtn.onclick=()=>{
   editMode=!editMode;
   dimsPanel.style.display=editMode?'block':'none';
   drawAll();
 };
 
-// Undo/Redo
-document.getElementById('undoBtn').onclick=()=>{
-  if(undoStack.length){redoStack.push(JSON.parse(JSON.stringify(shapes))); shapes=undoStack.pop(); drawAll();}
-};
-document.getElementById('redoBtn').onclick=()=>{
-  if(redoStack.length){undoStack.push(JSON.parse(JSON.stringify(shapes))); shapes=redoStack.pop(); drawAll();}
-};
-
-// Export obrázka
-document.getElementById('exportImg').onclick=()=>{
-  const link=document.createElement('a');
-  link.download='drawing.png';
-  link.href=canvas.toDataURL();
-  link.click();
-};
-
-// Export JSON
-document.getElementById('exportJSON').onclick=()=>{
-  const link=document.createElement('a');
-  link.download='drawing.json';
-  link.href='data:text/json,'+encodeURIComponent(JSON.stringify({origin,shapes}));
-  link.click();
-};
-
-// Grid
-function drawGrid(){
-  const step=20;
-  ctx.strokeStyle='rgba(255,255,255,0.05)';
-  ctx.lineWidth=1;
-  for(let x=0;x<canvas.width;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
-  for(let y=0;y<canvas.height;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
+// Transformácia súradníc obrazovky na svetové (World Coordinates)
+function toWorld(px, py){
+  return {
+    x: (px - pan.x) / zoom,
+    y: (py - pan.y) / zoom
+  };
 }
 
-// Draw shapes + dimensions
+// Kreslenie mriežky a osí
+function drawGrid(){
+  const step = 40 * zoom;
+  if(step < 10) return; // Príliš nahusto
+  ctx.strokeStyle='rgba(255,255,255,0.04)';
+  ctx.lineWidth=1;
+  
+  const startX = pan.x % step;
+  const startY = pan.y % step;
+
+  for(let x=startX; x<canvas.width; x+=step){
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+  }
+  for(let y=startY; y<canvas.height; y+=step){
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+  
+  // Hlavné osi X a Y (0,0)
+  ctx.strokeStyle='rgba(59, 130, 246, 0.2)';
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(pan.x, 0); ctx.lineTo(pan.x, canvas.height);
+  ctx.moveTo(0, pan.y); ctx.lineTo(canvas.width, pan.y);
+  ctx.stroke();
+}
+
+// Vykreslenie všetkého
 function drawAll(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawGrid();
-  // nulový bod
-  ctx.fillStyle='red';
-  ctx.beginPath(); ctx.arc(origin.x,origin.y,5,0,Math.PI*2); ctx.fill();
+  ctx.save();
+  ctx.translate(pan.x, pan.y);
+  ctx.scale(zoom, zoom);
 
-  // tvary
-  shapes.forEach((s,i)=>{
-    ctx.strokeStyle='green'; ctx.lineWidth=2;
+  drawGrid();
+
+  // Vykreslenie všetkých tvarov
+  shapes.forEach((s, i)=>{
+    ctx.strokeStyle = (i === selectedShapeIndex) ? '#3b82f6' : '#10b981';
+    ctx.lineWidth = (i === selectedShapeIndex) ? 3 : 2;
     ctx.beginPath();
-    if(s.type==='line'){ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2);}
-    else if(s.type==='circle'){ctx.arc(s.cx,s.cy,s.r,0,Math.PI*2);}
-    else if(s.type==='rect'){ctx.rect(s.x,s.y,s.w,s.h);}
+
+    if(s.type==='line'){
+      ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2);
+    }else if(s.type==='circle'){
+      ctx.arc(s.cx, s.cy, s.r, 0, Math.PI*2);
+    }else if(s.type==='rect'){
+      ctx.rect(s.x, s.y, s.w, s.h);
+    }
     ctx.stroke();
-    if(!editMode) drawDimension(s);
+
+    drawDimension(s);
   });
+
+  // Živý náhľad pri kreslení (Ghosting)
+  if(startPt){
+    ctx.strokeStyle='rgba(16, 185, 129, 0.6)';
+    ctx.lineWidth=2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    if(tool==='line'){
+      ctx.moveTo(startPt.x, startPt.y); ctx.lineTo(currentMouse.x, currentMouse.y);
+    }else if(tool==='circle'){
+      const r = Math.hypot(currentMouse.x - startPt.x, currentMouse.y - startPt.y);
+      ctx.arc(startPt.x, startPt.y, r, 0, Math.PI*2);
+    }else if(tool==='rect'){
+      ctx.rect(startPt.x, startPt.y, currentMouse.x - startPt.x, currentMouse.y - startPt.y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset bodkovanej čiary
+  }
+
+  ctx.restore();
   if(editMode) updateDimensionsPanel();
 }
 
-// Draw dimension text
+// Kóty a rozmery priamo na plátne
 function drawDimension(s){
-  ctx.fillStyle='red'; ctx.font='15px monospace';
+  ctx.fillStyle='#94a3b8'; ctx.font='12px monospace';
   if(s.type==='line'){
     const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
-    const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
-    ctx.fillText(len, midX+5, midY-5);
+    const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1);
+    ctx.fillText(`${len} mm`, midX+6, midY-6);
   }else if(s.type==='rect'){
-    ctx.fillText(`W:${Math.abs(s.w)} H:${Math.abs(s.h)}`, s.x+s.w/2, s.y+s.h/2-5);
+    ctx.fillText(`W:${Math.abs(s.w).toFixed(1)} H:${Math.abs(s.h).toFixed(1)}`, s.x+s.w/2-20, s.y+s.h/2);
   }else if(s.type==='circle'){
-    ctx.fillText(`R:${s.r.toFixed(2)}`, s.cx, s.cy - s.r - 5);
+    ctx.fillText(`R:${s.r.toFixed(1)}`, s.cx, s.cy - s.r - 6);
   }
 }
 
-// Snap to grid & points
-function snap(x,y){
-  const step=20;
-  let sx=Math.round(x/step)*step;
-  let sy=Math.round(y/step)*step;
+// AutoCAD OSNAP (Prichytávanie ku koncom a stredom čiar)
+function snap(x, y){
+  const snapDist = 12 / zoom;
+  let sx = x, sy = y;
+  let snapped = false;
+
   shapes.forEach(s=>{
     if(s.type==='line'){
-      if(Math.hypot(x-s.x1,y-s.y1)<10){sx=s.x1;sy=s.y1;}
-      if(Math.hypot(x-s.x2,y-s.y2)<10){sx=s.x2;sy=s.y2;}
-    }else if(s.type==='circle'){
-      if(Math.hypot(x-s.cx,y-s.cy)<10){sx=s.cx;sy=s.cy;}
-    }else if(s.type==='rect'){
-      [[s.x,s.y],[s.x+s.w,s.y],[s.x+s.w,s.y+s.h],[s.x,s.y+s.h]].forEach(([px,py])=>{
-        if(Math.hypot(x-px,y-py)<10){sx=px;sy=py;}
-      });
+      // Koncové body
+      if(Math.hypot(x-s.x1, y-s.y1) < snapDist){ sx=s.x1; sy=s.y1; snapped=true; }
+      if(Math.hypot(x-s.x2, y-s.y2) < snapDist){ sx=s.x2; sy=s.y2; snapped=true; }
+      // Stred čiary (Midpoint)
+      const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
+      if(Math.hypot(x-midX, y-midY) < snapDist){ sx=midX; sy=midY; snapped=true; }
     }
   });
-  return {x:sx,y:sy};
+
+  if(!snapped){
+    // Klasický grid snap ak nič nenašlo
+    const gridStep = 20;
+    sx = Math.round(x / gridStep) * gridStep;
+    sy = Math.round(y / gridStep) * gridStep;
+  }
+  return {x: sx, y: sy};
 }
 
-// Canvas clicks
+// Myš - Interakcia
 canvas.onmousedown=(e)=>{
   const rect=canvas.getBoundingClientRect();
-  const x=e.clientX-rect.left;
-  const y=e.clientY-rect.top;
-  const p=snap(x,y);
-  if(!startPt){startPt=p; return;}
-  let shape=null;
-  if(tool==='line'){shape={type:'line',x1:startPt.x,y1:startPt.y,x2:p.x,y2:p.y};}
-  if(tool==='circle'){shape={type:'circle',cx:startPt.x,cy:startPt.y,r:Math.hypot(p.x-startPt.x,p.y-startPt.y)};}
-  if(tool==='rect'){shape={type:'rect',x:startPt.x,y:startPt.y,w:p.x-startPt.x,h:p.y-startPt.y};}
-  shapes.push(shape);
-  undoStack.push(JSON.parse(JSON.stringify(shapes)));
-  startPt=null;
-  drawAll();
+  const px=e.clientX-rect.left;
+  const py=e.clientY-rect.top;
+
+  // Prostredné tlačidlo myši alebo Shift+Klik pre Pan (posun plátna)
+  if(e.button === 1 || (e.button === 0 && e.shiftKey)){
+    isPanning=true;
+    panStart={x: px - pan.x, y: py - pan.y};
+    return;
+  }
+
+  if(e.button === 0){
+    const w = toWorld(px, py);
+    const p = snap(w.x, w.y);
+
+    if(!startPt){
+      startPt=p;
+      logCommand(`Začiatočný bod: (${p.x.toFixed(0)}, ${p.y.toFixed(0)})`);
+      return;
+    }
+
+    pushState();
+    let shape=null;
+    if(tool==='line'){
+      shape={type:'line', x1:startPt.x, y1:startPt.y, x2:p.x, y2:p.y};
+      logCommand(`Vytvorená čiara od (${startPt.x},${startPt.y}) do (${p.x},${p.y})`);
+    }else if(tool==='circle'){
+      shape={type:'circle', cx:startPt.x, cy:startPt.y, r:Math.hypot(p.x-startPt.x, p.y-startPt.y)};
+      logCommand(`Vytvorený kruh s polomerom ${shape.r.toFixed(1)}`);
+    }else if(tool==='rect'){
+      shape={type:'rect', x:startPt.x, y:startPt.y, w:p.x-startPt.x, h:p.y-startPt.y};
+      logCommand(`Vytvorený obdĺžnik W:${shape.w}, H:${shape.h}`);
+    }
+
+    if(shape) shapes.push(shape);
+    startPt=null;
+    drawAll();
+  }
 };
 
-// Origin move
-canvas.oncontextmenu=(e)=>{
+canvas.onmousemove=(e)=>{
+  const rect=canvas.getBoundingClientRect();
+  const px=e.clientX-rect.left;
+  const py=e.clientY-rect.top;
+
+  if(isPanning){
+    pan.x = px - panStart.x;
+    pan.y = py - panStart.y;
+    drawAll();
+    return;
+  }
+
+  const w = toWorld(px, py);
+  currentMouse = snap(w.x, w.y);
+  info.textContent=`Súradnice: X: ${currentMouse.x.toFixed(0)}, Y: ${currentMouse.y.toFixed(0)} | Mierka: ${zoom.toFixed(1)}x | Nástroj: ${tool.toUpperCase()}`;
+
+  if(startPt) drawAll();
+};
+
+canvas.onmouseup=(e)=>{
+  if(e.button === 1 || isPanning){
+    isPanning=false;
+  }
+};
+
+// Zoomovanie kolieskom myši (približovanie/oddialenie ku kurzooru)
+canvas.onwheel=(e)=>{
   e.preventDefault();
   const rect=canvas.getBoundingClientRect();
-  origin={x:e.clientX-rect.left, y:e.clientY-rect.top};
+  const px=e.clientX-rect.left;
+  const py=e.clientY-rect.top;
+
+  const zoomFactor = 1.15;
+  const oldZoom = zoom;
+
+  if(e.deltaY < 0){
+    zoom *= zoomFactor;
+  } else {
+    zoom /= zoomFactor;
+  }
+  zoom = Math.max(0.2, Math.min(10, zoom)); // Limit zoomu
+
+  // Zoom do stredu myši
+  pan.x = px - (px - pan.x) * (zoom / oldZoom);
+  pan.y = py - (py - pan.y) * (zoom / oldZoom);
+
   drawAll();
 };
 
-// Dimensions panel edit
+// Pravé tlačidlo myši - zrušenie aktuálneho ťahu
+canvas.oncontextmenu=(e)=>{
+  e.preventDefault();
+  if(startPt){
+    startPt=null;
+    logCommand("Kreslenie zrušené");
+    drawAll();
+  }
+};
+
+// Mazanie označeného tvaru cez klávesu Delete
+window.onkeydown=(e)=>{
+  if(e.key==='Delete' && selectedShapeIndex!==null){
+    pushState();
+    logCommand(`Vymazaný tvar index ${selectedShapeIndex}`);
+    shapes.splice(selectedShapeIndex, 1);
+    selectedShapeIndex=null;
+    drawAll();
+  }
+};
+
+// Panel vlastností a kot
 function updateDimensionsPanel(){
   dimsContent.innerHTML='';
+  if(shapes.length===0){
+    dimsContent.innerHTML='Žiadne tvary';
+    return;
+  }
   shapes.forEach((s,i)=>{
     const div=document.createElement('div');
-    div.style.display='flex'; div.style.gap='5px'; div.style.alignItems='center';
-    div.innerHTML=`<strong>${s.type} ${i+1}</strong> `;
+    div.style.padding='6px'; div.style.borderRadius='6px';
+    div.style.background = (i===selectedShapeIndex)?'#1e3a8a':'#121216';
+    div.style.cursor='pointer';
+    div.onclick=()=>{ selectedShapeIndex=i; drawAll(); };
+
+    div.innerHTML=`<strong>#${i+1} (${s.type})</strong><br>`;
     if(s.type==='line'){
-      const inp=document.createElement('input'); inp.type='number'; inp.value=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(2);
+      const inp=document.createElement('input'); inp.type='number'; inp.value=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1);
       inp.onchange=(e)=>{
+        pushState();
         const len=parseFloat(e.target.value);
-        const angle=Math.atan2(s.y2-s.y1,s.x2-s.x1);
-        s.x2=s.x1+len*Math.cos(angle);
-        s.y2=s.y1+len*Math.sin(angle);
+        const angle=Math.atan2(s.y2-s.y1, s.x2-s.x1);
+        s.x2=s.x1 + len * Math.cos(angle);
+        s.y2=s.y1 + len * Math.sin(angle);
         drawAll();
       };
-      div.appendChild(inp);
+      div.appendChild(document.createTextNode('Dĺžka: ')); div.appendChild(inp);
     }else if(s.type==='rect'){
-      const inpW=document.createElement('input'); inpW.type='number'; inpW.value=Math.abs(s.w);
-      inpW.onchange=(e)=>{s.w=parseFloat(e.target.value)*(s.w<0?-1:1); drawAll();};
-      const inpH=document.createElement('input'); inpH.type='number'; inpH.value=Math.abs(s.h);
-      inpH.onchange=(e)=>{s.h=parseFloat(e.target.value)*(s.h<0?-1:1); drawAll();};
-      div.appendChild(inpW); div.appendChild(inpH);
+      const inpW=document.createElement('input'); inpW.type='number'; inpW.value=Math.abs(s.w).toFixed(1);
+      inpW.onchange=(e)=>{ pushState(); s.w=parseFloat(e.target.value)*(s.w<0?-1:1); drawAll(); };
+      const inpH=document.createElement('input'); inpH.type='number'; inpH.value=Math.abs(s.h).toFixed(1);
+      inpH.onchange=(e)=>{ pushState(); s.h=parseFloat(e.target.value)*(s.h<0?-1:1); drawAll(); };
+      div.appendChild(document.createTextNode('Š: ')); div.appendChild(inpW);
+      div.appendChild(document.createTextNode(' V: ')); div.appendChild(inpH);
     }else if(s.type==='circle'){
-      const inpR=document.createElement('input'); inpR.type='number'; inpR.value=s.r.toFixed(2);
-      inpR.onchange=(e)=>{s.r=parseFloat(e.target.value); drawAll();};
-      div.appendChild(inpR);
+      const inpR=document.createElement('input'); inpR.type='number'; inpR.value=s.r.toFixed(1);
+      inpR.onchange=(e)=>{ pushState(); s.r=parseFloat(e.target.value); drawAll(); };
+      div.appendChild(document.createTextNode('Polomer: ')); div.appendChild(inpR);
     }
     dimsContent.appendChild(div);
   });
 }
 
-drawAll();
+resizeCanvas();
 </script>
 </body>
 </html>
