@@ -24,7 +24,7 @@ body{
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-  touch-action: none; /* Zabráni predvolenému posúvaniu celej stránky na mobile */
+  touch-action: none;
 }
 header{
   padding: 8px 10px;
@@ -44,7 +44,7 @@ header{
   overflow: auto;
   position: relative;
   background: #0b0d13;
-  touch-action: auto; /* Povoliť skrolovanie kontajnera */
+  touch-action: auto;
 }
 canvas{background:#0b0d13;display:block;cursor:crosshair;}
 
@@ -108,12 +108,41 @@ button.active{background: var(--accent-blue); color:white;}
   overflow:auto;
   display:none;
   box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-  width: 260px;
+  width: 310px;
   z-index: 1000;
 }
 #dimensionsPanel h3{margin:0 0 8px 0;color:var(--accent-green);font-size:0.95rem;}
-#dimensionsPanel div{margin-bottom:8px;font-size:0.85rem;}
-#dimensionsPanel input{width:75px;padding:4px;border-radius:4px;border:1px solid var(--border-color);background:#121216;color:white;font-size:0.9rem;}
+.shape-card{
+  background: #121216;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+.shape-card.active{
+  border-color: var(--accent-blue);
+  background: #1a233a;
+}
+.input-row{
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.input-row label{
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.input-row input{
+  width: 65px;
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: #090b10;
+  color: white;
+  font-size: 0.85rem;
+}
 </style>
 </head>
 <body>
@@ -126,7 +155,7 @@ button.active{background: var(--accent-blue); color:white;}
     <button id="moveBtn" class="ghost" onclick="setTool('move')">🚚 Presun</button>
     <button id="undoBtn" class="ghost" onclick="undo()">↩️</button>
     <button id="redoBtn" class="ghost" onclick="redo()">↪️</button>
-    <button id="editDimsBtn" class="ghost">📋 Koty</button>
+    <button id="editDimsBtn" class="ghost">📋 Koty & Pozícia</button>
   </div>
   <div class="panel">
     <button id="exportImg" class="ghost" onclick="exportImage()">📷 PNG</button>
@@ -142,7 +171,7 @@ button.active{background: var(--accent-blue); color:white;}
 <div class="info" id="info">X: 0, Y: 0 | Nástroj: Čiara</div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>Systém pripravený pre PC aj Mobil...</div></div>
+  <div id="commandHistory"><div>Systém pripravený...</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
     <input type="text" id="commandInput" placeholder="Príkaz (line, move, undo)..." autocomplete="off">
@@ -150,7 +179,7 @@ button.active{background: var(--accent-blue); color:white;}
 </div>
 
 <div id="dimensionsPanel">
-  <h3>Vlastnosti a Koty</h3>
+  <h3>Vlastnosti, Koty a Pozícia</h3>
   <div id="dimsContent">Žiadne tvary</div>
 </div>
 
@@ -363,7 +392,6 @@ function distToSegment(p, a, b) {
   return Math.hypot(p.x - (a.x + t*(b.x - a.x)), p.y - (a.y + t*(b.y - a.y)));
 }
 
-// Spoločná logika pre stlačenie (PC aj Mobil)
 function handleStart(clientX, clientY){
   const rect=canvas.getBoundingClientRect();
   const x = clientX - rect.left + container.scrollLeft;
@@ -447,12 +475,10 @@ function handleEnd(){
   }
 }
 
-// Myš udalosti
 canvas.onmousedown=(e)=>{ if(e.button===0) handleStart(e.clientX, e.clientY); };
 canvas.onmousemove=(e)=> handleMove(e.clientX, e.clientY);
 canvas.onmouseup=()=> handleEnd();
 
-// Dotykové udalosti pre mobily a tablety
 canvas.ontouchstart=(e)=>{
   if(e.touches.length === 1){
     handleStart(e.touches[0].clientX, e.touches[0].clientY);
@@ -467,62 +493,119 @@ canvas.ontouchmove=(e)=>{
 };
 canvas.ontouchend=()=> handleEnd();
 
-// Panel vlastností s reálnou aktualizáciou kót
+function moveShapeToPos(s, newX, newY){
+  if(s.type==='line'){
+    const dx = s.x2 - s.x1;
+    const dy = s.y2 - s.y1;
+    s.x1 = newX;
+    s.y1 = newY;
+    s.x2 = newX + dx;
+    s.y2 = newY + dy;
+  }else if(s.type==='circle'){
+    s.cx = newX;
+    s.cy = newY;
+  }else if(s.type==='rect'){
+    s.x = newX;
+    s.y = newY;
+  }
+}
+
+function getShapePos(s){
+  if(s.type==='line') return {x: s.x1, y: s.y1};
+  if(s.type==='circle') return {x: s.cx, y: s.cy};
+  if(s.type==='rect') return {x: s.x, y: s.y};
+}
+
+// Vygenerovanie panela bez prepisovania aktívneho inputu pri písaní
 function updateDimensionsPanel(){
+  if(document.activeElement && document.activeElement.tagName === 'INPUT' && dimsPanel.contains(document.activeElement)){
+    return; // Ak používateľ práve píše hodnotu do políčka, panel neprekresľujeme
+  }
+
   dimsContent.innerHTML='';
   if(shapes.length===0){
     dimsContent.innerHTML='Žiadne tvary';
     return;
   }
-  shapes.forEach((s,i)=>{
-    const div=document.createElement('div');
-    div.style.padding='6px'; div.style.borderRadius='6px';
-    div.style.background = (i===selectedShapeIndex)?'#1e3a8a':'#121216';
-    div.style.cursor='pointer';
-    div.onclick=()=>{ selectedShapeIndex=i; drawAll(); };
 
-    div.innerHTML=`<strong>#${i+1} (${s.type})</strong><br>`;
-    
+  shapes.forEach((s,i)=>{
+    const card=document.createElement('div');
+    card.className = `shape-card ${i===selectedShapeIndex ? 'active' : ''}`;
+    card.onclick=(e)=>{
+      if(e.target.tagName !== 'INPUT'){
+        selectedShapeIndex=i;
+        drawAll();
+      }
+    };
+
+    const title=document.createElement('div');
+    title.innerHTML=`<strong>#${i+1} (${s.type})</strong>`;
+    card.appendChild(title);
+
+    // Pozícia X a Y pre presné premiestnenie
+    const pos = getShapePos(s);
+    const posRow = document.createElement('div');
+    posRow.className = 'input-row';
+    posRow.innerHTML = `<label>Pozícia X:</label><input type="number" value="${Math.round(pos.x)}" data-type="pos-x">` +
+                      `<label>Y:</label><input type="number" value="${Math.round(pos.y)}" data-type="pos-y">`;
+    card.appendChild(posRow);
+
+    const inputs = posRow.querySelectorAll('input');
+    inputs[0].onchange = (e) => {
+      pushState();
+      const val = parseFloat(e.target.value);
+      if(!isNaN(val)){ moveShapeToPos(s, val, getShapePos(s).y); drawAll(); }
+    };
+    inputs[1].onchange = (e) => {
+      pushState();
+      const val = parseFloat(e.target.value);
+      if(!isNaN(val)){ moveShapeToPos(s, getShapePos(s).x, val); drawAll(); }
+    };
+
+    // Nastavenie rozmerov
+    const dimRow = document.createElement('div');
+    dimRow.className = 'input-row';
+
     if(s.type==='line'){
-      const inp=document.createElement('input'); inp.type='number'; inp.value=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1);
-      inp.onfocus=()=>pushState();
-      inp.oninput=(e)=>{
-        const len=parseFloat(e.target.value);
-        if(!isNaN(len) && len > 0){
-          const angle=Math.atan2(s.y2-s.y1, s.x2-s.x1);
-          s.x2=s.x1 + len * Math.cos(angle);
-          s.y2=s.y1 + len * Math.sin(angle);
+      const len = Math.hypot(s.x2-s.x1, s.y2-s.y1).toFixed(1);
+      dimRow.innerHTML = `<label>Dĺžka:</label><input type="number" value="${len}" data-type="len">`;
+      const inp = dimRow.querySelector('input');
+      inp.onchange = (e) => {
+        pushState();
+        const val = parseFloat(e.target.value);
+        if(!isNaN(val) && val > 0){
+          const angle = Math.atan2(s.y2-s.y1, s.x2-s.x1);
+          s.x2 = s.x1 + val * Math.cos(angle);
+          s.y2 = s.y1 + val * Math.sin(angle);
           drawAll();
         }
       };
-      div.appendChild(document.createTextNode('Dĺžka: ')); div.appendChild(inp);
     }else if(s.type==='rect'){
-      const inpW=document.createElement('input'); inpW.type='number'; inpW.value=Math.abs(s.w).toFixed(1);
-      inpW.onfocus=()=>pushState();
-      inpW.oninput=(e)=>{ 
-        const val=parseFloat(e.target.value);
-        if(!isNaN(val)) { s.w=val*(s.w<0?-1:1); drawAll(); }
+      dimRow.innerHTML = `<label>Šírka:</label><input type="number" value="${Math.abs(s.w).toFixed(1)}" data-type="w">` +
+                         `<label>Výška:</label><input type="number" value="${Math.abs(s.h).toFixed(1)}" data-type="h">`;
+      const inps = dimRow.querySelectorAll('input');
+      inps[0].onchange = (e) => {
+        pushState();
+        const val = parseFloat(e.target.value);
+        if(!isNaN(val)){ s.w = val * (s.w < 0 ? -1 : 1); drawAll(); }
       };
-
-      const inpH=document.createElement('input'); inpH.type='number'; inpH.value=Math.abs(s.h).toFixed(1);
-      inpH.onfocus=()=>pushState();
-      inpH.oninput=(e)=>{ 
-        const val=parseFloat(e.target.value);
-        if(!isNaN(val)) { s.h=val*(s.h<0?-1:1); drawAll(); }
+      inps[1].onchange = (e) => {
+        pushState();
+        const val = parseFloat(e.target.value);
+        if(!isNaN(val)){ s.h = val * (s.h < 0 ? -1 : 1); drawAll(); }
       };
-
-      div.appendChild(document.createTextNode('Š: ')); div.appendChild(inpW);
-      div.appendChild(document.createTextNode(' V: ')); div.appendChild(inpH);
     }else if(s.type==='circle'){
-      const inpR=document.createElement('input'); inpR.type='number'; inpR.value=s.r.toFixed(1);
-      inpR.onfocus=()=>pushState();
-      inpR.oninput=(e)=>{ 
-        const val=parseFloat(e.target.value);
-        if(!isNaN(val) && val > 0) { s.r=val; drawAll(); }
+      dimRow.innerHTML = `<label>Polomer:</label><input type="number" value="${s.r.toFixed(1)}" data-type="r">`;
+      const inp = dimRow.querySelector('input');
+      inp.onchange = (e) => {
+        pushState();
+        const val = parseFloat(e.target.value);
+        if(!isNaN(val) && val > 0){ s.r = val; drawAll(); }
       };
-      div.appendChild(document.createTextNode('Polomer: ')); div.appendChild(inpR);
     }
-    dimsContent.appendChild(div);
+
+    card.appendChild(dimRow);
+    dimsContent.appendChild(card);
   });
 }
 
