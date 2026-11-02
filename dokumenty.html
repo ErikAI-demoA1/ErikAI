@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📄 ErikAI Študentský Word & Dokumenty Pro</title>
+<title>📄 ErikAI Študentský Word Pro</title>
 <!-- Knižnica na čítanie .docx (Word) súborov z PC -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
@@ -107,21 +107,23 @@
     border-color: var(--accent-yellow);
   }
 
-  textarea { 
+  /* Pravý WYSIWYG editor namiesto obyčajného textarea */
+  #editor { 
     width: 100%; 
-    height: 350px; 
+    height: 380px; 
     padding: 15px; 
-    font-family: monospace; 
-    font-size: 1rem;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    font-size: 1.05rem;
     background: #1a1a1a; 
     color: #fff; 
     border: 1px solid #333; 
     border-radius: 8px; 
-    resize: vertical;
+    overflow-y: auto;
     box-sizing: border-box;
     outline: none;
+    line-height: 1.5;
   }
-  textarea:focus {
+  #editor:focus {
     border-color: var(--border-green);
   }
 
@@ -260,7 +262,7 @@
     body { background: white; color: black; }
     .toolbar, .file-section, .stats-bar, .action-buttons, .doc-list-container, .footer, h1, .subtitle { display: none; }
     .container { border: none; box-shadow: none; max-width: 100%; padding: 0; }
-    textarea { border: none; width: 100%; height: auto; background: white; color: black; }
+    #editor { border: none; width: 100%; height: auto; background: white; color: black; padding: 0; }
   }
 </style>
 </head>
@@ -268,17 +270,17 @@
 
 <div class="container">
   <h1>📄 ErikAI Študentský Word Pro</h1>
-  <div class="subtitle">Študentský editor na poznámky, referáty a otváranie Word (.docx) súborov</div>
+  <div class="subtitle">Skutočný formátovaný editor na poznámky, referáty a Word (.docx) súbory</div>
 
   <!-- Nástrojová lišta -->
   <div class="toolbar">
-    <button onclick="formatText('<b>', '</b>')"><b>B</b> (Tučné)</button>
-    <button onclick="formatText('<i>', '</i>')"><i>I</i> (Kurzíva)</button>
-    <button onclick="formatText('<u>', '</u>')"><u>U</u> (Podčiarknuté)</button>
-    <button onclick="formatText('<h2>', '</h2>')">📌 Nadpis</button>
-    <button onclick="formatText('<div style=\'text-align:center;\'>', '</div>')">🎯 Na stred</button>
-    <button onclick="formatText('<ul>\n  <li>', '</li>\n</ul>')">📋 Odrážky</button>
-    <select onchange="insertColor(this.value); this.value='';">
+    <button onclick="document.execCommand('bold', false, null)"><b>B</b></button>
+    <button onclick="document.execCommand('italic', false, null)"><i>I</i></button>
+    <button onclick="document.execCommand('underline', false, null)"><u>U</u></button>
+    <button onclick="document.execCommand('formatBlock', false, '<h2>')">📌 Nadpis</button>
+    <button onclick="document.execCommand('justifyCenter', false, null)">🎯 Na stred</button>
+    <button onclick="document.execCommand('insertUnorderedList', false, null)">📋 Odrážky</button>
+    <select onchange="document.execCommand('foreColor', false, this.value); this.value='';">
       <option value="">🎨 Farba textu...</option>
       <option value="red">Červená</option>
       <option value="green">Zelená</option>
@@ -296,12 +298,13 @@
   </div>
 
   <div class="file-section">
-    <label>🖼️ Pridať obrázky / prílohy do dokumentu:</label>
+    <label>🖼️ Pridať obrázky do dokumentu:</label>
     <input type="file" id="imageInput" accept="image/*" multiple>
     <div class="preview" id="imagePreview"></div>
   </div>
 
-  <textarea id="textArea" placeholder="Tu píš text svojho dokumentu alebo načítaj súbor z počítača..." oninput="updateStats()"></textarea>
+  <!-- Živý formátovaný editor -->
+  <div id="editor" contenteditable="true" oninput="updateStats()" placeholder="Tu píš text svojho dokumentu..."></div>
 
   <!-- Študentské počítadlá -->
   <div class="stats-bar">
@@ -327,7 +330,7 @@
 </div>
 
 <script>
-const textArea = document.getElementById("textArea");
+const editor = document.getElementById("editor");
 const docNameInput = document.getElementById("docName");
 const imagePreview = document.getElementById("imagePreview");
 
@@ -342,9 +345,9 @@ document.getElementById("docFileInput").addEventListener("change", function(e) {
   if (file.name.endsWith(".docx")) {
     const reader = new FileReader();
     reader.onload = function(event) {
-      mammoth.extractRawText({ arrayBuffer: event.target.result })
+      mammoth.convertToHtml({ arrayBuffer: event.target.result })
         .then(function(result) {
-          textArea.value = result.value;
+          editor.innerHTML = result.value;
           updateStats();
           alert("Word dokument bol úspešne načítaný!");
         })
@@ -356,7 +359,7 @@ document.getElementById("docFileInput").addEventListener("change", function(e) {
   } else if (file.name.endsWith(".txt")) {
     const reader = new FileReader();
     reader.onload = function(event) {
-      textArea.value = event.target.result;
+      editor.innerText = event.target.result;
       updateStats();
       alert("Textový súbor bol úspešne načítaný!");
     };
@@ -364,25 +367,9 @@ document.getElementById("docFileInput").addEventListener("change", function(e) {
   }
 });
 
-// Vkladanie formátovacích tagov do textu
-function formatText(startTag, endTag) {
-  const start = textArea.selectionStart;
-  const end = textArea.selectionEnd;
-  const text = textArea.value;
-  const selectedText = text.substring(start, end);
-  textArea.value = text.substring(0, start) + startTag + selectedText + endTag + text.substring(end);
-  textArea.focus();
-  updateStats();
-}
-
-function insertColor(color) {
-  if(!color) return;
-  formatText(`<span style="color:${color};">`, `</span>`);
-}
-
-// Počítadlá pre študentov
+// Počítadlá pre študentov (berú čistý text bez HTML tagov)
 function updateStats() {
-  const text = textArea.value.trim();
+  const text = editor.innerText.trim();
   const words = text ? text.split(/\s+/).length : 0;
   const chars = text.length;
   const pages = (words / 250).toFixed(1);
@@ -430,7 +417,7 @@ function ulozDokument() {
   const name = docNameInput.value.trim();
   if(!name) return alert("Zadaj názov dokumentu.");
   const images = Array.from(imagePreview.querySelectorAll("img")).map(img => img.src);
-  const obj = { text: textArea.value, images };
+  const obj = { html: editor.innerHTML, images };
   localStorage.setItem("erikai_doc_" + name, JSON.stringify(obj));
   alert("Dokument '" + name + "' bol úspešne uložený do prehliadača!");
   refreshZoznam();
@@ -445,7 +432,7 @@ function nacitajDokument(customName) {
   
   const obj = JSON.parse(data);
   docNameInput.value = name;
-  textArea.value = obj.text;
+  editor.innerHTML = obj.html;
   imagePreview.innerHTML = '';
   
   if (obj.images) {
@@ -483,7 +470,7 @@ function vymazDokument(customName) {
     localStorage.removeItem("erikai_doc_" + name);
     if(docNameInput.value === name) {
       docNameInput.value = '';
-      textArea.value = '';
+      editor.innerHTML = '';
       imagePreview.innerHTML = '';
     }
     refreshZoznam();
@@ -491,16 +478,16 @@ function vymazDokument(customName) {
   }
 }
 
-// Stiahnutie TXT
+// Stiahnutie TXT (čistý text bez tagov)
 function stiahniTXT() {
-  const blob = new Blob([textArea.value], { type: 'text/plain;charset=utf-8' });
+  const blob = new Blob([editor.innerText], { type: 'text/plain;charset=utf-8' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = (docNameInput.value || "erikai_dokument") + ".txt";
   link.click();
 }
 
-// Stiahnutie DOCX (Word kompatibilný HTML odkaz)
+// Stiahnutie DOCX (Word kompatibilný formát so zachovaným štýlom a obrázkami)
 function stiahniDOCX() {
   const images = Array.from(imagePreview.querySelectorAll("img")).map(img => `<br><img src="${img.src}" style="max-width:500px;"><br>`).join("");
   const content = `
@@ -508,7 +495,7 @@ function stiahniDOCX() {
     <head><meta charset='utf-8'><title>${docNameInput.value || 'Dokument'}</title></head>
     <body style="font-family: Arial; padding: 20px;">
       <h1>${docNameInput.value || 'Dokument'}</h1>
-      <div>${textArea.value.replace(/\n/g,"<br>")}</div>
+      <div>${editor.innerHTML}</div>
       ${images}
     </body>
     </html>`;
@@ -522,7 +509,7 @@ function stiahniDOCX() {
 // Stiahnutie HTML
 function stiahniHTML() {
   const images = Array.from(imagePreview.querySelectorAll("img")).map(img => `<img src="${img.src}" style="max-width:400px; display:block; margin:10px 0;">`).join("");
-  const htmlContent = `<!DOCTYPE html><html lang="sk"><head><meta charset="UTF-8"><title>${docNameInput.value || 'Dokument'}</title></head><body style="font-family:Arial; padding:20px;"><h1>${docNameInput.value || 'Dokument'}</h1><div>${textArea.value.replace(/\n/g,"<br>")}</div><hr>${images}</body></html>`;
+  const htmlContent = `<!DOCTYPE html><html lang="sk"><head><meta charset="UTF-8"><title>${docNameInput.value || 'Dokument'}</title></head><body style="font-family:Arial; padding:20px;"><h1>${docNameInput.value || 'Dokument'}</h1><div>${editor.innerHTML}</div><hr>${images}</body></html>`;
   const blob = new Blob([htmlContent], { type: 'text/html' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
