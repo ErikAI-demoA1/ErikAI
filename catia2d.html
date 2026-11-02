@@ -48,7 +48,7 @@ header{
 }
 canvas{background:#0b0d13;display:block;cursor:crosshair;}
 
-button{
+button, label.file-btn{
   padding:8px 12px;
   border:none;
   border-radius:8px;
@@ -59,10 +59,24 @@ button{
   font-size: 0.9rem;
   transition: all 0.2s;
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
-button:hover{filter: brightness(1.1); transform: translateY(-1px);}
+button:hover, label.file-btn:hover{filter: brightness(1.1); transform: translateY(-1px);}
 button.ghost{background: var(--panel-bg);border:1px solid var(--border-color);color:var(--text-main);}
 button.active{background: var(--accent-blue); color:white;}
+
+/* Štýl pre spoľahlivé nahratie súboru na mobile aj PC */
+label.file-btn {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+input[type="file"] {
+  display: none;
+}
 
 #commandLineContainer{
   background: #090b10;
@@ -173,8 +187,11 @@ button.active{background: var(--accent-blue); color:white;}
   <div class="panel">
     <button id="exportImg" class="ghost" onclick="exportImage()">📷 PNG</button>
     <button id="exportJSON" class="ghost" onclick="exportJSON()">💾 Uložiť</button>
-    <button id="importJSONBtn" class="ghost" onclick="document.getElementById('fileInput').click()">📂 Otvoriť</button>
-    <input type="file" id="fileInput" style="display:none" accept=".json" onchange="importJSON(event)">
+    
+    <!-- Opravené: Klasický HTML label spojený s file inputom, funguje na 100% aj na mobile -->
+    <label for="fileInput" class="file-btn">📂 Otvoriť</label>
+    <input type="file" id="fileInput" accept=".json" onchange="importJSON(event)">
+
     <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Zmazať</button>
   </div>
 </header>
@@ -228,18 +245,16 @@ function logCommand(text){
   commandHistory.scrollTop=commandHistory.scrollHeight;
 }
 
-// Automatické ukladanie do pamäte prehliadača (LocalStorage) pri každej zmene
 function saveToLocalStorage(){
   localStorage.setItem('erikai_cad_autosave', JSON.stringify(shapes));
 }
 
-// Načítanie pri štarte
 function loadFromLocalStorage(){
   const saved = localStorage.getItem('erikai_cad_autosave');
   if(saved){
     try{
       shapes = JSON.parse(saved);
-      logCommand("Načtený posledný uložený projekt z pamäte.");
+      logCommand("Načítaný posledný uložený projekt z pamäte.");
     }catch(e){
       console.error("Chyba pri načítaní autosave", e);
     }
@@ -249,7 +264,7 @@ function loadFromLocalStorage(){
 function setTool(t){
   tool=t;
   document.querySelectorAll('header button').forEach(b=>{
-    if(!b.getAttribute('onclick')?.includes('export') && !b.getAttribute('onclick')?.includes('clear') && !b.getAttribute('onclick')?.includes('import')) {
+    if(!b.getAttribute('onclick')?.includes('export') && !b.getAttribute('onclick')?.includes('clear')) {
       b.classList.replace('active','ghost');
     }
   });
@@ -355,7 +370,6 @@ function exportImage(){
   logCommand("Výkres exportovaný ako PNG obrázok!");
 }
 
-// Uloženie výkresu do súboru (.json) pre prenos do iného zariadenia
 function exportJSON(){
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({shapes}, null, 2));
   const link = document.createElement('a');
@@ -365,7 +379,6 @@ function exportJSON(){
   logCommand("Projekt úspešne stiahnutý do súboru (.json)!");
 }
 
-// Načítanie výkresu zo súboru (.json) na pokračovanie v práci
 function importJSON(event){
   const file = event.target.files[0];
   if(!file) return;
@@ -388,7 +401,7 @@ function importJSON(event){
     }
   };
   reader.readAsText(file);
-  event.target.value = ''; // Reset inputu
+  event.target.value = '';
 }
 
 editDimsBtn.onclick=()=>{
@@ -796,7 +809,6 @@ function updateDimensionsPanel(){
   });
 }
 
-// Naštartovanie a načítanie uložených dát
 loadFromLocalStorage();
 drawAll();
 </script>
