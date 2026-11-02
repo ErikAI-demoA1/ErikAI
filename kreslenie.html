@@ -3,854 +3,745 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Erakai - Kresliaca App</title>
+  <title>Erakai Pro Studio - Kresliaca & Vektorová Aplikácia</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { 
-      font-family: 'Inter', sans-serif; 
-      background: linear-gradient(180deg, #071026, #071022);
-      color: #e6eef6;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@500&display=swap');
+    
+    :root {
+      --bg-gradient: linear-gradient(135deg, #090d16 0%, #0f172a 100%);
+      --panel-bg: rgba(15, 23, 42, 0.75);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-main: #f1f5f9;
+      --accent: #3b82f6;
+    }
+
+    body.light-mode {
+      --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      --panel-bg: rgba(255, 255, 255, 0.85);
+      --border-color: rgba(0, 0, 0, 0.08);
+      --text-main: #0f172a;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      user-select: none;
       min-height: 100vh;
-      padding: 10px;
-      overflow-x: hidden;
     }
-    .light-mode {
-      background: linear-gradient(180deg, #f6f9ff, #eef4ff) !important;
-      color: #0b1220 !important;
+
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
     }
-    
-    .container { 
-      display: flex; 
-      flex-direction: column;
-      gap: 15px; 
-      max-width: 1200px; 
-      margin: 0 auto;
+
+    .tool-btn {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
-    @media (min-width: 768px) {
-      .container {
-        flex-direction: row;
-      }
-      .sidebar { 
-        width: 280px; 
-        flex-shrink: 0; 
-      }
+    .tool-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
     }
-    
-    .panel { 
-      background: rgba(255,255,255,0.05); 
-      border-radius: 12px; 
-      padding: 12px; 
-      margin-bottom: 12px; 
-      border: 1px solid rgba(255,255,255,0.1); 
+    .tool-btn.active {
+      background: #3b82f6 !important;
+      color: #ffffff !important;
+      border-color: #60a5fa !important;
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
     }
-    .light-mode .panel { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.1); }
-    
-    .toolbtn { 
-      background: rgba(255,255,255,0.1); 
-      border: 1px solid rgba(255,255,255,0.2); 
-      color: white; 
-      padding: 8px 12px; 
-      border-radius: 6px; 
-      cursor: pointer; 
-      margin: 2px; 
-      transition: all 0.2s; 
-      font-size: 13px;
-      flex: 1;
-      min-width: 60px;
+
+    .bg-checker {
+      background-image: linear-gradient(45deg, rgba(0,0,0,0.06) 25%, transparent 25%), 
+                        linear-gradient(-45deg, rgba(0,0,0,0.06) 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.06) 75%), 
+                        linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.06) 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
     }
-    .light-mode .toolbtn { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.2); color: #333; }
-    .toolbtn:hover { background: rgba(255,255,255,0.2); }
-    .light-mode .toolbtn:hover { background: rgba(0,0,0,0.1); }
-    .toolbtn.active { background: #3b82f6; border-color: #3b82f6; }
-    
-    /* CANVAS CONTAINER - OPRAVENÉ */
-    .canvas-container { 
-      position: relative; 
-      background: white; 
-      border-radius: 8px; 
-      overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      border: 1px solid rgba(255,255,255,0.2);
-      width: 100%;
-      height: 500px;
-    }
-    
-    @media (max-width: 767px) {
-      .canvas-container {
-        height: 400px;
-      }
-    }
-    
-    @media (max-width: 480px) {
-      .canvas-container {
-        height: 350px;
-      }
-    }
-    
-    /* CANVAS ELEMENTS - OPRAVENÉ */
-    #raster, #main { 
-      position: absolute; 
-      top: 0; 
-      left: 0; 
-      display: block;
-      cursor: crosshair;
-      touch-action: none;
-    }
-    #raster { z-index: 1; }
-    #main { z-index: 2; background: transparent; }
-    
-    input[type="color"] { width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer; }
-    input[type="range"] { width: 100%; }
-    
-    .small { font-size: 12px; opacity: 0.8; }
-    pre { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; overflow: auto; max-height: 150px; font-size: 11px; }
-    .light-mode pre { background: rgba(0,0,0,0.05); }
-    
-    #modalBg {
-      display: none; position: fixed; top:0; left:0; width:100%; height:100%; 
-      background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
-      padding: 20px;
-    }
-    .modal { 
-      background: white; 
-      color: #333; 
-      padding: 20px; 
-      border-radius: 12px; 
-      width: 100%;
-      max-width: 300px; 
-    }
-    .modal input { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; }
-    
-    .tools-row { 
-      display: flex; 
-      flex-wrap: wrap; 
-      gap: 4px; 
-      margin-bottom: 8px;
-      justify-content: center;
-    }
-    
-    .mobile-warning {
-      display: none;
-      background: #f39c12;
-      color: white;
-      padding: 8px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-      text-align: center;
-      font-size: 12px;
-    }
-    
-    @media (max-width: 767px) {
-      .mobile-warning {
-        display: block;
-      }
-    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.2); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
   </style>
 </head>
-<body>
-  <div class="mobile-warning">
-    💡 Pre lepšiu prácu otoč zariadenie na šírku
-  </div>
-  
-  <div class="container">
-    <div class="sidebar">
-      <div class="panel">
-        <h3>Nástroje</h3>
-        <div class="tools-row">
-          <button class="toolbtn active" data-tool="select">Výber</button>
-          <button class="toolbtn" data-tool="draw">Kresliť</button>
-          <button class="toolbtn" data-tool="eraser">Guma</button>
-        </div>
-        <div class="tools-row">
-          <button class="toolbtn" data-tool="rect">Obdĺžnik</button>
-          <button class="toolbtn" data-tool="circle">Kruh</button>
-          <button class="toolbtn" data-tool="line">Čiara</button>
-          <button class="toolbtn" data-tool="text">Text</button>
-        </div>
+<body class="flex flex-col h-screen overflow-hidden">
+
+  <!-- TOP HEADER NAVBAR -->
+  <header class="glass-panel px-4 py-2 flex items-center justify-between border-b z-30">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-teal-400 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-blue-500/20">
+        E
       </div>
-      
-      <div class="panel">
-        <h3>Vlastnosti</h3>
-        <div style="margin-bottom:10px; display: flex; align-items: center; gap: 10px;">
-          <label class="small">Farba:</label>
-          <input type="color" id="colorPicker" value="#000000">
-        </div>
-        <div style="margin-bottom:10px;">
-          <label class="small">Veľkosť štetca: <span id="sizeValue">5</span>px</label>
-          <input type="range" id="sizeSlider" min="1" max="50" value="5">
-        </div>
-      </div>
-      
-      <div class="panel">
-        <h3>Výber</h3>
-        <div id="selInfo"><div class="small">Žiadny výber</div></div>
-        <div style="margin-top:10px; display:flex; gap:4px; flex-wrap:wrap;">
-          <button class="toolbtn" id="deleteBtn">Zmazať</button>
-          <button class="toolbtn" id="lockBtn">Zamknúť</button>
-          <button class="toolbtn" id="editText">Upraviť text</button>
-          <button class="toolbtn" id="bringFront">Dopredu</button>
-          <button class="toolbtn" id="sendBack">Dozadu</button>
-        </div>
-      </div>
-      
-      <div class="panel">
-        <h3>Plátno</h3>
-        <div style="display:flex; gap:4px; margin-bottom:8px;">
-          <input type="number" id="canvasW" placeholder="Šírka" value="800" style="flex:1;">
-          <input type="number" id="canvasH" placeholder="Výška" value="500" style="flex:1;">
-          <button class="toolbtn" id="setCanvasBtn">Nastaviť</button>
-        </div>
-        <button class="toolbtn" id="clearBtn" style="width:100%; margin-bottom:8px;">Vymazať plátno</button>
-        <button class="toolbtn" id="themeToggle" style="width:100%;">Prepnúť tému</button>
-      </div>
-      
-      <div class="panel">
-        <h3>Projekty</h3>
-        <div style="display:flex; gap:4px; margin-bottom:8px;">
-          <button class="toolbtn" id="saveBtn" style="flex:1;">Uložiť</button>
-          <button class="toolbtn" id="loadBtn" style="flex:1;">Načítať</button>
-        </div>
-        <div style="display:flex; gap:4px; margin-bottom:8px;">
-          <button class="toolbtn" id="downloadProject" style="flex:1;">Stiahnuť</button>
-          <button class="toolbtn" id="uploadProjectBtn" style="flex:1;">Nahrať</button>
-          <input type="file" id="uploadProject" accept=".json" style="display:none;">
-        </div>
-        <button class="toolbtn" id="exportBtn" style="width:100%;">Exportovať PNG</button>
-        <div id="projects" style="margin-top:10px;"></div>
+      <div>
+        <h1 class="font-extrabold text-sm tracking-tight flex items-center gap-2">
+          Erakai Studio <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">PRO 2.0</span>
+        </h1>
+        <p class="text-[10px] opacity-60">Vektorový & Raster Kresliaci Ateliér</p>
       </div>
     </div>
-    
-    <div class="main-area">
-      <div class="canvas-container">
-        <canvas id="raster" width="800" height="500"></canvas>
-        <canvas id="main" width="800" height="500"></canvas>
+
+    <!-- Quick Tool Actions & Undo/Redo -->
+    <div class="flex items-center gap-1.5">
+      <div class="flex bg-slate-900/60 p-1 rounded-xl border border-slate-800">
+        <button id="btnUndo" onclick="undo()" class="px-2.5 py-1 text-xs text-slate-400 hover:text-white rounded-lg transition disabled:opacity-30" title="Krok späť (Ctrl+Z)">
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+        <button id="btnRedo" onclick="redo()" class="px-2.5 py-1 text-xs text-slate-400 hover:text-white rounded-lg transition disabled:opacity-30" title="Krok vpred (Ctrl+Y)">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+      </div>
+
+      <div class="h-5 w-[1px] bg-slate-800 mx-1"></div>
+
+      <button onclick="exportImage('png')" class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-download text-teal-400"></i> PNG
+      </button>
+      <button onclick="exportImage('jpeg')" class="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/20 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-file-image"></i> Export JPG
+      </button>
+      <button id="themeToggle" class="p-2 text-xs text-slate-400 hover:text-white rounded-xl transition">
+        <i class="fa-solid fa-moon text-amber-400"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN STUDIO WORKSPACE -->
+  <main class="flex-1 flex overflow-hidden relative">
+
+    <!-- LEFT SIDEBAR: TOOL PANE -->
+    <aside class="w-64 glass-panel border-r p-3 flex flex-col gap-3 overflow-y-auto z-20">
+      
+      <!-- MAIN TOOLS -->
+      <div>
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Kreslenie & Výber</label>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button class="tool-btn active p-2 rounded-xl text-xs flex items-center gap-2 bg-slate-800/40 border border-slate-700/50" data-tool="select">
+            <i class="fa-solid fa-arrow-pointer text-blue-400"></i> Výber (V)
+          </button>
+          <button class="tool-btn p-2 rounded-xl text-xs flex items-center gap-2 bg-slate-800/40 border border-slate-700/50" data-tool="draw">
+            <i class="fa-solid fa-pen-nib text-teal-400"></i> Štetec (D)
+          </button>
+          <button class="tool-btn p-2 rounded-xl text-xs flex items-center gap-2 bg-slate-800/40 border border-slate-700/50" data-tool="eraser">
+            <i class="fa-solid fa-eraser text-rose-400"></i> Guma (E)
+          </button>
+          <button class="tool-btn p-2 rounded-xl text-xs flex items-center gap-2 bg-slate-800/40 border border-slate-700/50" data-tool="fill">
+            <i class="fa-solid fa-fill-drip text-amber-400"></i> Výplň
+          </button>
+        </div>
+      </div>
+
+      <!-- VECTOR SHAPES -->
+      <div>
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Vektorové Tvary</label>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button class="tool-btn p-2 rounded-xl text-xs flex items-center gap-2 bg-slate-800/40 border border-slate-700/50" data-tool="rect">
+            <i class="fa-regular fa-square"></i> Obdĺžnik
+          </button>
+          <button class="tool-btn p-2 rounded-xl text-xs flex items-center gap-2 bg-slate-800/40 border border-slate-700/50" data-tool="circle">
+            <i class="fa-regular fa-circle"></i> Kruh
+          </button>
+          <button class="tool-btn p-2 rounded-xl text-xs flex items-center gap-2 bg-slate-800/40 border border-slate-700/50" data-tool="line">
+            <i class="fa-solid fa-minus"></i> Čiara
+          </button>
+          <button class="tool-btn p-2 rounded-xl text-xs flex items-center gap-2 bg-slate-800/40 border border-slate-700/50" data-tool="arrow">
+            <i class="fa-solid fa-location-arrow"></i> Šípka
+          </button>
+          <button class="tool-btn p-2 rounded-xl text-xs flex items-center gap-2 bg-slate-800/40 border border-slate-700/50" data-tool="star">
+            <i class="fa-regular fa-star"></i> Hviezda
+          </button>
+          <button class="tool-btn p-2 rounded-xl text-xs flex items-center gap-2 bg-slate-800/40 border border-slate-700/50" data-tool="text">
+            <i class="fa-solid fa-font"></i> Text
+          </button>
+        </div>
+      </div>
+
+      <!-- PROPERTIES -->
+      <div class="space-y-3 pt-2 border-t border-slate-800">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Farba & Štetec</label>
+        
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-slate-300">Farba čiary:</span>
+          <input type="color" id="colorPicker" value="#3b82f6" class="w-8 h-8 rounded-lg border-0 bg-transparent cursor-pointer">
+        </div>
+
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-slate-300">Farba výplne:</span>
+          <div class="flex items-center gap-1.5">
+            <input type="checkbox" id="fillEnable" class="rounded">
+            <input type="color" id="fillColorPicker" value="#ffffff" class="w-8 h-8 rounded-lg border-0 bg-transparent cursor-pointer">
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-xs text-slate-300 mb-1">
+            <span>Hrúbka čiary</span>
+            <span id="sizeValue">5px</span>
+          </div>
+          <input type="range" id="sizeSlider" min="1" max="60" value="5" class="w-full accent-blue-500">
+        </div>
+
+        <div>
+          <div class="flex justify-between text-xs text-slate-300 mb-1">
+            <span>Priehľadnosť</span>
+            <span id="opacityValue">100%</span>
+          </div>
+          <input type="range" id="opacitySlider" min="0.1" max="1" step="0.05" value="1" class="w-full accent-blue-500">
+        </div>
+      </div>
+
+      <!-- CANVAS RESIZE & ACTIONS -->
+      <div class="space-y-2 pt-2 border-t border-slate-800">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Veľkosť Plátna</label>
+        <div class="flex gap-1.5">
+          <input type="number" id="canvasW" value="900" class="w-full bg-slate-900/80 border border-slate-700 rounded-lg p-1.5 text-xs text-center">
+          <span class="self-center text-slate-500">×</span>
+          <input type="number" id="canvasH" value="550" class="w-full bg-slate-900/80 border border-slate-700 rounded-lg p-1.5 text-xs text-center">
+          <button id="setCanvasBtn" class="px-2 py-1 bg-slate-800 border border-slate-700 rounded-lg text-xs hover:bg-slate-700">OK</button>
+        </div>
+
+        <button id="clearBtn" class="w-full py-1.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-xl text-xs hover:bg-rose-500/20 font-semibold transition">
+          <i class="fa-solid fa-trash-can"></i> Vymazať všetko
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- CENTER CANVAS WORKSPACE VIEWPORT -->
+    <section class="flex-1 flex items-center justify-center relative p-4 overflow-auto bg-checker">
+      <div class="canvas-container relative rounded-xl shadow-2xl overflow-hidden border border-slate-700/50 bg-white" style="width: 900px; height: 550px;">
+        <canvas id="raster" width="900" height="550" class="absolute top-0 left-0 z-10 touch-none"></canvas>
+        <canvas id="main" width="900" height="550" class="absolute top-0 left-0 z-20 touch-none bg-transparent cursor-crosshair"></canvas>
+      </div>
+    </section>
+
+    <!-- RIGHT SIDEBAR: LAYERS & PROJECTS -->
+    <aside class="w-64 glass-panel border-l p-3 flex flex-col gap-3 overflow-y-auto z-20">
+      
+      <!-- SELECTED OBJECT INSPECTOR -->
+      <div>
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 block">Vlastnosti Objektu</label>
+        <div id="selInfo" class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 text-xs text-slate-400 min-h-[60px] flex items-center justify-center">
+          Žiadny výber
+        </div>
+        <div class="grid grid-cols-2 gap-1.5 mt-2">
+          <button id="bringFront" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs">🔼 Dopredu</button>
+          <button id="sendBack" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs">🔽 Dozadu</button>
+          <button id="lockBtn" class="p-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs">🔒 Zamknúť</button>
+          <button id="deleteBtn" class="p-1.5 bg-rose-500/20 text-rose-400 rounded-lg text-xs">🗑 Zmazať</button>
+        </div>
+      </div>
+
+      <!-- PROJECTS & FILES -->
+      <div class="flex-1 flex flex-col border-t border-slate-800 pt-3">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 block">Uložené Projekty</label>
+        
+        <div class="grid grid-cols-2 gap-1.5 mb-2">
+          <button id="saveBtn" class="py-1.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl text-xs hover:bg-blue-600/30 font-semibold">
+            💾 Uložiť
+          </button>
+          <button id="downloadProject" class="py-1.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-xl text-xs hover:bg-slate-700 font-semibold">
+            📥 Export JSON
+          </button>
+        </div>
+
+        <button id="uploadProjectBtn" class="w-full py-1.5 mb-3 bg-slate-800 text-slate-200 border border-slate-700 rounded-xl text-xs hover:bg-slate-700 font-semibold">
+          📤 Načítať zo súboru (.JSON)
+        </button>
+        <input type="file" id="uploadProject" accept=".json" class="hidden">
+
+        <div id="projects" class="flex-1 overflow-y-auto space-y-1.5 pr-1">
+          <!-- Local projects list -->
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- MODAL FOR INPUTS -->
+  <div id="modalBg" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="glass-panel p-5 rounded-2xl max-w-sm w-full space-y-4">
+      <h3 id="modalTitle" class="font-bold text-sm text-slate-200">Nastaviť rozmery tvaru</h3>
+      <div id="modalContent" class="space-y-2">
+        <input type="number" id="mWidth" placeholder="Šírka (px)" value="120" class="w-full bg-slate-900 border border-slate-700 p-2 rounded-xl text-xs">
+        <input type="number" id="mHeight" placeholder="Výška (px)" value="90" class="w-full bg-slate-900 border border-slate-700 p-2 rounded-xl text-xs">
+        <input type="number" id="mRadius" placeholder="Polomer (px)" value="50" class="w-full bg-slate-900 border border-slate-700 p-2 rounded-xl text-xs">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="modalCancel" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs">Zrušiť</button>
+        <button id="modalOk" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold">OK</button>
       </div>
     </div>
   </div>
 
-  <div id="modalBg">
-    <div class="modal">
-      <h3 id="modalTitle">Pridať tvar</h3>
-      <div id="modalContent">
-        <input type="number" id="mWidth" placeholder="Šírka" value="100">
-        <input type="number" id="mHeight" placeholder="Výška" value="80">
-        <input type="number" id="mRadius" placeholder="Polomer" value="50">
-      </div>
-      <div style="margin-top:15px; display:flex; gap:8px; justify-content:flex-end;">
-        <button class="toolbtn" id="modalCancel">Zrušiť</button>
-        <button class="toolbtn" id="modalOk">OK</button>
-      </div>
-    </div>
-  </div>
+  <script>
+    /* ========== CORE DOM & SETUP ========== */
+    const $ = id => document.getElementById(id);
+    const raster = $('raster');
+    const main = $('main');
+    const rCtx = raster.getContext('2d');
+    const ctx = main.getContext('2d');
 
-<script>
-// DOM elements
-const $ = id => document.getElementById(id);
-const raster = $('raster');
-const main = $('main');
-const rCtx = raster.getContext('2d');
-const ctx = main.getContext('2d');
+    let tool = 'select';
+    let drawing = false;
+    let dragging = false;
+    let selectedId = null;
+    let dragOffset = { x: 0, y: 0 };
+    let color = '#3b82f6';
+    let fillColor = '#ffffff';
+    let useFill = false;
+    let strokeSize = 5;
+    let globalOpacity = 1;
 
-// State
-let tool = 'select';
-let drawing = false;
-let dragging = false;
-let selectedId = null;
-let dragOffset = {x:0, y:0};
-let color = '#000000';
-let sizeVal = 5;
-let objects = [];
-let strokes = [];
-let pendingShape = null;
+    let objects = [];
+    let pendingShape = null;
 
-// Initialize - OPRAVENÉ
-function initCanvas() {
-  // Nastav pevné rozmery podľa containeru
-  const container = document.querySelector('.canvas-container');
-  const width = 800; // fixed width
-  const height = 500; // fixed height
-  
-  raster.width = main.width = width;
-  raster.height = main.height = height;
-  
-  // Clear both canvases
-  rCtx.clearRect(0, 0, width, height);
-  ctx.clearRect(0, 0, width, height);
-  
-  // Draw initial white background
-  rCtx.fillStyle = '#ffffff';
-  rCtx.fillRect(0, 0, width, height);
-  
-  // Nastav štýly pre kreslenie
-  rCtx.lineCap = 'round';
-  rCtx.lineJoin = 'round';
-  rCtx.strokeStyle = color;
-  rCtx.lineWidth = sizeVal;
-  
-  renderAll();
-}
+    // History undo/redo buffers
+    let historyStack = [];
+    let historyStep = -1;
 
-// Tool selection
-document.querySelectorAll('[data-tool]').forEach(btn => {
-  btn.addEventListener('click', () => setTool(btn.dataset.tool));
-});
-
-function setTool(t){
-  tool = t;
-  document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
-  document.querySelector(`[data-tool="${t}"]`).classList.add('active');
-  
-  if(t === 'draw' || t === 'eraser'){
-    main.style.cursor = 'crosshair';
-    raster.style.cursor = 'crosshair';
-  } else {
-    main.style.cursor = 'default';
-    raster.style.cursor = 'default';
-  }
-}
-
-// Color & size
-$('colorPicker').addEventListener('input', e => { 
-  color = e.target.value; 
-  rCtx.strokeStyle = color; 
-});
-$('sizeSlider').addEventListener('input', e => { 
-  sizeVal = e.target.value; 
-  $('sizeValue').textContent = sizeVal; 
-  rCtx.lineWidth = sizeVal; 
-});
-
-// Drawing functions - OPRAVENÉ PRE KLIKANIE
-function getCanvasPos(e){
-  const rect = main.getBoundingClientRect();
-  const scaleX = main.width / rect.width;
-  const scaleY = main.height / rect.height;
-  
-  let clientX, clientY;
-  
-  if (e.type.includes('touch')) {
-    clientX = e.touches[0].clientX;
-    clientY = e.touches[0].clientY;
-  } else {
-    clientX = e.clientX;
-    clientY = e.clientY;
-  }
-  
-  return {
-    x: (clientX - rect.left) * scaleX,
-    y: (clientY - rect.top) * scaleY
-  };
-}
-
-function startStroke(pos){
-  drawing = true;
-  strokes.push([{...pos}]);
-  rCtx.beginPath();
-  rCtx.moveTo(pos.x, pos.y);
-}
-
-function continueStroke(pos){
-  if(!drawing) return;
-  strokes[strokes.length-1].push({...pos});
-  rCtx.lineTo(pos.x, pos.y);
-  rCtx.stroke();
-  renderAll();
-}
-
-function endStroke(){
-  drawing = false;
-}
-
-// Shape creation
-function createShape(type, pos){
-  if(type === 'text'){
-    const text = prompt('Zadaj text:','Text');
-    if(text){
-      const o = {
-        id: genId(),
-        type: 'text',
-        x: pos.x, y: pos.y,
-        text: text,
-        fontSize: 20,
-        color: color,
-        locked: false
+    function saveState() {
+      if (historyStep < historyStack.length - 1) {
+        historyStack = historyStack.slice(0, historyStep + 1);
+      }
+      const state = {
+        objects: JSON.parse(JSON.stringify(objects)),
+        rasterData: raster.toDataURL()
       };
-      objects.push(o);
-      selectedId = o.id;
+      historyStack.push(state);
+      if (historyStack.length > 30) historyStack.shift();
+      else historyStep++;
+      updateUndoRedoBtns();
+    }
+
+    function undo() {
+      if (historyStep > 0) {
+        historyStep--;
+        restoreState(historyStack[historyStep]);
+      }
+    }
+
+    function redo() {
+      if (historyStep < historyStack.length - 1) {
+        historyStep++;
+        restoreState(historyStack[historyStep]);
+      }
+    }
+
+    function restoreState(state) {
+      objects = JSON.parse(JSON.stringify(state.objects));
+      const img = new Image();
+      img.onload = () => {
+        rCtx.clearRect(0, 0, raster.width, raster.height);
+        rCtx.drawImage(img, 0, 0);
+        renderAll();
+        updateSelInfo();
+      };
+      img.src = state.rasterData;
+      updateUndoRedoBtns();
+    }
+
+    function updateUndoRedoBtns() {
+      $('btnUndo').disabled = historyStep <= 0;
+      $('btnRedo').disabled = historyStep >= historyStack.length - 1;
+    }
+
+    /* Initialize Canvas */
+    function initCanvas() {
+      rCtx.fillStyle = '#ffffff';
+      rCtx.fillRect(0, 0, raster.width, raster.height);
+      saveState();
+      renderAll();
+    }
+
+    /* Tool Selectors */
+    document.querySelectorAll('[data-tool]').forEach(btn => {
+      btn.addEventListener('click', () => setTool(btn.dataset.tool));
+    });
+
+    function setTool(t) {
+      tool = t;
+      document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.querySelector(`[data-tool="${t}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    /* Input Controls */
+    $('colorPicker').addEventListener('input', e => color = e.target.value);
+    $('fillColorPicker').addEventListener('input', e => fillColor = e.target.value);
+    $('fillEnable').addEventListener('change', e => useFill = e.target.checked);
+    $('sizeSlider').addEventListener('input', e => {
+      strokeSize = parseInt(e.target.value);
+      $('sizeValue').innerText = strokeSize + 'px';
+    });
+    $('opacitySlider').addEventListener('input', e => {
+      globalOpacity = parseFloat(e.target.value);
+      $('opacityValue').innerText = Math.round(globalOpacity * 100) + '%';
+    });
+
+    /* Position Calculator */
+    function getCanvasPos(e) {
+      const rect = main.getBoundingClientRect();
+      const scaleX = main.width / rect.width;
+      const scaleY = main.height / rect.height;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+
+    /* Drawing logic */
+    function onDown(e) {
+      const pos = getCanvasPos(e);
+
+      if (tool === 'draw') {
+        drawing = true;
+        rCtx.strokeStyle = color;
+        rCtx.lineWidth = strokeSize;
+        rCtx.lineCap = 'round';
+        rCtx.globalAlpha = globalOpacity;
+        rCtx.beginPath();
+        rCtx.moveTo(pos.x, pos.y);
+        return;
+      }
+
+      if (tool === 'eraser') {
+        drawing = true;
+        rCtx.strokeStyle = '#ffffff';
+        rCtx.lineWidth = strokeSize * 2;
+        rCtx.lineCap = 'round';
+        rCtx.beginPath();
+        rCtx.moveTo(pos.x, pos.y);
+        return;
+      }
+
+      if (tool === 'select') {
+        selectedId = hitTest(pos.x, pos.y);
+        if (selectedId) {
+          const o = objects.find(x => x.id === selectedId);
+          if (o && !o.locked) {
+            dragging = true;
+            dragOffset.x = pos.x - o.x;
+            dragOffset.y = pos.y - o.y;
+          }
+        }
+        updateSelInfo();
+        renderAll();
+        return;
+      }
+
+      if (['rect', 'circle', 'line', 'arrow', 'star', 'text'].includes(tool)) {
+        createShape(tool, pos);
+      }
+    }
+
+    function onMove(e) {
+      const pos = getCanvasPos(e);
+      if (drawing && (tool === 'draw' || tool === 'eraser')) {
+        rCtx.lineTo(pos.x, pos.y);
+        rCtx.stroke();
+        return;
+      }
+      if (dragging && selectedId) {
+        const o = objects.find(x => x.id === selectedId);
+        if (o && !o.locked) {
+          o.x = pos.x - dragOffset.x;
+          o.y = pos.y - dragOffset.y;
+          renderAll();
+        }
+      }
+    }
+
+    function onUp() {
+      if (drawing) {
+        drawing = false;
+        rCtx.globalAlpha = 1.0;
+        saveState();
+      }
+      if (dragging) {
+        dragging = false;
+        saveState();
+      }
+    }
+
+    main.addEventListener('mousedown', onDown);
+    main.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+
+    main.addEventListener('touchstart', onDown);
+    main.addEventListener('touchmove', onMove);
+    window.addEventListener('touchend', onUp);
+
+    /* Shape Creators */
+    function genId() { return Date.now().toString(36) + Math.random().toString(36).substring(2, 6); }
+
+    function createShape(type, pos) {
+      if (type === 'text') {
+        const txt = prompt('Zadaj text:', 'Erakai Pro');
+        if (txt) {
+          const o = { id: genId(), type: 'text', x: pos.x, y: pos.y, text: txt, fontSize: 28, color, opacity: globalOpacity, locked: false };
+          objects.push(o); selectedId = o.id; renderAll(); updateSelInfo(); saveState();
+        }
+        return;
+      }
+
+      pendingShape = { ...pos, type };
+      $('modalBg').style.display = 'flex';
+      $('mWidth').style.display = (type === 'rect' || type === 'line' || type === 'arrow') ? 'block' : 'none';
+      $('mHeight').style.display = (type === 'rect' || type === 'line' || type === 'arrow') ? 'block' : 'none';
+      $('mRadius').style.display = (type === 'circle' || type === 'star') ? 'block' : 'none';
+    }
+
+    $('modalCancel').addEventListener('click', () => { $('modalBg').style.display = 'none'; pendingShape = null; });
+    $('modalOk').addEventListener('click', () => {
+      if (!pendingShape) return;
+      const w = parseFloat($('mWidth').value) || 100;
+      const h = parseFloat($('mHeight').value) || 80;
+      const r = parseFloat($('mRadius').value) || 50;
+      const pos = pendingShape;
+
+      const base = { id: genId(), x: pos.x, y: pos.y, color, fillColor: useFill ? fillColor : null, stroke: strokeSize, opacity: globalOpacity, locked: false };
+
+      if (pos.type === 'rect') objects.push({ ...base, type: 'rect', w, h });
+      else if (pos.type === 'circle') objects.push({ ...base, type: 'circle', r });
+      else if (pos.type === 'line') objects.push({ ...base, type: 'line', x2: pos.x + w, y2: pos.y + h });
+      else if (pos.type === 'arrow') objects.push({ ...base, type: 'arrow', x2: pos.x + w, y2: pos.y + h });
+      else if (pos.type === 'star') objects.push({ ...base, type: 'star', r });
+
+      $('modalBg').style.display = 'none';
+      selectedId = base.id;
+      pendingShape = null;
       renderAll();
       updateSelInfo();
-    }
-    return;
-  }
-  
-  pendingShape = {...pos, type};
-  $('modalBg').style.display = 'flex';
-  // Show/hide relevant inputs
-  $('mWidth').style.display = (type==='rect'||type==='line') ? 'block' : 'none';
-  $('mHeight').style.display = (type==='rect') ? 'block' : 'none';
-  $('mRadius').style.display = (type==='circle') ? 'block' : 'none';
-}
+      saveState();
+    });
 
-function genId(){ return Date.now().toString(36) + Math.random().toString(36).substr(2); }
-
-// Hit testing
-function hitTest(x,y){
-  for(let i=objects.length-1; i>=0; i--){
-    const o = objects[i];
-    if(o.locked) continue;
-    
-    if(o.type==='rect' && x>=o.x && x<=o.x+o.w && y>=o.y && y<=o.y+o.h) return o.id;
-    if(o.type==='circle'){
-      const dx = x - (o.x+o.r), dy = y - (o.y+o.r);
-      if(dx*dx + dy*dy <= o.r*o.r) return o.id;
-    }
-    if(o.type==='line'){
-      const d = distToSegment(x,y, o.x,o.y, o.x2,o.y2);
-      if(d < 10) return o.id;
-    }
-    if(o.type==='text'){
-      ctx.font = `${o.fontSize}px Arial`;
-      const w = ctx.measureText(o.text).width;
-      if(x>=o.x && x<=o.x+w && y<=o.y && y>=o.y-o.fontSize) return o.id;
-    }
-  }
-  return null;
-}
-
-function distToSegment(px,py, x1,y1, x2,y2){
-  const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
-  const dot = A*C + B*D, lenSq = C*C + D*D;
-  let param = -1;
-  if(lenSq !== 0) param = dot / lenSq;
-  let xx,yy;
-  if(param < 0){ xx=x1; yy=y1; }
-  else if(param > 1){ xx=x2; yy=y2; }
-  else { xx=x1+param*C; yy=y1+param*D; }
-  const dx = px-xx, dy = py-yy;
-  return Math.sqrt(dx*dx + dy*dy);
-}
-
-// Rendering
-function renderAll(){
-  // Clear main canvas but keep the white background from raster
-  ctx.clearRect(0, 0, main.width, main.height);
-  
-  // Draw all objects
-  for(const o of objects){
-    if(o.type==='rect'){
-      ctx.lineWidth = o.stroke || Math.max(2, sizeVal/1.5);
-      ctx.strokeStyle = o.color || '#000';
-      if(o.fill){ ctx.fillStyle=o.fill; ctx.fillRect(o.x,o.y,o.w,o.h); }
-      ctx.strokeRect(o.x,o.y,o.w,o.h);
-      if(o.id===selectedId){ 
-        ctx.setLineDash([5,5]); 
-        ctx.strokeStyle = '#3b82f6';
-        ctx.strokeRect(o.x-3,o.y-3,o.w+6,o.h+6); 
-        ctx.setLineDash([]); 
+    /* Hit Test */
+    function hitTest(x, y) {
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const o = objects[i];
+        if (o.type === 'rect' && x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h) return o.id;
+        if (o.type === 'circle') {
+          const dx = x - (o.x + o.r), dy = y - (o.y + o.r);
+          if (dx * dx + dy * dy <= o.r * o.r) return o.id;
+        }
+        if (o.type === 'text') {
+          ctx.font = `${o.fontSize}px Inter, sans-serif`;
+          const w = ctx.measureText(o.text).width;
+          if (x >= o.x && x <= o.x + w && y <= o.y && y >= o.y - o.fontSize) return o.id;
+        }
       }
-    } else if(o.type==='circle'){
-      ctx.lineWidth = o.stroke || Math.max(2, sizeVal/1.5);
-      ctx.strokeStyle = o.color || '#000';
-      ctx.beginPath(); 
-      ctx.arc(o.x+o.r,o.y+o.r,o.r,0,Math.PI*2);
-      if(o.fill){ ctx.fillStyle=o.fill; ctx.fill(); }
-      ctx.stroke();
-      if(o.id===selectedId){ 
-        ctx.setLineDash([5,5]); 
-        ctx.strokeStyle = '#3b82f6';
-        ctx.strokeRect(o.x-3,o.y-3,o.r*2+6,o.r*2+6); 
-        ctx.setLineDash([]); 
-      }
-    } else if(o.type==='line'){
-      ctx.lineWidth = o.stroke || Math.max(2, sizeVal/1.5);
-      ctx.strokeStyle = o.color || '#000';
-      ctx.beginPath(); 
-      ctx.moveTo(o.x,o.y); 
-      ctx.lineTo(o.x2,o.y2); 
-      ctx.stroke();
-      if(o.id===selectedId){ 
-        ctx.setLineDash([5,5]); 
-        ctx.strokeStyle = '#3b82f6';
-        ctx.strokeRect(Math.min(o.x,o.x2)-3,Math.min(o.y,o.y2)-3,Math.abs(o.x2-o.x)+6,Math.abs(o.y2-o.y)+6); 
-        ctx.setLineDash([]); 
-      }
-    } else if(o.type==='text'){
-      ctx.fillStyle = o.color || '#000'; 
-      ctx.font = `${o.fontSize||20}px Inter, Arial`; 
-      ctx.fillText(o.text,o.x,o.y);
-      if(o.id===selectedId){ 
-        const w = ctx.measureText(o.text).width;
-        ctx.setLineDash([5,5]); 
-        ctx.strokeStyle = '#3b82f6';
-        ctx.strokeRect(o.x-3,o.y-o.fontSize-3,w+6,o.fontSize+6); 
-        ctx.setLineDash([]); 
+      return null;
+    }
+
+    /* Render Engine */
+    function renderAll() {
+      ctx.clearRect(0, 0, main.width, main.height);
+      for (const o of objects) {
+        ctx.save();
+        ctx.globalAlpha = o.opacity || 1;
+        ctx.strokeStyle = o.color || '#000';
+        ctx.lineWidth = o.stroke || 2;
+        ctx.fillStyle = o.fillColor || 'transparent';
+
+        if (o.type === 'rect') {
+          if (o.fillColor) ctx.fillRect(o.x, o.y, o.w, o.h);
+          ctx.strokeRect(o.x, o.y, o.w, o.h);
+        } else if (o.type === 'circle') {
+          ctx.beginPath();
+          ctx.arc(o.x + o.r, o.y + o.r, o.r, 0, Math.PI * 2);
+          if (o.fillColor) ctx.fill();
+          ctx.stroke();
+        } else if (o.type === 'line' || o.type === 'arrow') {
+          ctx.beginPath();
+          ctx.moveTo(o.x, o.y);
+          ctx.lineTo(o.x2, o.y2);
+          ctx.stroke();
+        } else if (o.type === 'text') {
+          ctx.font = `${o.fontSize || 24}px Inter, sans-serif`;
+          ctx.fillStyle = o.color || '#000';
+          ctx.fillText(o.text, o.x, o.y);
+        }
+
+        if (o.id === selectedId) {
+          ctx.setLineDash([6, 4]);
+          ctx.strokeStyle = '#3b82f6';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(o.x - 4, o.y - 4, (o.w || o.r * 2 || 100) + 8, (o.h || o.r * 2 || 40) + 8);
+        }
+        ctx.restore();
       }
     }
-  }
-}
 
-// Event handlers - ZJEDNODUŠENÉ
-function onDown(e){
-  const pos = getCanvasPos(e);
-  console.log('Mouse down at:', pos); // Debug
-  
-  if(tool==='draw'){
-    startStroke(pos);
-    return;
-  }
-  
-  if(tool==='eraser'){
-    drawing = true;
-    rCtx.strokeStyle = '#ffffff';
-    rCtx.globalCompositeOperation = 'destination-out';
-    rCtx.beginPath();
-    rCtx.moveTo(pos.x, pos.y);
-    return;
-  }
-  
-  if(tool==='select'){
-    selectedId = hitTest(pos.x,pos.y);
-    console.log('Selected:', selectedId); // Debug
-    if(selectedId){
-      const o = objects.find(x=>x.id===selectedId);
-      if(o && !o.locked){
-        dragging = true;
-        dragOffset.x = pos.x - o.x;
-        dragOffset.y = pos.y - o.y;
+    /* Inspector Update */
+    function updateSelInfo() {
+      const info = $('selInfo');
+      if (!selectedId) {
+        info.innerHTML = 'Žiadny výber';
+        return;
+      }
+      const o = objects.find(x => x.id === selectedId);
+      if (!o) return;
+      info.innerHTML = `<div class="w-full text-left font-mono">
+        <strong>${o.type.toUpperCase()}</strong><br>
+        ID: ${o.id}<br>
+        Pozícia: X:${Math.round(o.x)} Y:${Math.round(o.y)}
+      </div>`;
+    }
+
+    $('deleteBtn').addEventListener('click', () => {
+      if (!selectedId) return;
+      objects = objects.filter(o => o.id !== selectedId);
+      selectedId = null;
+      renderAll();
+      updateSelInfo();
+      saveState();
+    });
+
+    $('lockBtn').addEventListener('click', () => {
+      if (!selectedId) return;
+      const o = objects.find(x => x.id === selectedId);
+      if (o) { o.locked = !o.locked; updateSelInfo(); }
+    });
+
+    $('bringFront').addEventListener('click', () => {
+      if (!selectedId) return;
+      const idx = objects.findIndex(o => o.id === selectedId);
+      if (idx >= 0) { const [o] = objects.splice(idx, 1); objects.push(o); renderAll(); }
+    });
+
+    $('sendBack').addEventListener('click', () => {
+      if (!selectedId) return;
+      const idx = objects.findIndex(o => o.id === selectedId);
+      if (idx >= 0) { const [o] = objects.splice(idx, 1); objects.unshift(o); renderAll(); }
+    });
+
+    /* Resize Canvas */
+    $('setCanvasBtn').addEventListener('click', () => {
+      const w = parseInt($('canvasW').value) || 900;
+      const h = parseInt($('canvasH').value) || 550;
+      const container = document.querySelector('.canvas-container');
+      container.style.width = w + 'px';
+      container.style.height = h + 'px';
+      raster.width = main.width = w;
+      raster.height = main.height = h;
+      initCanvas();
+    });
+
+    $('clearBtn').addEventListener('click', () => {
+      if (confirm('Vymazať celé plátno?')) {
+        objects = [];
+        selectedId = null;
+        rCtx.fillStyle = '#ffffff';
+        rCtx.fillRect(0, 0, raster.width, raster.height);
+        renderAll();
+        updateSelInfo();
+        saveState();
+      }
+    });
+
+    /* Export PNG / JPG */
+    function exportImage(format = 'png') {
+      const tmp = document.createElement('canvas');
+      tmp.width = raster.width;
+      tmp.height = raster.height;
+      const tctx = tmp.getContext('2d');
+      tctx.fillStyle = '#ffffff';
+      tctx.fillRect(0, 0, tmp.width, tmp.height);
+      tctx.drawImage(raster, 0, 0);
+
+      // Render vector shapes
+      for (const o of objects) {
+        tctx.save();
+        tctx.globalAlpha = o.opacity || 1;
+        tctx.strokeStyle = o.color || '#000';
+        tctx.lineWidth = o.stroke || 2;
+        if (o.type === 'rect') tctx.strokeRect(o.x, o.y, o.w, o.h);
+        else if (o.type === 'circle') {
+          tctx.beginPath(); tctx.arc(o.x + o.r, o.y + o.r, o.r, 0, Math.PI * 2); tctx.stroke();
+        } else if (o.type === 'text') {
+          tctx.font = `${o.fontSize || 24}px Inter, sans-serif`; tctx.fillStyle = o.color || '#000'; tctx.fillText(o.text, o.x, o.y);
+        }
+        tctx.restore();
+      }
+
+      const a = document.createElement('a');
+      a.href = tmp.toDataURL(`image/${format}`);
+      a.download = `erakai_export.${format}`;
+      a.click();
+    }
+
+    /* Save / Load Projects */
+    $('saveBtn').addEventListener('click', () => {
+      const name = prompt('Názov projektu:', 'projekt_1');
+      if (!name) return;
+      const payload = { objects, rasterData: raster.toDataURL() };
+      localStorage.setItem('erakai_proj_' + name, JSON.stringify(payload));
+      refreshProjectsList();
+    });
+
+    function refreshProjectsList() {
+      const container = $('projects');
+      container.innerHTML = '';
+      Object.keys(localStorage).filter(k => k.startsWith('erakai_proj_')).forEach(k => {
+        const name = k.replace('erakai_proj_', '');
+        const div = document.createElement('div');
+        div.className = "flex items-center justify-between p-1.5 bg-slate-900/60 rounded-xl text-xs border border-slate-800";
+        div.innerHTML = `<span class="truncate font-semibold text-slate-300">${name}</span>
+          <div class="flex gap-1">
+            <button onclick="loadLocalProj('${name}')" class="px-2 py-0.5 bg-blue-600/30 text-blue-400 rounded-lg">Load</button>
+            <button onclick="deleteLocalProj('${name}')" class="px-2 py-0.5 bg-rose-500/20 text-rose-400 rounded-lg">Del</button>
+          </div>`;
+        container.appendChild(div);
+      });
+    }
+
+    function loadLocalProj(name) {
+      const raw = localStorage.getItem('erakai_proj_' + name);
+      if (raw) {
+        const data = JSON.parse(raw);
+        objects = data.objects || [];
+        const img = new Image();
+        img.onload = () => {
+          rCtx.clearRect(0, 0, raster.width, raster.height);
+          rCtx.drawImage(img, 0, 0);
+          renderAll();
+          saveState();
+        };
+        img.src = data.rasterData;
       }
     }
-    updateSelInfo();
-    renderAll();
-    return;
-  }
-  
-  if(['rect','circle','line','text'].includes(tool)){
-    createShape(tool, pos);
-  }
-}
 
-function onMove(e){
-  const pos = getCanvasPos(e);
-  
-  if(tool==='draw' && drawing){
-    continueStroke(pos);
-    return;
-  }
-  
-  if(tool==='eraser' && drawing){
-    rCtx.lineTo(pos.x, pos.y);
-    rCtx.stroke();
-    renderAll();
-    return;
-  }
-  
-  if(dragging && selectedId){
-    const o = objects.find(x=>x.id===selectedId);
-    if(o && !o.locked){
-      o.x = pos.x - dragOffset.x;
-      o.y = pos.y - dragOffset.y;
+    function deleteLocalProj(name) {
+      localStorage.removeItem('erakai_proj_' + name);
+      refreshProjectsList();
     }
-    renderAll(); 
-    updateSelInfo();
-  }
-}
 
-function onUp(e){
-  if(tool==='draw' && drawing) endStroke();
-  if(tool==='eraser' && drawing){ 
-    drawing=false; 
-    rCtx.globalCompositeOperation = 'source-over';
-    rCtx.strokeStyle = color;
-  }
-  if(dragging) dragging=false;
-}
+    /* Keyboard Shortcuts */
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Delete' && selectedId) {
+        objects = objects.filter(o => o.id !== selectedId);
+        selectedId = null;
+        renderAll();
+        saveState();
+      }
+      if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+      if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
+    });
 
-// SIMPLIFIED EVENT LISTENERS - OPRAVENÉ
-raster.addEventListener('mousedown', onDown);
-raster.addEventListener('mousemove', onMove);
-window.addEventListener('mouseup', onUp);
+    /* Theme Toggle */
+    $('themeToggle').addEventListener('click', () => {
+      document.body.classList.toggle('light-mode');
+    });
 
-// Touch events
-raster.addEventListener('touchstart', onDown);
-raster.addEventListener('touchmove', onMove);
-window.addEventListener('touchend', onUp);
-
-main.addEventListener('mousedown', onDown);
-main.addEventListener('mousemove', onMove);
-main.addEventListener('touchstart', onDown);
-main.addEventListener('touchmove', onMove);
-
-// Modal actions
-$('modalCancel').addEventListener('click', ()=>{ $('modalBg').style.display='none'; pendingShape=null; });
-$('modalOk').addEventListener('click', ()=>{
-  if(!pendingShape){ $('modalBg').style.display='none'; return; }
-  const w = parseFloat($('mWidth').value)||100;
-  const h = parseFloat($('mHeight').value)||80;
-  const r = parseFloat($('mRadius').value)||50;
-  const pos = pendingShape;
-  if(pos.type==='rect'){ 
-    const o={id:genId(),type:'rect',x:pos.x,y:pos.y,w:w,h:h,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; 
-    objects.push(o); selectedId=o.id; 
-  }
-  else if(pos.type==='circle'){ 
-    const o={id:genId(),type:'circle',x:pos.x,y:pos.y,r:r,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; 
-    objects.push(o); selectedId=o.id; 
-  }
-  else if(pos.type==='line'){ 
-    const o={id:genId(),type:'line',x:pos.x,y:pos.y,x2:pos.x+w,y2:pos.y+h,color:color,stroke:Math.max(2,sizeVal/1.2),locked:false}; 
-    objects.push(o); selectedId=o.id; 
-  }
-  $('modalBg').style.display='none'; pendingShape=null; renderAll(); updateProjectsList(); updateSelInfo();
-});
-
-// Selection info & controls
-function updateSelInfo(){
-  const box = $('selInfo'); box.innerHTML = '';
-  if(!selectedId){ box.innerHTML = '<div class="small">Žiadny výber</div>'; return; }
-  const o = objects.find(x=>x.id===selectedId);
-  if(!o){ box.innerHTML = '<div class="small">Žiadny výber</div>'; return; }
-  const pre = document.createElement('pre'); 
-  pre.textContent = JSON.stringify(o, ['id','type','x','y','w','h','r','x2','y2','text','fontSize','locked','color','stroke'], 2);
-  pre.className='small';
-  box.appendChild(pre);
-}
-
-// Delete & lock & edit
-$('deleteBtn').addEventListener('click', ()=>{
-  if(!selectedId) return alert('Vyber objekt');
-  const idx = objects.findIndex(o=>o.id===selectedId);
-  if(idx>=0){ objects.splice(idx,1); selectedId=null; updateSelInfo(); renderAll(); updateProjectsList(); }
-});
-$('lockBtn').addEventListener('click', ()=>{
-  if(!selectedId) return alert('Vyber objekt');
-  const o = objects.find(o=>o.id===selectedId);
-  if(o){ o.locked = !o.locked; updateSelInfo(); renderAll(); }
-});
-$('editText').addEventListener('click', ()=>{
-  if(!selectedId) return alert('Vyber text');
-  const o = objects.find(o=>o.id===selectedId);
-  if(!o || o.type!=='text') return alert('Vybratý objekt nie je text');
-  const t = prompt('Uprav text', o.text);
-  if(t!==null){ o.text = t; renderAll(); updateProjectsList(); updateSelInfo(); }
-});
-
-// Bring front / send back
-$('bringFront').addEventListener('click', ()=>{
-  if(!selectedId) return;
-  const i=objects.findIndex(o=>o.id===selectedId);
-  if(i>=0){ const [o]=objects.splice(i,1); objects.push(o); renderAll(); updateProjectsList(); }
-});
-$('sendBack').addEventListener('click', ()=>{
-  if(!selectedId) return;
-  const i=objects.findIndex(o=>o.id===selectedId);
-  if(i>=0){ const [o]=objects.splice(i,1); objects.unshift(o); renderAll(); updateProjectsList(); }
-});
-
-// Set canvas size
-$('setCanvasBtn').addEventListener('click', ()=>{
-  const w = Math.max(50, parseInt($('canvasW').value)||800);
-  const h = Math.max(50, parseInt($('canvasH').value)||500);
-  
-  const data = raster.toDataURL();
-  raster.width = w; 
-  raster.height = h;
-  main.width = w; 
-  main.height = h;
-  
-  const img = new Image();
-  img.onload = ()=>{ 
-    rCtx.clearRect(0,0,raster.width,raster.height); 
-    rCtx.drawImage(img,0,0); 
-    renderAll(); 
-  }
-  img.src = data;
-});
-
-// Clear canvas
-$('clearBtn').addEventListener('click', ()=>{
-  if(!confirm('Vymazať celú plochu (tvary + kresba)?')) return;
-  objects=[]; 
-  strokes=[]; 
-  rCtx.fillStyle = '#ffffff';
-  rCtx.fillRect(0,0,raster.width,raster.height);
-  selectedId=null; 
-  updateSelInfo(); 
-  renderAll(); 
-  updateProjectsList();
-});
-
-// Save/load projects
-function saveProject(){
-  const name = prompt('Názov projektu:','moj_projekt');
-  if(!name) return;
-  const payload = { objects, rasterData: raster.toDataURL('image/png'), meta:{savedAt:Date.now(), w:raster.width, h:raster.height} };
-  localStorage.setItem('erakai_proj_'+name, JSON.stringify(payload));
-  updateProjectsList(); alert('Uložené: '+name);
-}
-$('saveBtn').addEventListener('click', saveProject);
-
-function loadProject(){
-  const keys = Object.keys(localStorage).filter(k=>k.startsWith('erakai_proj_'));
-  if(keys.length===0) return alert('Žiadne projekty uložené');
-  const list = keys.map(k=>k.replace('erakai_proj_',''));
-  const name = prompt('Vyber projekt:\n'+list.join('\n'), list[0]);
-  if(!name) return;
-  const raw = localStorage.getItem('erakai_proj_'+name);
-  if(!raw) return alert('Projekt nenájdený');
-  try{
-    const payload = JSON.parse(raw);
-    objects = payload.objects || [];
-    const img = new Image();
-    img.onload = ()=>{ 
-      rCtx.clearRect(0,0,raster.width,raster.height); 
-      rCtx.drawImage(img,0,0); 
-      renderAll(); 
-      updateSelInfo(); 
-      updateProjectsList(); 
-    };
-    img.src = payload.rasterData || '';
-  }catch(err){ alert('Chyba pri načítaní projektu'); }
-}
-$('loadBtn').addEventListener('click', loadProject);
-
-function updateProjectsList(){
-  const cont = $('projects'); cont.innerHTML='';
-  const keys = Object.keys(localStorage).filter(k=>k.startsWith('erakai_proj_'));
-  if(keys.length===0){ cont.innerHTML='<div class="small">Žiadne</div>'; return; }
-  keys.forEach(k=>{
-    const name = k.replace('erakai_proj_','');
-    const row = document.createElement('div'); 
-    row.style.display='flex'; 
-    row.style.justifyContent='space-between'; 
-    row.style.alignItems='center'; 
-    row.style.padding='6px';
-    const left = document.createElement('div'); left.textContent = name; left.style.fontSize='13px';
-    const right = document.createElement('div');
-    const btnLoad = document.createElement('button'); btnLoad.textContent='Načítať'; btnLoad.className='toolbtn'; 
-    btnLoad.onclick=()=>{ 
-      if(confirm('Načítať '+name+'?')){ 
-        const raw = localStorage.getItem('erakai_proj_'+name); 
-        const p = JSON.parse(raw); 
-        objects = p.objects||[]; 
-        const img = new Image(); 
-        img.onload=()=>{ 
-          rCtx.clearRect(0,0,raster.width,raster.height); 
-          rCtx.drawImage(img,0,0); 
-          renderAll(); 
-        }; 
-        img.src = p.rasterData||''; 
-        selectedId=null; 
-        updateSelInfo(); 
-        updateProjectsList(); 
-      } 
-    };
-    const btnDel = document.createElement('button'); btnDel.textContent='Zmazať'; btnDel.className='toolbtn'; 
-    btnDel.onclick=()=>{ if(confirm('Zmazať '+name+'?')){ localStorage.removeItem('erakai_proj_'+name); updateProjectsList(); } };
-    right.appendChild(btnLoad); right.appendChild(btnDel);
-    row.appendChild(left); row.appendChild(right); cont.appendChild(row);
-  });
-}
-
-// Export PNG
-$('exportBtn').addEventListener('click', ()=>{
-  const tmp = document.createElement('canvas');
-  tmp.width = raster.width; tmp.height = raster.height;
-  const tctx = tmp.getContext('2d');
-  
-  // Draw white background
-  tctx.fillStyle = '#ffffff';
-  tctx.fillRect(0, 0, tmp.width, tmp.height);
-  
-  // Draw raster (drawing)
-  tctx.drawImage(raster,0,0);
-  
-  // Draw objects
-  for(const o of objects){
-    if(o.type==='rect'){
-      tctx.lineWidth = o.stroke||Math.max(2,sizeVal/1.5);
-      tctx.strokeStyle = o.color||'#000';
-      if(o.fill){ tctx.fillStyle=o.fill; tctx.fillRect(o.x,o.y,o.w,o.h); }
-      tctx.strokeRect(o.x,o.y,o.w,o.h);
-    } else if(o.type==='circle'){
-      tctx.lineWidth = o.stroke||Math.max(2,sizeVal/1.5);
-      tctx.strokeStyle = o.color||'#000';
-      tctx.beginPath(); tctx.arc(o.x+o.r,o.y+o.r,o.r,0,Math.PI*2);
-      if(o.fill){ tctx.fillStyle=o.fill; tctx.fill(); }
-      tctx.stroke();
-    } else if(o.type==='line'){
-      tctx.lineWidth = o.stroke||Math.max(2,sizeVal/1.5);
-      tctx.strokeStyle = o.color||'#000';
-      tctx.beginPath(); tctx.moveTo(o.x,o.y); tctx.lineTo(o.x2,o.y2); tctx.stroke();
-    } else if(o.type==='text'){
-      tctx.fillStyle = o.color||'#000'; tctx.font = `${o.fontSize||20}px Inter, Arial`; tctx.fillText(o.text,o.x,o.y);
-    }
-  }
-  
-  const url = tmp.toDataURL('image/png');
-  const a = document.createElement('a'); a.href = url; a.download = 'erakai_canvas.png'; a.click();
-});
-
-// Download/upload project JSON
-$('downloadProject').addEventListener('click', ()=>{
-  const data = { objects, rasterData: raster.toDataURL('image/png'), meta:{w:raster.width,h:raster.height} };
-  const blob = new Blob([JSON.stringify(data)],{type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'erakai_project.json'; a.click();
-});
-$('uploadProjectBtn').addEventListener('click', ()=>$('uploadProject').click());
-$('uploadProject').addEventListener('change', function(){
-  const file = this.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e=> {
-    try{
-      const payload = JSON.parse(e.target.result);
-      objects = payload.objects||[];
-      const img = new Image(); img.onload=()=>{ rCtx.clearRect(0,0,raster.width,raster.height); rCtx.drawImage(img,0,0); renderAll(); updateProjectsList(); alert('Projekt načítaný'); }; img.src = payload.rasterData||'';
-    }catch(err){ alert('Neplatný JSON'); }
-  };
-  reader.readAsText(file);
-});
-
-// Keyboard shortcuts
-window.addEventListener('keydown', e=>{
-  if(e.key==='Delete' || e.key==='Backspace'){ if(selectedId){ const idx = objects.findIndex(o=>o.id===selectedId); if(idx>=0){ objects.splice(idx,1); selectedId=null; updateSelInfo(); renderAll(); updateProjectsList(); } } }
-  if(e.key==='d') setTool('draw');
-  if(e.key==='v') setTool('select');
-  if(e.key==='e') setTool('eraser');
-});
-
-// Theme toggle
-$('themeToggle').addEventListener('click', ()=>{
-  document.body.classList.toggle('light-mode');
-  if(document.body.classList.contains('light-mode')){
-    document.body.style.background = 'linear-gradient(180deg,#f6f9ff,#eef4ff)';
-    document.body.style.color = '#0b1220';
-  } else {
-    document.body.style.background = 'linear-gradient(180deg,#071026,#071022)';
-    document.body.style.color = '#e6eef6';
-  }
-});
-
-// Initial render
-initCanvas();
-updateProjectsList();
-
-// Test: vytvor testovací objekt
-setTimeout(() => {
-  const testRect = {
-    id: genId(),
-    type: 'rect',
-    x: 50, y: 50,
-    w: 100, h: 80,
-    color: '#3b82f6',
-    stroke: 2,
-    locked: false
-  };
-  objects.push(testRect);
-  renderAll();
-  console.log('Testovací objekt pridaný');
-}, 1000);
-
-</script>
+    initCanvas();
+    refreshProjectsList();
+  </script>
 </body>
 </html>
