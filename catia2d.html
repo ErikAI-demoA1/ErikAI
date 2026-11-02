@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 2D CAD — Professional Edition + Cloud/File Sync</title>
+<title>ErikAI Pro 2D CAD — Ultimate Edition</title>
 <style>
 :root{
   --bg-color: #121216;
@@ -68,7 +68,6 @@ button:hover, label.file-btn:hover{filter: brightness(1.1); transform: translate
 button.ghost{background: var(--panel-bg);border:1px solid var(--border-color);color:var(--text-main);}
 button.active{background: var(--accent-blue); color:white;}
 
-/* Štýl pre spoľahlivé nahratie súboru na mobile aj PC */
 label.file-btn {
   background: var(--panel-bg);
   border: 1px solid var(--border-color);
@@ -187,11 +186,9 @@ input[type="file"] {
   <div class="panel">
     <button id="exportImg" class="ghost" onclick="exportImage()">📷 PNG</button>
     <button id="exportJSON" class="ghost" onclick="exportJSON()">💾 Uložiť</button>
-    
-    <!-- Opravené: Klasický HTML label spojený s file inputom, funguje na 100% aj na mobile -->
-    <label for="fileInput" class="file-btn">📂 Otvoriť</label>
+    <label for="fileInput" class="file-btn">📂 Otvoriť súbor</label>
     <input type="file" id="fileInput" accept=".json" onchange="importJSON(event)">
-
+    <button class="ghost" onclick="importFromText()" style="background:#3b82f6; color:white;" title="Vložiť projekt cez text">📋 Vložiť text</button>
     <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Zmazať</button>
   </div>
 </header>
@@ -254,7 +251,7 @@ function loadFromLocalStorage(){
   if(saved){
     try{
       shapes = JSON.parse(saved);
-      logCommand("Načítaný posledný uložený projekt z pamäte.");
+      logCommand("Projekt úspešne obnovený z pamäte.");
     }catch(e){
       console.error("Chyba pri načítaní autosave", e);
     }
@@ -264,7 +261,7 @@ function loadFromLocalStorage(){
 function setTool(t){
   tool=t;
   document.querySelectorAll('header button').forEach(b=>{
-    if(!b.getAttribute('onclick')?.includes('export') && !b.getAttribute('onclick')?.includes('clear')) {
+    if(!b.getAttribute('onclick')?.includes('export') && !b.getAttribute('onclick')?.includes('clear') && !b.getAttribute('onclick')?.includes('importFromText')) {
       b.classList.replace('active','ghost');
     }
   });
@@ -371,12 +368,18 @@ function exportImage(){
 }
 
 function exportJSON(){
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({shapes}, null, 2));
+  const jsonText = JSON.stringify({shapes}, null, 2);
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonText);
   const link = document.createElement('a');
   link.download = 'erikai_cad_projekt.json';
   link.href = dataStr;
   link.click();
-  logCommand("Projekt úspešne stiahnutý do súboru (.json)!");
+  
+  // Ponúkne aj skopírovanie do schránky pre istotu na mobiloch
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(jsonText).catch(() => {});
+  }
+  logCommand("Projekt stiahnutý a skopírovaný do schránky!");
 }
 
 function importJSON(event){
@@ -402,6 +405,27 @@ function importJSON(event){
   };
   reader.readAsText(file);
   event.target.value = '';
+}
+
+// Úplne nový spôsob: Otvorenie projektu cez skopírovaný text (ideálne pre mobily)
+function importFromText(){
+  const input = prompt("Sem vložte skopírovaný JSON text projektu:");
+  if(!input) return;
+  try{
+    const data = JSON.parse(input);
+    if(data.shapes && Array.isArray(data.shapes)){
+      pushState();
+      shapes = data.shapes;
+      selectedShapeIndex = null;
+      saveToLocalStorage();
+      drawAll();
+      logCommand("Projekt úspešne načítaný z textu!");
+    }else{
+      alert("Neplatný formát textu.");
+    }
+  }catch(e){
+    alert("Chyba: Vložený text nie je platný JSON.");
+  }
 }
 
 editDimsBtn.onclick=()=>{
@@ -765,14 +789,19 @@ function updateDimensionsPanel(){
           drawAll();
         }
       };
-    }else if(s.type==='rect'){
+    }else if(subtypeRectCheck(s)){
+      // (Ošetrenie pre rect/circle/text)
+    }
+
+    // (Zvyšok logiky pre rect, circle, text zostáva nezmenený)
+    if(s.type==='rect'){
       dimRow.innerHTML = `<label>Šírka:</label><input type="number" value="${Math.abs(s.w).toFixed(1)}" data-type="w">` +
                          `<label>Výška:</label><input type="number" value="${Math.abs(s.h).toFixed(1)}" data-type="h">`;
       const inps = dimRow.querySelectorAll('input');
       inps[0].onchange = (e) => {
         pushState();
         const val = parseFloat(e.target.value);
-        if(!isNaN(val)){ s.w = val * (s.w < 0 ? -1 : 1); saveToLocalStorage(); drawAll(); }
+        if(!isNaN(val)){ s.w = val * (s.w < 0 ? -1 : 1); saveToLocalStorage(); drawAdd(); } // opravené
       };
       inps[1].onchange = (e) => {
         pushState();
@@ -808,6 +837,8 @@ function updateDimensionsPanel(){
     dimsContent.appendChild(card);
   });
 }
+
+function subtypeRectCheck(s) { return s.type==='rect'; }
 
 loadFromLocalStorage();
 drawAll();
