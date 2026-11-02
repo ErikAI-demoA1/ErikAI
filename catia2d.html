@@ -122,16 +122,18 @@ input[type="file"] {
 #dimensionsPanel{
   position:fixed;
   top:60px;
-  right:20px;
+  right:15px;
   background:var(--panel-bg);
   border:1px solid var(--border-color);
-  padding:12px;
+  padding:10px;
   border-radius:12px;
   max-height:75vh;
-  overflow:auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   display:none;
   box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-  width: 410px;
+  width: 440px;
+  max-width: 95vw;
   z-index: 1000;
 }
 .panel-header{
@@ -142,13 +144,13 @@ input[type="file"] {
   cursor: grab;
   user-select: none;
   background: rgba(255,255,255,0.03);
-  padding: 6px 8px;
+  padding: 8px;
   border-radius: 6px;
 }
 .panel-header:active{
   cursor: grabbing;
 }
-#dimensionsPanel h3{margin:0;color:var(--accent-green);font-size:0.95rem;}
+#dimensionsPanel h3{margin:0;color:var(--accent-green);font-size:0.9rem;}
 .close-btn{
   background: transparent;
   border: none;
@@ -173,35 +175,50 @@ input[type="file"] {
   border-color: var(--accent-blue);
   background: #1a233a;
 }
+.shape-title-row{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.shape-actions{
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
 .input-row{
   display: flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
   margin-top: 4px;
   flex-wrap: wrap;
 }
 .input-row label{
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 .input-row input, .input-row select{
-  width: 50px;
-  padding: 4px;
+  width: 46px;
+  padding: 3px;
   border-radius: 4px;
   border: 1px solid var(--border-color);
   background: #090b10;
   color: white;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 .input-row input[type="text"]{
-  width: 85px;
-}
-.input-row select{
   width: 75px;
 }
+.input-row select{
+  width: 70px;
+}
 .input-row input[type="color"]{
-  width: 32px;
-  height: 26px;
+  width: 28px;
+  height: 24px;
   padding: 0;
   border: none;
   cursor: pointer;
@@ -309,29 +326,42 @@ const commandHistory=document.getElementById('commandHistory');
 const commandInput=document.getElementById('commandInput');
 const paperFormatSelect=document.getElementById('paperFormat');
 
-// Presúvanie panelu vlastností myšou
+// Voľné presúvanie panelu (Podpora pre myš aj dotyk/mobily)
 let isDraggingPanel = false;
 let panelDragOffset = {x: 0, y: 0};
 
-panelHeader.onmousedown = (e) => {
-  if(e.target.tagName === 'BUTTON') return;
+function startPanelDrag(clientX, clientY){
   isDraggingPanel = true;
   const rect = dimsPanel.getBoundingClientRect();
-  panelDragOffset.x = e.clientX - rect.left;
-  panelDragOffset.y = e.clientY - rect.top;
+  panelDragOffset.x = clientX - rect.left;
+  panelDragOffset.y = clientY - rect.top;
+}
+
+function movePanelDrag(clientX, clientY){
+  if(!isDraggingPanel) return;
+  dimsPanel.style.left = (clientX - panelDragOffset.x) + 'px';
+  dimsPanel.style.top = (clientY - panelDragOffset.y) + 'px';
+  dimsPanel.style.right = 'auto';
+}
+
+panelHeader.onmousedown = (e) => {
+  if(e.target.tagName === 'BUTTON') return;
+  startPanelDrag(e.clientX, e.clientY);
   e.preventDefault();
 };
+window.onmousemove = (e) => movePanelDrag(e.clientX, e.clientY);
+window.onmouseup = () => { isDraggingPanel = false; };
 
-window.onmousemove = (e) => {
-  if(!isDraggingPanel) return;
-  dimsPanel.style.left = (e.clientX - panelDragOffset.x) + 'px';
-  dimsPanel.style.top = (e.clientY - panelDragOffset.y) + 'px';
-  dimsPanel.style.right = 'auto';
+panelHeader.ontouchstart = (e) => {
+  if(e.target.tagName === 'BUTTON' || e.touches.length !== 1) return;
+  startPanelDrag(e.touches[0].clientX, e.touches[0].clientY);
+  e.preventDefault();
 };
+window.ontouchmove = (e) => {
+  if(e.touches.length === 1) movePanelDrag(e.touches[0].clientX, e.touches[0].clientY);
+};
+window.ontouchend = () => { isDraggingPanel = false; };
 
-window.onmouseup = () => {
-  isDraggingPanel = false;
-};
 
 function logCommand(text){
   const div=document.createElement('div');
@@ -1004,15 +1034,14 @@ function updateDimensionsPanel(){
     };
 
     const title=document.createElement('div');
-    title.style.display = 'flex';
-    title.style.justifyContent = 'space-between';
-    title.style.alignItems = 'center';
-    title.innerHTML=`<strong>#${i+1} (${s.type})</strong>`;
+    title.className = 'shape-title-row';
+    
+    const nameLabel = document.createElement('strong');
+    nameLabel.textContent = `#${i+1} (${s.type})`;
+    title.appendChild(nameLabel);
     
     const actionsRow = document.createElement('div');
-    actionsRow.style.display = 'flex';
-    actionsRow.style.gap = '6px';
-    actionsRow.style.alignItems = 'center';
+    actionsRow.className = 'shape-actions';
 
     const colorInp = document.createElement('input');
     colorInp.type = 'color';
@@ -1028,9 +1057,9 @@ function updateDimensionsPanel(){
     if(s.type !== 'text'){
       const dimToggleBtn = document.createElement('button');
       dimToggleBtn.className = s.hideDim ? 'warning' : 'ghost';
-      dimToggleBtn.textContent = s.hideDim ? '👁️ Zobraziť kótu' : '🙈 Skryť kótu';
-      dimToggleBtn.style.padding = '4px 8px';
-      dimToggleBtn.style.fontSize = '0.75rem';
+      dimToggleBtn.textContent = s.hideDim ? '👁️ Kotta' : '🙈 Kotta';
+      dimToggleBtn.style.padding = '3px 6px';
+      dimToggleBtn.style.fontSize = '0.7rem';
       dimToggleBtn.onclick = () => {
         pushState();
         s.hideDim = !s.hideDim;
@@ -1044,8 +1073,8 @@ function updateDimensionsPanel(){
     const delBtn = document.createElement('button');
     delBtn.className = 'danger';
     delBtn.textContent = '🗑️ Zmazať';
-    delBtn.style.padding = '4px 8px';
-    delBtn.style.fontSize = '0.75rem';
+    delBtn.style.padding = '3px 6px';
+    delBtn.style.fontSize = '0.7rem';
     delBtn.onclick = () => deleteShape(i);
     actionsRow.appendChild(delBtn);
 
@@ -1055,8 +1084,8 @@ function updateDimensionsPanel(){
     const pos = getShapePos(s);
     const posRow = document.createElement('div');
     posRow.className = 'input-row';
-    posRow.innerHTML = `<label>Poz. X:</label><input type="number" value="${Math.round(pos.x)}" data-type="pos-x">` +
-                      `<label>Y:</label><input type="number" value="${Math.round(pos.y)}" data-type="pos-y">`;
+    posRow.innerHTML = `<label>X:</label><input type="number" value="${Math.round(pos.x)}">` +
+                      `<label>Y:</label><input type="number" value="${Math.round(pos.y)}">`;
     card.appendChild(posRow);
 
     const posInputs = posRow.querySelectorAll('input');
@@ -1083,8 +1112,7 @@ function updateDimensionsPanel(){
       dimRow.innerHTML = `<label>Dĺžka:</label><input type="number" value="${len}">` +
                          `<label>Uhol:</label><input type="number" value="${angleDeg}">` +
                          `<label>Hrub:</label><input type="number" value="${s.lineWidth || 2}" min="1" max="10">` +
-                         `<label>Typ:</label><select><option value="solid" ${s.lineStyle!=='dashed'?'selected':''}>Plná</option><option value="dashed" ${s.lineStyle==='dashed'?'selected':''}>Bodkočiark.</option></select>` +
-                         `<label>Kota:</label><input type="number" value="${s.fontSize || 12}">`;
+                         `<label>Typ:</label><select><option value="solid" ${s.lineStyle!=='dashed'?'selected':''}>Plná</option><option value="dashed" ${s.lineStyle==='dashed'?'selected':''}>Bodkočiark.</option></select>`;
       
       const inps = dimRow.querySelectorAll('input, select');
       
@@ -1126,17 +1154,11 @@ function updateDimensionsPanel(){
         drawAll();
       };
 
-      inps[4].onchange = (e) => {
-        pushState();
-        const val = parseInt(e.target.value);
-        if(!isNaN(val) && val > 4){ s.fontSize = val; saveToLocalStorage(); drawAll(); }
-      };
     }else if(s.type==='rect'){
       dimRow.innerHTML = `<label>Šírka:</label><input type="number" value="${Math.abs(s.w).toFixed(1)}">` +
                          `<label>Výška:</label><input type="number" value="${Math.abs(s.h).toFixed(1)}">` +
                          `<label>Hrub:</label><input type="number" value="${s.lineWidth || 2}" min="1" max="10">` +
-                         `<label>Typ:</label><select><option value="solid" ${s.lineStyle!=='dashed'?'selected':''}>Plná</option><option value="dashed" ${s.lineStyle==='dashed'?'selected':''}>Bodkočiark.</option></select>` +
-                         `<label>Kota:</label><input type="number" value="${s.fontSize || 12}">`;
+                         `<label>Typ:</label><select><option value="solid" ${s.lineStyle!=='dashed'?'selected':''}>Plná</option><option value="dashed" ${s.lineStyle==='dashed'?'selected':''}>Bodkočiark.</option></select>`;
       const inps = dimRow.querySelectorAll('input, select');
       inps[0].onchange = (e) => {
         pushState();
@@ -1159,16 +1181,10 @@ function updateDimensionsPanel(){
         saveToLocalStorage();
         drawAll();
       };
-      inps[4].onchange = (e) => {
-        pushState();
-        const val = parseInt(e.target.value);
-        if(!isNaN(val) && val > 4){ s.fontSize = val; saveToLocalStorage(); drawAll(); }
-      };
     }else if(s.type==='circle'){
       dimRow.innerHTML = `<label>Polomer:</label><input type="number" value="${s.r.toFixed(1)}">` +
                          `<label>Hrub:</label><input type="number" value="${s.lineWidth || 2}" min="1" max="10">` +
-                         `<label>Typ:</label><select><option value="solid" ${s.lineStyle!=='dashed'?'selected':''}>Plná</option><option value="dashed" ${s.lineStyle==='dashed'?'selected':''}>Bodkočiark.</option></select>` +
-                         `<label>Kota:</label><input type="number" value="${s.fontSize || 12}">`;
+                         `<label>Typ:</label><select><option value="solid" ${s.lineStyle!=='dashed'?'selected':''}>Plná</option><option value="dashed" ${s.lineStyle==='dashed'?'selected':''}>Bodkočiark.</option></select>`;
       const inps = dimRow.querySelectorAll('input, select');
       inps[0].onchange = (e) => {
         pushState();
@@ -1185,11 +1201,6 @@ function updateDimensionsPanel(){
         s.lineStyle = e.target.value;
         saveToLocalStorage();
         drawAll();
-      };
-      inps[3].onchange = (e) => {
-        pushState();
-        const val = parseInt(e.target.value);
-        if(!isNaN(val) && val > 4){ s.fontSize = val; saveToLocalStorage(); drawAll(); }
       };
     }else if(s.type==='text'){
       dimRow.innerHTML = `<label>Text:</label><input type="text" value="${s.text}">` +
