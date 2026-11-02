@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>📄 ErikAI Študentský Word & Dokumenty Pro</title>
+<!-- Knižnica na čítanie .docx (Word) súborov z PC -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
   :root {
     --bg-color: #0b0b0b;
@@ -73,15 +75,30 @@
     border-color: var(--border-red);
   }
 
+  .file-section {
+    background: #1a1a1a;
+    border: 1px dashed #444;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+
+  .file-section label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--accent-yellow);
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+
   input[type="text"], input[type="file"] {
     width: 100%;
-    padding: 10px;
-    font-size: 1rem;
-    background: #1a1a1a;
+    padding: 8px 10px;
+    font-size: 0.95rem;
+    background: #111;
     color: #fff;
     border: 1px solid #333;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    border-radius: 6px;
     box-sizing: border-box;
     outline: none;
   }
@@ -149,7 +166,7 @@
 
   button.main-btn {
     padding: 10px 16px;
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: bold;
     border: none;
     border-radius: 8px;
@@ -169,6 +186,13 @@
   }
   button.secondary-btn:hover {
     background: #219653;
+  }
+
+  button.print-btn {
+    background: #2980b9;
+  }
+  button.print-btn:hover {
+    background: #1f618d;
   }
 
   button.danger-btn {
@@ -231,15 +255,22 @@
     margin-top: 30px;
     text-align: center;
   }
+
+  @media print {
+    body { background: white; color: black; }
+    .toolbar, .file-section, .stats-bar, .action-buttons, .doc-list-container, .footer, h1, .subtitle { display: none; }
+    .container { border: none; box-shadow: none; max-width: 100%; padding: 0; }
+    textarea { border: none; width: 100%; height: auto; background: white; color: black; }
+  }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>📄 ErikAI Dokumenty Pro</h1>
-  <div class="subtitle">Študentský editor na poznámky, referáty a projekty (Word alternatíva)</div>
+  <h1>📄 ErikAI Študentský Word Pro</h1>
+  <div class="subtitle">Študentský editor na poznámky, referáty a otváranie Word (.docx) súborov</div>
 
-  <!-- Nástrojová lišta (Formatér) -->
+  <!-- Nástrojová lišta -->
   <div class="toolbar">
     <button onclick="formatText('<b>', '</b>')"><b>B</b> (Tučné)</button>
     <button onclick="formatText('<i>', '</i>')"><i>I</i> (Kurzíva)</button>
@@ -247,7 +278,7 @@
     <button onclick="formatText('<h2>', '</h2>')">📌 Nadpis</button>
     <button onclick="formatText('<div style=\'text-align:center;\'>', '</div>')">🎯 Na stred</button>
     <button onclick="formatText('<ul>\n  <li>', '</li>\n</ul>')">📋 Odrážky</button>
-    <select onchange="insertColor(this.value)">
+    <select onchange="insertColor(this.value); this.value='';">
       <option value="">🎨 Farba textu...</option>
       <option value="red">Červená</option>
       <option value="green">Zelená</option>
@@ -258,10 +289,19 @@
 
   <input type="text" id="docName" placeholder="Zadaj názov dokumentu (napr. Dejepis - Referát)">
   
-  <input type="file" id="imageInput" accept="image/*" multiple>
-  <div class="preview" id="imagePreview"></div>
+  <!-- Sekcia pre nahrávanie súborov a obrázkov -->
+  <div class="file-section">
+    <label>📂 Otvoriť existujúci Word (.docx) alebo textový (.txt) súbor z PC:</label>
+    <input type="file" id="docFileInput" accept=".docx, .txt">
+  </div>
 
-  <textarea id="textArea" placeholder="Tu píš text svojho dokumentu... (podporuje aj základné HTML formátovanie)" oninput="updateStats()"></textarea>
+  <div class="file-section">
+    <label>🖼️ Pridať obrázky / prílohy do dokumentu:</label>
+    <input type="file" id="imageInput" accept="image/*" multiple>
+    <div class="preview" id="imagePreview"></div>
+  </div>
+
+  <textarea id="textArea" placeholder="Tu píš text svojho dokumentu alebo načítaj súbor z počítača..." oninput="updateStats()"></textarea>
 
   <!-- Študentské počítadlá -->
   <div class="stats-bar">
@@ -273,15 +313,16 @@
 
   <div class="action-buttons">
     <button class="main-btn" onclick="ulozDokument()">💾 Uložiť</button>
-    <button class="main-btn" onclick="nacitajDokument()">📂 Načítať</button>
+    <button class="main-btn" onclick="nacitajDokument()">📂 Načítať z pamäte</button>
     <button class="main-btn secondary-btn" onclick="stiahniTXT()">⬇ TXT</button>
     <button class="main-btn secondary-btn" onclick="stiahniDOCX()">⬇ DOCX (Word)</button>
     <button class="main-btn secondary-btn" onclick="stiahniHTML()">⬇ HTML stránka</button>
+    <button class="main-btn print-btn" onclick="tlacDokument()">🖨️ Tlačiť / PDF</button>
     <button class="main-btn danger-btn" onclick="vymazDokument()">🗑️ Vymazať</button>
   </div>
 
   <div class="doc-list-container" id="docList">
-    <h3>📚 Uložené dokumenty:</h3>
+    <h3>📚 Uložené dokumenty v prehliadači:</h3>
   </div>
 </div>
 
@@ -289,6 +330,39 @@
 const textArea = document.getElementById("textArea");
 const docNameInput = document.getElementById("docName");
 const imagePreview = document.getElementById("imagePreview");
+
+// Načítanie súboru DOCX alebo TXT z počítača
+document.getElementById("docFileInput").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const fileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+  docNameInput.value = fileName;
+
+  if (file.name.endsWith(".docx")) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      mammoth.extractRawText({ arrayBuffer: event.target.result })
+        .then(function(result) {
+          textArea.value = result.value;
+          updateStats();
+          alert("Word dokument bol úspešne načítaný!");
+        })
+        .catch(function(err) {
+          alert("Chyba pri čítaní Word súboru: " + err.message);
+        });
+    };
+    reader.readAsArrayBuffer(file);
+  } else if (file.name.endsWith(".txt")) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      textArea.value = event.target.result;
+      updateStats();
+      alert("Textový súbor bol úspešne načítaný!");
+    };
+    reader.readAsText(file);
+  }
+});
 
 // Vkladanie formátovacích tagov do textu
 function formatText(startTag, endTag) {
@@ -311,8 +385,8 @@ function updateStats() {
   const text = textArea.value.trim();
   const words = text ? text.split(/\s+/).length : 0;
   const chars = text.length;
-  const pages = (words / 250).toFixed(1); // Štandardná strana A4 má cca 250 slov
-  const readTime = Math.ceil(words / 200); // Priemerná rýchlosť čítania je 200 slov/min
+  const pages = (words / 250).toFixed(1);
+  const readTime = Math.ceil(words / 200);
 
   document.getElementById("wordCount").innerText = `Slov: ${words}`;
   document.getElementById("charCount").innerText = `Znakov: ${chars}`;
@@ -358,11 +432,11 @@ function ulozDokument() {
   const images = Array.from(imagePreview.querySelectorAll("img")).map(img => img.src);
   const obj = { text: textArea.value, images };
   localStorage.setItem("erikai_doc_" + name, JSON.stringify(obj));
-  alert("Dokument '" + name + "' bol úspešne uložený!");
+  alert("Dokument '" + name + "' bol úspešne uložený do prehliadača!");
   refreshZoznam();
 }
 
-// Načítanie dokumentu
+// Načítanie dokumentu z localStorage
 function nacitajDokument(customName) {
   const name = customName || docNameInput.value.trim();
   if(!name) return alert("Zadaj názov dokumentu.");
@@ -374,28 +448,30 @@ function nacitajDokument(customName) {
   textArea.value = obj.text;
   imagePreview.innerHTML = '';
   
-  obj.images.forEach(src => {
-    const container = document.createElement("div");
-    container.className = "preview-item";
-    
-    const img = document.createElement("img");
-    img.src = src;
-    
-    const delBtn = document.createElement("button");
-    delBtn.innerText = "❌";
-    delBtn.style.position = "absolute";
-    delBtn.style.top = "0";
-    delBtn.style.right = "0";
-    delBtn.style.background = "red";
-    delBtn.style.color = "white";
-    delBtn.style.border = "none";
-    delBtn.style.cursor = "pointer";
-    delBtn.onclick = () => container.remove();
+  if (obj.images) {
+    obj.images.forEach(src => {
+      const container = document.createElement("div");
+      container.className = "preview-item";
+      
+      const img = document.createElement("img");
+      img.src = src;
+      
+      const delBtn = document.createElement("button");
+      delBtn.innerText = "❌";
+      delBtn.style.position = "absolute";
+      delBtn.style.top = "0";
+      delBtn.style.right = "0";
+      delBtn.style.background = "red";
+      delBtn.style.color = "white";
+      delBtn.style.border = "none";
+      delBtn.style.cursor = "pointer";
+      delBtn.onclick = () => container.remove();
 
-    container.appendChild(img);
-    container.appendChild(delBtn);
-    imagePreview.appendChild(container);
-  });
+      container.appendChild(img);
+      container.appendChild(delBtn);
+      imagePreview.appendChild(container);
+    });
+  }
   updateStats();
 }
 
@@ -424,17 +500,26 @@ function stiahniTXT() {
   link.click();
 }
 
-// Stiahnutie DOCX (Word formát)
+// Stiahnutie DOCX (Word kompatibilný HTML odkaz)
 function stiahniDOCX() {
-  const content = textArea.value;
-  const blob = new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const images = Array.from(imagePreview.querySelectorAll("img")).map(img => `<br><img src="${img.src}" style="max-width:500px;"><br>`).join("");
+  const content = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='utf-8'><title>${docNameInput.value || 'Dokument'}</title></head>
+    <body style="font-family: Arial; padding: 20px;">
+      <h1>${docNameInput.value || 'Dokument'}</h1>
+      <div>${textArea.value.replace(/\n/g,"<br>")}</div>
+      ${images}
+    </body>
+    </html>`;
+  const blob = new Blob(['\ufeff' + content], { type: 'application/msword' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = (docNameInput.value || "erikai_dokument") + ".docx";
+  link.download = (docNameInput.value || "erikai_dokument") + ".doc";
   link.click();
 }
 
-// Stiahnutie HTML (text + obrázky)
+// Stiahnutie HTML
 function stiahniHTML() {
   const images = Array.from(imagePreview.querySelectorAll("img")).map(img => `<img src="${img.src}" style="max-width:400px; display:block; margin:10px 0;">`).join("");
   const htmlContent = `<!DOCTYPE html><html lang="sk"><head><meta charset="UTF-8"><title>${docNameInput.value || 'Dokument'}</title></head><body style="font-family:Arial; padding:20px;"><h1>${docNameInput.value || 'Dokument'}</h1><div>${textArea.value.replace(/\n/g,"<br>")}</div><hr>${images}</body></html>`;
@@ -445,11 +530,16 @@ function stiahniHTML() {
   link.click();
 }
 
+// Tlač a export do PDF
+function tlacDokument() {
+  window.print();
+}
+
 // Zoznam uložených dokumentov
 function refreshZoznam() {
   const keys = Object.keys(localStorage).filter(k => k.startsWith("erikai_doc_"));
   const div = document.getElementById("docList");
-  div.innerHTML = "<h3>📚 Uložené dokumenty:</h3>";
+  div.innerHTML = "<h3>📚 Uložené dokumenty v prehliadači:</h3>";
   
   if(keys.length === 0) {
     div.innerHTML += "<p style='color:var(--text-muted); font-size:0.9rem;'>Žiadne uložené dokumenty.</p>";
