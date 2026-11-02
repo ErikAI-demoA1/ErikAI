@@ -71,7 +71,7 @@
 <body class="flex flex-col h-screen overflow-hidden">
 
   <!-- TOP HEADER NAVBAR -->
-  <header class="glass-panel px-4 py-2 flex items-center justify-between border-b z-30">
+  <header class="glass-panel px-4 py-2 flex items-center justify-between border-b z-30 flex-shrink-0">
     <div class="flex items-center gap-3">
       <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-teal-400 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-blue-500/20">
         E
@@ -113,7 +113,7 @@
   <main class="flex-1 flex overflow-hidden relative">
 
     <!-- LEFT SIDEBAR: TOOL PANE -->
-    <aside class="w-64 glass-panel border-r p-3 flex flex-col gap-3 overflow-y-auto z-20">
+    <aside class="w-64 glass-panel border-r p-3 flex flex-col gap-3 overflow-y-auto z-20 flex-shrink-0">
       
       <!-- MAIN TOOLS -->
       <div>
@@ -212,14 +212,14 @@
 
     <!-- CENTER CANVAS WORKSPACE VIEWPORT -->
     <section class="flex-1 flex items-center justify-center relative p-4 overflow-auto bg-checker">
-      <div class="canvas-container relative rounded-xl shadow-2xl overflow-hidden border border-slate-700/50 bg-white" style="width: 900px; height: 550px;">
+      <div id="canvasViewport" class="canvas-container relative rounded-xl shadow-2xl overflow-hidden border border-slate-700/50 bg-white" style="width: 900px; height: 550px;">
         <canvas id="raster" width="900" height="550" class="absolute top-0 left-0 z-10 touch-none"></canvas>
         <canvas id="main" width="900" height="550" class="absolute top-0 left-0 z-20 touch-none bg-transparent cursor-crosshair"></canvas>
       </div>
     </section>
 
     <!-- RIGHT SIDEBAR: LAYERS & PROJECTS -->
-    <aside class="w-64 glass-panel border-l p-3 flex flex-col gap-3 overflow-y-auto z-20">
+    <aside class="w-64 glass-panel border-l p-3 flex flex-col gap-3 overflow-y-auto z-20 flex-shrink-0">
       
       <!-- SELECTED OBJECT INSPECTOR -->
       <div>
@@ -337,6 +337,8 @@
       const img = new Image();
       img.onload = () => {
         rCtx.clearRect(0, 0, raster.width, raster.height);
+        rCtx.fillStyle = '#ffffff';
+        rCtx.fillRect(0, 0, raster.width, raster.height);
         rCtx.drawImage(img, 0, 0);
         renderAll();
         updateSelInfo();
@@ -352,10 +354,20 @@
 
     /* Initialize Canvas */
     function initCanvas() {
+      const w = parseInt($('canvasW').value) || 900;
+      const h = parseInt($('canvasH').value) || 550;
+
+      $('canvasViewport').style.width = w + 'px';
+      $('canvasViewport').style.height = h + 'px';
+
+      raster.width = main.width = w;
+      raster.height = main.height = h;
+
       rCtx.fillStyle = '#ffffff';
-      rCtx.fillRect(0, 0, raster.width, raster.height);
-      saveState();
+      rCtx.fillRect(0, 0, w, h);
+
       renderAll();
+      saveState();
     }
 
     /* Tool Selectors */
@@ -501,8 +513,8 @@
     $('modalCancel').addEventListener('click', () => { $('modalBg').style.display = 'none'; pendingShape = null; });
     $('modalOk').addEventListener('click', () => {
       if (!pendingShape) return;
-      const w = parseFloat($('mWidth').value) || 100;
-      const h = parseFloat($('mHeight').value) || 80;
+      const w = parseFloat($('mWidth').value) || 120;
+      const h = parseFloat($('mHeight').value) || 90;
       const r = parseFloat($('mRadius').value) || 50;
       const pos = pendingShape;
 
@@ -624,13 +636,6 @@
 
     /* Resize Canvas */
     $('setCanvasBtn').addEventListener('click', () => {
-      const w = parseInt($('canvasW').value) || 900;
-      const h = parseInt($('canvasH').value) || 550;
-      const container = document.querySelector('.canvas-container');
-      container.style.width = w + 'px';
-      container.style.height = h + 'px';
-      raster.width = main.width = w;
-      raster.height = main.height = h;
       initCanvas();
     });
 
@@ -710,6 +715,8 @@
         const img = new Image();
         img.onload = () => {
           rCtx.clearRect(0, 0, raster.width, raster.height);
+          rCtx.fillStyle = '#ffffff';
+          rCtx.fillRect(0, 0, raster.width, raster.height);
           rCtx.drawImage(img, 0, 0);
           renderAll();
           saveState();
