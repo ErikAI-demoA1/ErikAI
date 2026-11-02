@@ -127,12 +127,12 @@ input[type="file"] {
   border:1px solid var(--border-color);
   padding:10px;
   border-radius:12px;
-  max-height:75vh;
+  max-height:78vh;
   overflow-y: auto;
   overflow-x: hidden;
   display:none;
   box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-  width: 440px;
+  width: 460px;
   max-width: 95vw;
   z-index: 1000;
 }
@@ -202,7 +202,7 @@ input[type="file"] {
   white-space: nowrap;
 }
 .input-row input, .input-row select{
-  width: 46px;
+  width: 45px;
   padding: 3px;
   border-radius: 4px;
   border: 1px solid var(--border-color);
@@ -217,12 +217,20 @@ input[type="file"] {
   width: 70px;
 }
 .input-row input[type="color"]{
-  width: 28px;
+  width: 26px;
   height: 24px;
   padding: 0;
   border: none;
   cursor: pointer;
   background: transparent;
+}
+.section-title {
+  font-size: 0.7rem;
+  color: #3b82f6;
+  font-weight: bold;
+  margin-top: 6px;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+  padding-bottom: 2px;
 }
 </style>
 </head>
@@ -280,7 +288,7 @@ input[type="file"] {
 
 <div id="dimensionsPanel">
   <div class="panel-header" id="panelHeader">
-    <h3>Zoznam prvkov, Koty & Štýly</h3>
+    <h3>Zoznam prvkov, Koty & Vlastnosti</h3>
     <button class="close-btn" onclick="closeDimensionsPanel()">✕</button>
   </div>
   <div id="dimsContent">Žiadne tvary</div>
@@ -778,22 +786,42 @@ function drawAll(){
 
 function drawDimensionOnContext(targetCtx, s){
   const fontSize = s.fontSize || 12;
+  const offsetX = s.dimOffsetX || 6;
+  const offsetY = s.dimOffsetY || -6;
+  const dimAngle = s.dimAngle || 0;
+
+  targetCtx.save();
   targetCtx.fillStyle = (targetCtx === ctx) ? '#94a3b8' : '#475569';
   targetCtx.font = `${fontSize}px monospace`;
   targetCtx.setLineDash([]);
 
+  let textX = 0, textY = 0;
+  let dimText = '';
+
   if(s.type==='line'){
-    const midX=(s.x1+s.x2)/2, midY=(s.y1+s.y2)/2;
-    const len=Math.hypot(s.x2-s.x1,s.y2-s.y1).toFixed(1);
-    const angleRad = Math.atan2(s.y2-s.y1, s.x2-s.x1);
+    textX = (s.x1 + s.x2) / 2 + offsetX;
+    textY = (s.y1 + s.y2) / 2 + offsetY;
+    const len = Math.hypot(s.x2 - s.x1, s.y2 - s.y1).toFixed(1);
+    const angleRad = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
     let angleDeg = Math.round(angleRad * (180 / Math.PI));
     if(angleDeg < 0) angleDeg += 360;
-    targetCtx.fillText(`${len} mm (${angleDeg}°)`, midX+6, midY-6);
+    dimText = `${len} mm (${angleDeg}°)`;
   }else if(s.type==='rect'){
-    targetCtx.fillText(`W:${Math.abs(s.w).toFixed(1)} H:${Math.abs(s.h).toFixed(1)}`, s.x+s.w/2-20, s.y+s.h/2);
+    textX = s.x + s.w / 2 - 20 + offsetX;
+    textY = s.y + s.h / 2 + offsetY;
+    dimText = `W:${Math.abs(s.w).toFixed(1)} H:${Math.abs(s.h).toFixed(1)}`;
   }else if(s.type==='circle'){
-    targetCtx.fillText(`R:${s.r.toFixed(1)}`, s.cx, s.cy - s.r - 6);
+    textX = s.cx + offsetX;
+    textY = (s.cy - s.r - 6) + offsetY;
+    dimText = `R:${s.r.toFixed(1)}`;
   }
+
+  if(dimText){
+    targetCtx.translate(textX, textY);
+    targetCtx.rotate(dimAngle * Math.PI / 180);
+    targetCtx.fillText(dimText, 0, 0);
+  }
+  targetCtx.restore();
 }
 
 function snap(x, y){
@@ -892,11 +920,11 @@ function handleStart(clientX, clientY){
   pushState();
   let shape=null;
   if(tool==='line'){
-    shape={type:'line', x1:startPt.x, y1:startPt.y, x2:p.x, y2:p.y, color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12, hideDim:false};
+    shape={type:'line', x1:startPt.x, y1:startPt.y, x2:p.x, y2:p.y, color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12, hideDim:false, dimOffsetX:6, dimOffsetY:-6, dimAngle:0};
   }else if(tool==='circle'){
-    shape={type:'circle', cx:startPt.x, cy:startPt.y, r:Math.hypot(p.x-startPt.x, p.y-startPt.y), color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12, hideDim:false};
+    shape={type:'circle', cx:startPt.x, cy:startPt.y, r:Math.hypot(p.x-startPt.x, p.y-startPt.y), color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12, hideDim:false, dimOffsetX:0, dimOffsetY:-6, dimAngle:0};
   }else if(tool==='rect'){
-    shape={type:'rect', x:startPt.x, y:startPt.y, w:p.x-startPt.x, h:p.y-startPt.y, color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12, hideDim:false};
+    shape={type:'rect', x:startPt.x, y:startPt.y, w:p.x-startPt.x, h:p.y-startPt.y, color:'#10b981', lineWidth:2, lineStyle:'solid', fontSize:12, hideDim:false, dimOffsetX:0, dimOffsetY:0, dimAngle:0};
   }
 
   if(shape) shapes.push(shape);
@@ -1057,7 +1085,7 @@ function updateDimensionsPanel(){
     if(s.type !== 'text'){
       const dimToggleBtn = document.createElement('button');
       dimToggleBtn.className = s.hideDim ? 'warning' : 'ghost';
-      dimToggleBtn.textContent = s.hideDim ? '👁️ Kotta' : '🙈 Kotta';
+      dimToggleBtn.textContent = s.hideDim ? '👁️ Kóta' : '🙈 Kóta';
       dimToggleBtn.style.padding = '3px 6px';
       dimToggleBtn.style.fontSize = '0.7rem';
       dimToggleBtn.onclick = () => {
@@ -1115,7 +1143,6 @@ function updateDimensionsPanel(){
                          `<label>Typ:</label><select><option value="solid" ${s.lineStyle!=='dashed'?'selected':''}>Plná</option><option value="dashed" ${s.lineStyle==='dashed'?'selected':''}>Bodkočiark.</option></select>`;
       
       const inps = dimRow.querySelectorAll('input, select');
-      
       inps[0].onchange = (e) => {
         pushState();
         const val = parseFloat(e.target.value);
@@ -1127,7 +1154,6 @@ function updateDimensionsPanel(){
           drawAll();
         }
       };
-
       inps[1].onchange = (e) => {
         pushState();
         const deg = parseFloat(e.target.value);
@@ -1140,20 +1166,17 @@ function updateDimensionsPanel(){
           drawAll();
         }
       };
-
       inps[2].onchange = (e) => {
         pushState();
         const val = parseInt(e.target.value);
         if(!isNaN(val) && val > 0){ s.lineWidth = val; saveToLocalStorage(); drawAll(); }
       };
-
       inps[3].onchange = (e) => {
         pushState();
         s.lineStyle = e.target.value;
         saveToLocalStorage();
         drawAll();
       };
-
     }else if(s.type==='rect'){
       dimRow.innerHTML = `<label>Šírka:</label><input type="number" value="${Math.abs(s.w).toFixed(1)}">` +
                          `<label>Výška:</label><input type="number" value="${Math.abs(s.h).toFixed(1)}">` +
@@ -1224,8 +1247,51 @@ function updateDimensionsPanel(){
         if(!isNaN(val)){ s.angle = val; saveToLocalStorage(); drawAll(); }
       };
     }
-
     card.appendChild(dimRow);
+
+    // Sekcia vlastností pre kótu (Pozícia textu kóty, Uhol a Veľkosť)
+    if(s.type !== 'text'){
+      const secTitle = document.createElement('div');
+      secTitle.className = 'section-title';
+      secTitle.textContent = '📐 Vlastnosti a pozícia kóty';
+      card.appendChild(secTitle);
+
+      const dimPropRow = document.createElement('div');
+      dimPropRow.className = 'input-row';
+      dimPropRow.innerHTML = `<label>Pos X:</label><input type="number" value="${s.dimOffsetX ?? 6}">` +
+                             `<label>Pos Y:</label><input type="number" value="${s.dimOffsetY ?? -6}">` +
+                             `<label>Uhol:</label><input type="number" value="${s.dimAngle ?? 0}">` +
+                             `<label>Veľk:</label><input type="number" value="${s.fontSize ?? 12}" min="6" max="30">`;
+
+      const dimInps = dimPropRow.querySelectorAll('input');
+      dimInps[0].onchange = (e) => {
+        pushState();
+        s.dimOffsetX = parseFloat(e.target.value) || 0;
+        saveToLocalStorage();
+        drawAll();
+      };
+      dimInps[1].onchange = (e) => {
+        pushState();
+        s.dimOffsetY = parseFloat(e.target.value) || 0;
+        saveToLocalStorage();
+        drawAll();
+      };
+      dimInps[2].onchange = (e) => {
+        pushState();
+        s.dimAngle = parseFloat(e.target.value) || 0;
+        saveToLocalStorage();
+        drawAll();
+      };
+      dimInps[3].onchange = (e) => {
+        pushState();
+        s.fontSize = parseInt(e.target.value) || 12;
+        saveToLocalStorage();
+        drawAll();
+      };
+
+      card.appendChild(dimPropRow);
+    }
+
     dimsContent.appendChild(card);
   });
 }
