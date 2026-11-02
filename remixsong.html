@@ -3,163 +3,452 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎵 ErikAI DJ Mixér</title>
+<title>🎧 ErikAI DJ Master Studio Pro</title>
 <style>
+  :root {
+    --bg-color: #0b0b0b;
+    --card-bg: #141414;
+    --border-red: #e74c3c;
+    --border-green: #2ecc71;
+    --accent-yellow: #f1c40f;
+    --text-main: #ffffff;
+    --text-muted: #aaaaaa;
+  }
+
   body {
-    font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #1b1b1b, #2c2c2c);
-    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-color);
+    color: var(--text-main);
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px;
+    padding: 1.5rem;
+    margin: 0;
   }
-  h1 { color: #ff4b2b; text-align: center; }
-  #trackList {
+
+  .container {
+    max-width: 1000px;
+    width: 100%;
+    background: var(--card-bg);
+    border: 2px solid var(--border-green);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+    box-sizing: border-box;
+  }
+
+  h1 { 
+    color: var(--accent-yellow); 
+    text-align: center; 
+    margin-top: 0;
+    font-size: 2rem;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+  }
+
+  .deck-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  @media(max-width: 768px) {
+    .deck-container { grid-template-columns: 1fr; }
+  }
+
+  .deck {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+  }
+
+  .deck h2 {
+    color: var(--accent-yellow);
+    margin-top: 0;
+    font-size: 1.3rem;
+    border-bottom: 1px solid #333;
+    padding-bottom: 8px;
+  }
+
+  .control-group {
+    margin: 12px 0;
+  }
+
+  .control-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  input[type="range"], input[type="file"] {
+    width: 100%;
+    accent-color: var(--border-green);
+  }
+
+  .mixer-console {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .buttons-row {
     display: flex;
     flex-wrap: wrap;
+    gap: 10px;
     justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
+    margin-top: 15px;
   }
-  .track {
-    background: #222;
-    padding: 15px;
+
+  button {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: var(--border-red);
+    color: white;
+    transition: all 0.2s;
+  }
+
+  button:hover {
+    background: #c0392b;
+    transform: translateY(-2px);
+  }
+
+  button.secondary { background: #27ae60; }
+  button.secondary:hover { background: #219653; }
+
+  button.record-btn { background: #e74c3c; animation: pulse 1.5px infinite; }
+  button.record-btn.recording { background: #c0392b; box-shadow: 0 0 15px #e74c3c; }
+
+  canvas {
+    background: #111;
     border-radius: 10px;
-    width: 200px;
+    width: 100%;
+    height: 150px;
+    border: 1px solid #333;
+    margin-top: 15px;
+  }
+
+  .track-info {
+    font-size: 0.9rem;
+    color: var(--border-green);
+    margin: 8px 0;
+    word-break: break-all;
+  }
+
+  .footer {
+    font-size: 13px;
+    color: gray;
+    margin-top: 30px;
     text-align: center;
-    box-shadow: 0 0 10px #ff4b2b;
-    transition: transform 0.2s;
   }
-  .track:hover { transform: scale(1.05); }
-  input[type="file"] { margin-top: 10px; }
-  button { 
-    margin: 5px; padding: 5px 10px; 
-    border: none; border-radius: 5px; 
-    cursor: pointer; 
-    background-color: #ff4b2b; color: #fff;
-    transition: background 0.3s;
-  }
-  button:hover { background-color: #e03a1f; }
-  .slider { width: 80%; margin: 10px 0; }
-  #crossfader { width: 60%; }
-  canvas { background: #111; border-radius: 10px; margin-top: 20px; }
 </style>
 </head>
 <body>
 
-<h1>🎧 ErikAI DJ Mixér</h1>
+<div class="container">
+  <h1>🎧 ErikAI DJ Master Studio Pro</h1>
+  <div class="subtitle">Profesionálny online mixér, tvorca remixov s efektmi a nahrávaním</div>
 
-<p>Vyberte viac songov:</p>
-<input type="file" id="fileInput" accept="audio/*" multiple>
+  <div class="deck-container">
+    <!-- DECK A -->
+    <div class="deck">
+      <h2>🎛️ Deck A</h2>
+      <input type="file" id="fileA" accept="audio/*">
+      <div class="track-info" id="infoA">Žiadna skladba</div>
+      
+      <div class="control-group">
+        <label>Hlasitosť</label>
+        <input type="range" id="volA" min="0" max="1" step="0.01" value="0.8">
+      </div>
+      <div class="control-group">
+        <label>Rýchlosť / Pitch (Tempo)</label>
+        <input type="range" id="rateA" min="0.5" max="1.5" step="0.01" value="1">
+      </div>
+      <div class="buttons-row">
+        <button class="secondary" onclick="playDeck('A')">▶️ Play</button>
+        <button onclick="pauseDeck('A')">⏸️ Pause</button>
+        <button onclick="stopDeck('A')">⏹️ Stop</button>
+      </div>
+    </div>
 
-<div id="trackList"></div>
+    <!-- DECK B -->
+    <div class="deck">
+      <h2>🎛️ Deck B</h2>
+      <input type="file" id="fileB" accept="audio/*">
+      <div class="track-info" id="infoB">Žiadna skladba</div>
+      
+      <div class="control-group">
+        <label>Hlasitosť</label>
+        <input type="range" id="volB" min="0" max="1" step="0.01" value="0.8">
+      </div>
+      <div class="control-group">
+        <label>Rýchlosť / Pitch (Tempo)</label>
+        <input type="range" id="rateB" min="0.5" max="1.5" step="0.01" value="1">
+      </div>
+      <div class="buttons-row">
+        <button class="secondary" onclick="playDeck('B')">▶️ Play</button>
+        <button onclick="pauseDeck('B')">⏸️ Pause</button>
+        <button onclick="stopDeck('B')">⏹️ Stop</button>
+      </div>
+    </div>
+  </div>
 
-<h3>Master hlasitosť</h3>
-<input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.8" class="slider">
+  <!-- MIXER PANEL -->
+  <div class="mixer-console">
+    <h3 style="color:var(--accent-yellow); margin-top:0;">🎚️ Master & Crossfader</h3>
+    <div class="control-group">
+      <label>Crossfader (Deck A ◄──► Deck B)</label>
+      <input type="range" id="crossfader" min="0" max="1" step="0.01" value="0.5">
+    </div>
+    <div class="control-group">
+      <label>Master Hlasitosť</label>
+      <input type="range" id="masterVol" min="0" max="1" step="0.01" value="0.8">
+    </div>
 
-<h3>Crossfader</h3>
-<input type="range" id="crossfader" min="0" max="1" step="0.01" value="0.5" class="slider">
+    <div class="buttons-row" style="margin-top: 20px;">
+      <button class="record-btn" id="recBtn" onclick="toggleRecording()">🔴 Začať nahrávať mix</button>
+      <a id="downloadLink" style="display:none;"><button class="secondary">⬇ Stiahnuť stiahnutý remix</button></a>
+    </div>
+  </div>
 
-<canvas id="visualizer" width="800" height="200"></canvas>
+  <canvas id="visualizer"></canvas>
+
+  <div class="footer">
+    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>
+    © 2026 Erik Mohylák – All rights reserved.
+  </div>
+</div>
 
 <script>
-const fileInput = document.getElementById('fileInput');
-const trackList = document.getElementById('trackList');
-const masterVolume = document.getElementById('masterVolume');
-const crossfader = document.getElementById('crossfader');
-const canvas = document.getElementById('visualizer');
-const ctx = canvas.getContext('2d');
+let audioCtx = null;
 
-let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let tracks = [];
+// Deck štruktúra
+const decks = {
+  A: { buffer: null, source: null, gain: null, pan: null, startTime: 0, pauseOffset: 0, isPlaying: false, name: "" },
+  B: { buffer: null, source: null, gain: null, pan: null, startTime: 0, pauseOffset: 0, isPlaying: false, name: "" }
+};
 
-function createTrack(file) {
+let masterGain = null;
+let analyser = null;
+let destination = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  
+  masterGain = audioCtx.createGain();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+
+  // Stream Destination pre nahrávanie
+  const dest = audioCtx.createMediaStreamDestination();
+  destination = dest;
+
+  masterGain.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  analyser.connect(dest.destination || dest);
+
+  // Setup Deck Gain nody
+  ['A', 'B'].forEach(id => {
+    decks[id].gain = audioCtx.createGain();
+    decks[id].gain.connect(masterGain);
+  });
+
+  setupRecorder(dest.stream);
+  visualize();
+}
+
+// Načítanie súborov
+document.getElementById('fileA').addEventListener('change', e => loadTrack('A', e.target.files[0]));
+document.getElementById('fileB').addEventListener('change', e => loadTrack('B', e.target.files[0]));
+
+function loadTrack(deckId, file) {
+  if (!file) return;
+  initAudio();
   const reader = new FileReader();
-  reader.onload = () => {
-    audioCtx.decodeAudioData(reader.result, buffer => {
-      const track = {
-        name: file.name,
-        buffer: buffer,
-        gainNode: audioCtx.createGain(),
-        source: null,
-        playing: false
-      };
-      track.gainNode.gain.value = 0.8;
-      tracks.push(track);
-      renderTrack(track);
+  reader.onload = function(e) {
+    audioCtx.decodeAudioData(e.target.result, buffer => {
+      decks[deckId].buffer = buffer;
+      decks[deckId].name = file.name;
+      decks[deckId].pauseOffset = 0;
+      document.getElementById(`info${deckId}`).innerText = `🎵 ${file.name}`;
     });
   };
   reader.readAsArrayBuffer(file);
 }
 
-function renderTrack(track) {
-  const div = document.createElement('div');
-  div.className = 'track';
-  div.innerHTML = `<strong>${track.name}</strong><br>
-    <button class="playBtn">Play</button>
-    <button class="stopBtn">Stop</button><br>
-    Hlasitosť:<input type="range" min="0" max="1" step="0.01" value="${track.gainNode.gain.value}" class="slider">`;
-  trackList.appendChild(div);
+function playDeck(deckId) {
+  initAudio();
+  const deck = decks[deckId];
+  if (!deck.buffer) return alert(`Do Decku ${deckId} nie je nahratá žiadna skladba!`);
+  if (deck.isPlaying) return;
 
-  const playBtn = div.querySelector('.playBtn');
-  const stopBtn = div.querySelector('.stopBtn');
-  const volumeSlider = div.querySelector('.slider');
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
 
-  playBtn.onclick = () => playTrack(track);
-  stopBtn.onclick = () => stopTrack(track);
-  volumeSlider.oninput = (e) => {
-    track.gainNode.gain.value = e.target.value;
+  const source = audioCtx.createBufferSource();
+  source.buffer = deck.buffer;
+  source.playbackRate.value = parseFloat(document.getElementById(`rate${deckId}`).value);
+  
+  source.connect(deck.gain);
+  
+  const offset = deck.pauseOffset % deck.buffer.duration;
+  source.start(0, offset);
+  deck.startTime = audioCtx.currentTime - offset;
+  deck.source = source;
+  deck.isPlaying = true;
+
+  source.onended = () => {
+    if (deck.isPlaying && deck.source === source) {
+      deck.isPlaying = false;
+      deck.pauseOffset = 0;
+    }
   };
 }
 
-function playTrack(track) {
-  if (track.playing) return;
-  const source = audioCtx.createBufferSource();
-  source.buffer = track.buffer;
-  source.connect(track.gainNode).connect(audioCtx.destination);
-  source.start(0);
-  track.source = source;
-  track.playing = true;
-  source.onended = () => { track.playing = false; track.source = null; };
+function pauseDeck(deckId) {
+  const deck = decks[deckId];
+  if (!deck.isPlaying || !deck.source) return;
+  deck.source.stop();
+  deck.pauseOffset = audioCtx.currentTime - deck.startTime;
+  deck.isPlaying = false;
+  deck.source = null;
 }
 
-function stopTrack(track) {
-  if (track.source) { track.source.stop(); track.playing = false; track.source = null; }
+function stopDeck(deckId) {
+  const deck = decks[deckId];
+  if (deck.source) {
+    deck.source.stop();
+    deck.source = null;
+  }
+  deck.isPlaying = false;
+  deck.pauseOffset = 0;
 }
 
-masterVolume.oninput = (e) => {
-  tracks.forEach(t => t.gainNode.gain.value = e.target.value);
+// Ovládanie hlasitostí, rýchlosti a crossfadera
+document.getElementById('volA').addEventListener('input', e => updateMixer());
+document.getElementById('volB').addEventListener('input', e => updateMixer());
+document.getElementById('crossfader').addEventListener('input', e => updateMixer());
+document.getElementById('masterVol').addEventListener('input', e => {
+  if (masterGain) masterGain.gain.value = e.target.value;
+});
+
+document.getElementById('rateA').addEventListener('input', e => {
+  if (decks.A.source) decks.A.source.playbackRate.value = parseFloat(e.target.value);
+});
+document.getElementById('rateB').addEventListener('input', e => {
+  if (decks.B.source) decks.B.source.playbackRate.value = parseFloat(e.target.value);
+});
+
+function updateMixer() {
+  if (!audioCtx) return;
+  const cf = parseFloat(document.getElementById('crossfader').value);
+  const volA = parseFloat(document.getElementById('volA').value);
+  const volB = parseFloat(document.getElementById('volB').value);
+
+  // Rovnomerný crossfade vzorec (Equal Power crossfade)
+  const gainA = volA * Math.cos(cf * 0.5 * Math.PI);
+  const gainB = volB * Math.sin(cf * 0.5 * Math.PI);
+
+  decks.A.gain.gain.value = gainA;
+  decks.B.gain.gain.value = gainB;
 }
 
-// Simple crossfader
-crossfader.oninput = (e) => {
-  const value = e.target.value;
-  if (tracks.length >= 2) {
-    tracks[0].gainNode.gain.value = 1 - value;
-    tracks[1].gainNode.gain.value = value;
+// Nahrávanie mixu
+function setupRecorder(stream) {
+  try {
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+      recordedChunks = [];
+      const url = URL.createObjectURL(blob);
+      const dlLink = document.getElementById('downloadLink');
+      dlLink.href = url;
+      dlLink.download = "ErikAI_Remix_Mix.webm";
+      dlLink.style.display = "inline-block";
+    };
+  } catch(e) {
+    console.log("MediaRecorder nepodporovaný týmto prehliadačom.");
   }
 }
 
-// Audio visualizer
-function visualize() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  tracks.forEach((track, i) => {
-    if (!track.source) return;
-    const freqData = new Uint8Array(64);
-    ctx.fillStyle = `hsl(${i*50}, 100%, 50%)`;
-    for (let j = 0; j < freqData.length; j++) {
-      const height = Math.random() * 50; // demo waveform
-      ctx.fillRect(j*12, canvas.height - height - i*60, 10, height);
-    }
-  });
-  requestAnimationFrame(visualize);
+function toggleRecording() {
+  initAudio();
+  const btn = document.getElementById('recBtn');
+  if (!isRecording) {
+    recordedChunks = [];
+    if(mediaRecorder) mediaRecorder.start();
+    isRecording = true;
+    btn.innerText = "⏹️ Zastaviť a uložiť remix";
+    btn.classList.add('recording');
+  } else {
+    if(mediaRecorder) mediaRecorder.stop();
+    isRecording = false;
+    btn.innerText = "🔴 Začať nahrávať mix";
+    btn.classList.remove('recording');
+    alert("Remix bol úspešne nahratý! Klikni na tlačidlo 'Stiahnutý remix' nižšie.");
+  }
 }
-visualize();
 
-fileInput.addEventListener('change', (e) => {
-  Array.from(e.target.files).forEach(file => createTrack(file));
-});
+// Canvas Visualizer
+function visualize() {
+  const canvas = document.getElementById('visualizer');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.clientWidth - 40;
+  canvas.height = 150;
+
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+
+  function draw() {
+    requestAnimationFrame(draw);
+    analyser.getByteFrequencyData(dataArray);
+
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const barWidth = (canvas.width / bufferLength) * 2.5;
+    let x = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+      const barHeight = dataArray[i] / 1.8;
+
+      // ErikAI Neonové farebné spektrum
+      const r = barHeight + 25;
+      const g = 250 - barHeight;
+      const b = 50;
+
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+      x += barWidth + 1;
+    }
+  }
+  draw();
+}
 </script>
+
 </body>
 </html>
