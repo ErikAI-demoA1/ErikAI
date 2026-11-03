@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokročilá Genetická BMI & Fit Kalkulačka</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.35);
+            --bg-dark: #090d16;
+            --card-bg: rgba(22, 31, 49, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --input-bg: rgba(11, 17, 29, 0.8);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #a855f7;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #f43f5e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 90% 90%, rgba(6, 182, 212, 0.12) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2.5rem 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.75rem;
+        }
+
+        @media (min-width: 850px) {
+            .container {
+                grid-template-columns: 1fr 1fr;
+            }
+            .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 1.75rem;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .header-box {
+            text-align: center;
+            padding: 1rem 0;
+        }
+
+        .header-box h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-box p {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 0.75rem;
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.85rem;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .radio-btn {
+            flex: 1;
+        }
+
+        .radio-btn input {
+            display: none;
+        }
+
+        .radio-btn label {
+            display: block;
+            padding: 0.8rem;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .radio-btn input:checked + label {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 1.1rem;
+            background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 20px -5px var(--primary-glow);
+            transition: all 0.2s ease;
+            margin-top: 0.5rem;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px -5px var(--primary-glow);
+        }
+
+        /* Výsledky Dashboard */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-card-mini {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .mini-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .mini-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin: 0.3rem 0;
+            color: var(--accent-cyan);
+        }
+
+        .mini-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        /* Gauge */
+        .gauge-wrap {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin-top: 0.8rem;
+            overflow: hidden;
+        }
+
+        .gauge-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #3b82f6, #10b981, #f59e0b, #ef4444);
+            border-radius: 5px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Verdikt Card */
+        .verdict-box {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar-wrap {
+            margin: 1rem 0 0.5rem 0;
+        }
+
+        .progress-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+
+        .progress-track {
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .bar-genetics { background: var(--accent-cyan); transition: width 0.5s ease; }
+        .bar-lifestyle { background: var(--accent-purple); transition: width 0.5s ease; }
+
+        .advice-card {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card full-width header-box">
+        <h1>🧬 Genetická & Fit BMI Kalkulačka</h1>
+        <p>Presná analýza vašej váhy, genetických predispozícií rodičov a kalórií</p>
+    </div>
+
+    <!-- Formulár: Užívateľ -->
+    <div class="card">
+        <h2>👤 Tvoj Profil</h2>
+        <form id="bmiForm">
+            <div class="form-group">
+                <label>Pohlavie</label>
+                <div class="radio-group">
+                    <div class="radio-btn">
+                        <input type="radio" id="male" name="gender" value="male" checked>
+                        <label for="male">👨 Muž</label>
+                    </div>
+                    <div class="radio-btn">
+                        <input type="radio" id="female" name="gender" value="female">
+                        <label for="female">👩 Žena</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="age">Vek</label>
+                    <input type="number" id="age" value="25" min="10" max="120" required>
+                </div>
+                <div class="form-group">
+                    <label for="height">Výška (cm)</label>
+                    <input type="number" id="height" value="178" min="100" max="230" required>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="weight">Váha (kg)</label>
+                    <input type="number" id="weight" value="76" min="30" max="300" required>
+                </div>
+                <div class="form-group">
+                    <label for="bodyType">Typ Postavy</label>
+                    <select id="bodyType">
+                        <option value="1">Štíhla / Útla kostra</option>
+                        <option value="2" selected>Priemerná</option>
+                        <option value="3">Svalnatá / Športová</option>
+                        <option value="4">Širšia / Ťažšia krupobičnosť</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="activity">Úroveň Fyzickej Aktivity</label>
+                <select id="activity">
+                    <option value="1.2">Sedavé zamestnanie (minimálny pohyb)</option>
+                    <option value="1.375" selected>Mierna aktivita (1-3x týždenne cvičenie)</option>
+                    <option value="1.55">Stredná aktivita (3-5x týždenne šport)</option>
+                    <option value="1.725">Vysoká aktivita (ťahy 6-7x týždenne)</option>
+                </select>
+            </div>
+    </div>
+
+    <!-- Formulár: Rodičia -->
+    <div class="card">
+        <h2>👨‍👩‍👦 Genetický Profil Rodičov (Voliteľné)</h2>
+        
+        <div style="border-bottom: 1px solid var(--card-border); padding-bottom: 1rem; margin-bottom: 1rem;">
+            <label style="color: #fff; font-weight: 700;">👨 Otec</label>
+            <div class="grid-2" style="margin-top: 0.5rem;">
+                <div class="form-group">
+                    <label for="fatherHeight">Výška (cm)</label>
+                    <input type="number" id="fatherHeight" placeholder="napr. 180">
+                </div>
+                <div class="form-group">
+                    <label for="fatherBody">Typ Postavy</label>
+                    <select id="fatherBody">
+                        <option value="">Nevybrané</option>
+                        <option value="1">Štíhla</option>
+                        <option value="2">Priemerná</option>
+                        <option value="3">Svalnatá</option>
+                        <option value="4">Nadváha / Obezita</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <label style="color: #fff; font-weight: 700;">👩 Mama</label>
+            <div class="grid-2" style="margin-top: 0.5rem;">
+                <div class="form-group">
+                    <label for="motherHeight">Výška (cm)</label>
+                    <input type="number" id="motherHeight" placeholder="napr. 165">
+                </div>
+                <div class="form-group">
+                    <label for="motherBody">Typ Postavy</label>
+                    <select id="motherBody">
+                        <option value="">Nevybrané</option>
+                        <option value="1">Štíhla</option>
+                        <option value="2">Priemerná</option>
+                        <option value="3">Svalnatá</option>
+                        <option value="4">Nadváha / Obezita</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-submit">🔥 Vypočítať Analýzu & Kalórie</button>
+        </form>
+    </div>
+
+    <!-- Výsledkový Panel -->
+    <div class="card full-width hidden" id="resultCard">
+        <h2>📊 Kompletný Výsledkový Report</h2>
+        
+        <div class="results-grid">
+            <div class="result-card-mini">
+                <div class="mini-title">Klasické BMI</div>
+                <div class="mini-value" id="bmiValue">24.0</div>
+                <span class="mini-badge" id="bmiStatus">Normálna váha</span>
+                <div class="gauge-wrap">
+                    <div class="gauge-bar" id="gaugeBar"></div>
+                </div>
+            </div>
+
+            <div class="result-card-mini">
+                <div class="mini-title">Ideálna Váha</div>
+                <div class="mini-value" id="idealWeightVal" style="color: var(--success);">72.5 kg</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);" id="idealWeightRange">Rozsah: 65 - 78 kg</div>
+            </div>
+
+            <div class="result-card-mini">
+                <div class="mini-title">Geneticky Upravené BMI</div>
+                <div class="mini-value" id="adjBmiValue" style="color: var(--accent-purple);">23.2</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Upravené podľa kostry</div>
+            </div>
+
+            <div class="result-card-mini">
+                <div class="mini-title">Denný Príjem (TDEE)</div>
+                <div class="mini-value" id="tdeeValue" style="color: var(--warning);">2 450</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">kcal / deň na udržanie</div>
+            </div>
+        </div>
+
+        <div class="verdict-box">
+            <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;" id="verdictTitle">⚖️ Verdikt: Čia je to chyba?</h3>
+            <p id="verdictText" style="font-size: 0.95rem; color: var(--text-muted);">
+                Na základe porovnania vašich údajov a stavby tela rodičov sme analyzovali podiel genetiky.
+            </p>
+
+            <div class="progress-bar-wrap">
+                <div class="progress-labels">
+                    <span style="color: var(--accent-cyan);">🧬 Genetika: <span id="genPct">50</span>%</span>
+                    <span style="color: var(--accent-purple);">🍔 Životný štýl: <span id="lifePct">50</span>%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="bar-genetics" id="genBar" style="width: 50%;"></div>
+                    <div class="bar-lifestyle" id="lifeBar" style="width: 50%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="advice-card" id="adviceBox">
+            💡 <strong>Odporúčanie:</strong> Výsledky sú pripravené.
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('bmiForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Užívateľské vstupy
+        const isMale = document.getElementById('male').checked;
+        const age = parseInt(document.getElementById('age').value);
+        const height = parseFloat(document.getElementById('height').value);
+        const weight = parseFloat(document.getElementById('weight').value);
+        const bodyType = parseInt(document.getElementById('bodyType').value);
+        const activity = parseFloat(document.getElementById('activity').value);
+
+        // Rodičia vstupy
+        const fatherHeight = parseFloat(document.getElementById('fatherHeight').value) || null;
+        const fatherBody = parseInt(document.getElementById('fatherBody').value) || null;
+        const motherHeight = parseFloat(document.getElementById('motherHeight').value) || null;
+        const motherBody = parseInt(document.getElementById('motherBody').value) || null;
+
+        // 1. Štandardné BMI
+        const heightMeters = height / 100;
+        const bmi = parseFloat((weight / (heightMeters * heightMeters)).toFixed(1));
+
+        // 2. Kategória BMI a Gauge
+        let statusText = "";
+        let statusBg = "";
+        let gaugePct = 0;
+
+        if (bmi < 18.5) {
+            statusText = "Podváha";
+            statusBg = "var(--primary)";
+            gaugePct = Math.max(10, (bmi / 18.5) * 25);
+        } else if (bmi <= 24.9) {
+            statusText = "Normálna váha";
+            statusBg = "var(--success)";
+            gaugePct = 25 + ((bmi - 18.5) / 6.4) * 25;
+        } else if (bmi <= 29.9) {
+            statusText = "Nadváha";
+            statusBg = "var(--warning)";
+            gaugePct = 50 + ((bmi - 25) / 4.9) * 25;
+        } else {
+            statusText = "Obezita";
+            statusBg = "var(--danger)";
+            gaugePct = Math.min(100, 75 + ((bmi - 30) / 10) * 25);
+        }
+
+        // 3. Ideálna váha (Devine formula)
+        let idealWeight = isMale 
+            ? 50 + 2.3 * ((height / 2.54) - 60)
+            : 45.5 + 2.3 * ((height / 2.54) - 60);
+        if (idealWeight < 40) idealWeight = 50;
+
+        // 4. BMR & TDEE (Mifflin-St Jeor)
+        let bmr = isMale 
+            ? (10 * weight) + (6.25 * height) - (5 * age) + 5
+            : (10 * weight) + (6.25 * height) - (5 * age) - 161;
+        const tdee = Math.round(bmr * activity);
+
+        // 5. Genetické BMI & Pomery
+        let bodyTypeAdj = 0;
+        if (bodyType === 1) bodyTypeAdj = 0.8;   // Štíhla kostra
+        if (bodyType === 3) bodyTypeAdj = -1.2;  // Svalnatá
+        if (bodyType === 4) bodyTypeAdj = -0.8;  // Široká
+
+        const adjBmi = parseFloat((bmi + bodyTypeAdj).toFixed(1));
+
+        let genPercent = 40;
+        let parentCount = 0;
+        let parentScore = 0;
+
+        if (fatherBody) { parentCount++; parentScore += (fatherBody === 4 ? 30 : fatherBody === 1 ? -20 : 0); }
+        if (motherBody) { parentCount++; parentScore += (motherBody === 4 ? 30 : motherBody === 1 ? -20 : 0); }
+
+        if (parentCount > 0) {
+            const avgParent = parentScore / parentCount;
+            if ((bmi > 25 && avgParent > 0) || (bmi < 18.5 && avgParent < 0)) {
+                genPercent = 70;
+            } else if ((bmi > 25 && avgParent < 0) || (bmi < 18.5 && avgParent > 0)) {
+                genPercent = 25;
+            } else {
+                genPercent = 50;
+            }
+        }
+        const lifePercent = 100 - genPercent;
+
+        // Výpis do DOM
+        document.getElementById('bmiValue').innerText = bmi;
+        const statusBadge = document.getElementById('bmiStatus');
+        statusBadge.innerText = statusText;
+        statusBadge.style.backgroundColor = statusBg;
+        statusBadge.style.color = '#fff';
+
+        document.getElementById('gaugeBar').style.width = gaugePct + '%';
+        document.getElementById('idealWeightVal').innerText = idealWeight.toFixed(1) + ' kg';
+        document.getElementById('idealWeightRange').innerText = `Rozsah: ${(idealWeight * 0.9).toFixed(0)} - ${(idealWeight * 1.1).toFixed(0)} kg`;
+        
+        document.getElementById('adjBmiValue').innerText = adjBmi;
+        document.getElementById('tdeeValue').innerText = tdee.toLocaleString('sk-SK');
+
+        document.getElementById('genPct').innerText = genPercent;
+        document.getElementById('lifePct').innerText = lifePercent;
+        document.getElementById('genBar').style.width = genPercent + '%';
+        document.getElementById('lifeBar').style.width = lifePercent + '%';
+
+        // Odporúčania a Verdikt
+        const verdictTitle = document.getElementById('verdictTitle');
+        const verdictText = document.getElementById('verdictText');
+        const adviceBox = document.getElementById('adviceBox');
+
+        if (genPercent >= 60) {
+            verdictTitle.innerText = `🧬 Verdikt: Dominantná Genetika (${genPercent}%)`;
+            verdictText.innerText = "Stavba tela vašich rodičov výrazne ovplyvňuje vašu váhu a metabolizmus.";
+        } else if (lifePercent >= 60) {
+            verdictTitle.innerText = `🍔 Verdikt: Vplyv Životného Štýlu (${lifePercent}%)`;
+            verdictText.innerText = "Telesná hmotnosť je prevažne výsledkom denného stravovania a pohybového režimu.";
+        } else {
+            verdictTitle.innerText = "⚖️ Verdikt: Vyrovnaný Vplyv (50% / 50%)";
+            verdictText.innerText = "Životný štýl aj rodinné predispozície sa podieľajú rovnakým dielom.";
+        }
+
+        adviceBox.innerHTML = `💡 <strong>Fit Odporúčanie:</strong> Pre udržanie váhy potrebujete prijať približne <strong>${tdee} kcal</strong> denne.<br>` +
+            (bmi > 25 
+                ? `Pre zdravý úbytok hmotnosti sa odporúča denný príjem znížiť na <strong>${tdee - 400} kcal</strong>.` 
+                : bmi < 18.5 
+                ? `Pre priberanie svalovej hmoty zvýšte príjem na <strong>${tdee + 300} kcal</strong>.` 
+                : `Tvoja váha je v skvelej forme! Udržuj súčasný režim.`);
+
+        document.getElementById('resultCard').classList.remove('hidden');
+        document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+    });
+</script>
+
+</body>
+</html>
