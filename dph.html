@@ -1,0 +1,168 @@
+<!DOCTYPE html>  
+<html lang="sk">  
+<head>  
+  <meta charset="UTF-8" />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  
+  <title>Svetová DPH Kalkulačka – ErikAI</title>  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>  
+    :root {
+      --bg-color: #f4f6f9;
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --accent-color: #2563eb;
+      --accent-hover: #1d4ed8;
+      --border-color: #e2e8f0;
+      --input-bg: #ffffff;
+      --result-bg: #f8fafc;
+    }
+
+    body.dark-mode {
+      --bg-color: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.95);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --input-bg: #1e293b;
+      --result-bg: #1e293b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; transition: background 0.2s, color 0.2s; }
+    body { background: var(--bg-color); color: var(--text-main); padding: 20px 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    
+    .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 15px; }
+
+    .card { background: var(--card-bg); border-radius: 16px; padding: 24px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    h2 { font-size: 1.25rem; font-weight: 700; color: var(--text-main); }
+    
+    .btn-theme { background: var(--accent-color); color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+    .btn-theme:hover { background: var(--accent-hover); }
+
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+    
+    .input-wrapper { position: relative; display: flex; align-items: center; }
+    .input-wrapper input, .input-wrapper select { width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); font-size: 1rem; outline: none; font-weight: 600; }
+    .input-wrapper input:focus, .input-wrapper select:focus { border-color: var(--accent-color); }
+    .currency { position: absolute; right: 16px; color: var(--text-muted); font-weight: 600; }
+
+    .rates-row { display: flex; gap: 8px; margin-bottom: 20px; }
+    .rate-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+    .rate-btn.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
+
+    .results-box { background: var(--result-bg); border-radius: 12px; padding: 16px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+    .result-item { display: flex; justify-content: space-between; align-items: center; }
+    .result-label { font-size: 0.9rem; color: var(--text-muted); }
+    .result-value { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
+    .result-value.highlight { color: var(--accent-color); font-size: 1.3rem; }
+
+    .footer-text { font-size: 0.75rem; text-align: center; color: var(--text-muted); margin-top: 15px; }
+  </style>  
+</head>  
+<body>    
+
+<div class="container">
+
+  <div class="card">
+    <div class="header-bar">
+      <h2>⚡ Svetová DPH Kalkulačka</h2>
+      <button class="btn-theme" onclick="toggleTheme()">🌓 Režim</button>
+    </div>
+
+    <!-- Výber sadzby DPH -->
+    <div class="form-group">
+      <label>Sadzba DPH</label>
+      <div class="rates-row">
+        <button class="rate-btn active" onclick="setRate(20, this)">20 %</button>
+        <button class="rate-btn" onclick="setRate(10, this)">10 %</button>
+        <button class="rate-btn" onclick="setRate(5, this)">5 %</button>
+        <button class="rate-btn" onclick="setRate(23, this)">23 %</button>
+      </div>
+    </div>
+
+    <!-- Vstup: Suma bez DPH -->
+    <div class="form-group">
+      <label for="zaklad">Suma bez DPH (Základ)</label>
+      <div class="input-wrapper">
+        <input type="number" id="zaklad" placeholder="0.00" oninput="vypocitajZoZakladu()">
+        <span class="currency">€</span>
+      </div>
+    </div>
+
+    <!-- Vstup: Suma s DPH -->
+    <div class="form-group">
+      <label for="celkom">Suma s DPH (Celkom)</label>
+      <div class="input-wrapper">
+        <input type="number" id="celkom" placeholder="0.00" oninput="vypocitajZCelku()">
+        <span class="currency">€</span>
+      </div>
+    </div>
+
+    <!-- Výsledky -->
+    <div class="results-box">
+      <div class="result-item">
+        <span class="result-label">Výška DPH:</span>
+        <span class="result-value" id="vysledok-dph">0.00 €</span>
+      </div>
+      <hr style="border: none; border-top: 1px solid var(--border-color);">
+      <div class="result-item">
+        <span class="result-label">Celková suma s DPH:</span>
+        <span class="result-value highlight" id="vysledok-spolu">0.00 €</span>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="footer-text">  
+    © 2025 Erik Mohylák – Všetky práva vyhradené.  
+  </p>  
+
+</div>
+
+<script>
+  let aktualnaSadzba = 20;
+
+  function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+  }
+
+  function setRate(sadzba, btn) {
+    aktualnaSadzba = sadzba;
+    document.querySelectorAll('.rate-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // Prepočíta podľa toho, kde je práve zadaná hodnota
+    const zaklad = document.getElementById('zaklad').value;
+    if (zaklad) {
+      vypocitajZoZakladu();
+    } else {
+      vypocitajZCelku();
+    }
+  }
+
+  function vypocitajZoZakladu() {
+    const zaklad = parseFloat(document.getElementById('zaklad').value) || 0;
+    const dph = zaklad * (aktualnaSadzba / 100);
+    const spolu = zaklad + dph;
+
+    document.getElementById('celkom').value = spolu ? spolu.toFixed(2) : '';
+    document.getElementById('vysledok-dph').textContent = dph.toFixed(2) + ' €';
+    document.getElementById('vysledok-spolu').textContent = spolu.toFixed(2) + ' €';
+  }
+
+  function vypocitajZCelku() {
+    const celkom = parseFloat(document.getElementById('celkom').value) || 0;
+    const zaklad = celkom / (1 + aktualnaSadzba / 100);
+    const dph = celkom - zaklad;
+
+    document.getElementById('zaklad').value = zaklad ? zaklad.toFixed(2) : '';
+    document.getElementById('vysledok-dph').textContent = dph.toFixed(2) + ' €';
+    document.getElementById('vysledok-spolu').textContent = celkom.toFixed(2) + ' €';
+  }
+</script>
+
+</body>  
+</html>
