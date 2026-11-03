@@ -1,0 +1,270 @@
+<!DOCTYPE html>  
+<html lang="sk">  
+<head>  
+  <meta charset="UTF-8" />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  
+  <title>ErikAI Chat – Kompletný Systém</title>  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>  
+    :root {
+      --bg-color: #f4f6f9;
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --accent-color: #2563eb;
+      --accent-hover: #1d4ed8;
+      --border-color: #e2e8f0;
+      --chat-bg: #ffffff;
+      --user-msg: #2563eb;
+      --ai-msg: #f1f5f9;
+    }
+
+    body.dark-mode {
+      --bg-color: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.95);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --chat-bg: #1e293b;
+      --user-msg: #3b82f6;
+      --ai-msg: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; transition: background 0.2s, color 0.2s; }
+    body { background: var(--bg-color); color: var(--text-main); padding: 20px 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    
+    .container { width: 100%; max-width: 700px; display: flex; flex-direction: column; gap: 15px; }
+
+    .card { background: var(--card-bg); border-radius: 16px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    
+    .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    #cas { font-size: 0.95rem; font-weight: 600; color: var(--accent-color); }
+    
+    .btn-theme { background: var(--accent-color); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+    .btn-theme:hover { background: var(--accent-hover); }
+
+    h2, h3 { font-weight: 700; margin-bottom: 8px; color: var(--text-main); }
+    p, li { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
+    ul { padding-left: 20px; }
+
+    .alert-box { background: rgba(37, 99, 235, 0.08); border-left: 4px solid var(--accent-color); padding: 12px 16px; border-radius: 8px; }
+    .warning-text { color: #ef4444; font-weight: 600; font-size: 0.85rem; text-align: center; }
+
+    /* Chat Okno */
+    #chat-box { height: 350px; overflow-y: auto; background: var(--chat-bg); border-radius: 12px; border: 1px solid var(--border-color); padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+    
+    .message { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 0.92rem; line-height: 1.4; word-break: break-word; }
+    .message strong { display: block; margin-bottom: 2px; font-size: 0.75rem; text-transform: uppercase; opacity: 0.8; }
+    
+    .message.user { align-self: flex-end; background: var(--user-msg); color: white; border-bottom-right-radius: 2px; }
+    .message.ai { align-self: flex-start; background: var(--ai-msg); color: var(--text-main); border-bottom-left-radius: 2px; }
+
+    /* Vstupný formulár */
+    #chat-form { display: flex; gap: 8px; }
+    #user-input { flex: 1; padding: 12px 16px; border-radius: 25px; border: 1px solid var(--border-color); background: var(--chat-bg); color: var(--text-main); font-size: 0.95rem; outline: none; }
+    #user-input:focus { border-color: var(--accent-color); }
+    
+    #chat-form button { padding: 12px 20px; border-radius: 25px; border: none; background: var(--accent-color); color: white; font-weight: 600; cursor: pointer; }
+    #chat-form button:hover { background: var(--accent-hover); }
+    #mic-btn { padding: 12px 16px !important; border-radius: 50% !important; }
+
+    .footer-text { font-size: 0.75rem; text-align: center; color: var(--text-muted); margin-top: 10px; }
+  </style>  
+</head>  
+<body>    
+
+<div class="container">
+
+  <!-- Top Bar: Čas, Prekladač & Režim -->
+  <div class="card header-bar">
+    <p id="cas">🕒 Načítavam čas...</p>  
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <div id="google_translate_element"></div>
+      <button class="btn-theme" onclick="toggleTheme()">🌓 Režim</button>
+    </div>
+  </div>
+
+  <!-- Návod & Informácie -->
+  <div class="card">
+    <h3>ℹ️ Ako používať ErikAI Chat</h3>  
+    <p>ErikAI ti odpovie na jednoduché otázky, napríklad: <strong>Pes</strong>, <strong>Futbal</strong>, <strong>Slovensko</strong>...</p>  
+    <p style="margin-top: 8px;">🧠 Môžeš použiť aj príkaz na vyhľadávanie:</p>  
+    <ul>  
+      <li><code>Vyhľadaj: Messi</code> – otvorí Google s výsledkami pre Messi</li>  
+    </ul>  
+  </div>  
+
+  <p class="warning-text">  
+    ⚠️ Pred odoslaním správy počkaj 1–2 sekundy, kým sa načíta ErikAI.  
+  </p>
+
+  <div class="card alert-box">  
+    <strong>🔔 Upozornenie:</strong>  
+    <p style="margin: 4px 0;">Začni písať do políčka a systém ti sám začne ponúkať a filtrovať známe témy z databázy!</p>  
+    <!-- Sem JavaScript automaticky vpíše reálny počet -->
+    <p style="margin-top: 6px; font-weight: 600;">🤖 ErikAI aktuálne pozná presne <strong id="pocetOdpovediSpan" style="color: var(--accent-color);">0</strong> odpovedí!</p>  
+  </div>  
+
+  <!-- Chatovacie Rozhranie -->
+  <div class="card" style="padding: 15px;">
+    <h2>💬 Chat s ErikAI</h2>  
+    <div id="chat-box" style="margin: 10px 0;"></div>  
+    
+    <form id="chat-form">  
+      <!-- Input prepojený s datalistom pre živé filtrovanie pri písaní -->
+      <input id="user-input" list="slovaPonuka" placeholder="Napíš otázku alebo začni písať..." autocomplete="off" style="flex: 1;">  
+      <datalist id="slovaPonuka"></datalist>
+
+      <button type="submit">Odoslať</button>  
+      <button id="mic-btn" type="button" title="Povedz niečo 🎤">🎤</button>  
+    </form>  
+  </div>
+
+  <p class="footer-text">  
+    This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.<br>   
+    © 2025 Erik Mohylák – All rights reserved.  
+  </p>  
+
+</div>
+
+<!-- Google Prekladač -->
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+<script type="text/javascript">
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+      pageLanguage: 'sk',
+      includedLanguages: 'en,cs,fr,hu,de,pl,ro,ru,es,it,uk,sr,bn,ko,ja,zh-CN',
+      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+    }, 'google_translate_element');
+  }
+
+  function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+  }
+
+  function aktualizujCas() {  
+    const teraz = new Date();  
+    const formatter = new Intl.DateTimeFormat("sk-SK", {  
+      weekday: "long", year: "numeric", month: "long", day: "numeric",  
+      hour: "2-digit", minute: "2-digit", second: "2-digit"  
+    });  
+    document.getElementById("cas").textContent = "🕒 " + formatter.format(teraz);  
+  }  
+  setInterval(aktualizujCas, 1000);  
+  aktualizujCas();  
+
+  // Kontrola Referrer
+  const povoleneRef = ["erikai-demoa1.github.io", "erikaios.online"];
+  let pristupOk = false;
+  povoleneRef.forEach(ref => {
+    if (document.referrer.includes(ref)) pristupOk = true;
+  });
+  if (!pristupOk && window.location.hostname !== "localhost" && window.location.protocol !== "file:") {
+    alert("Prístup zakázaný: túto stránku nemožno otvoriť priamo.");
+    window.location.href = "https://erikaios.online/";
+  }
+</script>
+
+<!-- TVOJ CELÝ STARÝ JS SKRYTÝ A SPOJENÝ PRIAMO V HTML -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("chat-form");
+    const micBtn = document.getElementById("mic-btn");
+    const input = document.getElementById("user-input");
+    const chat = document.getElementById("chat-box");
+    const datalist = document.getElementById("slovaPonuka");
+    const pocetSpan = document.getElementById("pocetOdpovediSpan");
+
+    // Tvoja kompletná databáza odpovedí (tu sú tie tvoje dáta)
+    const odpovede = {
+      "pes": "Pes domáci alebo pes je taxón z rodu Canis. Je to domestikovaná podoba vlka dravého. Presné zaradenie tohto taxónu v rámci rodu Canis je sporné.",
+      "futbal": "Futbal, zastarano kopaná, je kolektívna loptová hra, ktorá je považovaná za najpopulárnejší šport na svete. Podľa prieskumu FIFA hrá futbal pravidelne najmenej 300 miliónov ľudí vo viac ako 220 krajinách sveta.",
+      "erikai": "ErikAI je offline umelá inteligencia vytvorená tebou.",
+      "slovensko": "Slovensko, dlhý tvar Slovenská republika, je vnútrozemský štát v strednej Európe. Je členským štátom Európskej únie a NATO. Má rozlohu 49 036 km².",
+      "bratislava": "Bratislava je hlavné a rozlohou aj počtom obyvateľov najväčšie mesto Slovenska.",
+      "košice": "Košice sú metropolou východného Slovenska a s takmer 230 000 obyvateľmi druhým najľudnatejším mestom.",
+      "žilina": "Počtom obyvateľov je Žilina štvrtým najväčším mestom na Slovensku. Je administratívnym a kultúrnym centrom.",
+      "nitra": "Nitra je mesto ležiace v Nitrianskom kraji vzdialené približne 90 km od hlavného mesta Bratislavy.",
+      "prešov": "Prešov je krajské mesto ležiace v Prešovskom kraji. Je tretím najľudnatejším mestom na Slovensku.",
+      "tatry": "Tatry sú geomorfologický celok a tvoria najvyššiu časť Karpát na hranici s Poľskom.",
+      "dunaj": "Dunaj je druhá najdlhšia európska rieka a najdlhšia rieka v Európskej únii."
+      // TU SI MÔŽES DOPLNIŤ AKÉKOĽVEK DALŠIE ODPOVEDE Z TVOJHO ZOZNAMU
+    };
+
+    // 1. Zrátanie a vypísanie reálneho počtu odpovedí do HTML
+    const celkovyPocet = Object.keys(odpovede).length;
+    pocetSpan.textContent = celkovyPocet;
+
+    // 2. Automatické naplnenie datalistu pre živé filtrovanie pri písaní
+    for (let kluc in odpovede) {
+      let option = document.createElement("option");
+      option.value = kluc;
+      datalist.appendChild(option);
+    }
+
+    function getAIResponse(text) {
+      const lower = text.toLowerCase().trim();
+      if (lower.startsWith("vyhľadaj:")) {
+        const query = lower.replace("vyhľadaj:", "").trim();
+        window.open("https://www.google.com/search?q=" + encodeURIComponent(query), "_blank");
+        return `🔍 Vyhľadávam: ${query}`;
+      }
+      return odpovede[lower] || "Prepáč, túto otázku ešte nepoznám.";
+    }
+
+    function addMessage(sender, text, type) {
+      const msg = document.createElement("div");
+      msg.className = `message ${type}`;
+      msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
+      chat.appendChild(msg);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const userText = input.value.trim();
+      if (!userText) return;
+
+      addMessage("Ty", userText, "user");
+      const response = getAIResponse(userText);
+      addMessage("ErikAI", response, "ai");
+      input.value = "";
+    });
+
+    // Mikrofón
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+
+      recognition.lang = "sk-SK";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      micBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        recognition.start();
+        micBtn.disabled = true;
+        micBtn.textContent = "🎙️...";
+      });
+
+      recognition.addEventListener("result", (event) => {
+        const result = event.results[0][0].transcript;
+        input.value = result;
+        micBtn.disabled = false;
+        micBtn.textContent = "🎤";
+      });
+
+      recognition.addEventListener("end", () => {
+        micBtn.disabled = false;
+        micBtn.textContent = "🎤";
+      });
+
+    } else {
+      micBtn.disabled = true;
+      micBtn.title = "Tvoj prehliadač nepodporuje mikrofón.";
+    }
+  });
+</script>
+
+</body>  
+</html>
