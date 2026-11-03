@@ -3,6 +3,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const micBtn = document.getElementById("mic-btn");
   const input = document.getElementById("user-input");
   const chat = document.getElementById("chat-box");
+  const datalist = document.getElementById("slovaPonuka");
+  const pocetSpan = document.getElementById("pocetOdpovediSpan");
 
   const odpovede = {
     "pes": "Pes domáci alebo pes je taxón z rodu Canis. Je to domestikovaná podoba vlka dravého. Presné zaradenie tohto taxónu v rámci rodu Canis je sporné.",
@@ -1292,6 +1294,20 @@ document.addEventListener("DOMContentLoaded", function () {
 "fetch na obrázok": "`fetch('obrazok.jpg').then(r => r.blob())` – načítanie obrázka ako blob.",
   };
 
+  // 1. Zrátanie a vypísanie presného počtu odpovedí na stránku
+  if (pocetSpan) {
+    pocetSpan.textContent = Object.keys(odpovede).length;
+  }
+
+  // 2. Naplnenie ponuky (datalistu) pre filtrovanie pri písaní
+  if (datalist) {
+    for (let kluc in odpovede) {
+      let option = document.createElement("option");
+      option.value = kluc;
+      datalist.appendChild(option);
+    }
+  }
+
   function getAIResponse(text) {
     const lower = text.toLowerCase().trim();
     if (lower.startsWith("vyhľadaj:")) {
@@ -1304,13 +1320,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function addMessage(sender, text) {
     const msg = document.createElement("div");
-    msg.className = "message";
+    msg.className = "message " + (sender === "Ty" ? "user" : "ai");
     msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
     chat.appendChild(msg);
     chat.scrollTop = chat.scrollHeight;
   }
 
-   form.addEventListener("submit", function (e) {
+  form.addEventListener("submit", function (e) {
     e.preventDefault();
     const userText = input.value.trim();
     if (!userText) return;
@@ -1321,7 +1337,7 @@ document.addEventListener("DOMContentLoaded", function () {
     input.value = "";
   });
 
-  // ✅ Opravené podmienky pre mikrofón
+  // Mikrofón
   if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
@@ -1353,5 +1369,4 @@ document.addEventListener("DOMContentLoaded", function () {
     micBtn.disabled = true;
     micBtn.title = "Tvoj prehliadač nepodporuje mikrofón.";
   }
-
 });
