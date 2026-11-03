@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokročilá Mzdová Kalkulačka & Kariérny Porovnávač</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.35);
+            --bg-dark: #090d16;
+            --card-bg: rgba(22, 31, 49, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --input-bg: rgba(11, 17, 29, 0.85);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent: #06b6d4;
+            --purple: #a855f7;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 90% 90%, rgba(168, 85, 247, 0.12) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2.5rem 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 950px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 1.25rem;
+            padding: 1.75rem;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .header-box {
+            text-align: center;
+        }
+
+        .header-box h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-box p {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .calc-type-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            background: var(--input-bg);
+            padding: 0.4rem;
+            border-radius: 0.85rem;
+            border: 1px solid var(--card-border);
+            margin-bottom: 1.5rem;
+        }
+
+        .calc-type-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.75rem 0.5rem;
+            border-radius: 0.6rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .calc-type-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.1rem;
+        }
+
+        @media (min-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 0.75rem;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-top: 0.5rem;
+            cursor: pointer;
+        }
+
+        .checkbox-group input {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 1.1rem;
+            background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 20px -5px var(--primary-glow);
+            transition: all 0.2s ease;
+            margin-top: 0.5rem;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px -5px var(--primary-glow);
+        }
+
+        /* Dashboard Metric Boxes */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-box {
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .metric-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-value {
+            font-size: 2.1rem;
+            font-weight: 800;
+            margin: 0.3rem 0;
+        }
+
+        .metric-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Postup & Vzorce */
+        .step-box {
+            background: rgba(15, 23, 42, 0.6);
+            border-left: 4px solid var(--accent);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border-top: 1px solid var(--card-border);
+            border-right: 1px solid var(--card-border);
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .step-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #fff;
+            margin-bottom: 0.6rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .formula-badge {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent);
+            font-family: monospace;
+            padding: 0.25rem 0.6rem;
+            border-radius: 0.35rem;
+            font-size: 0.85rem;
+        }
+
+        .math-line {
+            font-family: monospace;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 0.6rem;
+            border-radius: 0.4rem;
+            margin: 0.5rem 0;
+            color: var(--accent);
+            line-height: 1.4;
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .table-custom th, .table-custom td {
+            padding: 0.65rem;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .table-custom th {
+            color: var(--text-muted);
+        }
+
+        /* TOP 10 Jobs List */
+        .job-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .job-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.85rem 1.1rem;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .job-item.highlight {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+        }
+
+        .job-info {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .job-rank {
+            background: rgba(255, 255, 255, 0.1);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .job-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .job-salary {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--accent);
+        }
+
+        .user-tag {
+            background: var(--success);
+            color: #fff;
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.3rem;
+            font-weight: bold;
+            margin-left: 0.5rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card header-box">
+        <h1>🎓 Edukatívna Mzdová Kalkulačka (SR)</h1>
+        <p>Prepočítavaj z čistej, hrubej aj superhrubej mzdy a porovnaj sa s TOP 10 povolaniami</p>
+    </div>
+
+    <!-- Formulár -->
+    <div class="card">
+        <h2>⚙️ Zadanie Mzdy & Parametrov</h2>
+        
+        <!-- Výber z čoho počítame -->
+        <label>Chcem zadať a vypočítať z:</label>
+        <div class="calc-type-selector">
+            <button type="button" class="calc-type-btn active" onclick="setCalcMode('gross')">Hrubá Mzda</button>
+            <button type="button" class="calc-type-btn" onclick="setCalcMode('net')">Čistá Mzda</button>
+            <button type="button" class="calc-type-btn" onclick="setCalcMode('superGross')">Superhrubá Mzda</button>
+        </div>
+
+        <form id="salaryForm">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label id="salaryLabel" for="salaryInput">Hrubá Mzda (€)</label>
+                    <input type="number" id="salaryInput" value="1300" min="0" step="10" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="childrenCount">Počet detí (Daňový bonus)</label>
+                    <input type="number" id="childrenCount" value="0" min="0" max="10">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-group">
+                    <input type="checkbox" id="applyNczd" checked>
+                    <span>Uplatniť NČZD (Nezdaniteľnú časť základu dane)</span>
+                </label>
+                <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.3rem;">
+                    (Znižuje základ dane a šetrí dane. Uplatňuje sa u jedného hlavného zamestnávateľa.)
+                </span>
+            </div>
+
+            <button type="submit" class="btn-submit">⚡ Vypočítať & Porovnať s Povolaniami</button>
+        </form>
+    </div>
+
+    <!-- Výsledkový a Edukatívny Panel -->
+    <div class="card hidden" id="resultCard">
+        <h2>📊 Výsledný Prehľad Mzdy</h2>
+        
+        <div class="dashboard">
+            <div class="metric-box">
+                <div class="metric-title">Čistá Mzda (Pre teba)</div>
+                <div class="metric-value" id="netValue" style="color: var(--success);">0 €</div>
+                <div class="metric-sub">Peniaze na účet</div>
+            </div>
+
+            <div class="metric-box">
+                <div class="metric-title">Hrubá Mzda</div>
+                <div class="metric-value" id="grossValue" style="color: #fff;">0 €</div>
+                <div class="metric-sub">Zmluvný plat</div>
+            </div>
+
+            <div class="metric-box">
+                <div class="metric-title">Superhrubá Mzda</div>
+                <div class="metric-value" id="superGrossValue" style="color: var(--accent);">0 €</div>
+                <div class="metric-sub">Náklady zamestnávateľa</div>
+            </div>
+        </div>
+
+        <h2>📖 Postup Výpočtu Krok za Krokom (Návod a Vzorce)</h2>
+
+        <!-- Kroky -->
+        <div class="step-box">
+            <div class="step-title">
+                <span>1. Celkové Náklady Zamestnávateľa (Superhrubá Mzda)</span>
+                <span class="formula-badge">Hrubá Mzda + 35.2%</span>
+            </div>
+            <div style="font-size: 0.95rem; line-height: 1.6;">
+                Zamestnávateľ okrem hrubej mzdy platí štátu a poisťovniam ďalších <strong>35,2 %</strong> naviac.
+                <div class="math-line" id="mathStep1"></div>
+            </div>
+        </div>
+
+        <div class="step-box">
+            <div class="step-title">
+                <span>2. Odvody Zamestnanca z Hrubej Mzdy</span>
+                <span class="formula-badge">Hrubá × 9.4% (SP) + 4% (ZP)</span>
+            </div>
+            <div style="font-size: 0.95rem; line-height: 1.6;">
+                Z hrubej mzdy sa strhávajú odvody do Sociálnej (9,4 %) a Zdravotnej poisťovne (4,0 %). Spolu: <strong>13,4 %</strong>.
+                <div class="math-line" id="mathStep2"></div>
+                <table class="table-custom">
+                    <tr>
+                        <th>Položka</th>
+                        <th>Sadzba</th>
+                        <th>Suma</th>
+                    </tr>
+                    <tr>
+                        <td>Zdravotné poistenie (ZP)</td>
+                        <td>4.0 %</td>
+                        <td id="employeeZp">0 €</td>
+                    </tr>
+                    <tr>
+                        <td>Sociálne poistenie (SP)</td>
+                        <td>9.4 %</td>
+                        <td id="employeeSp">0 €</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="step-box">
+            <div class="step-title">
+                <span>3. Základ Dane a Nezdaniteľná Časť (NČZD)</span>
+                <span class="formula-badge">Základ = Hrubá - Odvody - NČZD</span>
+            </div>
+            <div style="font-size: 0.95rem; line-height: 1.6;">
+                Daň sa vypočítava zo zdaniteľného základe po odečítaní odvodov a nezdaniteľného minima.
+                <div class="math-line" id="mathStep3"></div>
+            </div>
+        </div>
+
+        <div class="step-box">
+            <div class="step-title">
+                <span>4. Výpočet Preddavku na Daň</span>
+                <span class="formula-badge">Zdaniteľný Základ × 19%</span>
+            </div>
+            <div style="font-size: 0.95rem; line-height: 1.6;">
+                Zo zdaniteľného základu sa vypočíta 19 % daň z príjmu.
+                <div class="math-line" id="mathStep4"></div>
+            </div>
+        </div>
+
+        <div class="step-box">
+            <div class="step-title">
+                <span>5. Finálna Čistá Mzda</span>
+                <span class="formula-badge">Hrubá - Odvody - Daň + Bonus</span>
+            </div>
+            <div style="font-size: 0.95rem; line-height: 1.6;">
+                Čistá mzda je výsledná suma na bankový účet.
+                <div class="math-line" id="mathStep5"></div>
+            </div>
+        </div>
+
+        <!-- TOP 10 Povolaní -->
+        <h2 style="margin-top: 2rem;">🏆 TOP 10 Povolaní & Kde sa nachádza tvoja mzda</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+            Porovnanie priemernej mzdy v rôznych odvetviach na Slovensku zobrazené v <strong id="jobsModeLabel" style="color: var(--accent);">Hruhej mzde</strong>:
+        </p>
+        <div class="job-list" id="jobList">
+            <!-- Dynamicky naplní JS -->
+        </div>
+
+    </div>
+</div>
+
+<script>
+    let currentMode = 'gross'; // 'gross', 'net', 'superGross'
+
+    // Zoznam 10 typických profesií s priemernou hrubou mzdou v SR
+    const baseJobs = [
+        { title: "Riaditeľ IT / C-Level Exekutíva", gross: 4800, icon: "💼" },
+        { title: "Lekár Špecialista / Primár", gross: 3500, icon: "👨‍⚕️" },
+        { title: "Senior Software Engineer / Architekt", gross: 3100, icon: "💻" },
+        { title: "Advokát / Právny poradca", gross: 2400, icon: "⚖️" },
+        { title: "Projektový Manažér (Stavba / IT)", gross: 2000, icon: "📊" },
+        { title: "Stredoškolský Učiteľ / Pedagóg", gross: 1450, icon: "👨‍🏫" },
+        { title: "Mechanik / Elektrotechník", gross: 1350, icon: "🔧" },
+        { title: "Sestra / Zdravotný asistent", gross: 1250, icon: "🩺" },
+        { title: "Predavač / Pokladník v reťazci", gross: 980, icon: "🛒" },
+        { title: "Pracovník v čistiarni / Skladník", gross: 880, icon: "📦" }
+    ];
+
+    function setCalcMode(mode) {
+        currentMode = mode;
+        const btns = document.querySelectorAll('.calc-type-btn');
+        btns.forEach(b => b.classList.remove('active'));
+
+        const label = document.getElementById('salaryLabel');
+        const input = document.getElementById('salaryInput');
+
+        if (mode === 'gross') {
+            btns[0].classList.add('active');
+            label.innerText = "Hrubá Mzda (€)";
+            if (input.value === "1000" || input.value === "1750") input.value = 1300;
+        } else if (mode === 'net') {
+            btns[1].classList.add('active');
+            label.innerText = "Čistá Mzda (€)";
+            if (input.value === "1300") input.value = 1000;
+        } else if (mode === 'superGross') {
+            btns[2].classList.add('active');
+            label.innerText = "Superhrubá Mzda (€)";
+            if (input.value === "1300" || input.value === "1000") input.value = 1750;
+        }
+    }
+
+    // Pomocná funkcia pre spätný výpočet hrubej mzdy z čistej
+    function calculateGrossFromNet(targetNet, children, applyNczd) {
+        let low = 0;
+        let high = targetNet * 3;
+        let estimatedGross = targetNet;
+
+        // Bisekcia na presný výpočet hrubej mzdy
+        for (let i = 0; i < 40; i++) {
+            estimatedGross = (low + high) / 2;
+            const res = calcDetailsFromGross(estimatedGross, children, applyNczd);
+            if (res.net < targetNet) {
+                low = estimatedGross;
+            } else {
+                high = estimatedGross;
+            }
+        }
+        return estimatedGross;
+    }
+
+    function calcDetailsFromGross(gross, children, applyNczd) {
+        const EMPLOYEE_ZP_RATE = 0.04;
+        const EMPLOYEE_SP_RATE = 0.094;
+        const EMPLOYER_CONTRIBS_RATE = 0.352;
+        const NCZD_MONTHLY = applyNczd ? 479.48 : 0;
+        const TAX_RATE = 0.19;
+        const CHILD_BONUS = 140;
+
+        const employerContribs = gross * EMPLOYER_CONTRIBS_RATE;
+        const superGross = gross + employerContribs;
+
+        const employeeZp = gross * EMPLOYEE_ZP_RATE;
+        const employeeSp = gross * EMPLOYEE_SP_RATE;
+        const totalOdvody = employeeZp + employeeSp;
+
+        const baseBeforeNczd = gross - totalOdvody;
+        const taxableBase = Math.max(0, baseBeforeNczd - NCZD_MONTHLY);
+
+        const taxBeforeBonus = taxableBase * TAX_RATE;
+        const totalChildBonus = children * CHILD_BONUS;
+        const finalTax = Math.max(0, taxBeforeBonus - totalChildBonus);
+
+        const net = gross - totalOdvody - taxBeforeBonus + totalChildBonus;
+
+        return {
+            gross,
+            superGross,
+            employerContribs,
+            employeeZp,
+            employeeSp,
+            totalOdvody,
+            baseBeforeNczd,
+            taxableBase,
+            taxBeforeBonus,
+            totalChildBonus,
+            finalTax,
+            net,
+            nczd: NCZD_MONTHLY
+        };
+    }
+
+    document.getElementById('salaryForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const inputVal = parseFloat(document.getElementById('salaryInput').value) || 0;
+        const children = parseInt(document.getElementById('childrenCount').value) || 0;
+        const applyNczd = document.getElementById('applyNczd').checked;
+
+        let gross = 0;
+
+        if (currentMode === 'gross') {
+            gross = inputVal;
+        } else if (currentMode === 'superGross') {
+            gross = inputVal / 1.352; // Odstránenie 35.2% navýšenia zamestnávateľa
+        } else if (currentMode === 'net') {
+            gross = calculateGrossFromNet(inputVal, children, applyNczd);
+        }
+
+        const data = calcDetailsFromGross(gross, children, applyNczd);
+
+        // Zobrazenie 3 hlavných metrík
+        document.getElementById('netValue').innerText = data.net.toFixed(2) + ' €';
+        document.getElementById('grossValue').innerText = data.gross.toFixed(2) + ' €';
+        document.getElementById('superGrossValue').innerText = data.superGross.toFixed(2) + ' €';
+
+        // Výpis matematických krokov
+        document.getElementById('mathStep1').innerHTML = 
+            `${data.gross.toFixed(2)} € (Hrubá) + (${data.gross.toFixed(2)} × 35.2% [${data.employerContribs.toFixed(2)} €]) = <strong>${data.superGross.toFixed(2)} €</strong>`;
+
+        document.getElementById('employeeZp').innerText = data.employeeZp.toFixed(2) + ' €';
+        document.getElementById('employeeSp').innerText = data.employeeSp.toFixed(2) + ' €';
+
+        document.getElementById('mathStep2').innerHTML = 
+            `Odvody spolu = ${data.employeeZp.toFixed(2)} € (ZP) + ${data.employeeSp.toFixed(2)} € (SP) = <strong>${data.totalOdvody.toFixed(2)} €</strong>`;
+
+        document.getElementById('mathStep3').innerHTML = 
+            `Základ dane = ${data.gross.toFixed(2)} € - ${data.totalOdvody.toFixed(2)} € = ${data.baseBeforeNczd.toFixed(2)} €<br>` +
+            (applyNczd 
+                ? `Po uplatnení NČZD (-${data.nczd} €) je zdaniteľný základ: <strong>${data.taxableBase.toFixed(2)} €</strong>`
+                : `NČZD neuplatnené, zdaniteľný základ: <strong>${data.taxableBase.toFixed(2)} €</strong>`);
+
+        document.getElementById('mathStep4').innerHTML = 
+            `Daň (19%) = ${data.taxableBase.toFixed(2)} € × 0.19 = ${data.taxBeforeBonus.toFixed(2)} €<br>` +
+            (children > 0 
+                ? `Daňový bonus (${children}x 140 €) = -${data.totalChildBonus} € => Výsledná daň: <strong>${data.finalTax.toFixed(2)} €</strong>`
+                : `Výsledná daň: <strong>${data.taxBeforeBonus.toFixed(2)} €</strong>`);
+
+        document.getElementById('mathStep5').innerHTML = 
+            `Čistá Mzda = ${data.gross.toFixed(2)} € (Hrubá) - ${data.totalOdvody.toFixed(2)} € (Odvody) - ${data.taxBeforeBonus.toFixed(2)} € (Daň)` +
+            (children > 0 ? ` + ${data.totalChildBonus} € (Bonus na deti)` : ``) +
+            ` = <strong style="color: var(--success); font-size: 1.15rem;">${data.net.toFixed(2)} €</strong>`;
+
+        // Render TOP 10 Povolaní
+        renderJobList(data, children, applyNczd);
+
+        document.getElementById('resultCard').classList.remove('hidden');
+        document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    function renderJobList(userData, children, applyNczd) {
+        const jobListEl = document.getElementById('jobList');
+        const modeLabelEl = document.getElementById('jobsModeLabel');
+        jobListEl.innerHTML = '';
+
+        let modeText = "Hruhej mzde";
+        let userCompareValue = userData.gross;
+
+        if (currentMode === 'net') {
+            modeText = "Čistej mzde";
+            userCompareValue = userData.net;
+        } else if (currentMode === 'superGross') {
+            modeText = "Superhruhej mzde";
+            userCompareValue = userData.superGross;
+        }
+        modeLabelEl.innerText = modeText;
+
+        // Vytvorenie zoznamu povolaní prepočítaných do zvoleného režimu
+        const processedJobs = baseJobs.map(j => {
+            const d = calcDetailsFromGross(j.gross, children, applyNczd);
+            let val = j.gross;
+            if (currentMode === 'net') val = d.net;
+            if (currentMode === 'superGross') val = d.superGross;
+            return { ...j, displaySalary: val };
+        });
+
+        // Pridanie užívateľskej mzdy do zoznamu pre zoradenie
+        const userItem = {
+            title: "Tvoja Zadaná Mzda",
+            displaySalary: userCompareValue,
+            isUser: true,
+            icon: "⭐"
+        };
+
+        const allItems = [...processedJobs, userItem];
+        allItems.sort((a, b) => b.displaySalary - a.displaySalary);
+
+        allItems.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = `job-item ${item.isUser ? 'highlight' : ''}`;
+            
+            div.innerHTML = `
+                <div class="job-info">
+                    <div class="job-rank">${item.isUser ? '★' : index + 1}</div>
+                    <div class="job-title">${item.icon} ${item.title} ${item.isUser ? '<span class="user-tag">TY</span>' : ''}</div>
+                </div>
+                <div class="job-salary">${item.displaySalary.toFixed(0)} €</div>
+            `;
+            jobListEl.appendChild(div);
+        });
+    }
+</script>
+
+</body>
+</html>
