@@ -3,7 +3,7 @@
 <head>  
   <meta charset="UTF-8" />  
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  
-  <title>ErikAI Chat – Kompletný Systém</title>  
+  <title>ErikAI Chat – Externý Systém</title>  
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>  
     :root {
@@ -100,8 +100,8 @@
 
   <div class="card alert-box">  
     <strong>🔔 Upozornenie:</strong>  
-    <p style="margin: 4px 0;">Začni písať do políčka a systém ti sám začne ponúkať a filtrovať známe témy z databázy!</p>  
-    <!-- Sem JavaScript automaticky vpíše reálny počet -->
+    <p style="margin: 4px 0;">Začni písať do políčka a systém ti automaticky ponúkne známe témy vytiahnuté z externého JS súboru!</p>  
+    <!-- Sem skript automaticky vytiahne reálny počet z JS -->
     <p style="margin-top: 6px; font-weight: 600;">🤖 ErikAI aktuálne pozná presne <strong id="pocetOdpovediSpan" style="color: var(--accent-color);">0</strong> odpovedí!</p>  
   </div>  
 
@@ -111,7 +111,7 @@
     <div id="chat-box" style="margin: 10px 0;"></div>  
     
     <form id="chat-form">  
-      <!-- Input prepojený s datalistom pre živé filtrovanie pri písaní -->
+      <!-- Input prepojený s datalistom pre živé filtrovanie -->
       <input id="user-input" list="slovaPonuka" placeholder="Napíš otázku alebo začni písať..." autocomplete="off" style="flex: 1;">  
       <datalist id="slovaPonuka"></datalist>
 
@@ -165,106 +165,8 @@
   }
 </script>
 
-<!-- TVOJ CELÝ STARÝ JS SKRYTÝ A SPOJENÝ PRIAMO V HTML -->
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("chat-form");
-    const micBtn = document.getElementById("mic-btn");
-    const input = document.getElementById("user-input");
-    const chat = document.getElementById("chat-box");
-    const datalist = document.getElementById("slovaPonuka");
-    const pocetSpan = document.getElementById("pocetOdpovediSpan");
-
-    // Tvoja kompletná databáza odpovedí (tu sú tie tvoje dáta)
-    const odpovede = {
-      "pes": "Pes domáci alebo pes je taxón z rodu Canis. Je to domestikovaná podoba vlka dravého. Presné zaradenie tohto taxónu v rámci rodu Canis je sporné.",
-      "futbal": "Futbal, zastarano kopaná, je kolektívna loptová hra, ktorá je považovaná za najpopulárnejší šport na svete. Podľa prieskumu FIFA hrá futbal pravidelne najmenej 300 miliónov ľudí vo viac ako 220 krajinách sveta.",
-      "erikai": "ErikAI je offline umelá inteligencia vytvorená tebou.",
-      "slovensko": "Slovensko, dlhý tvar Slovenská republika, je vnútrozemský štát v strednej Európe. Je členským štátom Európskej únie a NATO. Má rozlohu 49 036 km².",
-      "bratislava": "Bratislava je hlavné a rozlohou aj počtom obyvateľov najväčšie mesto Slovenska.",
-      "košice": "Košice sú metropolou východného Slovenska a s takmer 230 000 obyvateľmi druhým najľudnatejším mestom.",
-      "žilina": "Počtom obyvateľov je Žilina štvrtým najväčším mestom na Slovensku. Je administratívnym a kultúrnym centrom.",
-      "nitra": "Nitra je mesto ležiace v Nitrianskom kraji vzdialené približne 90 km od hlavného mesta Bratislavy.",
-      "prešov": "Prešov je krajské mesto ležiace v Prešovskom kraji. Je tretím najľudnatejším mestom na Slovensku.",
-      "tatry": "Tatry sú geomorfologický celok a tvoria najvyššiu časť Karpát na hranici s Poľskom.",
-      "dunaj": "Dunaj je druhá najdlhšia európska rieka a najdlhšia rieka v Európskej únii."
-      // TU SI MÔŽES DOPLNIŤ AKÉKOĽVEK DALŠIE ODPOVEDE Z TVOJHO ZOZNAMU
-    };
-
-    // 1. Zrátanie a vypísanie reálneho počtu odpovedí do HTML
-    const celkovyPocet = Object.keys(odpovede).length;
-    pocetSpan.textContent = celkovyPocet;
-
-    // 2. Automatické naplnenie datalistu pre živé filtrovanie pri písaní
-    for (let kluc in odpovede) {
-      let option = document.createElement("option");
-      option.value = kluc;
-      datalist.appendChild(option);
-    }
-
-    function getAIResponse(text) {
-      const lower = text.toLowerCase().trim();
-      if (lower.startsWith("vyhľadaj:")) {
-        const query = lower.replace("vyhľadaj:", "").trim();
-        window.open("https://www.google.com/search?q=" + encodeURIComponent(query), "_blank");
-        return `🔍 Vyhľadávam: ${query}`;
-      }
-      return odpovede[lower] || "Prepáč, túto otázku ešte nepoznám.";
-    }
-
-    function addMessage(sender, text, type) {
-      const msg = document.createElement("div");
-      msg.className = `message ${type}`;
-      msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
-      chat.appendChild(msg);
-      chat.scrollTop = chat.scrollHeight;
-    }
-
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      const userText = input.value.trim();
-      if (!userText) return;
-
-      addMessage("Ty", userText, "user");
-      const response = getAIResponse(userText);
-      addMessage("ErikAI", response, "ai");
-      input.value = "";
-    });
-
-    // Mikrofón
-    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-
-      recognition.lang = "sk-SK";
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      micBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        recognition.start();
-        micBtn.disabled = true;
-        micBtn.textContent = "🎙️...";
-      });
-
-      recognition.addEventListener("result", (event) => {
-        const result = event.results[0][0].transcript;
-        input.value = result;
-        micBtn.disabled = false;
-        micBtn.textContent = "🎤";
-      });
-
-      recognition.addEventListener("end", () => {
-        micBtn.disabled = false;
-        micBtn.textContent = "🎤";
-      });
-
-    } else {
-      micBtn.disabled = true;
-      micBtn.title = "Tvoj prehliadač nepodporuje mikrofón.";
-    }
-  });
-</script>
+<!-- TENTO RIADOK PRIPOJÍ TVÔJ EXTERNÝ JS SÚBOR -->
+<script src="erikai-chat.js?v=999"></script>    
 
 </body>  
 </html>
