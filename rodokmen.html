@@ -1,0 +1,197 @@
+<!DOCTYPE html>  
+<html lang="sk">  
+<head>  
+  <meta charset="UTF-8" />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>  
+  <title>Môj Rodokmeň – ErikAI</title>  
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>  
+    :root {
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --accent-color: #2563eb;
+      --accent-hover: #1d4ed8;
+      --border-color: #e2e8f0;
+      --input-bg: #ffffff;
+      --member-bg: #f8fafc;
+    }
+
+    body.dark-mode {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --input-bg: #0f172a;
+      --member-bg: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; transition: background 0.2s, color 0.2s; }
+    body { background: var(--bg-color); color: var(--text-main); padding: 20px 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    
+    .container { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 20px; }
+
+    .card { background: var(--card-bg); border-radius: 16px; padding: 24px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    h1 { font-size: 1.25rem; font-weight: 700; color: var(--text-main); }
+    
+    .btn-theme { background: var(--accent-color); color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+    .btn-theme:hover { background: var(--accent-hover); }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: flex-end; }
+    @media (max-width: 650px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
+    input, select { padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); font-size: 0.9rem; outline: none; }
+    input:focus, select:focus { border-color: var(--accent-color); }
+
+    .btn { background: var(--accent-color); color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.9rem; height: 41px; }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-danger { background: #ef4444; padding: 6px 12px; font-size: 0.8rem; height: auto; }
+    .btn-danger:hover { background: #dc2626; }
+
+    /* Zoznam členov stromu */
+    .tree-list { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
+    .member-card { background: var(--member-bg); border: 1px solid var(--border-color); padding: 14px 18px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .member-info h4 { font-size: 1rem; font-weight: 700; color: var(--text-main); }
+    .member-info p { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+
+    .empty-state { text-align: center; color: var(--text-muted); padding: 30px; font-size: 0.9rem; }
+
+    .footer-text { font-size: 0.75rem; text-align: center; color: var(--text-muted); margin-top: 15px; }
+  </style>  
+</head>  
+<body>    
+
+<div class="container">
+
+  <!-- Hlavná karta s formulárom -->
+  <div class="card">
+    <div class="header-bar">
+      <h1>🌳 Môj Rodinný Rodokmeň</h1>
+      <button class="btn-theme" onclick="toggleTheme()">🌓 Režim</button>
+    </div>
+
+    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+      Pridaj členov svojej rodiny, zadefinuj ich vzťah a buduj svoj rodinný strom priamo v prehliadači. Údaje sa bezpečne ukladajú do pamäte tvojho zariadenia.
+    </p>
+
+    <!-- Formulár na pridanie člena -->
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="meno">Meno a Priezvisko</label>
+        <input type="text" id="meno" placeholder="napr. Ján Mráz">
+      </div>
+      <div class="form-group">
+        <label for="rola">Vzťah / Generácia</label>
+        <select id="rola">
+          <option value="Starý otec / Stará mama">Starý otec / Stará mama</option>
+          <option value="Otec / Matka" selected>Otec / Matka</option>
+          <option value="Súrodenec">Súrodenec</option>
+          <option value="Ja / Partner">Ja / Partner</option>
+          <option value="Dieťa">Dieťa</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="rok">Rok narodenia</label>
+        <input type="number" id="rok" placeholder="napr. 1975">
+      </div>
+      <button class="btn" onclick="pridatClena()">+ Pridať</button>
+    </div>
+  </div>
+
+  <!-- Zoznam členov stromu -->
+  <div class="card">
+    <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 10px;">📋 Zoznam členov rodiny</h3>
+    <div id="zoznam-clenov" class="tree-list">
+      <div class="empty-state">Zatiaľ nemáš pridaných žiadnych členov rodiny. Začni vyplnením formulára vyššie!</div>
+    </div>
+  </div>
+
+  <p class="footer-text">  
+    © 2025 Erik Mohylák – Všetky práva vyhradené.  
+  </p>  
+
+</div>
+
+<script>
+  let rodina = JSON.parse(localStorage.getItem('erikai_rodokmen')) || [];
+
+  function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+  }
+
+  function ulozAObnov() {
+    localStorage.setItem('erikai_rodokmen', JSON.stringify(rodina));
+    vykresliStrom();
+  }
+
+  function pridatClena() {
+    const menoInput = document.getElementById('meno');
+    const rolaSelect = document.getElementById('rola');
+    const rokInput = document.getElementById('rok');
+
+    const meno = menoInput.value.trim();
+    const rola = rolaSelect.value;
+    const rok = rokInput.value.trim();
+
+    if (!meno) {
+      alert('Prosím, zadaj meno člena rodiny.');
+      return;
+    }
+
+    const novyClen = {
+      id: Date.now(),
+      meno: meno,
+      rola: rola,
+      rok: rok ? rok : 'Neznámy'
+    };
+
+    rodina.push(novyClen);
+    
+    // Vyčistenie políčok
+    menoInput.value = '';
+    rokInput.value = '';
+
+    ulozAObnov();
+  }
+
+  function vymazatClena(id) {
+    rodina = rodina.filter(c => c.id !== id);
+    ulozAObnov();
+  }
+
+  function vykresliStrom() {
+    const zoznamDiv = document.getElementById('zoznam-clenov');
+    
+    if (rodina.length === 0) {
+      zoznamDiv.innerHTML = `<div class="empty-state">Zatiaľ nemáš pridaných žiadnych členov rodiny. Začni vyplnením formulára vyššie!</div>`;
+      return;
+    }
+
+    let html = '';
+    rodina.forEach(clen => {
+      html += `
+        <div class="member-card">
+          <div class="member-info">
+            <h4>👤 ${clen.meno}</h4>
+            <p><strong>Vzťah:</strong> ${clen.rola} &nbsp;|&nbsp; <strong>Rok narodenia:</strong> ${clen.rok}</p>
+          </div>
+          <button class="btn btn-danger" onclick="vymazatClena(${clen.id})">🗑️ Zmazať</button>
+        </div>
+      `;
+    });
+
+    zoznamDiv.innerHTML = html;
+  }
+
+  // Spustenie pri načítaní stránky
+  document.addEventListener('DOMContentLoaded', vykresliStrom);
+</script>
+
+</body>  
+</html>
