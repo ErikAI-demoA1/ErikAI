@@ -100,8 +100,8 @@
       <p class="subtitle">Oficiálny vstupný bod s globálnym počítadlom</p>
     </div>
 
-    <!-- Odkaz na tvoju hlavnú stránku (index3.html) -->
-    <a href="index3.html" class="single-card">
+    <!-- Odkaz na hlavnú aplikáciu -->
+    <a href="index3.html" class="single-card" id="main-link">
       <span>📄 Otvoriť ErikAI OS</span>
       <span class="click-badge" id="global-counter">Načítavam...</span>
     </a>
@@ -112,23 +112,49 @@
   </div>
 
   <script>
-    // Globálne počítadlo reálnych návštev cez stabilnú API službu
+    // Globálne počítadlo pre všetkých ľudí zo sveta s automatickým záložným serverom
     async function fetchGlobalCount() {
       const badge = document.getElementById('global-counter');
+      const namespace = 'erikaios_official_2027';
+      const key = 'total_visitors';
+
+      // 1. Pokus: Použitie CounterAPI.dev
       try {
-        // Volá verejný endpoint, ktorý automaticky pripočíta každého nového unikátneho návštevníka zo sveta
-        const response = await fetch('https://api.counterapi.dev/v1/erikaios/universe/up');
-        const data = await response.json();
-        
-        if (data && data.count !== undefined) {
-          badge.textContent = `${data.count} ${data.count === 1 ? 'návšteva' : 'návštev'}`;
-        } else {
-          badge.textContent = `Online`;
+        const response = await fetch(`https://api.counterapi.dev/v1/${namespace}/${key}/up`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.count !== undefined) {
+            formatBadgeText(badge, data.count);
+            return;
+          }
         }
       } catch (e) {
-        // Fallback pre prípad blokovania skriptov (napr. adblockerom)
-        badge.textContent = `Aktívne`;
+        console.warn('Primárny server počítadla nedostupný, pripájam záložný...');
       }
+
+      // 2. Pokus (Záložný): Použitie CountAPI.net
+      try {
+        const responseAlt = await fetch(`https://api.countapi.net/hit/${namespace}/${key}`);
+        if (responseAlt.ok) {
+          const dataAlt = await responseAlt.json();
+          if (dataAlt && dataAlt.value !== undefined) {
+            formatBadgeText(badge, dataAlt.value);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Chyba načítania počítadla');
+      }
+
+      // Ak obidve zlyhajú (napr. zapnutý prísny AdBlocker u používateľa)
+      badge.textContent = "1+ návšteva";
+    }
+
+    function formatBadgeText(element, count) {
+      let word = 'návštev';
+      if (count === 1) word = 'návšteva';
+      else if (count >= 2 && count <= 4) word = 'návštevy';
+      element.textContent = `${count} ${word}`;
     }
 
     document.addEventListener("DOMContentLoaded", fetchGlobalCount);
