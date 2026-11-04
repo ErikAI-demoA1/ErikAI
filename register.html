@@ -189,35 +189,24 @@
   <script>
     const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
     const REGISTERED_FLAG = 'erikai_has_registered';
-    const API_BASE = 'https://api.counterapi.dev/v1/erikaios_net_absolute_final_v2025/users';
+    
+    // Použijeme stabilný globálny cloud endpoint pre počítadlo
+    const API_URL = 'https://api.countapi.xyz/get/erikaios_os_system_2027/total_users';
+    const API_HIT = 'https://api.countapi.xyz/hit/erikaios_os_system_2027/total_users';
 
-    // 1. Rýchle načítanie štatistík bez zbytočného čakania
+    // 1. Spoľahlivé načítanie štatistík priamo z cloudovej databázy CountAPI
     async function fetchOnlineStats() {
       const counterEl = document.getElementById('counter-val');
-      
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500);
-
-        const response = await fetch(`${API_BASE}?_=${Date.now()}`, { 
-          cache: 'no-store',
-          signal: controller.signal,
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          }
-        });
-        
-        clearTimeout(timeoutId);
-
+        const response = await fetch(`${API_URL}?_=${Date.now()}`, { cache: 'no-store' });
         if (response.ok) {
           const data = await response.json();
-          if (data.count !== undefined) {
-            counterEl.textContent = data.count;
+          if (data.value !== undefined) {
+            counterEl.textContent = data.value;
           }
         }
       } catch (e) {
-        // Ak by sieť zaváhala, necháme aktuálne zobrazené číslo
+        // Ak je sieťový výpadok, ponecháme aktuálnu hodnotu
       }
     }
 
@@ -253,7 +242,7 @@
       return calcChecksum(payload) === expectedCheck;
     }
 
-    // Vygenerovanie nového kľúča + bleskové navýšenie
+    // Vygenerovanie nového kľúča + okamžité online navýšenie v cloude
     async function generateAndRegisterKey() {
       if (localStorage.getItem(REGISTERED_FLAG)) {
         alert('V tomto prehliadači si si už kľúč vygeneroval. Ak ho máš uložený, klikni na "Už mám svoj kľúč".');
@@ -275,12 +264,12 @@
       genBtn.style.background = '#16a34a';
       genBtn.onclick = showAuthView;
 
-      // Okamžité navýšenie na serveri
+      // Okamžité online navýšenie v cloude
       try {
-        const res = await fetch(`${API_BASE}/up?_=${Date.now()}`, { cache: 'no-store' });
+        const res = await fetch(`${API_HIT}?_=${Date.now()}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
-          document.getElementById('counter-val').textContent = data.count;
+          document.getElementById('counter-val').textContent = data.value;
         } else {
           let current = parseInt(document.getElementById('counter-val').textContent) || 4;
           document.getElementById('counter-val').textContent = current + 1;
