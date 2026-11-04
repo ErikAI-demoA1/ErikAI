@@ -190,26 +190,36 @@
     const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
     const REGISTERED_FLAG = 'erikai_has_registered';
     
-    // Použijeme aktívny a moderný Endpoint Key-Value Storage (api.keyvalue.xyz / cloud storage)
-    const API_ENDPOINT = 'https://keyvalue.onetap.com/v1/erikaios_registrations_2027';
+    // ZADEFINOVANIE JSONBin ÚLOŽISKA
+    const BIN_ID = 'SEM_VLOZ_ID_TVOJHO_BINU'; // <-- Sem vlož ID tvojho binu z jsonbin.io
+    const MASTER_KEY = '$2a$10$Z7tNtwZzwyhKDW.158HQYOUeAinxK00o8lzfRCZdew.PWcz.RT/B.';
+    const API_ENDPOINT = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-    // 1. Čítanie zo živého cloudu
+    // 1. Spoľahlivé načítanie štatistík priamo z JSONBin
     async function fetchOnlineStats() {
       const counterEl = document.getElementById('counter-val');
+      if (BIN_ID === 'SEM_VLOZ_ID_TVOJHO_BINU') {
+        counterEl.textContent = 'Chyba: Nastav BIN_ID';
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_ENDPOINT}?_=${Date.now()}`, { cache: 'no-store' });
+        const response = await fetch(API_ENDPOINT, {
+          headers: { 'X-Master-Key': MASTER_KEY },
+          cache: 'no-store'
+        });
+        
         if (response.ok) {
-          const textData = await response.text();
-          const parsed = parseInt(textData.trim(), 10);
-          if (!isNaN(parsed)) {
-            counterEl.textContent = parsed;
+          const data = await response.json();
+          // JSONBin vraciam dáta v objekte record
+          const count = data.record && data.record.count;
+          if (count !== undefined) {
+            counterEl.textContent = count;
             return;
           }
         }
-        // Ak endpoint zatiaľ neexistuje alebo zlyhal, zobraziť chybu
         counterEl.textContent = 'Chyba načítavania';
       } catch (e) {
-        // Pri sieťovom zlyhaní priamo indikujeme chybu
         counterEl.textContent = 'Chyba načítavania';
       }
     }
@@ -246,7 +256,7 @@
       return calcChecksum(payload) === expectedCheck;
     }
 
-    // Vygenerovanie nového kľúča a zápis do cloudu
+    // Vygenerovanie nového kľúča + okamžitý zápis do JSONBin
     async function generateAndRegisterKey() {
       if (localStorage.getItem(REGISTERED_FLAG)) {
         alert('V tomto prehliadači si si už kľúč vygeneroval. Ak ho máš uložený, klikni na "Už mám svoj kľúč".');
@@ -268,18 +278,21 @@
       genBtn.style.background = '#16a34a';
       genBtn.onclick = showAuthView;
 
-      // Získame aktuálnu hodnotu, pripočítame 1 a zapíšeme do cloudu
       const counterEl = document.getElementById('counter-val');
       let currentVal = parseInt(counterEl.textContent, 10);
-      if (isNaN(currentVal)) currentVal = 4; // Štartovací bod pri prvom zápise
+      if (isNaN(currentVal)) currentVal = 4; // Bezpečnostný fallback
 
       const newVal = currentVal + 1;
 
+      // Zápis nového čísla do cloudu
       try {
         const res = await fetch(API_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: newVal.toString(),
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': MASTER_KEY
+          },
+          body: JSON.stringify({ count: newVal }),
           cache: 'no-store'
         });
 
