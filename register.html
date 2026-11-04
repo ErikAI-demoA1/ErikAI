@@ -175,7 +175,7 @@
         <button class="btn btn-secondary" onclick="showGenView()">Späť</button>
       </div>
 
-      <!-- Počítadlo úspešne registrovaných používateľov (Presné číslo zo servera) -->
+      <!-- Počítadlo úspešne registrovaných používateľov -->
       <div class="stats-box">
         Celkovo registrovaných účtov: <strong id="counter-val">Načítavam...</strong>
       </div>
@@ -189,9 +189,11 @@
   <script>
     const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Bez zmätkových znakov (O, 0, I, 1)
     const REGISTERED_FLAG = 'erikai_has_registered';
-    const API_URL = 'https://api.counterapi.dev/v1/erikaios_official_secure_net_2027/registrations_v2';
+    
+    // Čistý a bezpečný CounterAPI endpoint pre reálne sledovanie registrácií
+    const API_URL = 'https://api.counterapi.dev/v1/erikaios-secure-system-2027/registrations';
 
-    // 1. Spoľahlivé načítanie štatistík priamo z cloudovej databázy
+    // 1. Spoľahlivé načítanie reálnych štatistík zo servera
     async function fetchStats() {
       try {
         const response = await fetch(API_URL);
@@ -199,14 +201,14 @@
           const data = await response.json();
           document.getElementById('counter-val').textContent = (data.count !== undefined) ? data.count : 0;
         } else {
-          // Ak ešte záznam neexistuje, inicializujeme ho na serveri
+          // Ak kontajner na serveri neexistuje, inicializujeme ho
           await fetch(`${API_URL}/up`);
           const retry = await fetch(API_URL);
           const data = await retry.json();
           document.getElementById('counter-val').textContent = (data.count !== undefined) ? data.count : 1;
         }
       } catch (e) {
-        document.getElementById('counter-val').textContent = '1';
+        document.getElementById('counter-val').textContent = '0';
       }
     }
 
@@ -267,7 +269,7 @@
       genBtn.style.background = '#16a34a';
       genBtn.onclick = showAuthView;
 
-      // Započítanie +1 novej registrácie na serveri a okamžité stiahnutie nového čísla
+      // Započítanie +1 novej registrácie na serveri
       try {
         const res = await fetch(`${API_URL}/up`);
         if (res.ok) {
