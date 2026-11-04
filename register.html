@@ -190,28 +190,21 @@
     const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
     const REGISTERED_FLAG = 'erikai_has_registered';
     
-    // ZADEFINOVANIE JSONBin ÚLOŽISKA
-    const BIN_ID = 'SEM_VLOZ_ID_TVOJHO_BINU'; // <-- Sem vlož ID tvojho binu z jsonbin.io
+    // Tvoj konkrétny API endpoint z JSONBin.io
+    const API_ENDPOINT = 'https://api.jsonbin.io/v3/b/6aeb2016ffd5d16053a55aa7';
     const MASTER_KEY = '$2a$10$Z7tNtwZzwyhKDW.158HQYOUeAinxK00o8lzfRCZdew.PWcz.RT/B.';
-    const API_ENDPOINT = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-    // 1. Spoľahlivé načítanie štatistík priamo z JSONBin
+    // 1. Čítanie aktuálneho stavu z cloudu
     async function fetchOnlineStats() {
       const counterEl = document.getElementById('counter-val');
-      if (BIN_ID === 'SEM_VLOZ_ID_TVOJHO_BINU') {
-        counterEl.textContent = 'Chyba: Nastav BIN_ID';
-        return;
-      }
-
       try {
-        const response = await fetch(API_ENDPOINT, {
+        const response = await fetch(API_ENDPOINT + `?_=${Date.now()}`, {
           headers: { 'X-Master-Key': MASTER_KEY },
           cache: 'no-store'
         });
         
         if (response.ok) {
           const data = await response.json();
-          // JSONBin vraciam dáta v objekte record
           const count = data.record && data.record.count;
           if (count !== undefined) {
             counterEl.textContent = count;
@@ -256,7 +249,7 @@
       return calcChecksum(payload) === expectedCheck;
     }
 
-    // Vygenerovanie nového kľúča + okamžitý zápis do JSONBin
+    // Vygenerovanie nového kľúča + okamžitý zápis do cloudu
     async function generateAndRegisterKey() {
       if (localStorage.getItem(REGISTERED_FLAG)) {
         alert('V tomto prehliadači si si už kľúč vygeneroval. Ak ho máš uložený, klikni na "Už mám svoj kľúč".');
@@ -280,11 +273,11 @@
 
       const counterEl = document.getElementById('counter-val');
       let currentVal = parseInt(counterEl.textContent, 10);
-      if (isNaN(currentVal)) currentVal = 4; // Bezpečnostný fallback
+      if (isNaN(currentVal)) currentVal = 4;
 
       const newVal = currentVal + 1;
 
-      // Zápis nového čísla do cloudu
+      // Zápis nového čísla do tvojho JSONBin
       try {
         const res = await fetch(API_ENDPOINT, {
           method: 'PUT',
