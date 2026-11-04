@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🔐 Anonymná Registrácia – ErikAI OS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090a0f;
+      --card-bg: rgba(255, 255, 255, 0.03);
+      --card-hover: rgba(255, 255, 255, 0.08);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #2563eb;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+
+    body {
+      background: radial-gradient(circle at top, #131722 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 460px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 30px 25px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff 30%, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px; line-height: 1.4; }
+
+    .key-box {
+      background: rgba(0,0,0,0.5);
+      border: 1px dashed var(--accent);
+      padding: 15px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 1.2rem;
+      color: #60a5fa;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 10px;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn:hover { background: #1d4ed8; transform: translateY(-2px); }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .btn-secondary:hover { background: var(--card-hover); color: white; }
+
+    .badge-container {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .badge-container img {
+      height: 22px;
+      border-radius: 5px;
+    }
+
+    footer { font-size: 0.8rem; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="card">
+      <h1>🔐 ErikAI OS Účet</h1>
+      <p class="subtitle">Anonymný prístup bez zadávania e-mailu, hesla či osobných údajov (Zero-Data Model).</p>
+
+      <!-- Zobrazenie vygenerovaného kľúča -->
+      <div id="key-display" class="key-box">---</div>
+
+      <!-- Tlačidlo na vytvorenie účtu / Pokračovanie -->
+      <button id="btn-register" class="btn" onclick="registerUser()">⚡ Vytvoriť anonymný účet</button>
+      <a id="btn-continue" class="btn" href="index3.html" style="display: none;">🚀 Otvoriť ErikAI OS</a>
+
+      <!-- Živé počítadlo celkových registrácií -->
+      <div class="badge-container">
+        <span>Celkovo registrovaných účtov:</span>
+        <img id="users-badge" src="https://api.visitorbadge.io/api/visitors?path=erikaios-registered-accounts&countColor=%232563eb&style=flat" alt="Registrovaní používatelia" />
+      </div>
+    </div>
+
+    <footer>
+      © 2025 Erik Mohylák – Všetky práva vyhradené.
+    </footer>
+  </div>
+
+  <script>
+    // Generovanie anonymného kľúča
+    function generateToken() {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let p1 = '', p2 = '';
+      for (let i = 0; i < 4; i++) p1 += chars.charAt(Math.floor(Math.random() * chars.length));
+      for (let i = 0; i < 4; i++) p2 += chars.charAt(Math.floor(Math.random() * chars.length));
+      return `ERIK-${p1}-${p2}`;
+    }
+
+    function registerUser() {
+      let token = localStorage.getItem('erikai_user_token');
+
+      // Ak používateľ ešte nemá účet, vytvoríme ho
+      if (!token) {
+        token = generateToken();
+        localStorage.setItem('erikai_user_token', token);
+        
+        // Obnovíme počítadlo na serveri (pošle požiadavku, čím navýši počet registrovaných)
+        const badgeImg = document.getElementById('users-badge');
+        badgeImg.src = `https://api.visitorbadge.io/api/visitors?path=erikaios-registered-accounts&countColor=%232563eb&style=flat&t=${new Date().getTime()}`;
+      }
+
+      showRegisteredState(token);
+    }
+
+    function showRegisteredState(token) {
+      document.getElementById('key-display').style.display = 'block';
+      document.getElementById('key-display').textContent = token;
+
+      const btnReg = document.getElementById('btn-register');
+      btnReg.style.display = 'none';
+
+      const btnCont = document.getElementById('btn-continue');
+      btnCont.style.display = 'inline-block';
+    }
+
+    // Pri načítaní skontrolujeme, či už používateľ bol zaregistrovaný
+    document.addEventListener("DOMContentLoaded", () => {
+      const existingToken = localStorage.getItem('erikai_user_token');
+      if (existingToken) {
+        showRegisteredState(existingToken);
+      }
+    });
+  </script>
+
+</body>
+</html>
