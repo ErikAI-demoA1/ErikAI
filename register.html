@@ -277,12 +277,18 @@
       return calcChecksum(payload) === expectedCheck;
     }
 
-    // Vygenerovanie nového kľúča + okamžitý zápis do cloudu
+    // Vygenerovanie nového kľúča + okamžitý zápis do cloudu s bezpečnostnou poistkou
     async function generateAndRegisterKey() {
       if (localStorage.getItem(REGISTERED_FLAG)) {
         alert('V tomto prehliadači si si už kľúč vygeneroval. Ak ho máš uložený, klikni na "Už mám svoj kľúč".');
         showAuthView();
         return;
+      }
+
+      // 🛡️ Bezpečnostná otázka pre istotu, či si už človek kód zapísal
+      const userConfirmed = confirm("⚠️ Pozor! Máte svoj vygenerovaný kľúč bezpečne opísaný alebo uložený?\n\nKliknutím na OK potvrdíte pokračovanie. Kliknutím na Zrušiť sa vrátite späť, aby ste si ho mohli opísať.");
+      if (!userConfirmed) {
+        return; // Ak klikne na zrušiť, nič sa nestane a kód ostane zobrazený
       }
 
       const newToken = generateValidToken();
