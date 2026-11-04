@@ -183,10 +183,10 @@
         <button class="btn btn-secondary" onclick="showGenView()">Späť</button>
       </div>
 
-      <!-- Počítadlo registrovaných účtov -->
+      <!-- Počítadlo úspešne registrovaných používateľov -->
       <div class="stats-box">
-        <span>Celkovo úspešne registrovaných:</span>
-        <img id="counter-img" src="https://api.visitorbadge.io/api/visitors?path=erikaios_registrations_official_2027&countColor=%232563eb&style=flat" alt="Registrované účty" />
+        <span>Celkovo registrovaných účtov:</span>
+        <img id="counter-img" src="https://api.visitorbadge.io/api/visitors?path=erikaios_unique_registrations_2027&countColor=%232563eb&style=flat" alt="Registrované účty" />
       </div>
     </div>
 
@@ -197,8 +197,9 @@
 
   <script>
     const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Bez zmätkových znakov (O, 0, I, 1)
+    const REGISTERED_FLAG = 'erikai_has_registered';
 
-    // Matematický výpočet kontrolného znaku (Checksum) pre prísnu kontrolu
+    // Výpočet kontrolného znaku (Checksum) pre prísnu matematickú kontrolu
     function calcChecksum(str) {
       let sum = 0;
       for (let i = 0; i < str.length; i++) {
@@ -207,31 +208,37 @@
       return CHARS[sum % CHARS.length];
     }
 
-    // Vygenerovanie platného kryptografického kľúča
+    // Vygenerovanie platného kľúča
     function generateValidToken() {
       let payload = '';
       for (let i = 0; i < 7; i++) {
         payload += CHARS.charAt(Math.floor(Math.random() * CHARS.length));
       }
       const check = calcChecksum(payload);
-      const full = payload + check; // 8 znakov
+      const full = payload + check;
       return `ERIK-${full.substring(0, 4)}-${full.substring(4, 8)}`;
     }
 
-    // Prísna kontrola platnosti zadaného kódu (odhalí aj 1 zlé písmeno)
+    // Prísna kontrola zadaného kódu
     function isValidToken(token) {
       const clean = token.replace(/[^A-Z0-9]/g, '');
       if (!clean.startsWith('ERIK') || clean.length !== 12) return false;
       
-      const raw = clean.substring(4); // 8 znakov
+      const raw = clean.substring(4);
       const payload = raw.substring(0, 7);
       const expectedCheck = raw.substring(7, 8);
       
       return calcChecksum(payload) === expectedCheck;
     }
 
-    // Vygenerovanie nového kľúča (Započíta registráciu až tu)
+    // Vygenerovanie nového kľúča – započíta sa presne RAZ pre daný prehliadač
     function generateAndRegisterKey() {
+      if (localStorage.getItem(REGISTERED_FLAG)) {
+        alert('V tomto prehliadači si si už kľúč vygeneroval. Ak ho máš uložený, klikni na "Už mám svoj kľúč".');
+        showAuthView();
+        return;
+      }
+
       const newToken = generateValidToken();
 
       // Zobrazenie kľúča používateľovi
@@ -240,25 +247,30 @@
       box.textContent = newToken;
       document.getElementById('warning-msg').style.display = 'block';
 
-      // Zmena tlačidla - prinúti ho prejsť k ručnému zadaniu
+      // Označenie v prehliadači, že už bol kľúč vygenerovaný
+      localStorage.setItem(REGISTERED_FLAG, 'true');
+
+      // Tlačidlo prejde do stavu pokračovania
       const genBtn = document.getElementById('btn-gen');
       genBtn.textContent = '➡️ Kód zapísaný, pokračovať na prihlásenie';
       genBtn.style.background = '#16a34a';
       genBtn.onclick = showAuthView;
 
-      // Navýšenie reálneho počítadla registrácií na serveri
+      // Započítanie +1 novej registrácie na serveri
+      fetch(`https://api.counterapi.dev/v1/erikaios_registrations_2027/total_users/up`).catch(() => {});
+      
+      // Aktualizácia vizuálneho odznaku
       const img = document.getElementById('counter-img');
-      img.src = `https://api.visitorbadge.io/api/visitors?path=erikaios_registrations_official_2027&countColor=%232563eb&style=flat&t=${Date.now()}`;
+      img.src = `https://api.visitorbadge.io/api/visitors?path=erikaios_unique_registrations_2027&countColor=%232563eb&style=flat&t=${Date.now()}`;
     }
 
-    // Prísne overenie ručne zadaného kódu
+    // Prísne overenie zadaného kódu
     function verifyKeyAndEnter() {
       const input = document.getElementById('input-token').value.trim().toUpperCase();
       const err = document.getElementById('error-msg');
 
       if (isValidToken(input)) {
         err.style.display = 'none';
-        // Pustí používateľa do aplikácie iba vtedy, ak je kód 100% mataticky správny
         window.location.href = 'index3.html';
       } else {
         err.style.display = 'block';
@@ -276,6 +288,16 @@
       document.getElementById('auth-view').style.display = 'none';
       document.getElementById('gen-view').style.display = 'block';
     }
+
+    // Pri opätovnom načítaní skontrolujeme, či si už kľúč generoval
+    document.addEventListener("DOMContentLoaded", () => {
+      if (localStorage.getItem(REGISTERED_FLAG)) {
+        const genBtn = document.getElementById('btn-gen');
+        genBtn.textContent = '🔒 Kľúč už bol vygenerovaný (Zadaj ho nižšie)';
+        genBtn.style.background = '#334155';
+        genBtn.onclick = showAuthView;
+      }
+    });
   </script>
 
 </body>
