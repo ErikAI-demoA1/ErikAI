@@ -191,17 +191,20 @@
     const REGISTERED_FLAG = 'erikai_has_registered';
     const API_URL = 'https://api.counterapi.dev/v1/erikaios_official_secure_net_2027/registrations_v2';
 
-    // 1. Spoľahlivé načítanie štatistík s ošetrením nuly alebo prázdnej hodnoty
+    // 1. Spoľahlivé načítanie štatistík priamo z cloudovej databázy
     async function fetchStats() {
       try {
-        let response = await fetch(API_URL);
-        if (!response.ok) {
+        const response = await fetch(API_URL);
+        if (response.ok) {
+          const data = await response.json();
+          document.getElementById('counter-val').textContent = (data.count !== undefined) ? data.count : 0;
+        } else {
+          // Ak ešte záznam neexistuje, inicializujeme ho na serveri
           await fetch(`${API_URL}/up`);
-          response = await fetch(API_URL);
+          const retry = await fetch(API_URL);
+          const data = await retry.json();
+          document.getElementById('counter-val').textContent = (data.count !== undefined) ? data.count : 1;
         }
-        const data = await response.json();
-        let currentCount = (data.count !== undefined) ? data.count : 1;
-        document.getElementById('counter-val').textContent = currentCount;
       } catch (e) {
         document.getElementById('counter-val').textContent = '1';
       }
@@ -264,11 +267,11 @@
       genBtn.style.background = '#16a34a';
       genBtn.onclick = showAuthView;
 
-      // Započítanie +1 novej registrácie na serveri
+      // Započítanie +1 novej registrácie na serveri a okamžité stiahnutie nového čísla
       try {
-        const response = await fetch(`${API_URL}/up`);
-        if (response.ok) {
-          const data = await response.json();
+        const res = await fetch(`${API_URL}/up`);
+        if (res.ok) {
+          const data = await res.json();
           document.getElementById('counter-val').textContent = data.count;
         } else {
           let current = parseInt(document.getElementById('counter-val').textContent) || 0;
@@ -305,7 +308,7 @@
       document.getElementById('gen-view').style.display = 'block';
     }
 
-    // Pri načítaní stránky overíme stav a načítame aktuálne štatistiky
+    // Pri načítaní stránky overíme stav a načítame aktuálne štatistiky zo servera
     document.addEventListener("DOMContentLoaded", () => {
       if (localStorage.getItem(REGISTERED_FLAG)) {
         const genBtn = document.getElementById('btn-gen');
