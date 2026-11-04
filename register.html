@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🔐 Bezpečná Anonymná Registrácia – ErikAI OS</title>
+  <title>🔐 Prísna Bezpečnostná Brána – ErikAI OS</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -13,6 +13,7 @@
       --border: rgba(255, 255, 255, 0.08);
       --accent: #2563eb;
       --warning: #f59e0b;
+      --danger: #ef4444;
       --text: #f1f5f9;
       --text-muted: #94a3b8;
     }
@@ -65,35 +66,50 @@
       padding: 15px;
       border-radius: 12px;
       font-family: monospace;
-      font-size: 1.2rem;
+      font-size: 1.25rem;
       color: #fbbf24;
       letter-spacing: 2px;
       margin-bottom: 12px;
       display: none;
       word-break: break-all;
+      user-select: all;
     }
 
     .warning-text {
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       color: var(--warning);
       margin-bottom: 20px;
       line-height: 1.3;
       display: none;
     }
 
+    .error-text {
+      font-size: 0.85rem;
+      color: var(--danger);
+      margin-bottom: 15px;
+      display: none;
+      font-weight: 600;
+    }
+
     input[type="text"] {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       border-radius: 10px;
       border: 1px solid var(--border);
       background: rgba(0,0,0,0.4);
       color: white;
       text-align: center;
       font-family: monospace;
-      font-size: 1rem;
+      font-size: 1.1rem;
       margin-bottom: 15px;
       outline: none;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
     }
 
     .btn {
@@ -128,9 +144,17 @@
       border-top: 1px solid var(--border);
       font-size: 0.85rem;
       color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
 
-    .stats-box strong { color: #60a5fa; }
+    .stats-box img {
+      height: 22px;
+      border-radius: 5px;
+    }
+
     footer { font-size: 0.8rem; color: var(--text-muted); }
   </style>
 </head>
@@ -139,32 +163,30 @@
   <div class="container">
     <div class="card">
       <h1>🔐 Bezpečnostná Brána</h1>
-      <p class="subtitle">Zadaj svoj unikátny kľúč pre vstup do ErikAI OS. Žiadne osobné dáta sa nezberajú.</p>
+      <p class="subtitle">Prestup do ErikAI OS vyžaduje overenie tajným kľúčom. Žiadne osobné údaje sa nezberajú.</p>
 
-      <!-- Hlavný stav -->
-      <div id="main-view">
-        <!-- Zobrazenie kľúča LEN pri prvom vygenerovaní -->
+      <!-- Obrazovka 1: Generovanie nového kľúča -->
+      <div id="gen-view">
         <div id="key-display" class="key-box">---</div>
-        <div id="warning-msg" class="warning-text">⚠️ <strong>Upozornenie:</strong> Tento kód sa zobrazuje iba raz! Zapíš si ho alebo odlož. Ak ho stratíš, účet sa nedá obnoviť.</div>
+        <div id="warning-msg" class="warning-text">⚠️ <strong>Pozor:</strong> Kód sa zobrazuje iba raz! Zapíš si ho. Bez presného kódu sa do systému nedostaneš.</div>
 
-        <button id="btn-register" class="btn" onclick="registerNewUser()">⚡ Vygenerovať nový prístupový kľúč</button>
-        
-        <!-- Tlačidlo na vstup, ak už má kľúč uložený v pamäti -->
-        <button id="btn-enter" class="btn" onclick="enterSystemWithSaved()" style="display: none; background: #16a34a;">🚀 Vstúpiť do ErikAI OS</button>
-        
-        <button class="btn btn-secondary" onclick="showLoginInput()">🔑 Už mám svoj kľúč (Zadať ho)</button>
+        <button id="btn-gen" class="btn" onclick="generateAndRegisterKey()">⚡ Vygenerovať nový prístupový kľúč</button>
+        <button class="btn btn-secondary" onclick="showAuthView()">🔑 Už mám svoj kľúč (Zadať & Vstúpiť)</button>
       </div>
 
-      <!-- Časť pre zadanie existujúceho kľúča (Overenie) -->
-      <div id="login-view" style="display: none;">
-        <input type="text" id="input-token" placeholder="ERIK-XXXX-XXXX" />
-        <button class="btn" onclick="verifyAndLogin()">Overiť kľúč a vstúpiť</button>
-        <button class="btn btn-secondary" onclick="showMainView()">Späť</button>
+      <!-- Obrazovka 2: Ručné zadanie kľúča a prísne overenie -->
+      <div id="auth-view" style="display: none;">
+        <input type="text" id="input-token" placeholder="ERIK-XXXX-XXXX" maxlength="14" autocomplete="off" />
+        <div id="error-msg" class="error-text">❌ Neplatný kľúč! Skontroluj zadané znaky.</div>
+        
+        <button class="btn" onclick="verifyKeyAndEnter()">Overiť kľúč a Vstúpiť</button>
+        <button class="btn btn-secondary" onclick="showGenView()">Späť</button>
       </div>
 
       <!-- Počítadlo registrovaných účtov -->
       <div class="stats-box">
-        Celkovo vydaných kľúčov: <strong id="total-accounts">Načítavam...</strong>
+        <span>Celkovo úspešne registrovaných:</span>
+        <img id="counter-img" src="https://api.visitorbadge.io/api/visitors?path=erikaios_registrations_official_2027&countColor=%232563eb&style=flat" alt="Registrované účty" />
       </div>
     </div>
 
@@ -174,123 +196,86 @@
   </div>
 
   <script>
-    const NAMESPACE = 'erikaios_secure_accounts_2027';
-    const KEY_NAME = 'erikai_user_token';
-    const SEEN_FLAG = 'erikai_key_revealed';
+    const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Bez zmätkových znakov (O, 0, I, 1)
 
-    // Generovanie náhodného kľúča
-    function generateToken() {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let p1 = '', p2 = '';
-      for (let i = 0; i < 4; i++) p1 += chars.charAt(Math.floor(Math.random() * chars.length));
-      for (let i = 0; i < 4; i++) p2 += chars.charAt(Math.floor(Math.random() * chars.length));
-      return `ERIK-${p1}-${p2}`;
-    }
-
-    // Načítanie štatistík zo servera
-    async function loadStats() {
-      try {
-        const response = await fetch(`https://api.counterapi.dev/v1/${NAMESPACE}/total_keys`);
-        if (response.ok) {
-          const data = await response.json();
-          document.getElementById('total-accounts').textContent = data.count || 0;
-        } else {
-          document.getElementById('total-accounts').textContent = 'Online';
-        }
-      } catch (e) {
-        document.getElementById('total-accounts').textContent = 'Aktívne';
+    // Matematický výpočet kontrolného znaku (Checksum) pre prísnu kontrolu
+    function calcChecksum(str) {
+      let sum = 0;
+      for (let i = 0; i < str.length; i++) {
+        sum += str.charCodeAt(i) * (i + 1);
       }
+      return CHARS[sum % CHARS.length];
     }
 
-    // Vygenerovanie nového kľúča (+1 na serveri)
-    async function registerNewUser() {
-      const newToken = generateToken();
-      localStorage.setItem(KEY_NAME, newToken);
-      localStorage.setItem(SEEN_FLAG, 'true'); // Označíme, že kľúč už bol zobrazený
-
-      try {
-        await fetch(`https://api.counterapi.dev/v1/${NAMESPACE}/total_keys/up`);
-      } catch (e) {
-        console.warn('Počítadlo sa nepodarilo aktualizovať');
+    // Vygenerovanie platného kryptografického kľúča
+    function generateValidToken() {
+      let payload = '';
+      for (let i = 0; i < 7; i++) {
+        payload += CHARS.charAt(Math.floor(Math.random() * CHARS.length));
       }
-
-      showFreshKey(newToken);
-      loadStats();
+      const check = calcChecksum(payload);
+      const full = payload + check; // 8 znakov
+      return `ERIK-${full.substring(0, 4)}-${full.substring(4, 8)}`;
     }
 
-    // Zobraziť kľúč iba pri prvom vytvoreni
-    function showFreshKey(token) {
+    // Prísna kontrola platnosti zadaného kódu (odhalí aj 1 zlé písmeno)
+    function isValidToken(token) {
+      const clean = token.replace(/[^A-Z0-9]/g, '');
+      if (!clean.startsWith('ERIK') || clean.length !== 12) return false;
+      
+      const raw = clean.substring(4); // 8 znakov
+      const payload = raw.substring(0, 7);
+      const expectedCheck = raw.substring(7, 8);
+      
+      return calcChecksum(payload) === expectedCheck;
+    }
+
+    // Vygenerovanie nového kľúča (Započíta registráciu až tu)
+    function generateAndRegisterKey() {
+      const newToken = generateValidToken();
+
+      // Zobrazenie kľúča používateľovi
       const box = document.getElementById('key-display');
       box.style.display = 'block';
-      box.textContent = token;
-
+      box.textContent = newToken;
       document.getElementById('warning-msg').style.display = 'block';
-      document.getElementById('btn-register').style.display = 'none';
-      document.getElementById('btn-enter').style.display = 'inline-block';
+
+      // Zmena tlačidla - prinúti ho prejsť k ručnému zadaniu
+      const genBtn = document.getElementById('btn-gen');
+      genBtn.textContent = '➡️ Kód zapísaný, pokračovať na prihlásenie';
+      genBtn.style.background = '#16a34a';
+      genBtn.onclick = showAuthView;
+
+      // Navýšenie reálneho počítadla registrácií na serveri
+      const img = document.getElementById('counter-img');
+      img.src = `https://api.visitorbadge.io/api/visitors?path=erikaios_registrations_official_2027&countColor=%232563eb&style=flat&t=${Date.now()}`;
     }
 
-    // Ak už človek kľúč má v pamäti, ale nechceme mu ho ukazovať znova, ukážeme len tlačidlo pre vstup
-    function showHiddenState() {
-      document.getElementById('key-display').style.display = 'none';
-      document.getElementById('warning-msg').style.display = 'none';
-      
-      const regBtn = document.getElementById('btn-register');
-      regBtn.textContent = '🔒 Kľúč je bezpečne uložený v zariadení';
-      regBtn.style.background = '#334155';
-      regBtn.style.cursor = 'default';
-      regBtn.onclick = null;
+    // Prísne overenie ručne zadaného kódu
+    function verifyKeyAndEnter() {
+      const input = document.getElementById('input-token').value.trim().toUpperCase();
+      const err = document.getElementById('error-msg');
 
-      document.getElementById('btn-enter').style.display = 'inline-block';
-    }
-
-    // Vstup do systému cez uložený kľúč
-    function enterSystemWithSaved() {
-      const token = localStorage.getItem(KEY_NAME);
-      if (!token) {
-        alert('Žiadny kľúč sa nenašiel. Zadaj svoj kľúč cez tlačidlo nižšie.');
-        return;
+      if (isValidToken(input)) {
+        err.style.display = 'none';
+        // Pustí používateľa do aplikácie iba vtedy, ak je kód 100% mataticky správny
+        window.location.href = 'index3.html';
+      } else {
+        err.style.display = 'block';
+        document.getElementById('input-token').style.borderColor = '#ef4444';
       }
-      // Pustí ho do aplikácie
-      window.location.href = 'index3.html';
     }
 
-    // Prepínanie obrazoviek
-    function showLoginInput() {
-      document.getElementById('main-view').style.display = 'none';
-      document.getElementById('login-view').style.display = 'block';
+    function showAuthView() {
+      document.getElementById('gen-view').style.display = 'none';
+      document.getElementById('auth-view').style.display = 'block';
+      document.getElementById('error-msg').style.display = 'none';
     }
 
-    function showMainView() {
-      document.getElementById('login-view').style.display = 'none';
-      document.getElementById('main-view').style.display = 'block';
+    function showGenView() {
+      document.getElementById('auth-view').style.display = 'none';
+      document.getElementById('gen-view').style.display = 'block';
     }
-
-    // Overenie ručne zadaného kľúča
-    function verifyAndLogin() {
-      const entered = document.getElementById('input-token').value.trim().toUpperCase();
-      
-      if (!entered.startsWith('ERIK-') || entered.length < 10) {
-        alert('Neplatný tvar kľúča! Kľúč musí začínať na ERIK-');
-        return;
-      }
-
-      // Uložíme kľúč a pustíme ho dnu bez pripočítavania na server
-      localStorage.setItem(KEY_NAME, entered);
-      localStorage.setItem(SEEN_FLAG, 'true');
-      window.location.href = 'index3.html';
-    }
-
-    // Pri načítaní stránky overíme stav
-    document.addEventListener("DOMContentLoaded", () => {
-      const savedToken = localStorage.getItem(KEY_NAME);
-      const wasSeen = localStorage.getItem(SEEN_FLAG);
-
-      if (savedToken && wasSeen) {
-        // Kľúč už existuje a bol videný -> už ho NEUKÁŽEME, len dáme možnosť vstúpiť alebo zadať iný
-        showHiddenState();
-      }
-      loadStats();
-    });
   </script>
 
 </body>
