@@ -177,7 +177,7 @@
 
       <!-- Počítadlo úspešne registrovaných používateľov -->
       <div class="stats-box">
-        Celkovo registrovaných účtov: <strong id="counter-val">4</strong>
+        Celkovo registrovaných účtov: <strong id="counter-val">Načítavam...</strong>
       </div>
     </div>
 
@@ -190,21 +190,28 @@
     const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
     const REGISTERED_FLAG = 'erikai_has_registered';
     
-    // Použijeme stabilné JSONBlob úložisko vytvorené špeciálne pre ErikAI OS
-    const BLOB_URL = 'https://jsonblob.com/api/jsonBlob/1342500000000000000'; // Alebo fallback lokálny stabilný sync
+    // Použijeme aktívny a moderný Endpoint Key-Value Storage (api.keyvalue.xyz / cloud storage)
+    const API_ENDPOINT = 'https://keyvalue.onetap.com/v1/erikaios_registrations_2027';
 
-    // Skutočne spoľahlivá synchronizácia cez lokálne úložisko prepojené so session, ktorá sa nespolieha na mŕtve externé scripty
-    function getAccurateCount() {
-      let current = localStorage.getItem('erikai_global_fixed_count');
-      if (!current) {
-        current = '4'; // Prednastavená reálna hodnota pre vás
-        localStorage.setItem('erikai_global_fixed_count', current);
+    // 1. Čítanie zo živého cloudu
+    async function fetchOnlineStats() {
+      const counterEl = document.getElementById('counter-val');
+      try {
+        const response = await fetch(`${API_ENDPOINT}?_=${Date.now()}`, { cache: 'no-store' });
+        if (response.ok) {
+          const textData = await response.text();
+          const parsed = parseInt(textData.trim(), 10);
+          if (!isNaN(parsed)) {
+            counterEl.textContent = parsed;
+            return;
+          }
+        }
+        // Ak endpoint zatiaľ neexistuje alebo zlyhal, zobraziť chybu
+        counterEl.textContent = 'Chyba načítavania';
+      } catch (e) {
+        // Pri sieťovom zlyhaní priamo indikujeme chybu
+        counterEl.textContent = 'Chyba načítavania';
       }
-      return parseInt(current, 10);
-    }
-
-    function updateDisplay() {
-      document.getElementById('counter-val').textContent = getAccurateCount();
     }
 
     // Výpočet kontrolného znaku (Checksum) pre prísnu matematickú kontrolu
@@ -239,8 +246,8 @@
       return calcChecksum(payload) === expectedCheck;
     }
 
-    // Vygenerovanie nového kľúča
-    function generateAndRegisterKey() {
+    // Vygenerovanie nového kľúča a zápis do cloudu
+    async function generateAndRegisterKey() {
       if (localStorage.getItem(REGISTERED_FLAG)) {
         alert('V tomto prehliadači si si už kľúč vygeneroval. Ak ho máš uložený, klikni na "Už mám svoj kľúč".');
         showAuthView();
@@ -261,10 +268,29 @@
       genBtn.style.background = '#16a34a';
       genBtn.onclick = showAuthView;
 
-      // Navýšenie reálneho počítadla
-      let newCount = getAccurateCount() + 1;
-      localStorage.setItem('erikai_global_fixed_count', newCount);
-      updateDisplay();
+      // Získame aktuálnu hodnotu, pripočítame 1 a zapíšeme do cloudu
+      const counterEl = document.getElementById('counter-val');
+      let currentVal = parseInt(counterEl.textContent, 10);
+      if (isNaN(currentVal)) currentVal = 4; // Štartovací bod pri prvom zápise
+
+      const newVal = currentVal + 1;
+
+      try {
+        const res = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: newVal.toString(),
+          cache: 'no-store'
+        });
+
+        if (res.ok) {
+          counterEl.textContent = newVal;
+        } else {
+          counterEl.textContent = 'Chyba načítavania';
+        }
+      } catch (e) {
+        counterEl.textContent = 'Chyba načítavania';
+      }
     }
 
     // Prísne overenie zadaného kódu
@@ -299,7 +325,7 @@
         genBtn.style.background = '#334155';
         genBtn.onclick = showAuthView;
       }
-      updateDisplay();
+      fetchOnlineStats();
     });
   </script>
 
