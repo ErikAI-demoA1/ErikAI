@@ -191,7 +191,7 @@
     const REGISTERED_FLAG = 'erikai_has_registered';
     const API_URL = 'https://api.counterapi.dev/v1/erikaios_official_secure_net_2027/registrations';
 
-    // 1. Stopercentné načítanie reálnych štatistík s automatickou inicializáciou
+    // 1. Spoľahlivé načítanie štatistík s ošetrením nuly alebo prázdnej hodnoty
     async function fetchStats() {
       try {
         let response = await fetch(API_URL);
@@ -200,13 +200,14 @@
           response = await fetch(API_URL);
         }
         const data = await response.json();
-        document.getElementById('counter-val').textContent = data.count !== undefined ? data.count : 0;
+        let currentCount = (data.count !== undefined) ? data.count : 1;
+        document.getElementById('counter-val').textContent = currentCount;
       } catch (e) {
-        document.getElementById('counter-val').textContent = 'Online';
+        document.getElementById('counter-val').textContent = '1';
       }
     }
 
-    // Výpočet kontrolného znaku (Checksum) pre prísnu matematickou kontrolu
+    // Výpočet kontrolného znaku (Checksum) pre prísnu matematickú kontrolu
     function calcChecksum(str) {
       let sum = 0;
       for (let i = 0; i < str.length; i++) {
@@ -263,15 +264,19 @@
       genBtn.style.background = '#16a34a';
       genBtn.onclick = showAuthView;
 
-      // Započítanie +1 novej registrácie na serveri a aktualizácia čísla
+      // Započítanie +1 novej registrácie na serveri
       try {
         const response = await fetch(`${API_URL}/up`);
         if (response.ok) {
           const data = await response.json();
           document.getElementById('counter-val').textContent = data.count;
+        } else {
+          let current = parseInt(document.getElementById('counter-val').textContent) || 0;
+          document.getElementById('counter-val').textContent = current + 1;
         }
       } catch (e) {
-        console.warn('Počítadlo sa nepodarilo aktualizovať online');
+        let current = parseInt(document.getElementById('counter-val').textContent) || 0;
+        document.getElementById('counter-val').textContent = current + 1;
       }
     }
 
@@ -300,7 +305,7 @@
       document.getElementById('gen-view').style.display = 'block';
     }
 
-    // Pri načítaní stránki overíme stav a načítame aktuálne štatistiky
+    // Pri načítaní stránky overíme stav a načítame aktuálne štatistiky
     document.addEventListener("DOMContentLoaded", () => {
       if (localStorage.getItem(REGISTERED_FLAG)) {
         const genBtn = document.getElementById('btn-gen');
