@@ -144,17 +144,9 @@
       border-top: 1px solid var(--border);
       font-size: 0.85rem;
       color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
     }
 
-    .stats-box img {
-      height: 22px;
-      border-radius: 5px;
-    }
-
+    .stats-box strong { color: #60a5fa; }
     footer { font-size: 0.8rem; color: var(--text-muted); }
   </style>
 </head>
@@ -183,10 +175,9 @@
         <button class="btn btn-secondary" onclick="showGenView()">Späť</button>
       </div>
 
-      <!-- Počítadlo úspešne registrovaných používateľov -->
+      <!-- Počítadlo úspešne registrovaných používateľov (Presné číslo zo servera) -->
       <div class="stats-box">
-        <span>Celkovo registrovaných účtov:</span>
-        <img id="counter-img" src="https://api.visitorbadge.io/api/visitors?path=erikaios_unique_registrations_2027&countColor=%232563eb&style=flat" alt="Registrované účty" />
+        Celkovo registrovaných účtov: <strong id="counter-val">Načítavam...</strong>
       </div>
     </div>
 
@@ -198,8 +189,24 @@
   <script>
     const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Bez zmätkových znakov (O, 0, I, 1)
     const REGISTERED_FLAG = 'erikai_has_registered';
+    const API_URL = 'https://api.counterapi.dev/v1/erikaios_official_secure_net_2027/registrations';
 
-    // Výpočet kontrolného znaku (Checksum) pre prísnu matematickú kontrolu
+    // 1. Stopercentné načítanie reálnych štatistík s automatickou inicializáciou
+    async function fetchStats() {
+      try {
+        let response = await fetch(API_URL);
+        if (!response.ok) {
+          await fetch(`${API_URL}/up`);
+          response = await fetch(API_URL);
+        }
+        const data = await response.json();
+        document.getElementById('counter-val').textContent = data.count !== undefined ? data.count : 0;
+      } catch (e) {
+        document.getElementById('counter-val').textContent = 'Online';
+      }
+    }
+
+    // Výpočet kontrolného znaku (Checksum) pre prísnu matematickou kontrolu
     function calcChecksum(str) {
       let sum = 0;
       for (let i = 0; i < str.length; i++) {
@@ -232,7 +239,7 @@
     }
 
     // Vygenerovanie nového kľúča – započíta sa presne RAZ pre daný prehliadač
-    function generateAndRegisterKey() {
+    async function generateAndRegisterKey() {
       if (localStorage.getItem(REGISTERED_FLAG)) {
         alert('V tomto prehliadači si si už kľúč vygeneroval. Ak ho máš uložený, klikni na "Už mám svoj kľúč".');
         showAuthView();
@@ -256,12 +263,16 @@
       genBtn.style.background = '#16a34a';
       genBtn.onclick = showAuthView;
 
-      // Započítanie +1 novej registrácie na serveri
-      fetch(`https://api.counterapi.dev/v1/erikaios_registrations_2027/total_users/up`).catch(() => {});
-      
-      // Aktualizácia vizuálneho odznaku
-      const img = document.getElementById('counter-img');
-      img.src = `https://api.visitorbadge.io/api/visitors?path=erikaios_unique_registrations_2027&countColor=%232563eb&style=flat&t=${Date.now()}`;
+      // Započítanie +1 novej registrácie na serveri a aktualizácia čísla
+      try {
+        const response = await fetch(`${API_URL}/up`);
+        if (response.ok) {
+          const data = await response.json();
+          document.getElementById('counter-val').textContent = data.count;
+        }
+      } catch (e) {
+        console.warn('Počítadlo sa nepodarilo aktualizovať online');
+      }
     }
 
     // Prísne overenie zadaného kódu
@@ -289,7 +300,7 @@
       document.getElementById('gen-view').style.display = 'block';
     }
 
-    // Pri opätovnom načítaní skontrolujeme, či si už kľúč generoval
+    // Pri načítaní stránki overíme stav a načítame aktuálne štatistiky
     document.addEventListener("DOMContentLoaded", () => {
       if (localStorage.getItem(REGISTERED_FLAG)) {
         const genBtn = document.getElementById('btn-gen');
@@ -297,6 +308,7 @@
         genBtn.style.background = '#334155';
         genBtn.onclick = showAuthView;
       }
+      fetchStats();
     });
   </script>
 
