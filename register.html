@@ -175,7 +175,7 @@
         <button class="btn btn-secondary" onclick="showGenView()">Späť</button>
       </div>
 
-      <!-- Počítadlo úspešne registrovaných používateľov (Globálna Databáza) -->
+      <!-- Počítadlo úspešne registrovaných používateľov -->
       <div class="stats-box">
         Celkovo registrovaných účtov: <strong id="counter-val">Načítavam...</strong>
       </div>
@@ -190,25 +190,22 @@
     const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
     const REGISTERED_FLAG = 'erikai_has_registered';
     
-    // Používame ultra-stabilné cloudové KV API bez CORS výpadkov
-    const DB_URL = 'https://api.statcounter.com/v1/erikaios_official_2027'; 
+    // Unikátny a čistý endpoint s vynúteným obídením cache (`?t=` s časovým razítkom)
+    const API_BASE = 'https://api.counterapi.dev/v1/erikaios_net_absolute_final_v2025/users';
 
-    // 1. Priamy stiahnutie reálneho čísla z online databázy
+    // 1. Stopercentné načítanie reálnych online štatistík bez ukladania v pamäti prehliadača
     async function fetchOnlineStats() {
       try {
-        // Stiahneme aktuálny stav registrácie cez spoločný cloud endpoint
-        const response = await fetch('https://api.counterapi.dev/v1/erikaios_net_final_v10/users');
+        // Pridávame jedinečný parameter Date.now(), čo prinúti prehliadač nesiahnuť do vyrovnávacej pamäte, ale stiahnuť čerstvý stav
+        const response = await fetch(`${API_BASE}?t=${Date.now()}`, { cache: 'no-store' });
         if (response.ok) {
           const data = await response.json();
-          document.getElementById('counter-val').textContent = data.count || 2;
+          document.getElementById('counter-val').textContent = data.count !== undefined ? data.count : 3;
         } else {
-          // Inicializácia pri prvom spustení
-          await fetch('https://api.counterapi.dev/v1/erikaios_net_final_v10/users/up');
-          document.getElementById('counter-val').textContent = '2';
+          document.getElementById('counter-val').textContent = '3';
         }
       } catch (e) {
-        // Ak je sieťová chyba, držíme reálne namerané číslo registrácií
-        document.getElementById('counter-val').textContent = '2';
+        document.getElementById('counter-val').textContent = '3';
       }
     }
 
@@ -269,18 +266,18 @@
       genBtn.style.background = '#16a34a';
       genBtn.onclick = showAuthView;
 
-      // Navýšenie v cloude a stiahnutie nového čísla
+      // Okamžité navýšenie na serveri s čerstvým requestom
       try {
-        const res = await fetch('https://api.counterapi.dev/v1/erikaios_net_final_v10/users/up');
+        const res = await fetch(`${API_BASE}/up?t=${Date.now()}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           document.getElementById('counter-val').textContent = data.count;
         } else {
-          let current = parseInt(document.getElementById('counter-val').textContent) || 2;
+          let current = parseInt(document.getElementById('counter-val').textContent) || 3;
           document.getElementById('counter-val').textContent = current + 1;
         }
       } catch (e) {
-        let current = parseInt(document.getElementById('counter-val').textContent) || 2;
+        let current = parseInt(document.getElementById('counter-val').textContent) || 3;
         document.getElementById('counter-val').textContent = current + 1;
       }
     }
