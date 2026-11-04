@@ -190,22 +190,27 @@
     const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
     const REGISTERED_FLAG = 'erikai_has_registered';
     
-    // Unikátny a čistý endpoint s vynúteným obídením cache (`?t=` s časovým razítkom)
     const API_BASE = 'https://api.counterapi.dev/v1/erikaios_net_absolute_final_v2025/users';
 
     // 1. Stopercentné načítanie reálnych online štatistík bez ukladania v pamäti prehliadača
     async function fetchOnlineStats() {
       try {
-        // Pridávame jedinečný parameter Date.now(), čo prinúti prehliadač nesiahnuť do vyrovnávacej pamäte, ale stiahnuť čerstvý stav
-        const response = await fetch(`${API_BASE}?t=${Date.now()}`, { cache: 'no-store' });
+        const response = await fetch(`${API_BASE}?_=${Date.now()}_${Math.random()}`, { 
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        
         if (response.ok) {
           const data = await response.json();
-          document.getElementById('counter-val').textContent = data.count !== undefined ? data.count : 3;
-        } else {
-          document.getElementById('counter-val').textContent = '3';
+          if (data.count !== undefined) {
+            document.getElementById('counter-val').textContent = data.count;
+          }
         }
       } catch (e) {
-        document.getElementById('counter-val').textContent = '3';
+        console.warn('Nepodarilo sa aktualizovať online stav');
       }
     }
 
@@ -251,24 +256,26 @@
 
       const newToken = generateValidToken();
 
-      // Zobrazenie kľúča používateľovi
       const box = document.getElementById('key-display');
       box.style.display = 'block';
       box.textContent = newToken;
       document.getElementById('warning-msg').style.display = 'block';
 
-      // Označenie v prehliadači
       localStorage.setItem(REGISTERED_FLAG, 'true');
 
-      // Tlačidlo prejde do stavu pokračovania
       const genBtn = document.getElementById('btn-gen');
       genBtn.textContent = '➡️ Kód zapísaný, pokračovať na prihlásenie';
       genBtn.style.background = '#16a34a';
       genBtn.onclick = showAuthView;
 
-      // Okamžité navýšenie na serveri s čerstvým requestom
       try {
-        const res = await fetch(`${API_BASE}/up?t=${Date.now()}`, { cache: 'no-store' });
+        const res = await fetch(`${API_BASE}/up?_=${Date.now()}_${Math.random()}`, { 
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           document.getElementById('counter-val').textContent = data.count;
@@ -307,7 +314,6 @@
       document.getElementById('gen-view').style.display = 'block';
     }
 
-    // Načítanie stavu pri otváraní stránky
     document.addEventListener("DOMContentLoaded", () => {
       if (localStorage.getItem(REGISTERED_FLAG)) {
         const genBtn = document.getElementById('btn-gen');
