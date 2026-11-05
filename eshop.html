@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI Store — Prémiový Produkt</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #030712;
+    --card-glass: rgba(17, 24, 39, 0.75);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --card-hover-border: rgba(239, 68, 68, 0.5);
+    --neon-red: #ef4444;
+    --neon-orange: #f97316;
+    --accent-glow: rgba(239, 68, 68, 0.3);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-deep);
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(239, 68, 68, 0.1) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(249, 115, 22, 0.08) 0%, transparent 40%),
+      linear-gradient(135deg, #030712 0%, #0b0f19 100%);
+    color: var(--text-main);
+    min-height: 100vh;
+    padding: 30px 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .product-card {
+    width: 100%;
+    max-width: 1000px;
+    background: var(--card-glass);
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 35px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 35px;
+    position: relative;
+  }
+
+  /* ====== LEVÁ ČASŤ - GALÉRIA ====== */
+  .gallery-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .main-image-wrapper {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+    background: rgba(0,0,0,0.5);
+    cursor: zoom-in;
+  }
+
+  .main-image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+  }
+
+  .main-image-wrapper:hover img {
+    transform: scale(1.05);
+  }
+
+  .zoom-badge {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--text-muted);
+    padding: 6px 12px;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--card-border);
+  }
+
+  /* Posuvná lišta fotiek (Swipe & Scroll) */
+  .thumbnails-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--neon-red) transparent;
+  }
+
+  .thumbnails-scroll::-webkit-scrollbar {
+    height: 6px;
+  }
+  .thumbnails-scroll::-webkit-scrollbar-thumb {
+    background: var(--neon-red);
+    border-radius: 99px;
+  }
+
+  .thumb-item {
+    min-width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    overflow: hidden;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .thumb-item.active, .thumb-item:hover {
+    opacity: 1;
+    border-color: var(--neon-red);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  .thumb-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* ====== PRAVÁ ČASŤ - DETAILY & FORMULÁR ====== */
+  .info-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .product-header {
+    border-bottom: 1px solid var(--card-border);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+  }
+
+  .product-badge {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--neon-orange);
+    margin-bottom: 8px;
+    display: inline-block;
+  }
+
+  .product-title {
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff 40%, var(--neon-red), var(--neon-orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+
+  .product-code-price {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+  }
+
+  .product-code {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.05);
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+  }
+
+  .product-price {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--neon-red);
+    text-shadow: 0 0 15px var(--accent-glow);
+  }
+
+  .product-description {
+    color: var(--text-muted);
+    line-height: 1.6;
+    font-size: 0.95rem;
+    margin-bottom: 25px;
+  }
+
+  /* Formuľár na objednávku */
+  .order-form {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+  }
+
+  .form-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .input-group {
+    margin-bottom: 12px;
+  }
+
+  .input-group input, .input-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.3s;
+  }
+
+  .input-group input:focus, .input-group textarea:focus {
+    border-color: var(--neon-red);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  .btn-submit {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-orange));
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 8px 20px var(--accent-glow);
+    transition: all 0.3s ease;
+  }
+
+  .btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px var(--accent-glow);
+  }
+
+  /* ====== LIGHTBOX (PRIBILÍŽENIE FOTKY NA CELÚ OBRAZOVKU) ====== */
+  .lightbox-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(3, 7, 18, 0.95);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(15px);
+  }
+
+  .lightbox-modal img {
+    max-width: 90%;
+    max-height: 85vh;
+    border-radius: 16px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    border: 1px solid var(--card-border);
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 25px;
+    right: 25px;
+    color: #fff;
+    font-size: 2rem;
+    cursor: pointer;
+    background: rgba(255,255,255,0.1);
+    width: 45px; height: 45px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  @media (max-width: 850px) {
+    .product-card {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="product-card">
+    
+    <!-- LEVÁ ČASŤ - GALÉRIA -->
+    <div class="gallery-section">
+      <div class="main-image-wrapper" id="mainImageWrapper">
+        <img id="activeMainImg" src="https://picsum.photos/800/600?random=1" alt="Produkt">
+        <span class="zoom-badge">🔍 Klikni pre detail</span>
+      </div>
+      
+      <!-- Tiahnutím doprava/doľava vyberáš fotky -->
+      <div class="thumbnails-scroll" id="thumbContainer">
+        <div class="thumb-item active" onclick="zmenFotku(this, 'https://picsum.photos/800/600?random=1')">
+          <img src="https://picsum.photos/800/600?random=1" alt="Fotka 1">
+        </div>
+        <div class="thumb-item" onclick="zmenFotku(this, 'https://picsum.photos/800/600?random=2')">
+          <img src="https://picsum.photos/800/600?random=2" alt="Fotka 2">
+        </div>
+        <div class="thumb-item" onclick="zmenFotku(this, 'https://picsum.photos/800/600?random=3')">
+          <img src="https://picsum.photos/800/600?random=3" alt="Fotka 3">
+        </div>
+        <div class="thumb-item" onclick="zmenFotku(this, 'https://picsum.photos/800/600?random=4')">
+          <img src="https://picsum.photos/800/600?random=4" alt="Fotka 4">
+        </div>
+      </div>
+    </div>
+
+    <!-- PRAVÁ ČASŤ - PODROBNOSTI A MIESTNA OBJEDNÁVKA -->
+    <div class="info-section">
+      <div>
+        <div class="product-header">
+          <span class="product-badge">🔥 ErikAI Exkluzívny Tovar</span>
+          <h1 class="product-title" id="pTitle">Sony PlayStation 5 Slim 1TB</h1>
+          <div class="product-code-price">
+            <span class="product-code">Kód: <strong id="pCode">ERIK-PS5-001</strong></span>
+            <span class="product-price" id="pPrice">450 €</span>
+          </div>
+        </div>
+
+        <p class="product-description" id="pDesc">
+          Predám plne funkčnú hernú konzolu v bezchybnom stave. Kompletné originálne balenie, 1x ovládač DualSense, káble a záruka. Osobné prevzatie alebo dohoda cez e-mail.
+        </p>
+      </div>
+
+      <!-- LOKÁLNY FORMULÁR -->
+      <div class="order-form">
+        <div class="form-title">📩 Napísať predajcovi (E-mail dohoda)</div>
+        <form onsubmit="odoslatDohodu(event)">
+          <div class="input-group">
+            <input type="text" id="custName" placeholder="Tvoje Meno / Prezývka" required>
+          </div>
+          <div class="input-group">
+            <input type="tel" id="custPhone" placeholder="Telefónne číslo (voliteľné)">
+          </div>
+          <div class="input-group">
+            <textarea id="custMsg" rows="3" placeholder="Aké máš otázky alebo kedy chceš tovar prebrať?"></textarea>
+          </div>
+          <button type="submit" class="btn-submit">🚀 Odoslať správu a rezervovať</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LIGHTBOX / PRIBLÍŽENIE -->
+  <div class="lightbox-modal" id="lightboxModal">
+    <span class="lightbox-close" onclick="zatvorZoom()">&times;</span>
+    <img id="lightboxImg" src="" alt="Detail">
+  </div>
+
+<script>
+  // Nastavenie tvojich kontaktov
+  const ERIK_EMAIL = "mojmail@gmail.com"; // <-- SEM DAJ SVOJ EMAIL
+
+  // Zmena hlavnej fotky
+  function zmenFotku(element, novySrc) {
+    document.querySelectorAll('.thumb-item').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    document.getElementById('activeMainImg').src = novySrc;
+  }
+
+  // Zoom na celú obrazovku
+  const mainWrapper = document.getElementById('mainImageWrapper');
+  const lightboxModal = document.getElementById('lightboxModal');
+  const lightboxImg = document.getElementById('lightboxImg');
+
+  mainWrapper.addEventListener('click', () => {
+    lightboxImg.src = document.getElementById('activeMainImg').src;
+    lightboxModal.style.display = 'flex';
+  });
+
+  function zatvorZoom() {
+    lightboxModal.style.display = 'none';
+  }
+
+  // Generovanie správy a odoslanie mailu bez databázy
+  function odoslatDohodu(event) {
+    event.preventDefault();
+    
+    const name = document.getElementById('custName').value;
+    const phone = document.getElementById('custPhone').value || 'Nezadané';
+    const msg = document.getElementById('custMsg').value || 'Mám záujem o tento tovar.';
+    const title = document.getElementById('pTitle').innerText;
+    const code = document.getElementById('pCode').innerText;
+    const pageUrl = window.location.href;
+
+    const predmet = `Záujem o tovar: ${title} [${code}]`;
+    const teloMailingu = `Ahoj Erik,\n\nMám záujem o tvoj tovar:\n- Produkt: ${title}\n- Kód tovaru: ${code}\n- Odkaz na produkt: ${pageUrl}\n\nÚdaje záujemcu:\n- Meno: ${name}\n- Tel. kontakt: ${phone}\n\nSpráva od záujemcu:\n${msg}\n\nS pozdravom,\n${name}`;
+
+    // Otvorí e-mailový klient zákazníka s predvyplnenými údajmi
+    window.location.href = `mailto:${ERIK_EMAIL}?subject=${encodeURIComponent(predmet)}&body=${encodeURIComponent(teloMailingu)}`;
+  }
+</script>
+
+</body>
+</html>
