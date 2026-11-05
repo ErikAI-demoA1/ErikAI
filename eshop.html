@@ -3,8 +3,250 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- 1. SEM SI ZMEŇ NÁZOV KARTY V PREHLIADAČI -->
-<title>ErikAI Store — Detail Produktu</title>
+<title>ErikAI OS — Generátor Produktových HTML Šablón</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #030712;
+    --card-glass: rgba(17, 24, 39, 0.75);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --neon-red: #ef4444;
+    --neon-orange: #f97316;
+    --accent-glow: rgba(239, 68, 68, 0.3);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-deep);
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(239, 68, 68, 0.1) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(249, 115, 22, 0.08) 0%, transparent 40%),
+      linear-gradient(135deg, #030712 0%, #0b0f19 100%);
+    color: var(--text-main);
+    min-height: 100vh;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .generator-card {
+    width: 100%;
+    max-width: 800px;
+    background: var(--card-glass);
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 35px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff 40%, var(--neon-red), var(--neon-orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  p.subtitle {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 25px;
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  input, textarea {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.3s ease;
+  }
+
+  input:focus, textarea:focus {
+    border-color: var(--neon-red);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  .row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+
+  .img-input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--card-border);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-remove {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid var(--neon-red);
+    color: var(--neon-red);
+    padding: 0 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  .btn-submit {
+    width: 100%;
+    padding: 16px;
+    margin-top: 20px;
+    background: linear-gradient(90deg, var(--neon-red), var(--neon-orange));
+    border: none;
+    border-radius: 14px;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: 0 10px 25px var(--accent-glow);
+    transition: all 0.3s ease;
+  }
+
+  .btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px var(--accent-glow);
+  }
+
+  @media (max-width: 600px) {
+    .row-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="generator-card">
+    <h1>🛠️ ErikAI Generátor Produktov</h1>
+    <p class="subtitle">Vyplň údaje a stiahni si hotovú HTML stránku pre svoj e-shopový produkt.</p>
+
+    <form id="genForm" onsubmit="vygenerujAStiahniHTML(event)">
+      
+      <div class="form-group">
+        <label>Názov Produktu</label>
+        <input type="text" id="pTitle" placeholder="napr. Sony PlayStation 5 Slim 1TB" required>
+      </div>
+
+      <div class="row-2">
+        <div class="form-group">
+          <label>Kód Produktu</label>
+          <input type="text" id="pCode" placeholder="napr. ERIK-PS5-001" required>
+        </div>
+        <div class="form-group">
+          <label>Cena (€)</label>
+          <input type="text" id="pPrice" placeholder="napr. 450 €" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Tvoj Kontakt E-mail (kam prídu správy)</label>
+        <input type="email" id="pEmail" placeholder="napr. erik@mojadomena.sk" required>
+      </div>
+
+      <div class="form-group">
+        <label>Popis Produktu</label>
+        <textarea id="pDesc" rows="4" placeholder="Opíš stav tovaru, kompletné balenie a podmienky prevzatia..." required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Obrázky (URL odkazy na fotky)</label>
+        <div id="imgContainer">
+          <div class="img-input-row">
+            <input type="text" class="img-url" placeholder="https://odkaz-na-obrazok-1.jpg" required>
+          </div>
+        </div>
+        <button type="button" class="btn-secondary" onclick="pridajInputObrazka()">+ Pridať ďalšiu fotku</button>
+      </div>
+
+      <button type="submit" class="btn-submit">💾 Vygenerovať a stiahnuť HTML súbor</button>
+    </form>
+  </div>
+
+<script>
+  function pridajInputObrazka() {
+    const container = document.getElementById('imgContainer');
+    const div = document.createElement('div');
+    div.className = 'img-input-row';
+    div.innerHTML = `
+      <input type="text" class="img-url" placeholder="https://odkaz-na-dalsi-obrazok.jpg" required>
+      <button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>
+    `;
+    container.appendChild(div);
+  }
+
+  function vygenerujAStiahniHTML(event) {
+    event.preventDefault();
+
+    const title = document.getElementById('pTitle').value.trim();
+    const code = document.getElementById('pCode').value.trim();
+    const price = document.getElementById('pPrice').value.trim();
+    const email = document.getElementById('pEmail').value.trim();
+    const desc = document.getElementById('pDesc').value.trim();
+
+    const imgInputs = document.querySelectorAll('.img-url');
+    const imgUrls = Array.from(imgInputs).map(input => input.value.trim()).filter(url => url !== '');
+
+    if (imgUrls.length === 0) {
+      alert('Pridaj aspoň jeden obrázok!');
+      return;
+    }
+
+    // Vygenerovanie náhľadov fotiek pre šablónu
+    let thumbsHTML = '';
+    imgUrls.forEach((url, idx) => {
+      thumbsHTML += `
+        <div class="thumb-item ${idx === 0 ? 'active' : ''}" onclick="zmenFotku(this, '${url}')">
+          <img src="${url}" alt="Foto ${idx + 1}">
+        </div>`;
+    });
+
+    // Kompletná šablóna nového produktu
+    const finalHTML = `<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title} — ErikAI Store</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -60,9 +302,7 @@
   .product-code-price { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
   .product-code { font-size: 0.85rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--card-border); }
   .product-price { font-size: 1.8rem; font-weight: 800; color: var(--neon-red); text-shadow: 0 0 15px var(--accent-glow); }
-  .product-description { color: var(--text-muted); line-height: 1.6; font-size: 0.95rem; margin-bottom: 25px; }
-  
-  /* FORMULÁR (Nechcené meniť, šliape perfektne) */
+  .product-description { color: var(--text-muted); line-height: 1.6; font-size: 0.95rem; margin-bottom: 25px; white-space: pre-line; }
   .order-form { background: rgba(0, 0, 0, 0.4); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; backdrop-filter: blur(10px); }
   .form-title { font-size: 1rem; font-weight: 700; margin-bottom: 12px; color: #fff; display: flex; align-items: center; gap: 8px; }
   .input-group { margin-bottom: 12px; }
@@ -74,8 +314,6 @@
     width: 100%; padding: 14px; background: linear-gradient(90deg, var(--neon-red), var(--neon-orange)); border: none; border-radius: 12px; color: #fff; font-weight: 800; font-size: 1rem; cursor: pointer; box-shadow: 0 8px 20px var(--accent-glow); transition: all 0.3s;
   }
   .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 12px 25px var(--accent-glow); }
-
-  /* ZOOM MODAL */
   .lightbox-modal {
     display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(3, 7, 18, 0.95); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(15px);
   }
@@ -87,49 +325,29 @@
 <body>
 
   <div class="product-card">
-    
-    <!-- GALÉRIA FOTIEK (Pridaj alebo odober fotky podľa ľubovôle) -->
     <div class="gallery-section">
       <div class="main-image-wrapper" id="mainImageWrapper">
-        <img id="activeMainImg" src="ODKAZ_NA_PRVU_FOTKU.jpg" alt="Produkt">
+        <img id="activeMainImg" src="${imgUrls[0]}" alt="Produkt">
         <span class="zoom-badge">🔍 Klikni pre detail</span>
       </div>
-      
       <div class="thumbnails-scroll" id="thumbContainer">
-        <!-- Fotka 1 (Hlavná) -->
-        <div class="thumb-item active" onclick="zmenFotku(this, 'ODKAZ_NA_PRVU_FOTKU.jpg')">
-          <img src="ODKAZ_NA_PRVU_FOTKU.jpg" alt="Foto 1">
-        </div>
-        <!-- Fotka 2 -->
-        <div class="thumb-item" onclick="zmenFotku(this, 'ODKAZ_NA_DRUHU_FOTKU.jpg')">
-          <img src="ODKAZ_NA_DRUHU_FOTKU.jpg" alt="Foto 2">
-        </div>
-        <!-- Fotka 3 (Pridaj ďalšie riadky ak chceš viac fotiek) -->
+        ${thumbsHTML}
       </div>
     </div>
 
-    <!-- INFORMÁCIE O TOVARE -->
     <div class="info-section">
       <div>
         <div class="product-header">
           <span class="product-badge">📦 ErikAI Katalóg</span>
-          <!-- NÁZOV PRODUKTU -->
-          <h1 class="product-title" id="pTitle">Sem napíš názov tvojho tovaru</h1>
+          <h1 class="product-title" id="pTitle">${title}</h1>
           <div class="product-code-price">
-            <!-- KÓD PRODUKTU -->
-            <span class="product-code">Kód: <strong id="pCode">ERIK-001</strong></span>
-            <!-- CENA -->
-            <span class="product-price" id="pPrice">0 €</span>
+            <span class="product-code">Kód: <strong id="pCode">${code}</strong></span>
+            <span class="product-price" id="pPrice">${price}</span>
           </div>
         </div>
-
-        <!-- POPIS PRODUKTU -->
-        <p class="product-description" id="pDesc">
-          Sem napíš vlastný popis produktu – o čom to je, v akom je stave, aké sú podmienky a všetko, čo zákazník potrebuje vedieť.
-        </p>
+        <p class="product-description" id="pDesc">${desc}</p>
       </div>
 
-      <!-- FORMULÁR PRE EMAIL (BEZ ZMENY, FUNGUJE PERFEKTNE) -->
       <div class="order-form">
         <div class="form-title">📩 Mám záujem (Dohoda cez e-mail)</div>
         <form onsubmit="odoslatDohodu(event)">
@@ -145,19 +363,16 @@
           <button type="submit" class="btn-submit">🚀 Odoslať správu predajcovi</button>
         </form>
       </div>
-
     </div>
   </div>
 
-  <!-- ZOOM OKNO -->
   <div class="lightbox-modal" id="lightboxModal">
     <span class="lightbox-close" onclick="zatvorZoom()">&times;</span>
     <img id="lightboxImg" src="" alt="Detail">
   </div>
 
 <script>
-  // ⚠️ SEM SI DAJ SVÔJ VLASTNÝ E-MAIL, NA KTORÝ TI BUDÚ CHODIŤ SPRÁVY
-  const ERIK_EMAIL = "tvojmail@gmail.com";
+  const ERIK_EMAIL = "${email}";
 
   function zmenFotku(element, novySrc) {
     document.querySelectorAll('.thumb-item').forEach(el => el.classList.remove('active'));
@@ -185,10 +400,23 @@
     const code = document.getElementById('pCode').innerText;
     const pageUrl = window.location.href;
 
-    const predmet = `Záujem o tovar: ${title} [${code}]`;
-    const teloMailingu = `Ahoj Erik,\n\nMám záujem o tvoj tovar:\n- Produkt: ${title}\n- Kód tovaru: ${code}\n- Odkaz na produkt: ${pageUrl}\n\nÚdaje záujemcu:\n- Meno: ${name}\n- Tel. kontakt: ${phone}\n\nSpráva od záujemcu:\n${msg}\n\nS pozdravom,\n${name}`;
+    const predmet = \`Záujem o tovar: \${title} [\${code}]\`;
+    const teloMailingu = \`Ahoj Erik,\\n\\nMám záujem o tvoj tovar:\\n- Produkt: \${title}\\n- Kód tovaru: \${code}\\n- Odkaz na produkt: \${pageUrl}\\n\\nÚdaje záujemcu:\\n- Meno: \${name}\\n- Tel. kontakt: \${phone}\\n\\nSpráva od záujemcu:\\n\${msg}\\n\\nS pozdravom,\\n\${name}\`;
 
-    window.location.href = `mailto:${ERIK_EMAIL}?subject=${encodeURIComponent(predmet)}&body=${encodeURIComponent(teloMailingu)}`;
+    window.location.href = \`mailto:\${ERIK_EMAIL}?subject=\${encodeURIComponent(predmet)}&body=\${encodeURIComponent(teloMailingu)}\`;
+  }
+<\/script>
+</body>
+</html>`;
+
+    // Automatické vytvorenie a stiahnutie .html súboru
+    const blob = new Blob([finalHTML], { type: 'text/html' });
+    const a = document.createElement('a');
+    const safeFileName = code.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'produkt';
+    a.href = URL.createObjectURL(blob);
+    a.download = `${safeFileName}.html`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 </script>
 
