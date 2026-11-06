@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI — Dynamický Cloudflare Štít</title>
+<title>ErikAI — Pokročilý Multi-Level Štít</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -32,7 +32,7 @@
 
   .shield-card {
     width: 100%;
-    max-width: 450px;
+    max-width: 480px;
     background: var(--card-glass);
     border: 1px solid var(--card-border);
     backdrop-filter: blur(20px);
@@ -101,39 +101,45 @@
     box-shadow: 0 10px 20px rgba(34, 197, 94, 0.3);
   }
 
-  /* MODÁLNE OKNO PRE DYNAMICKÚ CAPTCHA VÝZVU */
+  /* MODÁLNE OKNO PRE EXTRÉMNU CAPTCHU */
   .challenge-overlay {
     display: none;
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(3, 7, 18, 0.95);
+    background: rgba(3, 7, 18, 0.96);
     backdrop-filter: blur(10px);
-    padding: 25px;
+    padding: 20px;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     z-index: 10;
   }
 
-  .challenge-title { font-size: 1.1rem; color: var(--neon-red); font-weight: 800; margin-bottom: 10px; }
-  .challenge-desc { font-size: 0.85rem; color: var(--text-main); margin-bottom: 15px; }
+  .challenge-title { font-size: 1.1rem; color: var(--neon-red); font-weight: 800; margin-bottom: 5px; }
+  .challenge-desc { font-size: 0.8rem; color: var(--text-main); margin-bottom: 12px; text-align: center; }
+  .penalty-counter { font-size: 0.75rem; color: var(--neon-orange); margin-bottom: 15px; font-weight: 700; }
 
+  /* Mriežka pre 10+ tlačidiel, ktorá sa flexibilne prispôsobuje */
   .challenge-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
     width: 100%;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
   }
 
   .challenge-btn {
-    padding: 12px;
+    padding: 10px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--card-border);
-    border-radius: 10px;
+    border-radius: 8px;
     color: #fff;
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     cursor: pointer;
+    transition: background 0.2s;
   }
 
   .challenge-btn:hover { background: rgba(255, 255, 255, 0.15); }
@@ -142,13 +148,13 @@
 <body ontouchmove="zaznamenajPohyb(event)" onmousemove="zaznamenajPohyb(event)">
 
   <div class="shield-card">
-    <h2>🛡️ ErikAI Security Štít v3</h2>
-    <p>Dynamický bezpečnostný štít s náhodným generovaním výziev.</p>
+    <h2>🛡️ ErikAI Security Štít v4</h2>
+    <p>Pokročilý biometrický štít s rastúcou obtiažnosťou pri zlyhaní.</p>
 
     <div class="shield-box">
       <div class="shield-status">
         <div class="shield-dot" id="shieldDot"></div>
-        <span id="shieldText">Analýza správania...</span>
+        <span id="shieldText">Sledujem správanie...</span>
       </div>
       <button type="button" class="btn-verify" onclick="manualneOverenie()">Overiť</button>
     </div>
@@ -157,13 +163,14 @@
       🔒 Čaká sa na overenie...
     </button>
 
-    <!-- DYNAMICKÁ VÝZVA PROTI BOTOM -->
+    <!-- EXTRÉMNA DYNAMICKÁ VÝZVA -->
     <div class="challenge-overlay" id="challengeOverlay">
-      <div class="challenge-title">⚠️ Bezpečnostná výzva</div>
-      <div class="challenge-desc" id="challengePromptText">Načítavam zadanie...</div>
+      <div class="challenge-title">⚠️ Zistené podozrivé správanie</div>
+      <div class="challenge-desc" id="challengePromptText">Vyberte správny prvok:</div>
+      <div class="penalty-counter" id="penaltyCounterText">Počet možností: 10</div>
       
       <div class="challenge-grid" id="challengeGridContainer">
-        <!-- Tlačidlá sa sem vygenerujú náhodne cez JavaScript -->
+        <!-- Sem sa vygeneruje veľa možností -->
       </div>
     </div>
   </div>
@@ -174,15 +181,25 @@
   let stitPrekonany = false;
   let podozrenieBot = false;
   let spravnaOdpovedId = "";
+  let aktualnyPocetMoznosti = 10; // Začíname na 10 možnostiach
 
-  // Zoznam možností pre dynamickú výzvu
-  const moznostiVyzvy = [
+  // Veľká databáza farieb, tvarov a mien pre 10+ výzvy
+  const velkaBazaMoznosti = [
     { id: "zeleny_stvorec", nazov: "🟩 Zelený Štvorec" },
     { id: "cerveny_kruh", nazov: "🔴 Červený Kruh" },
     { id: "modry_trojuholnik", nazov: "🔵 Modrý Trojuholník" },
     { id: "zlta_hviezda", nazov: "⭐ Žltá Hviezda" },
     { id: "fialovy_kosoctverec", nazov: "🟣 Fialový Kosočtverec" },
-    { id: "oranzovy_mesiac", nazov: "🟠 Oranžový Mesiac" }
+    { id: "oranzovy_mesiac", nazov: "🟠 Oranžový Mesiac" },
+    { id: "ruzove_srdce", nazov: "💖 Ružové Srdce" },
+    { id: "biela_jednotka", nazov: "1️⃣ Biela Jednotka" },
+    { id: "cierny_blesk", nazov: "⚡ Čierny Blesk" },
+    { id: "hnedy_strom", nazov: "🌲 Hnedý Strom" },
+    { id: "siva_kotva", nazov: "⚓ Sivá Kotva" },
+    { id: "zlaty_mec", nazov: "⚔️ Zlatý Meč" },
+    { id: "strieborna_koruna", nazov: "👑 Strieborná Koruna" },
+    { id: "neviditelny_ohen", nazov: "🔥 Horiaci Oheň" },
+    { id: "ledovy_kristal", nazov: "❄️ Ľadový Kryštál" }
   ];
 
   function zaznamenajPohyb(e) {
@@ -207,50 +224,56 @@
         rovneKroky++;
       }
     }
-
     if (rovneKroky > 7) {
       podozrenieBot = true;
-    }
-
-    // Ak ubehli aspoň 2 sekundy a nie je podozrenie, pustí ťa hneď bez výzvy
-    if ((Date.now() - casNacitania) >= 2000 && !podozrenieBot && zoznamPohybov.length > 3) {
-      schvalOverenie();
     }
   }
 
   function manualneOverenie() {
     const ubehnutyCas = Date.now() - casNacitania;
 
-    // Ak klikne príliš rýchlo alebo má podozrivé pohyby, vygenerujeme mu DYNAMICKÚ CAPTCHU
-    if (ubehnutyCas < 2000 || podozrenieBot || zoznamPohybov.length < 3) {
-      spustDynamickuVyzvu();
+    // PRAVIDLO 1: Ak klikne pred 2 sekundami, je automaticky podozrivý a ide do výzvy
+    if (ubehnutyCas < 2000) {
+      spustExtremnuVyzvu("Príliš rýchle kliknutie (pod 2s)");
       return;
     }
 
+    // PRAVIDLO 2: Ak má podozrivé pohyby alebo sa vôbec nehýbal
+    if (podozrenieBot || zoznamPohybov.length < 3) {
+      spustExtremnuVyzvu("Neregulárne správanie myši/prsta");
+      return;
+    }
+
+    // Ak prešiel čas aj pohybmi, schválime ho
     schvalOverenie();
   }
 
-  function spustDynamickuVyzvu() {
+  function spustExtremnuVyzvu(dovod) {
+    console.warn("Spúšťam výzvu. Dôvod:", dovod);
     document.getElementById('shieldDot').className = "shield-dot failed";
-    document.getElementById('shieldText').innerText = "Vyžaduje sa overenie...";
+    document.getElementById('shieldText').innerText = "Vyžaduje sa potvrdenie...";
 
-    // 1. Náhodne vybereme správnu odpoveď zo zoznamu
-    const nahodnyCielIndex = Math.floor(Math.random() * moznostiVyzvy.length);
-    const cielObjekt = moznostiVyzvy[nahodnyCielIndex];
+    // Aktualizácia počítadla možností v UI
+    document.getElementById('penaltyCounterText').innerText = `Aktuálna obtiažnosť: ${aktualnyPocetMoznosti} možností`;
+
+    // 1. Náhodne vyberieme správnu odpoveď
+    const nahodnyCielIndex = Math.floor(Math.random() * velkaBazaMoznosti.length);
+    const cielObjekt = velkaBazaMoznosti[nahodnyCielIndex];
     spravnaOdpovedId = cielObjekt.id;
 
-    // 2. Nastavíme text zadania pre používateľa
-    document.getElementById('challengePromptText').innerHTML = `Pre potvrdenie identity kliknite na: <br><strong style="font-size: 1rem; color: #f97316;">${cielObjekt.nazov}</strong>`;
+    // 2. Nastavíme zadanie
+    document.getElementById('challengePromptText').innerHTML = `Kliknite na požadovaný prvok: <br><strong style="font-size: 0.95rem; color: #f97316;">${cielObjekt.nazov}</strong>`;
 
-    // 3. Vybereme 4 náhodné možnosti (vrátane správnej) a premiešame ich poradie (Shuffle)
+    // 3. Zostavíme pole s presným počtom možností (aktualnyPocetMoznosti)
     let vybraneMoznosti = [cielObjekt];
-    while (vybraneMoznosti.length < 4) {
-      let nahodnaItem = moznostiVyzvy[Math.floor(Math.random() * moznostiVyzvy.length)];
+    while (vybraneMoznosti.length < aktualnyPocetMoznosti) {
+      let nahodnaItem = velkaBazaMoznosti[Math.floor(Math.random() * velkaBazaMoznosti.length)];
       if (!vybraneMoznosti.includes(nahodnaItem)) {
         vybraneMoznosti.push(nahodnaItem);
       }
     }
-    // Premiešame poradie tlačidiel v poli, aby nikdy neboli na istom mieste
+
+    // Premiešame poradie tlačidiel (Shuffle)
     vybraneMoznosti.sort(() => Math.random() - 0.5);
 
     // 4. Vykreslíme tlačidlá do mriežky
@@ -265,19 +288,19 @@
       gridContainer.appendChild(btn);
     });
 
-    // Zobrazíme okno výzvy
     document.getElementById('challengeOverlay').style.display = "flex";
   }
 
   function skontrolujOdpoved(kliknuteId) {
     if (kliknuteId === spravnaOdpovedId) {
-      // Úspech
+      // Úspech vo výzve
       document.getElementById('challengeOverlay').style.display = "none";
       schvalOverenie();
     } else {
-      // Zlá odpoveď
-      alert("🛑 Nesprávna odpoveď! Overenie zlyhalo.");
-      window.location.reload();
+      // CHYBA! Zvýšenie obtiažnosti o 1 a reštart výzvy
+      aktualnyPocetMoznosti++;
+      alert(`❌ Nesprávna voľba! Obtiažnosť sa zvyšuje na ${aktualnyPocetMoznosti} možností.`);
+      spustExtremnuVyzvu("Chybná odpoveď");
     }
   }
 
