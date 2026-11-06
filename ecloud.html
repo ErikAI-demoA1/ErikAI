@@ -3,15 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI — Čistý Cloudflare Štít</title>
+<title>ErikAI — Pokročilý Cloudflare Štít</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg-deep: #030712;
-    --card-glass: rgba(17, 24, 39, 0.85);
+    --card-glass: rgba(17, 24, 39, 0.9);
     --card-border: rgba(255, 255, 255, 0.1);
     --neon-orange: #f97316;
     --neon-green: #22c55e;
+    --neon-red: #ef4444;
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
   }
@@ -39,20 +40,12 @@
     padding: 30px;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
     text-align: center;
+    position: relative;
+    overflow: hidden;
   }
 
-  h2 {
-    font-size: 1.5rem;
-    font-weight: 800;
-    margin-bottom: 10px;
-  }
-
-  p {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    margin-bottom: 25px;
-    line-height: 1.5;
-  }
+  h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; }
+  p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5; }
 
   .shield-box {
     background: rgba(0, 0, 0, 0.4);
@@ -65,27 +58,17 @@
     justify-content: space-between;
   }
 
-  .shield-status {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
+  .shield-status { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; }
 
   .shield-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
+    width: 12px; height: 12px; border-radius: 50%;
     background: var(--neon-orange);
     box-shadow: 0 0 10px var(--neon-orange);
     transition: all 0.3s;
   }
 
-  .shield-dot.passed {
-    background: var(--neon-green);
-    box-shadow: 0 0 12px var(--neon-green);
-  }
+  .shield-dot.passed { background: var(--neon-green); box-shadow: 0 0 12px var(--neon-green); }
+  .shield-dot.failed { background: var(--neon-red); box-shadow: 0 0 12px var(--neon-red); }
 
   .btn-verify {
     background: rgba(255, 255, 255, 0.1);
@@ -98,8 +81,6 @@
     font-weight: 600;
   }
 
-  .btn-verify:hover { background: rgba(255, 255, 255, 0.2); }
-
   .btn-continue {
     width: 100%;
     padding: 14px;
@@ -109,7 +90,6 @@
     color: #fff;
     font-weight: 800;
     font-size: 1rem;
-    cursor: pointer;
     opacity: 0.4;
     cursor: not-allowed;
     transition: all 0.3s;
@@ -120,51 +100,168 @@
     cursor: pointer !important;
     box-shadow: 0 10px 20px rgba(34, 197, 94, 0.3);
   }
+
+  /* MODÁLNE OKNO PRE DRUHÚ VÝZVU (CAPTCHA PROTI BOTOM) */
+  .challenge-overlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(3, 7, 18, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 25px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+  }
+
+  .challenge-title { font-size: 1.1rem; color: var(--neon-red); font-weight: 800; margin-bottom: 10px; }
+  .challenge-desc { font-size: 0.85rem; color: var(--text-main); margin-bottom: 15px; }
+
+  .challenge-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .challenge-btn {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .challenge-btn:hover { background: rgba(255, 255, 255, 0.15); }
+
+  /* Skrytá pasca pre automatické boty */
+  .bot-trap-btn { display: none; }
 </style>
 </head>
-<body ontouchmove="skontrolujInterakciu()" onmousemove="skontrolujInterakciu()">
+<body ontouchmove="zaznamenajPohyb(event)" onmousemove="zaznamenajPohyb(event)">
 
   <div class="shield-card">
-    <h2>🛡️ ErikAI Security Štít</h2>
-    <p>Pre pokračovanie do systému prebehnite rýchlym bezpečnostným overením správania.</p>
+    <h2>🛡️ ErikAI Security Štít v2</h2>
+    <p>Systém kontroluje čas načítania a plynulosť ľudských pohybov.</p>
 
     <div class="shield-box">
       <div class="shield-status">
         <div class="shield-dot" id="shieldDot"></div>
-        <span id="shieldText">Overujem pohyb...</span>
+        <span id="shieldText">Analýza správania...</span>
       </div>
-      <button type="button" class="btn-verify" onclick="manualneOverenie()">Overiť hneď</button>
+      <button type="button" class="btn-verify" onclick="manualneOverenie()">Overiť</button>
     </div>
 
     <button type="button" id="continueBtn" class="btn-continue" onclick="vstupDoSystemu()" disabled>
       🔒 Čaká sa na overenie...
     </button>
+
+    <!-- DRUHÁ VÝZVA PRI PODOZRENÍ NA BOTA -->
+    <div class="challenge-overlay" id="challengeOverlay">
+      <div class="challenge-title">⚠️ Zistené podozrivé správanie</div>
+      <div class="challenge-desc">Pre potvrdenie, že nie ste bot, ťuknite na tlačidlo: <strong>ZELENÝ ŠTVOREC</strong></div>
+      
+      <div class="challenge-grid">
+        <button class="challenge-btn" onclick="zlyhaloOverenie()">🔴 Červený Kruh</button>
+        <button class="challenge-btn" onclick="vyriesenaVyzva()">🟩 Zelený Štvorec</button>
+        <button class="challenge-btn" onclick="zlyhaloOverenie()">🔵 Modrý Trojuholník</button>
+        <button class="challenge-btn" onclick="zlyhaloOverenie()">⭐ Žltá Hviezda</button>
+      </div>
+
+      <!-- Falošné invisible tlačidlo pre botov, ktorí klikajú na prvý prvok v DOM -->
+      <button class="bot-trap-btn" onclick="zlyhaloOverenie()">AutoClick Trap</button>
+    </div>
   </div>
 
 <script>
-  let skoreInterakcie = 0;
+  const casNacitania = Date.now();
+  let zoznamPohybov = [];
   let stitPrekonany = false;
+  let podozrenieBot = false;
 
-  // Sleduje pohyb myši alebo dotyk na mobile
-  function skontrolujInterakciu() {
+  function zaznamenajPohyb(e) {
     if (stitPrekonany) return;
-    skoreInterakcie++;
-    if (skoreInterakcie > 3) {
-      aktivujStit();
+
+    const x = e.clientX || (e.touches && e.touches[0].clientX);
+    const y = e.clientY || (e.touches && e.touches[0].clientY);
+
+    if (x && y) {
+      zoznamPohybov.push({ x, y, t: Date.now() });
+    }
+
+    // Ak máme aspoň 10 bodov trajektórie, skontrolujeme plynulosť
+    if (zoznamPohybov.length > 10) {
+      vyhodnotPohyby();
+    }
+  }
+
+  function vyhodnotPohyby() {
+    let rovneKroky = 0;
+
+    // Test: Ak sa X alebo Y nemení (dokonale rovná čiara = typické pre bota)
+    for (let i = 1; i < zoznamPohybov.length; i++) {
+      if (zoznamPohybov[i].x === zoznamPohybov[i-1].x || zoznamPohybov[i].y === zoznamPohybov[i-1].y) {
+        rovneKroky++;
+      }
+    }
+
+    // Ak bolo veľa lineárnych pohybov bez chvenia ruky
+    if (rovneKroky > 7) {
+      podozrenieBot = true;
+    }
+
+    // Ak ubehli 2 sekundy a nebol zistený bot pattern
+    if ((Date.now() - casNacitania) >= 2000 && !podozrenieBot) {
+      schvalOverenie();
     }
   }
 
   function manualneOverenie() {
-    aktivujStit();
+    const ubehnutyCas = Date.now() - casNacitania;
+
+    // PRAVIDLO 1: Ak klikne rýchlejšie ako za 2 sekundy = podozrenie na bota
+    if (ubehnutyCas < 2000) {
+      spustDruhuVyzvu("Príliš rýchle kliknutie (pod 2s)");
+      return;
+    }
+
+    // PRAVIDLO 2: Ak systém zachytil neludské pohyby
+    if (podozrenieBot || zoznamPohybov.length < 3) {
+      spustDruhuVyzvu("Nezistené prirodzené pohyby myši/prsta");
+      return;
+    }
+
+    schvalOverenie();
   }
 
-  function aktivujStit() {
+  function spustDruhuVyzvu(dovod) {
+    console.warn("Štít aktivuje výzvu z dôvodu:", dovod);
+    document.getElementById('shieldDot').className = "shield-dot failed";
+    document.getElementById('shieldText').innerText = "Kontrola identity...";
+    document.getElementById('challengeOverlay').style.display = "flex";
+  }
+
+  function vyriesenaVyzva() {
+    document.getElementById('challengeOverlay').style.display = "none";
+    schvalOverenie();
+  }
+
+  function zlyhaloOverenie() {
+    alert("🛑 Zlyhalo bezpečnostné overenie. Prístup zamietnutý!");
+    window.location.reload();
+  }
+
+  function schvalOverenie() {
     if (stitPrekonany) return;
     stitPrekonany = true;
-    
-    document.getElementById('shieldDot').classList.add('passed');
-    document.getElementById('shieldText').innerText = "Overenie úspešné";
-    
+
+    document.getElementById('shieldDot').className = "shield-dot passed";
+    document.getElementById('shieldText').innerText = "✅ Overenie úspešné (Človek)";
+
     const btn = document.getElementById('continueBtn');
     btn.disabled = false;
     btn.innerText = "🚀 Vstúpiť do systému";
@@ -173,8 +270,7 @@
 
   function vstupDoSystemu() {
     if (!stitPrekonany) return;
-    alert("Úspešne prenesené cez Cloudflare štít! Tu môže nasledovať presmerovanie.");
-    // window.location.href = "tvoja-dalsia-stranka.html";
+    alert("Prístup schválený! Vraciam ťa do tvojho ekosystému.");
   }
 </script>
 
