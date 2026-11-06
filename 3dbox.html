@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI OS — 3D Studio Generátor</title>
+<title>ErikAI OS — 3D Studio Generátor v2</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<!-- Knižnica pre 3D rendering priamo v prehliadači -->
+<!-- 3D Engine & Controls -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
   :root {
     --bg-deep: #030712;
     --card-glass: rgba(17, 24, 39, 0.95);
-    --card-border: rgba(255, 255, 255, 0.1);
+    --card-border: rgba(255, 255, 255, 0.12);
     --neon-blue: #3b82f6;
     --neon-orange: #f97316;
     --neon-green: #22c55e;
@@ -26,7 +26,7 @@
     background-color: var(--bg-deep);
     color: var(--text-main);
     min-height: 100vh;
-    padding: 20px;
+    padding: 15px;
   }
 
   .app-container {
@@ -41,38 +41,50 @@
     .app-container { grid-template-columns: 1fr; }
   }
 
+  /* LEFT PANEL: EDITOR */
   .editor-card {
     background: var(--card-glass);
     border: 1px solid var(--card-border);
     backdrop-filter: blur(20px);
     border-radius: 20px;
-    padding: 25px;
-    max-height: calc(100vh - 40px);
+    padding: 22px;
+    max-height: calc(100vh - 30px);
     overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
   }
 
   h1 {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     font-weight: 900;
     background: linear-gradient(135deg, #fff 40%, var(--neon-blue), var(--neon-orange));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
   }
 
-  p.sub { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; }
+  p.sub { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 18px; }
 
-  .form-group { margin-bottom: 12px; }
-  label { display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; color: var(--neon-blue); }
+  .form-group { margin-bottom: 10px; }
+  label { 
+    display: flex; 
+    justify-content: space-between; 
+    font-size: 0.72rem; 
+    font-weight: 800; 
+    margin-bottom: 4px; 
+    text-transform: uppercase; 
+    color: var(--neon-blue); 
+  }
+  label span.status { color: var(--text-muted); font-weight: 400; text-transform: none; }
 
   input[type="file"] {
     width: 100%;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.05);
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--card-border);
     border-radius: 8px;
     color: #fff;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+    cursor: pointer;
   }
 
   .btn-gen {
@@ -84,53 +96,58 @@
     border-radius: 10px;
     color: #fff;
     font-weight: 800;
-    font-size: 1rem;
+    font-size: 0.95rem;
     cursor: pointer;
     box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+    transition: transform 0.2s ease;
   }
   .btn-gen:hover { transform: translateY(-2px); }
 
+  /* RIGHT PANEL: 3D PREVIEW */
   .preview-card {
     background: #000;
     border: 1px solid var(--card-border);
     border-radius: 20px;
     overflow: hidden;
     position: relative;
-    height: calc(100vh - 40px);
+    height: calc(100vh - 30px);
     display: flex;
     flex-direction: column;
+    min-height: 450px;
   }
 
   .preview-header {
-    background: #1e293b;
-    padding: 12px 20px;
+    background: #0f172a;
+    padding: 10px 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--card-border);
-    font-size: 0.85rem;
-    font-weight: 700;
+    font-size: 0.8rem;
+    font-weight: 800;
     z-index: 10;
   }
 
   #canvasContainer {
     width: 100%;
     height: 100%;
+    flex: 1;
     background: radial-gradient(circle at center, #1e293b 0%, #030712 100%);
   }
 
   .hint {
     position: absolute;
-    bottom: 15px;
+    bottom: 12px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0,0,0,0.7);
-    padding: 8px 16px;
+    background: rgba(0,0,0,0.75);
+    padding: 6px 14px;
     border-radius: 20px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
     pointer-events: none;
     border: 1px solid var(--card-border);
+    white-space: nowrap;
   }
 </style>
 </head>
@@ -140,39 +157,39 @@
     
     <!-- EDITOR -->
     <div class="editor-card">
-      <h1>🧊 ErikAI 3D Studio v1</h1>
-      <p class="sub">Priraď fotky alebo videá pre jednotlivé steny 3D objektu.</p>
+      <h1>🧊 ErikAI 3D Studio v2</h1>
+      <p class="sub">Priraď fotku alebo video pre steny 3D objektu (podpora všetkých formátov).</p>
 
       <form id="mediaForm">
         
         <div class="form-group">
-          <label>1. Predná strana (Front)</label>
-          <input type="file" accept="image/*,video/*" onchange="nacitajMedia(0, event)">
+          <label>1. Predná strana (Front) <span class="status" id="st-0">Prázdne</span></label>
+          <input type="file" accept="*" onchange="nacitajMedia(0, event)">
         </div>
 
         <div class="form-group">
-          <label>2. Zadná strana (Back)</label>
-          <input type="file" accept="image/*,video/*" onchange="nacitajMedia(1, event)">
+          <label>2. Zadná strana (Back) <span class="status" id="st-1">Prázdne</span></label>
+          <input type="file" accept="*" onchange="nacitajMedia(1, event)">
         </div>
 
         <div class="form-group">
-          <label>3. Pravá strana (Right)</label>
-          <input type="file" accept="image/*,video/*" onchange="nacitajMedia(2, event)">
+          <label>3. Pravá strana (Right) <span class="status" id="st-2">Prázdne</span></label>
+          <input type="file" accept="*" onchange="nacitajMedia(2, event)">
         </div>
 
         <div class="form-group">
-          <label>4. Ľavá strana (Left)</label>
-          <input type="file" accept="image/*,video/*" onchange="nacitajMedia(3, event)">
+          <label>4. Ľavá strana (Left) <span class="status" id="st-3">Prázdne</span></label>
+          <input type="file" accept="*" onchange="nacitajMedia(3, event)">
         </div>
 
         <div class="form-group">
-          <label>5. Horná strana (Top - voliteľné)</label>
-          <input type="file" accept="image/*,video/*" onchange="nacitajMedia(4, event)">
+          <label>5. Horná strana (Top) <span class="status" id="st-4">Prázdne</span></label>
+          <input type="file" accept="*" onchange="nacitajMedia(4, event)">
         </div>
 
         <div class="form-group">
-          <label>6. Spodná strana (Bottom - voliteľné)</label>
-          <input type="file" accept="image/*,video/*" onchange="nacitajMedia(5, event)">
+          <label>6. Spodná strana (Bottom) <span class="status" id="st-5">Prázdne</span></label>
+          <input type="file" accept="*" onchange="nacitajMedia(5, event)">
         </div>
 
         <button type="button" class="btn-gen" onclick="stiahni3DHTML()">💾 Stiahnuť 3D Web (.html)</button>
@@ -182,11 +199,11 @@
     <!-- 3D NÁHĽAD -->
     <div class="preview-card">
       <div class="preview-header">
-        <div>🎮 INTERAKTÍVNY 3D NÁHĽAD</div>
+        <div>🎮 INTERAKTÍVNY 3D STUDIO NÁHĽAD</div>
         <div style="color: var(--neon-green)">ONLINE</div>
       </div>
       <div id="canvasContainer"></div>
-      <div class="hint">🖱️ Otáčaj prstom/myšou | Kolieskom približuj</div>
+      <div class="hint">🖱️ Otáčaj prstom / myšou | Kolieskom približuj</div>
     </div>
 
   </div>
@@ -194,39 +211,59 @@
 <script>
   let scene, camera, renderer, controls, cube;
   let materials = [];
-  let mediaData = [null, null, null, null, null, null]; // Base64 dáta pre 6 stien
 
-  // Inicializácia Three.js scény
+  // Mapovanie používateľského vstupu (0-5) na Three.js indexy [Right, Left, Top, Bottom, Front, Back]
+  const userToThreeMap = [4, 5, 0, 1, 2, 3];
+  
+  // Ukladanie dát pre neskorší export do HTML
+  let rawMediaData = [null, null, null, null, null, null];
+
   function init3D() {
     const container = document.getElementById('canvasContainer');
     
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.set(3, 2, 4);
+    camera.position.set(3.2, 2.2, 4.2);
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
     container.appendChild(renderer.domElement);
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
 
-    // Svetlá
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    // Osvetlenie
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
     dirLight.position.set(5, 10, 7);
     scene.add(dirLight);
 
-    // Vytvorenie základných 6 stien
+    // Neónová spodná mriežka (Grid) pre lepší pocit z priestoru
+    const gridHelper = new THREE.GridHelper(10, 10, 0x3b82f6, 0x1e293b);
+    gridHelper.position.y = -1.2;
+    scene.add(gridHelper);
+
+    // Vytvorenie východiskových 6 stien
     for (let i = 0; i < 6; i++) {
-      materials.push(new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4 }));
+      materials.push(new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.1 }));
     }
 
     const geometry = new THREE.BoxGeometry(2, 2, 2);
     cube = new THREE.Mesh(geometry, materials);
     scene.add(cube);
+
+    // Automatická úprava veľkosti pri zmene okná
+    const resizeObserver = new ResizeObserver(() => {
+      if (!container.clientWidth || !container.clientHeight) return;
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+    resizeObserver.observe(container);
 
     animate();
   }
@@ -237,17 +274,21 @@
     renderer.render(scene, camera);
   }
 
-  // Načítanie súboru (Fotka / Video) a aplikácia na stenu
-  function nacitajMedia(index, event) {
+  // Spracovanie načítania médií (fotka alebo video)
+  function nacitajMedia(userIndex, event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    const threeIndex = userToThreeMap[userIndex];
+    const statusEl = document.getElementById('st-' + userIndex);
+    statusEl.textContent = "Načítavam...";
+
     const reader = new FileReader();
-    const isVideo = file.type.startsWith('video/');
+    const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|webm|ogg|mov)$/i);
 
     reader.onload = function(e) {
       const src = e.target.result;
-      mediaData[index] = { src: src, isVideo: isVideo };
+      rawMediaData[userIndex] = { src: src, isVideo: isVideo };
 
       if (isVideo) {
         const video = document.createElement('video');
@@ -255,15 +296,23 @@
         video.autoplay = true;
         video.loop = true;
         video.muted = true;
+        video.setAttribute('playsinline', '');
         video.play();
 
         const texture = new THREE.VideoTexture(video);
-        materials[index] = new THREE.MeshBasicMaterial({ map: texture });
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+
+        materials[threeIndex] = new THREE.MeshBasicMaterial({ map: texture });
+        statusEl.textContent = "🎬 Video (" + (file.size / 1024 / 1024).toFixed(1) + "MB)";
+        statusEl.style.color = "#22c55e";
       } else {
         const loader = new THREE.TextureLoader();
         loader.load(src, function(texture) {
-          materials[index] = new THREE.MeshBasicMaterial({ map: texture });
+          materials[threeIndex] = new THREE.MeshBasicMaterial({ map: texture });
           cube.material = materials;
+          statusEl.textContent = "🖼️ Fotka";
+          statusEl.style.color = "#3b82f6";
         });
       }
       cube.material = materials;
@@ -272,8 +321,17 @@
     reader.readAsDataURL(file);
   }
 
-  // Stiahnutie samostatného HTML súboru
+  // Generovanie a stiahnutie samostatného HTML súboru
   function stiahni3DHTML() {
+    const exportData = [
+      rawMediaData[2], // Right
+      rawMediaData[3], // Left
+      rawMediaData[4], // Top
+      rawMediaData[5], // Bottom
+      rawMediaData[0], // Front
+      rawMediaData[1]  // Back
+    ];
+
     const htmlContent = `<!DOCTYPE html>
 <html lang="sk">
 <head>
@@ -283,9 +341,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>
 <style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body { margin: 0; background: #030712; overflow: hidden; font-family: sans-serif; }
   #canvas { width: 100vw; height: 100vh; }
-  .info { position: absolute; top: 20px; left: 20px; color: #fff; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); }
+  .info { position: absolute; top: 20px; left: 20px; color: #fff; background: rgba(0,0,0,0.7); padding: 10px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); font-size: 0.9rem; z-index: 10; }
 </style>
 </head>
 <body>
@@ -293,13 +352,14 @@
   <div id="canvas"></div>
 
 <script>
-  const mediaData = ${JSON.stringify(mediaData)};
+  const mediaData = ${JSON.stringify(exportData)};
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(3, 2, 4);
+  camera.position.set(3.2, 2.2, 4.2);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
   document.getElementById('canvas').appendChild(renderer.domElement);
 
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -308,6 +368,10 @@
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
   scene.add(ambientLight);
 
+  const gridHelper = new THREE.GridHelper(10, 10, 0x3b82f6, 0x1e293b);
+  gridHelper.position.y = -1.2;
+  scene.add(gridHelper);
+
   const materials = [];
   for (let i = 0; i < 6; i++) {
     const item = mediaData[i];
@@ -315,14 +379,17 @@
       if (item.isVideo) {
         const video = document.createElement('video');
         video.src = item.src;
-        video.autoplay = true; video.loop = true; video.muted = true; video.play();
-        materials.push(new THREE.MeshBasicMaterial({ map: new THREE.VideoTexture(video) }));
+        video.autoplay = true; video.loop = true; video.muted = true;
+        video.setAttribute('playsinline', '');
+        video.play();
+        const texture = new THREE.VideoTexture(video);
+        materials.push(new THREE.MeshBasicMaterial({ map: texture }));
       } else {
         const texture = new THREE.TextureLoader().load(item.src);
         materials.push(new THREE.MeshBasicMaterial({ map: texture }));
       }
     } else {
-      materials.push(new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+      materials.push(new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4 }));
     }
   }
 
@@ -348,7 +415,7 @@
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'moj_3d_objekt.html';
+    a.download = 'moj_3d_objekt_v2.html';
     a.click();
     URL.revokeObjectURL(a.href);
   }
