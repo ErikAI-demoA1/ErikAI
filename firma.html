@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI OS — Pokročilý Generátor Firemných Stránok</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #030712;
+    --card-glass: rgba(17, 24, 39, 0.9);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --neon-blue: #3b82f6;
+    --neon-orange: #f97316;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-deep);
+    background-image: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 40%), linear-gradient(135deg, #030712 0%, #0b0f19 100%);
+    color: var(--text-main);
+    min-height: 100vh;
+    padding: 30px 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .gen-card {
+    width: 100%;
+    max-width: 750px;
+    background: var(--card-glass);
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff 40%, var(--neon-blue), var(--neon-orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+
+  p.sub { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px; }
+
+  .section-tag {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--neon-blue);
+    letter-spacing: 1px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--card-border);
+    padding-bottom: 5px;
+  }
+
+  .form-group { margin-bottom: 15px; text-align: left; }
+
+  label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; }
+
+  input, textarea {
+    width: 100%;
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.95rem;
+    outline: none;
+  }
+
+  input[type="color"] {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    width: 100%;
+    height: 45px;
+    border-radius: 10px;
+    cursor: pointer;
+    background: transparent;
+    padding: 0;
+  }
+
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: 1px solid var(--card-border); border-radius: 10px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 600px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .btn-gen {
+    width: 100%;
+    padding: 16px;
+    margin-top: 20px;
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-orange));
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.05rem;
+    cursor: pointer;
+    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-gen:hover { transform: translateY(-2px); }
+</style>
+</head>
+<body>
+
+  <div class="gen-card">
+    <h1>🏭 ErikAI Generátor Firemných Stránok v2</h1>
+    <p class="sub">Vytvor web na mieru s vlastnými farbami pozadia a textu pre akúkoľvek firmu.</p>
+
+    <form onsubmit="vygenerujFiremnyWeb(event)">
+      
+      <div class="section-tag">📌 1. Základné Údaje Firmy</div>
+      
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Názov Firmy / Značky</label>
+          <input type="text" id="fName" placeholder="napr. LJ Metal s.r.o." required>
+        </div>
+        <div class="form-group">
+          <label>Hlavné Zameranie / Podnadpis</label>
+          <input type="text" id="fTagline" placeholder="napr. Kovovýroba a Zámočníctvo" required>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Telefónne Číslo</label>
+          <input type="text" id="fPhone" placeholder="napr. +421 900 000 000" required>
+        </div>
+        <div class="form-group">
+          <label>Mesto / Lokalita</label>
+          <input type="text" id="fCity" placeholder="napr. Veľké Rovné" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Krátky Popis Firmy</label>
+        <textarea id="fDesc" rows="3" placeholder="Opíš v 2-3 vetách, čo robíte..." required></textarea>
+      </div>
+
+      <div class="section-tag">🎨 2. Vlastné Farby Webstránky</div>
+      <div class="grid-3">
+        <div class="form-group">
+          <label>Farba Pozadia (Background)</label>
+          <input type="color" id="fBgColor" value="#0f172a">
+        </div>
+        <div class="form-group">
+          <label>Farba Textu (Hlavná)</label>
+          <input type="color" id="fTextColor" value="#f8fafc">
+        </div>
+        <div class="form-group">
+          <label>Hlavná Akcentová Farba (Tlačidlá)</label>
+          <input type="color" id="fAccentColor" value="#f97316">
+        </div>
+      </div>
+
+      <div class="section-tag">✨ 3. Doplnkové Informácie (Voliteľné)</div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label>E-mailová Adresa</label>
+          <input type="email" id="fEmail" placeholder="info@firma.sk">
+        </div>
+        <div class="form-group">
+          <label>Presná Adresa</label>
+          <input type="text" id="fAddress" placeholder="napr. Ulica 123">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Zoznam Služieb (Oddelené čiarkou)</label>
+        <input type="text" id="fServices" placeholder="napr. Výroba brán, Prístrešky, Zváranie">
+      </div>
+
+      <div class="form-group">
+        <label>Odkaz na Fotku prác (URL)</label>
+        <input type="text" id="fImg" placeholder="https://images.unsplash.com/photo-...">
+      </div>
+
+      <button type="submit" class="btn-gen">💾 Vygenerovať a Stiahnuť Vlastný Web (.html)</button>
+    </form>
+  </div>
+
+<script>
+  function vygenerujFiremnyWeb(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('fName').value.trim();
+    const tagline = document.getElementById('fTagline').value.trim();
+    const phone = document.getElementById('fPhone').value.trim();
+    const city = document.getElementById('fCity').value.trim();
+    const desc = document.getElementById('fDesc').value.trim();
+
+    const bgColor = document.getElementById('fBgColor').value;
+    const textColor = document.getElementById('fTextColor').value;
+    const accentColor = document.getElementById('fAccentColor').value;
+
+    const email = document.getElementById('fEmail').value.trim();
+    const address = document.getElementById('fAddress').value.trim();
+    const servicesRaw = document.getElementById('fServices').value.trim();
+    const imgUrl = document.getElementById('fImg').value.trim() || "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80";
+
+    let servicesHTML = "";
+    if (servicesRaw) {
+      const arr = servicesRaw.split(',');
+      arr.forEach(s => {
+        if(s.trim()) {
+          servicesHTML += '<div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:20px; border-radius:12px; font-weight:700;">⚡ ' + s.trim() + '</div>';
+        }
+      });
+    }
+
+    const htmlContent = '<' + '!DOCTYPE html>\n' +
+'<html lang="sk">\n' +
+'<head>\n' +
+'<meta charset="UTF-8">\n' +
+'<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+'<title>' + name + ' — ' + city + '</title>\n' +
+'<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">\n' +
+'<style>\n' +
+'  :root {\n' +
+'    --bg-color: ' + bgColor + ';\n' +
+'    --text-color: ' + textColor + ';\n' +
+'    --accent-color: ' + accentColor + ';\n' +
+'  }\n' +
+'  * { box-sizing: border-box; margin: 0; padding: 0; }\n' +
+'  body { font-family: \'Inter\', sans-serif; background: var(--bg-color); color: var(--text-color); line-height: 1.6; }\n' +
+'  header { background: rgba(0,0,0,0.3); backdrop-filter: blur(10px); position: sticky; top: 0; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 99; }\n' +
+'  .logo { font-size: 1.3rem; font-weight: 900; color: var(--text-color); text-decoration: none; }\n' +
+'  .btn-call { background: var(--accent-color); color: #fff; padding: 10px 18px; border-radius: 8px; font-weight: 800; text-decoration: none; display: inline-block; }\n' +
+'  .hero { padding: 60px 20px; text-align: center; max-width: 800px; margin: 0 auto; }\n' +
+'  .hero h1 { font-size: 2.3rem; font-weight: 900; margin-bottom: 15px; line-height: 1.2; }\n' +
+'  .hero p { opacity: 0.8; font-size: 1.05rem; margin-bottom: 25px; }\n' +
+'  .box { max-width: 900px; margin: 30px auto; padding: 0 20px; }\n' +
+'  .grid-services { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }\n' +
+'  .contact-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 30px; border-radius: 16px; margin-top: 30px; text-align: center; }\n' +
+'  footer { text-align: center; padding: 25px; opacity: 0.6; font-size: 0.85rem; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 40px; }\n' +
+'</style>\n' +
+'</head>\n' +
+'<body>\n\n' +
+'  <header>\n' +
+'    <a href="#" class="logo">' + name + '</a>\n' +
+'    <a href="tel:' + phone + '" class="btn-call">📞 Zavolať</a>\n' +
+'  </header>\n\n' +
+'  <section class="hero">\n' +
+'    <h1>' + tagline + '</h1>\n' +
+'    <p style="color:var(--accent-color); font-weight:700; font-size:1.1rem;">📍 ' + city + '</p>\n' +
+'    <p>' + desc + '</p>\n' +
+'    <a href="tel:' + phone + '" class="btn-call" style="padding:15px 30px; font-size:1.1rem;">⚡ Priamy Kontakt: ' + phone + '</a>\n' +
+'  </section>\n\n' +
+'  <div class="box">\n' +
+'    <div style="width:100%; height:280px; border-radius:16px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); margin-bottom:30px;">\n' +
+'      <img src="' + imgUrl + '" style="width:100%; height:100%; object-fit:cover;" alt="Ukážka">\n' +
+'    </div>\n' +
+'  ' + (servicesHTML ? '<h2 style="font-size:1.4rem; font-weight:800; margin-bottom:15px;">Naše Služby</h2><div class="grid-services">' + servicesHTML + '</div>' : '') + '\n' +
+'  </div>\n\n' +
+'  <div class="box">\n' +
+'    <div class="contact-card">\n' +
+'      <h2 style="font-size:1.5rem; margin-bottom:15px;">Kontaktujte Nás</h2>\n' +
+'      <p style="font-size:1.3rem; font-weight:800; color:var(--accent-color); margin-bottom:10px;">📞 ' + phone + '</p>\n' +
+'      ' + (email ? '<p style="margin-bottom:8px;">✉️ ' + email + '</p>' : '') + '\n' +
+'      ' + (address ? '<p style="margin-bottom:8px;">📍 ' + address + '</p>' : '') + '\n' +
+'    </div>\n' +
+'  </div>\n\n' +
+'  <footer>&copy; 2026 ' + name + '. Všetky práva vyhradené.</footer>\n' +
+'</body>\n' +
+'</html>';
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const a = document.createElement('a');
+    const safeName = name.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'firma';
+    a.href = URL.createObjectURL(blob);
+    a.download = safeName + '_custom.html';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+</script>
+
+</body>
+</html>
