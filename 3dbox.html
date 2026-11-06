@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI OS — 3D Studio v3 (OP Edition)</title>
+<title>ErikAI OS — 3D Studio v4 (OP Ultimate)</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <!-- Three.js Engine & Controls -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -115,7 +115,7 @@
   }
   .btn-gen:hover { transform: translateY(-2px); }
 
-  /* 3D NÁHĽAD PANEL WITH PULSING ATMOSPHERE */
+  /* PREVIEW PANEL */
   .preview-card {
     background: #030712;
     border: 1px solid var(--card-border);
@@ -148,7 +148,6 @@
     position: relative;
   }
 
-  /* ATMOSPHERIC PULSE ANIMATION */
   .pulse-bg {
     position: absolute;
     top: 50%;
@@ -192,8 +191,8 @@
     
     <!-- EDITOR -->
     <div class="editor-card">
-      <h1>🧊 ErikAI 3D Studio v3</h1>
-      <p class="sub">Pokročilé tvary, vyhladenie hran a atmosferické pozadie.</p>
+      <h1>🧊 ErikAI 3D Studio v4</h1>
+      <p class="sub">Dynamické tvary, textúry a hudba na pozadí.</p>
 
       <form id="mediaForm">
         
@@ -201,42 +200,21 @@
         <div class="form-group">
           <label>Tvar 3D Objektu</label>
           <select id="shapeType" onchange="zmenTvar()">
-            <option value="box">Kváder / Kocka (Zaoblené hrany)</option>
-            <option value="cylinder">Valec (Pre okrúhle produkty)</option>
-            <option value="sphere">Guľa (360° Sféra)</option>
+            <option value="box">Kváder / Kocka (6 strán)</option>
+            <option value="cylinder">Valec (Plášť + Vrch/Spodok)</option>
+            <option value="sphere">Guľa (360° Textúra)</option>
           </select>
         </div>
 
-        <div class="section-title">🖼️ 2. Média pre Steny</div>
-        
+        <div class="section-title">🎵 3. Zvuk / Hudba na pozadí</div>
         <div class="form-group">
-          <label>1. Hlavná / Predná strana <span class="status" id="st-0">Prázdne</span></label>
-          <input type="file" accept="*" onchange="nacitajMedia(0, event)">
+          <label>Zvukový súbor (MP3/WAV) <span class="status" id="st-audio">Žiadny</span></label>
+          <input type="file" accept="audio/*" onchange="nacitajAudio(event)">
         </div>
 
-        <div class="form-group">
-          <label>2. Zadná strana <span class="status" id="st-1">Prázdne</span></label>
-          <input type="file" accept="*" onchange="nacitajMedia(1, event)">
-        </div>
-
-        <div class="form-group">
-          <label>3. Pravá strana <span class="status" id="st-2">Prázdne</span></label>
-          <input type="file" accept="*" onchange="nacitajMedia(2, event)">
-        </div>
-
-        <div class="form-group">
-          <label>4. Ľavá strana <span class="status" id="st-3">Prázdne</span></label>
-          <input type="file" accept="*" onchange="nacitajMedia(3, event)">
-        </div>
-
-        <div class="form-group">
-          <label>5. Vrchná strana <span class="status" id="st-4">Prázdne</span></label>
-          <input type="file" accept="*" onchange="nacitajMedia(4, event)">
-        </div>
-
-        <div class="form-group">
-          <label>6. Spodná strana <span class="status" id="st-5">Prázdne</span></label>
-          <input type="file" accept="*" onchange="nacitajMedia(5, event)">
+        <div class="section-title" id="inputsTitle">🖼️ 2. Média pre Kocku</div>
+        <div id="dynamicInputsContainer">
+          <!-- Dynamicky generované políčka podľa tvaru -->
         </div>
 
         <button type="button" class="btn-gen" onclick="stiahni3DHTML()">🚀 Stiahnuť OP 3D Web (.html)</button>
@@ -250,7 +228,6 @@
         <div style="color: var(--neon-green)">ONLINE</div>
       </div>
       <div id="canvasContainer">
-        <!-- Upokojujúce pulzujúce neónovo-červené pozadie -->
         <div class="pulse-bg"></div>
       </div>
       <div class="hint">🖱️ Otáčaj prstom / myšou | Kolieskom približuj</div>
@@ -260,10 +237,28 @@
 
 <script>
   let scene, camera, renderer, controls, mesh;
-  let materials = [];
-  const userToThreeMap = [4, 5, 0, 1, 2, 3];
-  let rawMediaData = [null, null, null, null, null, null];
   let currentShape = "box";
+  let mediaSlotsData = {}; // Ukladá dáta pre aktuálny tvar
+  let backgroundAudioSrc = null;
+
+  const shapeConfig = {
+    box: [
+      { id: 0, label: "1. Predná strana" },
+      { id: 1, label: "2. Zadná strana" },
+      { id: 2, label: "3. Pravá strana" },
+      { id: 3, label: "4. Ľavá strana" },
+      { id: 4, label: "5. Vrchná strana" },
+      { id: 5, label: "6. Spodná strana" }
+    ],
+    cylinder: [
+      { id: 0, label: "1. Hlavný plášť valca" },
+      { id: 1, label: "2. Vrchný kruh" },
+      { id: 2, label: "3. Spodný kruh" }
+    ],
+    sphere: [
+      { id: 0, label: "1. Celá 360° Textúra gule" }
+    ]
+  };
 
   function init3D() {
     const container = document.getElementById('canvasContainer');
@@ -281,20 +276,14 @@
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
 
-    // Svetlá pre plynulý vzhľad
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
     dirLight.position.set(5, 10, 7);
     scene.add(dirLight);
 
-    // Inicializácia stien
-    for (let i = 0; i < 6; i++) {
-      materials.push(new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.1 }));
-    }
-
-    vytvorObjekt();
+    zmenTvar(); // Vytvorí úvodné vstupy a objekt
 
     const resizeObserver = new ResizeObserver(() => {
       if (!container.clientWidth || !container.clientHeight) return;
@@ -307,27 +296,124 @@
     animate();
   }
 
-  // Vytvorí zvolený tvar so zaoblením
+  function zmenTvar() {
+    currentShape = document.getElementById('shapeType').value;
+    mediaSlotsData = {}; // Reset slotov pri zmene tvaru
+
+    // Vykreslenie správnych vstupných políčok
+    const container = document.getElementById('dynamicInputsContainer');
+    const titleEl = document.getElementById('inputsTitle');
+    container.innerHTML = "";
+
+    if (currentShape === 'box') titleEl.textContent = "🖼️ 2. Média pre Kocku (6 strán)";
+    else if (currentShape === 'cylinder') titleEl.textContent = "🖼️ 2. Média pre Valec";
+    else titleEl.textContent = "🖼️ 2. Média pre Guľu";
+
+    shapeConfig[currentShape].forEach(slot => {
+      container.innerHTML += `
+        <div class="form-group">
+          <label>${slot.label} <span class="status" id="st-${slot.id}">Prázdne</span></label>
+          <input type="file" accept="*" onchange="nacitajMedia(${slot.id}, event)">
+        </div>
+      `;
+    });
+
+    vytvorObjekt();
+  }
+
   function vytvorObjekt() {
     if (mesh) scene.remove(mesh);
 
     let geometry;
+    let materials = [];
+
     if (currentShape === "cylinder") {
       geometry = new THREE.CylinderGeometry(1.2, 1.2, 2.2, 64);
+      for (let i = 0; i < 3; i++) {
+        materials.push(new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 }));
+      }
     } else if (currentShape === "sphere") {
       geometry = new THREE.SphereGeometry(1.4, 64, 64);
+      materials = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 });
     } else {
-      // Box so zaoblenými jemnými rohami pre hladší vzhľad
       geometry = new THREE.BoxGeometry(2, 2, 2, 16, 16, 16);
+      for (let i = 0; i < 6; i++) {
+        materials.push(new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 }));
+      }
     }
 
     mesh = new THREE.Mesh(geometry, materials);
     scene.add(mesh);
+    obnovMaterialy();
   }
 
-  function zmenTvar() {
-    currentShape = document.getElementById('shapeType').value;
-    vytvorObjekt();
+  function nacitajMedia(slotId, event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById('st-' + slotId);
+    statusEl.textContent = "Načítavam...";
+
+    const reader = new FileReader();
+    const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|webm|ogg|mov)$/i);
+
+    reader.onload = function(e) {
+      const src = e.target.result;
+      mediaSlotsData[slotId] = { src: src, isVideo: isVideo };
+
+      statusEl.textContent = isVideo ? "🎬 Video" : "🖼️ Fotka";
+      statusEl.style.color = isVideo ? "#22c55e" : "#3b82f6";
+
+      obnovMaterialy();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function nacitajAudio(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      backgroundAudioSrc = e.target.result;
+      document.getElementById('st-audio').textContent = "🎵 " + file.name.substring(0, 15) + "...";
+      document.getElementById('st-audio').style.color = "#22c55e";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function obnovMaterialy() {
+    if (!mesh) return;
+
+    if (currentShape === "sphere") {
+      const slot = mediaSlotsData[0];
+      if (slot && slot.src) {
+        if (slot.isVideo) {
+          const video = document.createElement('video');
+          video.src = slot.src; video.autoplay = true; video.loop = true; video.muted = true; video.setAttribute('playsinline', ''); video.play();
+          mesh.material = new THREE.MeshBasicMaterial({ map: new THREE.VideoTexture(video) });
+        } else {
+          new THREE.TextureLoader().load(slot.src, (texture) => {
+            mesh.material = new THREE.MeshBasicMaterial({ map: texture });
+          });
+        }
+      }
+    } else {
+      const mats = mesh.material;
+      shapeConfig[currentShape].forEach((slotConfig, index) => {
+        const slot = mediaSlotsData[slotConfig.id];
+        if (slot && slot.src) {
+          if (slot.isVideo) {
+            const video = document.createElement('video');
+            video.src = slot.src; video.autoplay = true; video.loop = true; video.muted = true; video.setAttribute('playsinline', ''); video.play();
+            mats[index] = new THREE.MeshBasicMaterial({ map: new THREE.VideoTexture(video) });
+          } else {
+            new THREE.TextureLoader().load(slot.src, (texture) => {
+              mats[index] = new THREE.MeshBasicMaterial({ map: texture });
+            });
+          }
+        }
+      });
+    }
   }
 
   function animate() {
@@ -336,55 +422,7 @@
     renderer.render(scene, camera);
   }
 
-  function nacitajMedia(userIndex, event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const threeIndex = userToThreeMap[userIndex];
-    const statusEl = document.getElementById('st-' + userIndex);
-    statusEl.textContent = "Načítavam...";
-
-    const reader = new FileReader();
-    const isVideo = file.type.startsWith('video/') || file.name.match(/\.(mp4|webm|ogg|mov)$/i);
-
-    reader.onload = function(e) {
-      const src = e.target.result;
-      rawMediaData[userIndex] = { src: src, isVideo: isVideo };
-
-      if (isVideo) {
-        const video = document.createElement('video');
-        video.src = src;
-        video.autoplay = true; video.loop = true; video.muted = true;
-        video.setAttribute('playsinline', '');
-        video.play();
-
-        const texture = new THREE.VideoTexture(video);
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-
-        materials[threeIndex] = new THREE.MeshBasicMaterial({ map: texture });
-        statusEl.textContent = "🎬 Video";
-        statusEl.style.color = "#22c55e";
-      } else {
-        const loader = new THREE.TextureLoader();
-        loader.load(src, function(texture) {
-          materials[threeIndex] = new THREE.MeshBasicMaterial({ map: texture });
-          mesh.material = materials;
-          statusEl.textContent = "🖼️ Fotka";
-          statusEl.style.color = "#3b82f6";
-        });
-      }
-      mesh.material = materials;
-    };
-
-    reader.readAsDataURL(file);
-  }
-
   function stiahni3DHTML() {
-    const exportData = [
-      rawMediaData[2], rawMediaData[3], rawMediaData[4], rawMediaData[5], rawMediaData[0], rawMediaData[1]
-    ];
-
     const htmlContent = `<!DOCTYPE html>
 <html lang="sk">
 <head>
@@ -410,16 +448,32 @@
     100% { opacity: 0.1; transform: translate(-50%, -50%) scale(0.8); }
   }
   .info { position: absolute; top: 20px; left: 20px; color: #fff; background: rgba(0,0,0,0.7); padding: 10px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); font-size: 0.9rem; z-index: 10; }
+  .audio-btn { position: absolute; bottom: 20px; left: 20px; background: rgba(59, 130, 246, 0.8); color: #fff; border: none; padding: 10px 16px; border-radius: 10px; font-weight: bold; cursor: pointer; z-index: 10; }
 </style>
 </head>
 <body>
   <div class="pulse-bg"></div>
   <div class="info">🧊 3D Objekt OP — ErikAI OS</div>
+  ${backgroundAudioSrc ? '<button class="audio-btn" onclick="toggleAudio()">🎵 Zapnúť/Vypnúť hudbu</button>' : ''}
   <div id="canvas"></div>
 
+  ${backgroundAudioSrc ? `<audio id="bgAudio" loop><source src="${backgroundAudioSrc}" type="audio/mp3"></audio>` : ''}
+
 <script>
-  const mediaData = ${JSON.stringify(exportData)};
+  const mediaData = ${JSON.stringify(mediaSlotsData)};
   const shapeType = "${currentShape}";
+  
+  function toggleAudio() {
+    const audio = document.getElementById('bgAudio');
+    if (audio) { if (audio.paused) audio.play(); else audio.pause(); }
+  }
+  
+  // Automatický pokus o spustenie hudby pri prvom kliknutí
+  window.addEventListener('click', () => {
+    const audio = document.getElementById('bgAudio');
+    if (audio && audio.paused) { audio.play().catch(e => {}); }
+  }, { once: true });
+
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(3.5, 2.2, 4.5);
@@ -435,33 +489,44 @@
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
   scene.add(ambientLight);
 
-  const materials = [];
-  for (let i = 0; i < 6; i++) {
-    const item = mediaData[i];
-    if (item && item.src) {
-      if (item.isVideo) {
-        const video = document.createElement('video');
-        video.src = item.src;
-        video.autoplay = true; video.loop = true; video.muted = true;
-        video.setAttribute('playsinline', '');
-        video.play();
-        materials.push(new THREE.MeshBasicMaterial({ map: new THREE.VideoTexture(video) }));
-      } else {
-        const texture = new THREE.TextureLoader().load(item.src);
-        materials.push(new THREE.MeshBasicMaterial({ map: texture }));
-      }
-    } else {
-      materials.push(new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2 }));
-    }
+  let geometry, mesh;
+  let materials = shapeType === 'sphere' ? new THREE.MeshStandardMaterial({color: 0x1e293b}) : [];
+
+  if (shapeType === 'cylinder') {
+    geometry = new THREE.CylinderGeometry(1.2, 1.2, 2.2, 64);
+    for(let i=0; i<3; i++) materials.push(new THREE.MeshStandardMaterial({color: 0x1e293b}));
+  } else if (shapeType === 'sphere') {
+    geometry = new THREE.SphereGeometry(1.4, 64, 64);
+  } else {
+    geometry = new THREE.BoxGeometry(2, 2, 2, 16, 16, 16);
+    for(let i=0; i<6; i++) materials.push(new THREE.MeshStandardMaterial({color: 0x1e293b}));
   }
 
-  let geometry;
-  if (shapeType === "cylinder") geometry = new THREE.CylinderGeometry(1.2, 1.2, 2.2, 64);
-  else if (shapeType === "sphere") geometry = new THREE.SphereGeometry(1.4, 64, 64);
-  else geometry = new THREE.BoxGeometry(2, 2, 2, 16, 16, 16);
-
-  const mesh = new THREE.Mesh(geometry, materials);
+  mesh = new THREE.Mesh(geometry, materials);
   scene.add(mesh);
+
+  // Aplikovanie médií
+  if (shapeType === 'sphere' && mediaData[0]) {
+    const item = mediaData[0];
+    if(item.isVideo) {
+      const v = document.createElement('video'); v.src = item.src; v.autoplay = true; v.loop = true; v.muted = true; v.play();
+      mesh.material = new THREE.MeshBasicMaterial({map: new THREE.VideoTexture(v)});
+    } else {
+      new THREE.TextureLoader().load(item.src, t => mesh.material = new THREE.MeshBasicMaterial({map: t}));
+    }
+  } else {
+    for(let key in mediaData) {
+      const item = mediaData[key];
+      if(item && item.src) {
+        if(item.isVideo) {
+          const v = document.createElement('video'); v.src = item.src; v.autoplay = true; v.loop = true; v.muted = true; v.play();
+          mesh.material[key] = new THREE.MeshBasicMaterial({map: new THREE.VideoTexture(v)});
+        } else {
+          new THREE.TextureLoader().load(item.src, t => mesh.material[key] = new THREE.MeshBasicMaterial({map: t}));
+        }
+      }
+    }
+  }
 
   function animate() {
     requestAnimationFrame(animate);
@@ -482,7 +547,7 @@
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = '3d_objekt_op_v3.html';
+    a.download = '3d_objekt_op_v4.html';
     a.click();
     URL.revokeObjectURL(a.href);
   }
