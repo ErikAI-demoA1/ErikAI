@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI OS — 3D Studio v5 (OP Ultimate Audio & Light)</title>
+<title>ErikAI OS — 3D Studio v6 (OP Fullscreen Atmosphere)</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <!-- Three.js Engine & Controls -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -28,6 +28,30 @@
     color: var(--text-main);
     min-height: 100vh;
     padding: 15px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* INTENSE FULLSCREEN RED-BLACK PULSING ATMOSPHERE IN EDITOR */
+  .editor-pulse-bg {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 800px;
+    height: 800px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.45) 0%, rgba(3, 7, 18, 0.98) 70%);
+    border-radius: 50%;
+    filter: blur(100px);
+    pointer-events: none;
+    z-index: -1;
+    animation: editorBreathe 5s infinite ease-in-out;
+  }
+
+  @keyframes editorBreathe {
+    0% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.8); }
+    50% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.35); }
+    100% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.8); }
   }
 
   .app-container {
@@ -36,6 +60,8 @@
     gap: 20px;
     max-width: 1600px;
     margin: 0 auto;
+    position: relative;
+    z-index: 2;
   }
 
   @media (max-width: 1024px) {
@@ -51,7 +77,7 @@
     padding: 22px;
     max-height: calc(100vh - 30px);
     overflow-y: auto;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
   }
 
   h1 {
@@ -110,14 +136,14 @@
     font-weight: 800;
     font-size: 0.95rem;
     cursor: pointer;
-    box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
     transition: transform 0.2s ease;
   }
   .btn-gen:hover { transform: translateY(-2px); }
 
   /* PREVIEW PANEL */
   .preview-card {
-    background: #030712;
+    background: rgba(3, 7, 18, 0.6);
     border: 1px solid var(--card-border);
     border-radius: 20px;
     overflow: hidden;
@@ -129,7 +155,7 @@
   }
 
   .preview-header {
-    background: rgba(15, 23, 42, 0.8);
+    background: rgba(15, 23, 42, 0.85);
     backdrop-filter: blur(10px);
     padding: 10px 18px;
     display: flex;
@@ -146,27 +172,6 @@
     height: 100%;
     flex: 1;
     position: relative;
-  }
-
-  /* INTENSE RED-BLACK PULSING ATMOSPHERE */
-  .pulse-bg {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 500px;
-    height: 500px;
-    transform: translate(-50%, -50%);
-    background: radial-gradient(circle, rgba(239, 68, 68, 0.35) 0%, rgba(3, 7, 18, 0.9) 65%);
-    border-radius: 50%;
-    filter: blur(70px);
-    pointer-events: none;
-    animation: breathe 5s infinite ease-in-out;
-  }
-
-  @keyframes breathe {
-    0% { opacity: 0.15; transform: translate(-50%, -50%) scale(0.75); }
-    50% { opacity: 0.65; transform: translate(-50%, -50%) scale(1.25); }
-    100% { opacity: 0.15; transform: translate(-50%, -50%) scale(0.75); }
   }
 
   .hint {
@@ -188,12 +193,15 @@
 </head>
 <body>
 
+  <!-- Celoplošné silné pulzujúce pozadie -->
+  <div class="editor-pulse-bg"></div>
+
   <div class="app-container">
     
     <!-- EDITOR -->
     <div class="editor-card">
-      <h1>🧊 ErikAI 3D Studio v5</h1>
-      <p class="sub">Pokročilé pulzujúce prostredie, audio ikona a dynamické tvary.</p>
+      <h1>🧊 ErikAI 3D Studio v6</h1>
+      <p class="sub">Celoplošná OP atmosféra, audio a dynamické tvary.</p>
 
       <form id="mediaForm">
         
@@ -223,12 +231,10 @@
     <!-- 3D NÁHĽAD -->
     <div class="preview-card">
       <div class="preview-header">
-        <div>⚡ 3D NÁHĽAD (OP ATMOSPHERE)</div>
+        <div>⚡ 3D NÁHĽAD (OP FULLSCREEN ATMOSPHERE)</div>
         <div style="color: var(--neon-green)">ONLINE</div>
       </div>
-      <div id="canvasContainer">
-        <div class="pulse-bg"></div>
-      </div>
+      <div id="canvasContainer"></div>
       <div class="hint">🖱️ Otáčaj prstom / myšou | Kolieskom približuj</div>
     </div>
 
@@ -431,26 +437,26 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { margin: 0; background: #030712; overflow: hidden; font-family: sans-serif; position: relative; }
-  #canvas { width: 100vw; height: 100vh; position: relative; z-index: 2; }
+  body { margin: 0; background: #030712; overflow: hidden; font-family: sans-serif; position: relative; width: 100vw; height: 100vh; }
   
-  /* Intenzívne červeno-čierne pulzujúce pozadie */
-  .pulse-bg {
-    position: absolute; top: 50%; left: 50%; width: 550px; height: 550px;
+  /* Silné celoplošné červeno-čierne pulzujúce pozadie na stiahnutom webe */
+  .fullscreen-pulse-bg {
+    position: fixed; top: 50%; left: 50%; width: 900px; height: 900px;
     transform: translate(-50%, -50%);
-    background: radial-gradient(circle, rgba(239, 68, 68, 0.35) 0%, rgba(3, 7, 18, 0.95) 70%);
-    border-radius: 50%; filter: blur(75px); pointer-events: none; z-index: 1;
-    animation: breathe 5s infinite ease-in-out;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.45) 0%, rgba(3, 7, 18, 0.98) 70%);
+    border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 1;
+    animation: fullBreathe 5s infinite ease-in-out;
   }
-  @keyframes breathe {
-    0% { opacity: 0.15; transform: translate(-50%, -50%) scale(0.75); }
-    50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.3); }
-    100% { opacity: 0.15; transform: translate(-50%, -50%) scale(0.75); }
+  @keyframes fullBreathe {
+    0% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.8); }
+    50% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.35); }
+    100% { opacity: 0.3; transform: translate(-50%, -50%) scale(0.8); }
   }
 
+  #canvas { width: 100vw; height: 100vh; position: relative; z-index: 2; }
+  
   .info { position: absolute; top: 20px; left: 20px; color: #fff; background: rgba(0,0,0,0.75); padding: 10px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); font-size: 0.9rem; z-index: 10; backdrop-filter: blur(10px); }
   
-  /* Štýlové plávajúce tlačidlo audio ikony */
   .audio-btn {
     position: absolute; bottom: 25px; right: 25px;
     background: rgba(17, 24, 39, 0.85);
@@ -458,15 +464,15 @@
     width: 55px; height: 55px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 1.4rem; cursor: pointer; z-index: 100;
-    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
     transition: transform 0.2s, background 0.2s;
     backdrop-filter: blur(10px);
   }
-  .audio-btn:hover { transform: scale(1.1); background: rgba(239, 68, 68, 0.2); }
+  .audio-btn:hover { transform: scale(1.1); background: rgba(239, 68, 68, 0.25); }
 </style>
 </head>
 <body>
-  <div class="pulse-bg"></div>
+  <div class="fullscreen-pulse-bg"></div>
   <div class="info">🧊 3D Objekt OP — ErikAI OS</div>
   
   ${backgroundAudioSrc ? `
@@ -507,12 +513,7 @@
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
 
-  // Dynamické pulzujúce červené svetlo v 3D scéne, ktoré imituje pozadie
-  const pulseLight = new THREE.PointLight(0xef4444, 2, 10);
-  pulseLight.position.set(0, 0, 3);
-  scene.add(pulseLight);
-
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
   scene.add(ambientLight);
 
   let geometry, mesh;
@@ -531,7 +532,6 @@
   mesh = new THREE.Mesh(geometry, materials);
   scene.add(mesh);
 
-  // Aplikovanie médií
   if (shapeType === 'sphere' && mediaData[0]) {
     const item = mediaData[0];
     if(item.isVideo) {
@@ -554,14 +554,8 @@
     }
   }
 
-  let clock = new THREE.Clock();
   function animate() {
     requestAnimationFrame(animate);
-    
-    // Jemné pulzovanie 3D červeného svetla v synchronizácii s pozadím
-    const elapsedTime = clock.getElapsedTime();
-    pulseLight.intensity = 1.5 + Math.sin(elapsedTime * 1.5) * 1.2;
-
     controls.update();
     renderer.render(scene, camera);
   }
@@ -579,7 +573,7 @@
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = '3d_objekt_op_v5.html';
+    a.download = '3d_objekt_op_v6.html';
     a.click();
     URL.revokeObjectURL(a.href);
   }
