@@ -171,274 +171,252 @@
     const redirectUrl = document.getElementById('cfgRedirectUrl').value.trim();
     const btnText = document.getElementById('cfgBtnText').value.trim();
 
-    // Čistá výstupná šablóna bez nechcených znakov
-    const finalShieldHTML = `<!DOCTYPE html>
-<html lang="sk">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${title}</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg-deep: #030712;
-    --card-glass: rgba(17, 24, 39, 0.92);
-    --card-border: rgba(255, 255, 255, 0.1);
-    --neon-orange: #f97316;
-    --neon-green: #22c55e;
-    --neon-red: #ef4444;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--bg-deep);
-    color: var(--text-main);
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-  }
-  .shield-card {
-    width: 100%;
-    max-width: 500px;
-    background: var(--card-glass);
-    border: 1px solid var(--card-border);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 30px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
-  h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; }
-  p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; line-height: 1.5; }
-  .shield-box {
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid var(--card-border);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .shield-status { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; }
-  .shield-dot {
-    width: 12px; height: 12px; border-radius: 50%;
-    background: var(--neon-orange);
-    box-shadow: 0 0 10px var(--neon-orange);
-    transition: all 0.3s;
-  }
-  .shield-dot.passed { background: var(--neon-green); box-shadow: 0 0 12px var(--neon-green); }
-  .shield-dot.failed { background: var(--neon-red); box-shadow: 0 0 12px var(--neon-red); }
-  .btn-verify {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid var(--card-border);
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 600;
-  }
-  .btn-continue {
-    width: 100%;
-    padding: 14px;
-    background: linear-gradient(90deg, #22c55e, #16a34a);
-    border: none;
-    border-radius: 12px;
-    color: #fff;
-    font-weight: 800;
-    font-size: 1rem;
-    opacity: 0.4;
-    cursor: not-allowed;
-    transition: all 0.3s;
-  }
-  .btn-active {
-    opacity: 1 !important;
-    cursor: pointer !important;
-    box-shadow: 0 10px 20px rgba(34, 197, 94, 0.3);
-  }
-  .challenge-overlay {
-    display: none;
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(3, 7, 18, 0.97);
-    backdrop-filter: blur(15px);
-    padding: 20px;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-  }
-  .challenge-title { font-size: 1.1rem; color: var(--neon-red); font-weight: 800; margin-bottom: 5px; }
-  .challenge-desc { font-size: 0.85rem; color: var(--text-main); margin-bottom: 10px; text-align: center; }
-  .penalty-counter { font-size: 0.75rem; color: var(--neon-orange); margin-bottom: 12px; font-weight: 700; }
-  .challenge-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    width: 100%;
-    max-height: 260px;
-    overflow-y: auto;
-    padding-right: 4px;
-  }
-  .challenge-btn {
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--card-border);
-    border-radius: 8px;
-    color: #fff;
-    font-weight: 700;
-    font-size: 0.75rem;
-    cursor: pointer;
-  }
-  .challenge-btn:hover { background: rgba(255, 255, 255, 0.15); }
-</style>
-</head>
-<body ontouchmove="_0xTRK(event)" onmousemove="_0xTRK(event)">
-
-  <div class="shield-card">
-    <h2>🛡️ ${title}</h2>
-    <p>${subtitle}</p>
-
-    <div class="shield-box">
-      <div class="shield-status">
-        <div class="shield-dot" id="shieldDot"></div>
-        <span id="shieldText">Monitorujem správanie...</span>
-      </div>
-      <button type="button" class="btn-verify" onclick="_0xRUN()">Overiť</button>
-    </div>
-
-    <button type="button" id="continueBtn" class="btn-continue" onclick="_0xGO()" disabled>
-      🔒 Čaká sa na overenie...
-    </button>
-
-    <div class="challenge-overlay" id="challengeOverlay">
-      <div class="challenge-title">⚠️ Vyžaduje sa potvrdenie identity</div>
-      <div class="challenge-desc" id="challengePromptText">Generujem zadanie...</div>
-      <div class="penalty-counter" id="penaltyCounterText">Obtiažnosť: ${startCount} možností</div>
-      <div class="challenge-grid" id="challengeGridContainer"></div>
-    </div>
-  </div>
-
-<script>
-  const _0xENC_DATA = [
-    "🟩 Zelený Štvorec", "🔴 Červený Kruh", "🔵 Modrý Trojuholník", 
-    "⭐ Žltá Hviezda", "🟣 Fialový Kosočtverec", "🟠 Oranžový Mesiac", 
-    "💖 Ružové Srdce", "⚡ Čierny Blesk", "🌲 Hnedý Strom", 
-    "⚓ Sivá Kotva", "⚔️ Zlatý Meč", "👑 Strieborná Koruna"
-  ].map(str => btoa(unescape(encodeURIComponent(str))));
-
-  const _0xT0 = Date.now();
-  let _0xPOS = [];
-  let _0xOK = false;
-  let _0xBOT = false;
-  let _0xHASH = "";
-  let _0xCNT = ${startCount};
-  const _0xURL = "${redirectUrl}";
-
-  function _0xTRK(e) {
-    if (_0xOK) return;
-    const x = e.clientX || (e.touches && e.touches[0].clientX);
-    const y = e.clientY || (e.touches && e.touches[0].clientY);
-    if (x && y) _0xPOS.push({ x, y, t: Date.now() });
-    if (_0xPOS.length > 10) _0xEVAL();
-  }
-
-  function _0xEVAL() {
-    let lin = 0;
-    for (let i = 1; i < _0xPOS.length; i++) {
-      if (_0xPOS[i].x === _0xPOS[i-1].x || _0xPOS[i].y === _0xPOS[i-1].y) lin++;
-    }
-    if (lin > 7) _0xBOT = true;
-  }
-
-  function _0xRUN() {
-    const elapsed = Date.now() - _0xT0;
-    if (elapsed < 2000 || _0xBOT || _0xPOS.length < 3) {
-      _0xGEN();
-      return;
-    }
-    _0xPASS();
-  }
-
-  function _0xGEN() {
-    document.getElementById('shieldDot').className = "shield-dot failed";
-    document.getElementById('shieldText').innerText = "Kontrola podozrenia...";
-    document.getElementById('penaltyCounterText').innerText = "Úroveň obtiažnosti: " + _0xCNT + " možností";
-
-    let dynamicPool = _0xENC_DATA.map(item => decodeURIComponent(escape(atob(item))));
-    for (let i = 0; i < 15; i++) {
-      let pin = Math.floor(1000 + Math.random() * 9000);
-      dynamicPool.push("🔑 Kód [" + pin + "]");
-    }
-
-    const target = dynamicPool[Math.floor(Math.random() * dynamicPool.length)];
-    _0xHASH = btoa(unescape(encodeURIComponent(target)));
-
-    document.getElementById('challengePromptText').innerHTML = "Vyberte presnú položku:<br><strong style='font-size:1rem; color:#f97316;'>" + target + "</strong>";
-
-    let gridItems = [target];
-    while (gridItems.length < _0xCNT) {
-      let rnd = dynamicPool[Math.floor(Math.random() * dynamicPool.length)];
-      if (!gridItems.includes(rnd)) gridItems.push(rnd);
-    }
-    gridItems.sort(() => Math.random() - 0.5);
-
-    const container = document.getElementById('challengeGridContainer');
-    container.innerHTML = "";
-
-    gridItems.forEach(txt => {
-      const btn = document.createElement('button');
-      btn.className = "challenge-btn";
-      btn.innerText = txt;
-      btn.onclick = () => _0xCHK(btoa(unescape(encodeURIComponent(txt))));
-      container.appendChild(btn);
-    });
-
-    document.getElementById('challengeOverlay').style.display = "flex";
-  }
-
-  function _0xCHK(val) {
-    if (val === _0xHASH) {
-      document.getElementById('challengeOverlay').style.display = "none";
-      _0xPASS();
-    } else {
-      _0xCNT++;
-      alert("❌ Zlá odpoveď! Obtiažnosť stúpa na " + _0xCNT + " možností.");
-      _0xGEN();
-    }
-  }
-
-  function _0xPASS() {
-    if (_0xOK) return;
-    _0xOK = true;
-
-    document.getElementById('shieldDot').className = "shield-dot passed";
-    document.getElementById('shieldText').innerText = "✅ Overenie úspešné";
-
-    const btn = document.getElementById('continueBtn');
-    btn.disabled = false;
-    btn.innerText = "${btnText}";
-    btn.classList.add('btn-active');
-  }
-
-  function _0xGO() {
-    if (!_0xOK) return;
-    if (_0xURL && _0xURL.startsWith('http')) {
-      window.location.href = _0xURL;
-    } else {
-      alert("Prístup schválený! Vraciam vás do ErikAI OS.");
-    }
-  }
-</script>
-</body>
-</html>`;
+    // Opravená výstupná šablóna bez kolízií premenných
+    const finalShieldHTML = '<' + '!DOCTYPE html>\n' +
+'<html lang="sk">\n' +
+'<head>\n' +
+'<meta charset="UTF-8">\n' +
+'<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+'<title>' + title + '</title>\n' +
+'<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">\n' +
+'<style>\n' +
+'  :root {\n' +
+'    --bg-deep: #030712;\n' +
+'    --card-glass: rgba(17, 24, 39, 0.92);\n' +
+'    --card-border: rgba(255, 255, 255, 0.1);\n' +
+'    --neon-orange: #f97316;\n' +
+'    --neon-green: #22c55e;\n' +
+'    --neon-red: #ef4444;\n' +
+'    --text-main: #f8fafc;\n' +
+'    --text-muted: #94a3b8;\n' +
+'  }\n' +
+'  * { box-sizing: border-box; margin: 0; padding: 0; }\n' +
+'  body {\n' +
+'    font-family: \'Inter\', sans-serif;\n' +
+'    background-color: var(--bg-deep);\n' +
+'    color: var(--text-main);\n' +
+'    min-height: 100vh;\n' +
+'    display: flex;\n' +
+'    justify-content: center;\n' +
+'    align-items: center;\n' +
+'    padding: 20px;\n' +
+'  }\n' +
+'  .shield-card {\n' +
+'    width: 100%;\n' +
+'    max-width: 500px;\n' +
+'    background: var(--card-glass);\n' +
+'    border: 1px solid var(--card-border);\n' +
+'    backdrop-filter: blur(20px);\n' +
+'    border-radius: 20px;\n' +
+'    padding: 30px;\n' +
+'    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);\n' +
+'    text-align: center;\n' +
+'    position: relative;\n' +
+'    overflow: hidden;\n' +
+'  }\n' +
+'  h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; }\n' +
+'  p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; line-height: 1.5; }\n' +
+'  .shield-box {\n' +
+'    background: rgba(0, 0, 0, 0.4);\n' +
+'    border: 1px solid var(--card-border);\n' +
+'    border-radius: 12px;\n' +
+'    padding: 15px;\n' +
+'    margin-bottom: 20px;\n' +
+'    display: flex;\n' +
+'    align-items: center;\n' +
+'    justify-content: space-between;\n' +
+'  }\n' +
+'  .shield-status { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; }\n' +
+'  .shield-dot {\n' +
+'    width: 12px; height: 12px; border-radius: 50%;\n' +
+'    background: var(--neon-orange);\n' +
+'    box-shadow: 0 0 10px var(--neon-orange);\n' +
+'    transition: all 0.3s;\n' +
+'  }\n' +
+'  .shield-dot.passed { background: var(--neon-green); box-shadow: 0 0 12px var(--neon-green); }\n' +
+'  .shield-dot.failed { background: var(--neon-red); box-shadow: 0 0 12px var(--neon-red); }\n' +
+'  .btn-verify {\n' +
+'    background: rgba(255, 255, 255, 0.1);\n' +
+'    border: 1px solid var(--card-border);\n' +
+'    color: #fff;\n' +
+'    padding: 8px 12px;\n' +
+'    border-radius: 8px;\n' +
+'    cursor: pointer;\n' +
+'    font-size: 0.8rem;\n' +
+'    font-weight: 600;\n' +
+'  }\n' +
+'  .btn-continue {\n' +
+'    width: 100%;\n' +
+'    padding: 14px;\n' +
+'    background: linear-gradient(90deg, #22c55e, #16a34a);\n' +
+'    border: none;\n' +
+'    border-radius: 12px;\n' +
+'    color: #fff;\n' +
+'    font-weight: 800;\n' +
+'    font-size: 1rem;\n' +
+'    opacity: 0.4;\n' +
+'    cursor: not-allowed;\n' +
+'    transition: all 0.3s;\n' +
+'  }\n' +
+'  .btn-active {\n' +
+'    opacity: 1 !important;\n' +
+'    cursor: pointer !important;\n' +
+'    box-shadow: 0 10px 20px rgba(34, 197, 94, 0.3);\n' +
+'  }\n' +
+'  .challenge-overlay {\n' +
+'    display: none;\n' +
+'    position: absolute;\n' +
+'    top: 0; left: 0; width: 100%; height: 100%;\n' +
+'    background: rgba(3, 7, 18, 0.97);\n' +
+'    backdrop-filter: blur(15px);\n' +
+'    padding: 20px;\n' +
+'    flex-direction: column;\n' +
+'    justify-content: center;\n' +
+'    align-items: center;\n' +
+'    z-index: 10;\n' +
+'  }\n' +
+'  .challenge-title { font-size: 1.1rem; color: var(--neon-red); font-weight: 800; margin-bottom: 5px; }\n' +
+'  .challenge-desc { font-size: 0.85rem; color: var(--text-main); margin-bottom: 10px; text-align: center; }\n' +
+'  .penalty-counter { font-size: 0.75rem; color: var(--neon-orange); margin-bottom: 12px; font-weight: 700; }\n' +
+'  .challenge-grid {\n' +
+'    display: grid;\n' +
+'    grid-template-columns: repeat(2, 1fr);\n' +
+'    gap: 8px;\n' +
+'    width: 100%;\n' +
+'    max-height: 260px;\n' +
+'    overflow-y: auto;\n' +
+'    padding-right: 4px;\n' +
+'  }\n' +
+'  .challenge-btn {\n' +
+'    padding: 10px;\n' +
+'    background: rgba(255, 255, 255, 0.05);\n' +
+'    border: 1px solid var(--card-border);\n' +
+'    border-radius: 8px;\n' +
+'    color: #fff;\n' +
+'    font-weight: 700;\n' +
+'    font-size: 0.75rem;\n' +
+'    cursor: pointer;\n' +
+'  }\n' +
+'  .challenge-btn:hover { background: rgba(255, 255, 255, 0.15); }\n' +
+'</style>\n' +
+'</head>\n' +
+'<body ontouchmove="_0xTRK(event)" onmousemove="_0xTRK(event)">\n\n' +
+'  <div class="shield-card">\n' +
+'    <h2>🛡️ ' + title + '</h2>\n' +
+'    <p>' + subtitle + '</p>\n\n' +
+'    <div class="shield-box">\n' +
+'      <div class="shield-status">\n' +
+'        <div class="shield-dot" id="shieldDot"></div>\n' +
+'        <span id="shieldText">Monitorujem správanie...</span>\n' +
+'      </div>\n' +
+'      <button type="button" class="btn-verify" onclick="_0xRUN()">Overiť</button>\n' +
+'    </div>\n\n' +
+'    <button type="button" id="continueBtn" class="btn-continue" onclick="_0xGO()" disabled>\n' +
+'      🔒 Čaká sa na overenie...\n' +
+'    </button>\n\n' +
+'    <div class="challenge-overlay" id="challengeOverlay">\n' +
+'      <div class="challenge-title">⚠️ Vyžaduje sa potvrdenie identity</div>\n' +
+'      <div class="challenge-desc" id="challengePromptText">Generujem zadanie...</div>\n' +
+'      <div class="penalty-counter" id="penaltyCounterText">Obtiažnosť: ' + startCount + ' možností</div>\n' +
+'      <div class="challenge-grid" id="challengeGridContainer"></div>\n' +
+'    </div>\n' +
+'  </div>\n\n' +
+'<script>\n' +
+'  const _0xENC_DATA = [\n' +
+'    "🟩 Zelený Štvorec", "🔴 Červený Kruh", "🔵 Modrý Trojuholník", \n' +
+'    "⭐ Žltá Hviezda", "🟣 Fialový Kosočtverec", "🟠 Oranžový Mesiac", \n' +
+'    "💖 Ružové Srdce", "⚡ Čierny Blesk", "🌲 Hnedý Strom", \n' +
+'    "⚓ Sivá Kotva", "⚔️ Zlatý Meč", "👑 Strieborná Koruna"\n' +
+'  ].map(str => btoa(unescape(encodeURIComponent(str))));\n\n' +
+'  const _0xT0 = Date.now();\n' +
+'  let _0xPOS = [];\n' +
+'  let _0xOK = false;\n' +
+'  let _0xBOT = false;\n' +
+'  let _0xHASH = "";\n' +
+'  let _0xCNT = ' + startCount + ';\n' +
+'  const _0xURL = "' + redirectUrl + '";\n\n' +
+'  function _0xTRK(e) {\n' +
+'    if (_0xOK) return;\n' +
+'    const x = e.clientX || (e.touches && e.touches[0].clientX);\n' +
+'    const y = e.clientY || (e.touches && e.touches[0].clientY);\n' +
+'    if (x && y) _0xPOS.push({ x, y, t: Date.now() });\n' +
+'    if (_0xPOS.length > 10) _0xEVAL();\n' +
+'  }\n\n' +
+'  function _0xEVAL() {\n' +
+'    let lin = 0;\n' +
+'    for (let i = 1; i < _0xPOS.length; i++) {\n' +
+'      if (_0xPOS[i].x === _0xPOS[i-1].x || _0xPOS[i].y === _0xPOS[i-1].y) lin++;\n' +
+'    }\n' +
+'    if (lin > 7) _0xBOT = true;\n' +
+'  }\n\n' +
+'  function _0xRUN() {\n' +
+'    const elapsed = Date.now() - _0xT0;\n' +
+'    if (elapsed < 2000 || _0xBOT || _0xPOS.length < 3) {\n' +
+'      _0xGEN();\n' +
+'      return;\n' +
+'    }\n' +
+'    _0xPASS();\n' +
+'  }\n\n' +
+'  function _0xGEN() {\n' +
+'    document.getElementById(\'shieldDot\').className = "shield-dot failed";\n' +
+'    document.getElementById(\'shieldText\').innerText = "Kontrola podozrenia...";\n' +
+'    document.getElementById(\'penaltyCounterText\').innerText = "Úroveň obtiažnosti: " + _0xCNT + " možností";\n\n' +
+'    let dynamicPool = _0xENC_DATA.map(item => decodeURIComponent(escape(atob(item))));\n' +
+'    for (let i = 0; i < 15; i++) {\n' +
+'      let pin = Math.floor(1000 + Math.random() * 9000);\n' +
+'      dynamicPool.push("🔑 Kód [" + pin + "]");\n' +
+'    }\n\n' +
+'    const target = dynamicPool[Math.floor(Math.random() * dynamicPool.length)];\n' +
+'    _0xHASH = btoa(unescape(encodeURIComponent(target)));\n\n' +
+'    document.getElementById(\'challengePromptText\').innerHTML = "Vyberte presnú položku:<br><strong style=\'font-size:1rem; color:#f97316;\'>" + target + "</strong>";\n\n' +
+'    let gridItems = [target];\n' +
+'    while (gridItems.length < _0xCNT) {\n' +
+'      let rnd = dynamicPool[Math.floor(Math.random() * dynamicPool.length)];\n' +
+'      if (!gridItems.includes(rnd)) gridItems.push(rnd);\n' +
+'    }\n' +
+'    gridItems.sort(() => Math.random() - 0.5);\n\n' +
+'    const container = document.getElementById(\'challengeGridContainer\');\n' +
+'    container.innerHTML = "";\n\n' +
+'    gridItems.forEach(txt => {\n' +
+'      const btn = document.createElement(\'button\');\n' +
+'      btn.className = "challenge-btn";\n' +
+'      btn.innerText = txt;\n' +
+'      btn.onclick = () => _0xCHK(btoa(unescape(encodeURIComponent(txt))));\n' +
+'      container.appendChild(btn);\n' +
+'    });\n\n' +
+'    document.getElementById(\'challengeOverlay\').style.display = "flex";\n' +
+'  }\n\n' +
+'  function _0xCHK(val) {\n' +
+'    if (val === _0xHASH) {\n' +
+'      document.getElementById(\'challengeOverlay\').style.display = "none";\n' +
+'      _0xPASS();\n' +
+'    } else {\n' +
+'      _0xCNT++;\n' +
+'      alert("❌ Zlá odpoveď! Obtiažnosť stúpa na " + _0xCNT + " možností.");\n' +
+'      _0xGEN();\n' +
+'    }\n' +
+'  }\n\n' +
+'  function _0xPASS() {\n' +
+'    if (_0xOK) return;\n' +
+'    _0xOK = true;\n\n' +
+'    document.getElementById(\'shieldDot\').className = "shield-dot passed";\n' +
+'    document.getElementById(\'shieldText\').innerText = "✅ Overenie úspešné";\n\n' +
+'    const btn = document.getElementById(\'continueBtn\');\n' +
+'    btn.disabled = false;\n' +
+'    btn.innerText = "' + btnText + '";\n' +
+'    btn.classList.add(\'btn-active\');\n' +
+'  }\n\n' +
+'  function _0xGO() {\n' +
+'    if (!_0xOK) return;\n' +
+'    if (_0xURL && _0xURL.startsWith(\'http\')) {\n' +
+'      window.location.href = _0xURL;\n' +
+'    } else {\n' +
+'      alert("Prístup schválený! Vraciam vás do ErikAI OS.");\n' +
+'    }\n' +
+'  }\n' +
+'<\/script>\n' +
+'</body>\n' +
+'</html>';
 
     const blob = new Blob([finalShieldHTML], { type: 'text/html' });
     const a = document.createElement('a');
