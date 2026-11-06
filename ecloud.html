@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI — Pokročilý Cloudflare Štít</title>
+<title>ErikAI — Dynamický Cloudflare Štít</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -101,7 +101,7 @@
     box-shadow: 0 10px 20px rgba(34, 197, 94, 0.3);
   }
 
-  /* MODÁLNE OKNO PRE DRUHÚ VÝZVU (CAPTCHA PROTI BOTOM) */
+  /* MODÁLNE OKNO PRE DYNAMICKÚ CAPTCHA VÝZVU */
   .challenge-overlay {
     display: none;
     position: absolute;
@@ -137,16 +137,13 @@
   }
 
   .challenge-btn:hover { background: rgba(255, 255, 255, 0.15); }
-
-  /* Skrytá pasca pre automatické boty */
-  .bot-trap-btn { display: none; }
 </style>
 </head>
 <body ontouchmove="zaznamenajPohyb(event)" onmousemove="zaznamenajPohyb(event)">
 
   <div class="shield-card">
-    <h2>🛡️ ErikAI Security Štít v2</h2>
-    <p>Systém kontroluje čas načítania a plynulosť ľudských pohybov.</p>
+    <h2>🛡️ ErikAI Security Štít v3</h2>
+    <p>Dynamický bezpečnostný štít s náhodným generovaním výziev.</p>
 
     <div class="shield-box">
       <div class="shield-status">
@@ -160,20 +157,14 @@
       🔒 Čaká sa na overenie...
     </button>
 
-    <!-- DRUHÁ VÝZVA PRI PODOZRENÍ NA BOTA -->
+    <!-- DYNAMICKÁ VÝZVA PROTI BOTOM -->
     <div class="challenge-overlay" id="challengeOverlay">
-      <div class="challenge-title">⚠️ Zistené podozrivé správanie</div>
-      <div class="challenge-desc">Pre potvrdenie, že nie ste bot, ťuknite na tlačidlo: <strong>ZELENÝ ŠTVOREC</strong></div>
+      <div class="challenge-title">⚠️ Bezpečnostná výzva</div>
+      <div class="challenge-desc" id="challengePromptText">Načítavam zadanie...</div>
       
-      <div class="challenge-grid">
-        <button class="challenge-btn" onclick="zlyhaloOverenie()">🔴 Červený Kruh</button>
-        <button class="challenge-btn" onclick="vyriesenaVyzva()">🟩 Zelený Štvorec</button>
-        <button class="challenge-btn" onclick="zlyhaloOverenie()">🔵 Modrý Trojuholník</button>
-        <button class="challenge-btn" onclick="zlyhaloOverenie()">⭐ Žltá Hviezda</button>
+      <div class="challenge-grid" id="challengeGridContainer">
+        <!-- Tlačidlá sa sem vygenerujú náhodne cez JavaScript -->
       </div>
-
-      <!-- Falošné invisible tlačidlo pre botov, ktorí klikajú na prvý prvok v DOM -->
-      <button class="bot-trap-btn" onclick="zlyhaloOverenie()">AutoClick Trap</button>
     </div>
   </div>
 
@@ -182,6 +173,17 @@
   let zoznamPohybov = [];
   let stitPrekonany = false;
   let podozrenieBot = false;
+  let spravnaOdpovedId = "";
+
+  // Zoznam možností pre dynamickú výzvu
+  const moznostiVyzvy = [
+    { id: "zeleny_stvorec", nazov: "🟩 Zelený Štvorec" },
+    { id: "cerveny_kruh", nazov: "🔴 Červený Kruh" },
+    { id: "modry_trojuholnik", nazov: "🔵 Modrý Trojuholník" },
+    { id: "zlta_hviezda", nazov: "⭐ Žltá Hviezda" },
+    { id: "fialovy_kosoctverec", nazov: "🟣 Fialový Kosočtverec" },
+    { id: "oranzovy_mesiac", nazov: "🟠 Oranžový Mesiac" }
+  ];
 
   function zaznamenajPohyb(e) {
     if (stitPrekonany) return;
@@ -193,7 +195,6 @@
       zoznamPohybov.push({ x, y, t: Date.now() });
     }
 
-    // Ak máme aspoň 10 bodov trajektórie, skontrolujeme plynulosť
     if (zoznamPohybov.length > 10) {
       vyhodnotPohyby();
     }
@@ -201,21 +202,18 @@
 
   function vyhodnotPohyby() {
     let rovneKroky = 0;
-
-    // Test: Ak sa X alebo Y nemení (dokonale rovná čiara = typické pre bota)
     for (let i = 1; i < zoznamPohybov.length; i++) {
       if (zoznamPohybov[i].x === zoznamPohybov[i-1].x || zoznamPohybov[i].y === zoznamPohybov[i-1].y) {
         rovneKroky++;
       }
     }
 
-    // Ak bolo veľa lineárnych pohybov bez chvenia ruky
     if (rovneKroky > 7) {
       podozrenieBot = true;
     }
 
-    // Ak ubehli 2 sekundy a nebol zistený bot pattern
-    if ((Date.now() - casNacitania) >= 2000 && !podozrenieBot) {
+    // Ak ubehli aspoň 2 sekundy a nie je podozrenie, pustí ťa hneď bez výzvy
+    if ((Date.now() - casNacitania) >= 2000 && !podozrenieBot && zoznamPohybov.length > 3) {
       schvalOverenie();
     }
   }
@@ -223,36 +221,64 @@
   function manualneOverenie() {
     const ubehnutyCas = Date.now() - casNacitania;
 
-    // PRAVIDLO 1: Ak klikne rýchlejšie ako za 2 sekundy = podozrenie na bota
-    if (ubehnutyCas < 2000) {
-      spustDruhuVyzvu("Príliš rýchle kliknutie (pod 2s)");
-      return;
-    }
-
-    // PRAVIDLO 2: Ak systém zachytil neludské pohyby
-    if (podozrenieBot || zoznamPohybov.length < 3) {
-      spustDruhuVyzvu("Nezistené prirodzené pohyby myši/prsta");
+    // Ak klikne príliš rýchlo alebo má podozrivé pohyby, vygenerujeme mu DYNAMICKÚ CAPTCHU
+    if (ubehnutyCas < 2000 || podozrenieBot || zoznamPohybov.length < 3) {
+      spustDynamickuVyzvu();
       return;
     }
 
     schvalOverenie();
   }
 
-  function spustDruhuVyzvu(dovod) {
-    console.warn("Štít aktivuje výzvu z dôvodu:", dovod);
+  function spustDynamickuVyzvu() {
     document.getElementById('shieldDot').className = "shield-dot failed";
-    document.getElementById('shieldText').innerText = "Kontrola identity...";
+    document.getElementById('shieldText').innerText = "Vyžaduje sa overenie...";
+
+    // 1. Náhodne vybereme správnu odpoveď zo zoznamu
+    const nahodnyCielIndex = Math.floor(Math.random() * moznostiVyzvy.length);
+    const cielObjekt = moznostiVyzvy[nahodnyCielIndex];
+    spravnaOdpovedId = cielObjekt.id;
+
+    // 2. Nastavíme text zadania pre používateľa
+    document.getElementById('challengePromptText').innerHTML = `Pre potvrdenie identity kliknite na: <br><strong style="font-size: 1rem; color: #f97316;">${cielObjekt.nazov}</strong>`;
+
+    // 3. Vybereme 4 náhodné možnosti (vrátane správnej) a premiešame ich poradie (Shuffle)
+    let vybraneMoznosti = [cielObjekt];
+    while (vybraneMoznosti.length < 4) {
+      let nahodnaItem = moznostiVyzvy[Math.floor(Math.random() * moznostiVyzvy.length)];
+      if (!vybraneMoznosti.includes(nahodnaItem)) {
+        vybraneMoznosti.push(nahodnaItem);
+      }
+    }
+    // Premiešame poradie tlačidiel v poli, aby nikdy neboli na istom mieste
+    vybraneMoznosti.sort(() => Math.random() - 0.5);
+
+    // 4. Vykreslíme tlačidlá do mriežky
+    const gridContainer = document.getElementById('challengeGridContainer');
+    gridContainer.innerHTML = "";
+    
+    vybraneMoznosti.forEach(item => {
+      const btn = document.createElement('button');
+      btn.className = "challenge-btn";
+      btn.innerText = item.nazov;
+      btn.onclick = () => skontrolujOdpoved(item.id);
+      gridContainer.appendChild(btn);
+    });
+
+    // Zobrazíme okno výzvy
     document.getElementById('challengeOverlay').style.display = "flex";
   }
 
-  function vyriesenaVyzva() {
-    document.getElementById('challengeOverlay').style.display = "none";
-    schvalOverenie();
-  }
-
-  function zlyhaloOverenie() {
-    alert("🛑 Zlyhalo bezpečnostné overenie. Prístup zamietnutý!");
-    window.location.reload();
+  function skontrolujOdpoved(kliknuteId) {
+    if (kliknuteId === spravnaOdpovedId) {
+      // Úspech
+      document.getElementById('challengeOverlay').style.display = "none";
+      schvalOverenie();
+    } else {
+      // Zlá odpoveď
+      alert("🛑 Nesprávna odpoveď! Overenie zlyhalo.");
+      window.location.reload();
+    }
   }
 
   function schvalOverenie() {
@@ -260,7 +286,7 @@
     stitPrekonany = true;
 
     document.getElementById('shieldDot').className = "shield-dot passed";
-    document.getElementById('shieldText').innerText = "✅ Overenie úspešné (Človek)";
+    document.getElementById('shieldText').innerText = "✅ Overenie úspešné";
 
     const btn = document.getElementById('continueBtn');
     btn.disabled = false;
@@ -270,7 +296,8 @@
 
   function vstupDoSystemu() {
     if (!stitPrekonany) return;
-    alert("Prístup schválený! Vraciam ťa do tvojho ekosystému.");
+    alert("Prístup schválený! Vitajte v ErikAI OS.");
+    // window.location.href = "tvoja-hlavna-stranka.html";
   }
 </script>
 
