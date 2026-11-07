@@ -104,11 +104,31 @@
         .table-element td:focus, .table-element th:focus {
             background-color: rgba(16, 185, 129, 0.2);
         }
+
+        /* Trieda pre skrytie okrajov pri exporte */
+        .exporting-pdf .canvas-element,
+        .exporting-pdf .whiteout-box,
+        .exporting-pdf .image-element,
+        .exporting-pdf .table-element {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+        .exporting-pdf .whiteout-box {
+            background-color: white !important; /* Biele zakrytie ostane biele, len čiara zmizne */
+        }
+
         .pan-mode .canvas-element,
         .pan-mode .whiteout-box,
         .pan-mode .image-element,
         .pan-mode .table-element {
             pointer-events: none !important;
+        }
+        .move-objects-mode .canvas-element,
+        .move-objects-mode .whiteout-box,
+        .move-objects-mode .image-element,
+        .move-objects-mode .table-element {
+            cursor: grab !important;
         }
     </style>
 </head>
@@ -146,10 +166,11 @@
 
     <!-- Toolbar -->
     <div class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 flex items-center justify-between gap-3 text-xs z-20">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
             <span class="text-slate-400 font-semibold">Režim:</span>
             <button id="mode-edit-btn" class="px-3 py-1 bg-red-600 text-white rounded font-medium">✏️ Úpravy</button>
-            <button id="mode-pan-btn" class="px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium">✋ Ruka (Pan)</button>
+            <button id="mode-move-objects-btn" class="px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium">✋ Pohyb objektov</button>
+            <button id="mode-pan-btn" class="px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium">✋ Posun plátna</button>
             
             <div class="h-4 w-[1px] bg-slate-700 mx-2"></div>
 
@@ -214,7 +235,7 @@
             </div>
         </aside>
 
-        <!-- Main Viewport (Voľný priestor) -->
+        <!-- Main Viewport -->
         <main id="main-viewport" class="flex-1 bg-slate-950">
             <div id="canvas-wrapper">
                 <canvas id="pdf-render"></canvas>
@@ -259,21 +280,29 @@
         let pageAnnotations = {};
         let activeElement = null;
 
-        // Režim Ruka (Pan)
-        document.getElementById('mode-edit-btn').addEventListener('click', () => {
-            currentMode = 'edit';
-            document.getElementById('mode-edit-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
-            document.getElementById('mode-pan-btn').className = "px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium";
-            viewport.classList.remove('pan-mode');
-        });
-
-        document.getElementById('mode-pan-btn').addEventListener('click', () => {
-            currentMode = 'pan';
-            document.getElementById('mode-pan-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
+        function setMode(mode) {
+            currentMode = mode;
+            viewport.classList.remove('pan-mode', 'move-objects-mode');
+            
             document.getElementById('mode-edit-btn').className = "px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium";
-            viewport.classList.add('pan-mode');
-            selectElement(null);
-        });
+            document.getElementById('mode-move-objects-btn').className = "px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium";
+            document.getElementById('mode-pan-btn').className = "px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium";
+
+            if (mode === 'edit') {
+                document.getElementById('mode-edit-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
+            } else if (mode === 'move-objects') {
+                document.getElementById('mode-move-objects-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
+                viewport.classList.add('move-objects-mode');
+            } else if (mode === 'pan') {
+                document.getElementById('mode-pan-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
+                viewport.classList.add('pan-mode');
+                selectElement(null);
+            }
+        }
+
+        document.getElementById('mode-edit-btn').addEventListener('click', () => setMode('edit'));
+        document.getElementById('mode-move-objects-btn').addEventListener('click', () => setMode('move-objects'));
+        document.getElementById('mode-pan-btn').addEventListener('click', () => setMode('pan'));
 
         let isPanning = false, startX, startY, scrollLeft, scrollTop;
         viewport.addEventListener('mousedown', (e) => {
@@ -292,7 +321,6 @@
             viewport.scrollTop = scrollTop - (e.clientY - startY);
         });
 
-        // Nahranie PDF a automatické prispôsobenie na celú stranu bez orezania
         document.getElementById('pdf-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file && file.type === 'application/pdf') {
@@ -303,14 +331,13 @@
                         pageNum = 1;
                         pageAnnotations = {};
                         
-                        // Zistíme ideálny Zoom tak, aby sa celý papier zmestil hneď na obrazovku
                         pdfDoc.getPage(1).then((page) => {
                             const baseVp = page.getViewport({ scale: 1.0 });
                             const availableWidth = viewport.clientWidth - 80;
                             const availableHeight = viewport.clientHeight - 80;
                             const scaleX = availableWidth / baseVp.width;
                             const scaleY = availableHeight / baseVp.height;
-                            currentZoom = Math.min(scaleX, scaleY, 1.2); // Zmestí sa celý, bez orezania
+                            currentZoom = Math.min(scaleX, scaleY, 1.2);
                             document.getElementById('zoom-val').textContent = Math.round(currentZoom * 100) + '%';
                             renderPage(pageNum);
                         });
@@ -323,7 +350,7 @@
         function renderPage(num) {
             saveAnnotations();
             pdfDoc.getPage(num).then((page) => {
-                const scaledViewport = page.getViewport({ scale: 1.3 * currentZoom });
+                const scaledViewport = page.getViewport({ scale: 1.0 * currentZoom });
                 canvas.width = scaledViewport.width;
                 canvas.height = scaledViewport.height;
 
@@ -704,7 +731,7 @@
         document.getElementById('prev-page').addEventListener('click', () => { if (pageNum > 1) renderPage(--pageNum); });
         document.getElementById('next-page').addEventListener('click', () => { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(++pageNum); });
 
-        // Export 1:1 bez orezania
+        // Export 1:1 bez orezania a bez čiarkovaných rámčekov
         document.getElementById('export-pdf-btn').addEventListener('click', async () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
             saveAnnotations();
@@ -713,6 +740,9 @@
             const oldZoom = currentZoom;
             currentZoom = 1.0;
 
+            // Aktivujeme triedu, ktorá okamžite skryje všetky čiarkované ohraničenia na plátne
+            wrapper.classList.add('exporting-pdf');
+
             const { jsPDF } = window.jspdf;
             let finalPdf = null;
 
@@ -720,7 +750,7 @@
                 await new Promise((resolve) => {
                     pageNum = i;
                     pdfDoc.getPage(i).then((page) => {
-                        const viewport1x = page.getViewport({ scale: 1.3 });
+                        const viewport1x = page.getViewport({ scale: 1.0 });
                         canvas.width = viewport1x.width;
                         canvas.height = viewport1x.height;
                         wrapper.style.width = viewport1x.width + 'px';
@@ -759,7 +789,10 @@
                 });
             }
 
+            // Vypneme mód exportu, vrátime všetko do pôvodného stavu
+            wrapper.classList.remove('exporting-pdf');
             finalPdf.save('ErikAI_OS_Master_Dokument_1to1.pdf');
+            
             currentZoom = oldZoom;
             renderPage(pageNum);
         });
