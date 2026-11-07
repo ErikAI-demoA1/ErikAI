@@ -2,7 +2,7 @@
 <html lang="sk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ErikAI OS - Master PDF & Document Studio</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,29 +16,34 @@
             background-color: #0f172a;
             color: #f8fafc;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: manipulation;
         }
-        #canvas-container {
+        #canvas-wrapper {
             position: relative;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.8);
             display: inline-block;
             background: white;
-            transform-origin: top center;
+            transform-origin: top left;
         }
         .canvas-element {
             position: absolute;
             cursor: move;
             border: 1px dashed rgba(239, 68, 68, 0.6);
             user-select: none;
+            touch-action: none;
+            box-sizing: border-box;
         }
         .canvas-element:hover, .canvas-element.selected {
             border-color: #ef4444;
-            background-color: rgba(239, 68, 68, 0.05);
+            background-color: rgba(239, 68, 68, 0.08);
         }
         .whiteout-box {
             position: absolute;
             cursor: move;
             background-color: white;
             border: 1px dashed #cbd5e1;
+            touch-action: none;
+            box-sizing: border-box;
         }
         .whiteout-box:hover, .whiteout-box.selected {
             border-color: #3b82f6;
@@ -48,124 +53,163 @@
             position: absolute;
             cursor: move;
             border: 1px dashed #eab308;
+            touch-action: none;
+            box-sizing: border-box;
         }
         .image-element img {
             width: 100%;
             height: 100%;
             pointer-events: none;
+            object-fit: contain;
         }
         .image-element.selected {
             border-color: #eab308;
             box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
+        }
+        .table-element {
+            position: absolute;
+            cursor: move;
+            border: 1px dashed #10b981;
+            background: white;
+            touch-action: none;
+            box-sizing: border-box;
+            overflow: auto;
+        }
+        .table-element.selected {
+            border-color: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+        }
+        .table-element table {
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+            color: #000;
+        }
+        .table-element td, .table-element th {
+            border: 1px solid #64748b;
+            padding: 4px;
+            text-align: left;
+            font-size: 12px;
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
     <!-- Header -->
-    <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center flex-wrap gap-4">
+    <header class="bg-slate-900 border-b border-slate-800 p-3 sm:p-4 flex justify-between items-center flex-wrap gap-3">
         <div class="flex items-center gap-3">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center font-bold text-white shadow-lg shadow-red-600/30">
                 E
             </div>
             <div>
-                <h1 class="text-lg font-bold tracking-wide text-white">
+                <h1 class="text-base sm:text-lg font-bold tracking-wide text-white">
                     ErikAI OS <span class="text-xs px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">Master Studio</span>
                 </h1>
-                <p class="text-xs text-slate-400">Bezserverový editor PDF, textov a obrázkov</p>
+                <p class="text-xs text-slate-400 hidden sm:block">Serverless editor pre PDF, text, obrázky a tabuľky</p>
             </div>
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
-            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2 text-sm font-medium">
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 sm:py-2 rounded-lg border border-slate-700 transition flex items-center gap-1.5 text-xs sm:text-sm font-medium">
                 📄 Nahrať PDF
                 <input type="file" id="pdf-input" accept="application/pdf" class="hidden">
             </label>
-            <button id="add-whiteout-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition border border-slate-700 flex items-center gap-1.5" title="Zakryje starý text alebo tabuľku bielym poľom">
-                ⬜ Vymazať miesto
+            <button id="add-whiteout-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-slate-700 flex items-center gap-1" title="Zakryje staré miesto bielym obdĺžnikom">
+                ⬜ Vymazať
             </button>
-            <button id="add-text-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition border border-slate-700 flex items-center gap-1.5">
-                ✏️ Pridať text
+            <button id="add-text-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-slate-700 flex items-center gap-1">
+                ✏️ Text
             </button>
-            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition border border-slate-700 flex items-center gap-1.5">
-                🖼️ Pridať obrázok
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-slate-700 flex items-center gap-1">
+                🖼️ Obrázok
                 <input type="file" id="image-input" accept="image/*" class="hidden">
             </label>
-            <button id="export-pdf-btn" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-lg shadow-red-600/25 flex items-center gap-2">
-                💾 Stiahnuť PDF
+            <button id="add-table-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-slate-700 flex items-center gap-1">
+                📊 Tabuľka
             </button>
-            <button id="print-pdf-btn" class="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-lg shadow-sky-600/25 flex items-center gap-2">
-                🖨️ Vytlačiť
+            <button id="export-pdf-btn" class="bg-red-600 hover:bg-red-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition shadow-lg shadow-red-600/25 flex items-center gap-1.5">
+                💾 Uložiť PDF
+            </button>
+            <button id="print-pdf-btn" class="bg-sky-600 hover:bg-sky-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition shadow-lg shadow-sky-600/25 flex items-center gap-1.5">
+                🖨️ Tlač
             </button>
         </div>
     </header>
 
+    <!-- Toolbar: Zoom & Controls -->
+    <div class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 flex items-center justify-between flex-wrap gap-2 text-xs">
+        <div class="flex items-center gap-2">
+            <span class="text-slate-400 font-semibold">Lupa:</span>
+            <button id="zoom-out-btn" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded font-bold text-white flex items-center justify-center">-</button>
+            <span id="zoom-val" class="font-mono text-slate-200">100%</span>
+            <button id="zoom-in-btn" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded font-bold text-white flex items-center justify-center">+</button>
+            <button id="zoom-reset-btn" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-slate-300">Reset</button>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="page-num-display" class="font-medium text-slate-300">Strana: 0 / 0</span>
+            <div class="flex items-center gap-1">
+                <button id="prev-page" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded disabled:opacity-40">◄</button>
+                <button id="next-page" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded disabled:opacity-40">►</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Workspace -->
     <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
 
-        <!-- Sidebar / Controls -->
-        <aside class="w-full lg:w-80 bg-slate-900/80 border-r border-slate-800 p-4 flex flex-col gap-6 overflow-y-auto">
-            <div class="space-y-3">
-                <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Stránky dokumentu</h2>
-                <div class="flex items-center justify-between bg-slate-800/80 p-2 rounded-lg border border-slate-700">
-                    <button id="prev-page" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm disabled:opacity-40">◄ Predch.</button>
-                    <span id="page-num-display" class="text-sm font-medium">0 / 0</span>
-                    <button id="next-page" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm disabled:opacity-40">Ďalšia ►</button>
-                </div>
-            </div>
-
-            <!-- Property Inspector -->
-            <div class="space-y-4 bg-slate-950/40 p-3.5 rounded-xl border border-slate-800" id="inspector-panel">
-                <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Vlastnosti vybraného prvku</h2>
+        <!-- Sidebar Controls -->
+        <aside class="w-full lg:w-80 bg-slate-900/80 border-r border-slate-800 p-4 flex flex-col gap-5 overflow-y-auto max-h-[35vh] lg:max-h-none">
+            <div class="space-y-3 bg-slate-950/50 p-3.5 rounded-xl border border-slate-800" id="inspector-panel">
+                <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Vlastnosti prvku</h2>
                 
                 <div id="no-selection" class="text-xs text-slate-500 italic py-2">
-                    Kliknite na text, biely obdĺžnik alebo obrázok na plátne pre jeho úpravu.
+                    Kliknite na text, zakrytie, obrázok alebo tabuľku na plátne pre úpravu.
                 </div>
 
                 <div id="inspector-content" class="space-y-3 hidden">
                     <div id="text-prop-group">
-                        <label class="text-xs text-slate-400 mb-1 block">Textový obsah:</label>
+                        <label class="text-xs text-slate-400 mb-1 block">Text / Obsah:</label>
                         <input type="text" id="prop-text" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-red-500">
                     </div>
 
                     <div class="grid grid-cols-2 gap-2" id="font-prop-group">
                         <div>
-                            <label class="text-xs text-slate-400 mb-1 block">Veľkosť (px):</label>
+                            <label class="text-xs text-slate-400 mb-1 block">Veľkosť písma:</label>
                             <input type="number" id="prop-size" min="8" max="72" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                         </div>
                         <div>
                             <label class="text-xs text-slate-400 mb-1 block">Farba:</label>
-                            <input type="color" id="prop-color" class="w-full h-10 bg-slate-800 border border-slate-700 rounded p-1 cursor-pointer">
+                            <input type="color" id="prop-color" class="w-full h-9 bg-slate-800 border border-slate-700 rounded p-1 cursor-pointer">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-xs text-slate-400 mb-1 block">Šírka:</label>
-                            <input type="number" id="prop-width" min="10" max="800" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
+                            <label class="text-xs text-slate-400 mb-1 block">Šírka (px):</label>
+                            <input type="number" id="prop-width" min="10" max="1000" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                         </div>
                         <div>
-                            <label class="text-xs text-slate-400 mb-1 block">Výška:</label>
-                            <input type="number" id="prop-height" min="10" max="800" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
+                            <label class="text-xs text-slate-400 mb-1 block">Výška (px):</label>
+                            <input type="number" id="prop-height" min="10" max="1000" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                         </div>
                     </div>
 
                     <button id="delete-btn" class="w-full bg-red-950/60 hover:bg-red-900 border border-red-800/60 text-red-300 py-2 rounded-lg text-sm transition font-medium">
-                        🗑️ Odstrániť prvok
+                        🗑️ Odstrániť prvok (Delete)
                     </button>
                 </div>
             </div>
 
             <div class="mt-auto p-3 bg-slate-800/40 rounded-xl border border-slate-800/80 text-xs text-slate-400 space-y-1.5">
                 <p class="font-semibold text-slate-300">💡 ErikAI OS Tip:</p>
-                <p>1. <b>Vymazať miesto:</b> Zakryje starú cenu, text alebo tabuľku bielym boxom.</p>
-                <p>2. <b>Obrázok:</b> Nahrá logo alebo pečiatku priamo do PDF.</p>
+                <p>• Môžete pridávať neobmedzene veľa textov, obrázkov aj tabuliek.</p>
+                <p>• Na mobiloch presúvate prvky plynule dotykom prsta.</p>
             </div>
         </aside>
 
         <!-- Main Viewport -->
-        <main class="flex-1 p-6 overflow-auto flex justify-center items-start bg-slate-950">
-            <div id="canvas-container" class="relative rounded-lg overflow-hidden">
+        <main class="flex-1 p-4 sm:p-6 overflow-auto flex justify-center items-start bg-slate-950 relative">
+            <div id="canvas-wrapper" class="relative rounded-lg overflow-hidden">
                 <canvas id="pdf-render"></canvas>
             </div>
         </main>
@@ -176,15 +220,17 @@
 
         let pdfDoc = null;
         let pageNum = 1;
-        let scale = 1.3;
+        let userZoom = 1.0;
+        let baseScale = 1.3;
+        
         const canvas = document.getElementById('pdf-render');
         const ctx = canvas.getContext('2d');
-        const container = document.getElementById('canvas-container');
+        const wrapper = document.getElementById('canvas-wrapper');
 
         let pageAnnotations = {};
         let activeElement = null;
 
-        // Načítanie PDF
+        // Načítanie PDF súboru
         document.getElementById('pdf-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file && file.type === 'application/pdf') {
@@ -201,30 +247,35 @@
             }
         });
 
+        // Vykreslenie stránky s podporou zoomu
         function renderPage(num) {
             saveAnnotations();
             pdfDoc.getPage(num).then((page) => {
-                const viewport = page.getViewport({ scale: scale });
+                const currentScale = baseScale * userZoom;
+                const viewport = page.getViewport({ scale: currentScale });
+                
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-                container.style.width = viewport.width + 'px';
-                container.style.height = viewport.height + 'px';
+                wrapper.style.width = viewport.width + 'px';
+                wrapper.style.height = viewport.height + 'px';
 
                 page.render({ canvasContext: ctx, viewport: viewport }).promise.then(() => {
-                    document.getElementById('page-num-display').textContent = `${num} / ${pdfDoc.numPages}`;
+                    document.getElementById('page-num-display').textContent = `Strana: ${num} / ${pdfDoc.numPages}`;
                     restoreAnnotations(num);
                 });
             });
         }
 
+        // Uloženie stavu vrstiev pre aktuálnu stranu
         function saveAnnotations() {
             if (!pdfDoc) return;
-            const elements = container.querySelectorAll('.canvas-element, .whiteout-box, .image-element');
+            const elements = wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element');
             const data = [];
             elements.forEach(el => {
                 let type = 'whiteout';
                 if (el.classList.contains('canvas-element')) type = 'text';
                 if (el.classList.contains('image-element')) type = 'image';
+                if (el.classList.contains('table-element')) type = 'table';
 
                 data.push({
                     type: type,
@@ -242,8 +293,9 @@
             pageAnnotations[pageNum] = data;
         }
 
+        // Obnovenie vrstiev zo zálohy stránky
         function restoreAnnotations(num) {
-            container.querySelectorAll('.canvas-element, .whiteout-box, .image-element').forEach(el => el.remove());
+            wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element').forEach(el => el.remove());
             selectElement(null);
 
             const saved = pageAnnotations[num] || [];
@@ -254,14 +306,16 @@
                     createText(item.text, item.left, item.top, item.fontSize, item.color, item.width, item.height);
                 } else if (item.type === 'image') {
                     createImage(item.src, item.left, item.top, item.width, item.height);
+                } else if (item.type === 'table') {
+                    createTable(item.html, item.left, item.top, item.width, item.height);
                 }
             });
         }
 
-        // Pridanie bieleho boxu
+        // Pridanie zakrytia (Vymazať staré miesto)
         document.getElementById('add-whiteout-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            createBox('whiteout-box', '100px', '100px', '160px', '35px');
+            createBox('whiteout-box', '50px', '50px', '160px', '35px');
         });
 
         function createBox(className, left, top, width, height) {
@@ -272,14 +326,14 @@
             el.style.width = width;
             el.style.height = height;
             makeInteractive(el);
-            container.appendChild(el);
+            wrapper.appendChild(el);
             selectElement(el);
         }
 
         // Pridanie textu
         document.getElementById('add-text-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            createText('Nový text / položka', '100px', '150px', '16px', '#000000', '180px', '35px');
+            createText('Nový text', '50px', '100px', '16px', '#000000', '180px', '35px');
         });
 
         function createText(text, left, top, fontSize, color, width, height) {
@@ -295,21 +349,18 @@
             if (height) el.style.height = height;
 
             makeInteractive(el);
-            container.appendChild(el);
+            wrapper.appendChild(el);
             selectElement(el);
         }
 
-        // Pridanie obrázka (Logo / Pečiatka)
+        // Pridanie obrázka
         document.getElementById('image-input').addEventListener('change', (e) => {
-            if (!pdfDoc) {
-                alert('Najprv nahrajte PDF!');
-                return;
-            }
+            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
-                    createImage(event.target.result, '100px', '100px', '120px', '120px');
+                    createImage(event.target.result, '50px', '150px', '120px', '120px');
                 };
                 reader.readAsDataURL(file);
             }
@@ -328,49 +379,88 @@
             el.appendChild(img);
 
             makeInteractive(el);
-            container.appendChild(el);
+            wrapper.appendChild(el);
             selectElement(el);
         }
 
-        // Interaktivita (drag & drop)
-        function makeInteractive(el) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            el.onmousedown = dragMouseDown;
-            el.onclick = (e) => {
-                e.stopPropagation();
-                selectElement(el);
-            };
+        // Pridanie tabuľky
+        document.getElementById('add-table-btn').addEventListener('click', () => {
+            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
+            const tableHTML = `
+                <table>
+                    <tr><th>Položka</th><th>Množstvo</th><th>Cena</th></tr>
+                    <tr><td>Služba A</td><td>1</td><td>100 €</td></tr>
+                    <tr><td>Služba B</td><td>2</td><td>200 €</td></tr>
+                </table>
+            `;
+            createTable(tableHTML, '50px', '200px', '250px', '100px');
+        });
 
-            function dragMouseDown(e) {
-                e.preventDefault();
-                selectElement(el);
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                document.onmouseup = closeDrag;
-                document.onmousemove = elementDrag;
-            }
+        function createTable(html, left, top, width, height) {
+            const el = document.createElement('div');
+            el.className = 'table-element';
+            el.innerHTML = html;
+            el.style.left = left;
+            el.style.top = top;
+            el.style.width = width;
+            el.style.height = height;
 
-            function elementDrag(e) {
-                e.preventDefault();
-                pos1 = pos3 - e.clientX;
-                pos2 = pos4 - e.clientY;
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                el.style.top = (el.offsetTop - pos2) + "px";
-                el.style.left = (el.offsetLeft - pos1) + "px";
-            }
-
-            function closeDrag() {
-                document.onmouseup = null;
-                document.onmousemove = null;
-            }
+            makeInteractive(el);
+            wrapper.appendChild(el);
+            selectElement(el);
         }
 
-        container.addEventListener('click', () => { selectElement(null); });
+        // Univerzálna interaktivita (Mouse + Touch pre mobily)
+        function makeInteractive(el) {
+            let startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
+
+            // Myš
+            el.onmousedown = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectElement(el);
+                startX = e.clientX;
+                startY = e.clientY;
+                initialLeft = el.offsetLeft;
+                initialTop = el.offsetTop;
+
+                document.onmousemove = (e) => {
+                    el.style.left = (initialLeft + (e.clientX - startX)) + 'px';
+                    el.style.top = (initialTop + (e.clientY - startY)) + 'px';
+                };
+                document.onmouseup = () => {
+                    document.onmousemove = null;
+                    document.onmouseup = null;
+                };
+            };
+
+            // Dotyk (Mobil / Tablet)
+            el.ontouchstart = (e) => {
+                e.stopPropagation();
+                selectElement(el);
+                const touch = e.touches[0];
+                startX = touch.clientX;
+                startY = touch.clientY;
+                initialLeft = el.offsetLeft;
+                initialTop = el.offsetTop;
+
+                document.ontouchmove = (e) => {
+                    const touchMove = e.touches[0];
+                    el.style.left = (initialLeft + (touchMove.clientX - startX)) + 'px';
+                    el.style.top = (initialTop + (touchMove.clientY - startY)) + 'px';
+                };
+                document.ontouchend = () => {
+                    document.ontouchmove = null;
+                    document.ontouchend = null;
+                };
+            };
+        }
+
+        wrapper.addEventListener('click', () => selectElement(null));
 
         // Výber prvku a zobrazovač vlastností
         function selectElement(el) {
-            container.querySelectorAll('.canvas-element, .whiteout-box, .image-element').forEach(item => item.classList.remove('selected'));
+            wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element').forEach(item => item.classList.remove('selected'));
             activeElement = el;
 
             const inspector = document.getElementById('inspector-content');
@@ -432,21 +522,49 @@
             }
         });
 
+        // Klávesové skratky Delete & Backspace pre vymazanie
+        window.addEventListener('keydown', (e) => {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && activeElement && document.activeElement.tagName !== 'INPUT') {
+                activeElement.remove();
+                selectElement(null);
+            }
+        });
+
+        // Ovládanie Zoomu
+        document.getElementById('zoom-in-btn').addEventListener('click', () => {
+            if (!pdfDoc) return;
+            userZoom += 0.15;
+            document.getElementById('zoom-val').textContent = Math.round(userZoom * 100) + '%';
+            renderPage(pageNum);
+        });
+        document.getElementById('zoom-out-btn').addEventListener('click', () => {
+            if (!pdfDoc || userZoom <= 0.4) return;
+            userZoom -= 0.15;
+            document.getElementById('zoom-val').textContent = Math.round(userZoom * 100) + '%';
+            renderPage(pageNum);
+        });
+        document.getElementById('zoom-reset-btn').addEventListener('click', () => {
+            if (!pdfDoc) return;
+            userZoom = 1.0;
+            document.getElementById('zoom-val').textContent = '100%';
+            renderPage(pageNum);
+        });
+
         // Stránkovanie
         document.getElementById('prev-page').addEventListener('click', () => { if (pageNum > 1) renderPage(--pageNum); });
         document.getElementById('next-page').addEventListener('click', () => { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(++pageNum); });
 
-        // Export do PDF
+        // Export do PDF súboru
         document.getElementById('export-pdf-btn').addEventListener('click', async () => {
-            if (!pdfDoc) return alert('Nahrajte najprv PDF!');
+            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
             saveAnnotations();
             selectElement(null);
 
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({
-                orientation: container.offsetWidth > container.offsetHeight ? 'landscape' : 'portrait',
+                orientation: wrapper.offsetWidth > wrapper.offsetHeight ? 'landscape' : 'portrait',
                 unit: 'px',
-                format: [container.offsetWidth, container.offsetHeight]
+                format: [wrapper.offsetWidth, wrapper.offsetHeight]
             });
 
             for (let i = 1; i <= pdfDoc.numPages; i++) {
@@ -454,24 +572,24 @@
                     pageNum = i;
                     renderPage(i);
                     setTimeout(async () => {
-                        const canvasCap = await html2canvas(container, { scale: 2, useCORS: true });
+                        const canvasCap = await html2canvas(wrapper, { scale: 2, useCORS: true });
                         const imgData = canvasCap.toDataURL('image/jpeg', 0.95);
-                        if (i > 1) pdf.addPage([container.offsetWidth, container.offsetHeight]);
-                        pdf.addImage(imgData, 'JPEG', 0, 0, container.offsetWidth, container.offsetHeight);
+                        if (i > 1) pdf.addPage([wrapper.offsetWidth, wrapper.offsetHeight]);
+                        pdf.addImage(imgData, 'JPEG', 0, 0, wrapper.offsetWidth, wrapper.offsetHeight);
                         resolve();
-                    }, 350);
+                    }, 400);
                 });
             }
-            pdf.save('ErikAI_OS_Upraveny_Dokument.pdf');
+            pdf.save('ErikAI_OS_Master_Dokument.pdf');
         });
 
-        // Tlač
+        // Tlač dokumentu
         document.getElementById('print-pdf-btn').addEventListener('click', async () => {
-            if (!pdfDoc) return alert('Nahrajte najprv PDF!');
+            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
             saveAnnotations();
             selectElement(null);
 
-            const canvasCap = await html2canvas(container, { scale: 2 });
+            const canvasCap = await html2canvas(wrapper, { scale: 2 });
             const imgData = canvasCap.toDataURL('image/png');
             const w = window.open('', '_blank');
             w.document.write(`<html><head><title>Tlač - ErikAI OS</title></head><body style="margin:0;display:flex;justify-content:center;"><img style="max-width:100%;" src="${imgData}" onload="window.print();window.close();"/></body></html>`);
