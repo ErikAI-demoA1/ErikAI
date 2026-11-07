@@ -20,6 +20,8 @@
         }
         #main-viewport {
             cursor: default;
+            position: relative;
+            overflow: auto;
         }
         #main-viewport.pan-mode {
             cursor: grab;
@@ -82,7 +84,6 @@
             background: white;
             touch-action: none;
             box-sizing: border-box;
-            overflow: auto;
         }
         .table-element.selected {
             border-color: #10b981;
@@ -99,6 +100,11 @@
             padding: 5px;
             text-align: left;
             font-size: 13px;
+            outline: none;
+        }
+        .table-element td:focus, .table-element th:focus {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-color: #10b981;
         }
     </style>
 </head>
@@ -231,7 +237,7 @@
         </aside>
 
         <!-- Main Viewport -->
-        <main id="main-viewport" class="flex-1 p-4 sm:p-6 overflow-auto flex justify-center items-start bg-slate-950 relative">
+        <main id="main-viewport" class="flex-1 p-4 sm:p-6 flex justify-center items-start bg-slate-950">
             <div id="canvas-wrapper" class="relative rounded-lg overflow-hidden">
                 <canvas id="pdf-render"></canvas>
             </div>
@@ -394,7 +400,6 @@
             updateLayersList();
         }
 
-        // Aktualizácia zoznamu vrstiev v paneli
         function updateLayersList() {
             const listContainer = document.getElementById('layers-list');
             const elements = wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element');
@@ -425,7 +430,6 @@
             });
         }
 
-        // Pridanie zakrytia
         document.getElementById('add-whiteout-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
             createBox('whiteout-box', '60px', '60px', '160px', '35px');
@@ -444,7 +448,6 @@
             saveAnnotations();
         }
 
-        // Pridanie textu
         document.getElementById('add-text-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
             createText('Nový text', '60px', '120px', '16px', '#000000', '180px', '35px');
@@ -468,7 +471,6 @@
             saveAnnotations();
         }
 
-        // Viacnásobné pridávanie obrázkov
         document.getElementById('image-input').addEventListener('change', (e) => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
             const files = e.target.files;
@@ -501,7 +503,6 @@
             saveAnnotations();
         }
 
-        // Modál pre tabuľku
         const modal = document.getElementById('table-modal');
         document.getElementById('add-table-modal-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
@@ -514,16 +515,16 @@
             modal.classList.add('hidden');
 
             let tableHTML = '<table><tr>';
-            for (let c = 0; c < cols; c++) tableHTML += `<th>Hlavička ${c+1}</th>`;
+            for (let c = 0; c < cols; c++) tableHTML += `<th contenteditable="true">Hlavička ${c+1}</th>`;
             tableHTML += '</tr>';
             for (let r = 0; r < rows - 1; r++) {
                 tableHTML += '<tr>';
-                for (let c = 0; c < cols; c++) tableHTML += `<td>Údaj ${r+1},${c+1}</td>`;
+                for (let c = 0; c < cols; c++) tableHTML += `<td contenteditable="true">Údaj ${r+1},${c+1}</td>`;
                 tableHTML += '</tr>';
             }
             tableHTML += '</table>';
 
-            createTable(tableHTML, '60px', '220px', (cols * 90) + 'px', (rows * 30) + 'px');
+            createTable(tableHTML, '60px', '220px', (cols * 95) + 'px', (rows * 35) + 'px');
         });
 
         function createTable(html, left, top, width, height) {
@@ -535,18 +536,24 @@
             el.style.width = width;
             el.style.height = height;
 
+            // Zamedzenie posúvania priamo pri písaní v tabuľke
+            el.querySelectorAll('td, th').forEach(cell => {
+                cell.addEventListener('mousedown', (e) => e.stopPropagation());
+                cell.addEventListener('touchstart', (e) => e.stopPropagation());
+                cell.addEventListener('input', () => saveAnnotations());
+            });
+
             makeInteractive(el);
             wrapper.appendChild(el);
             selectElement(el);
             saveAnnotations();
         }
 
-        // Interaktivita pre presúvanie prvkami
         function makeInteractive(el) {
             let startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
 
             el.onmousedown = (e) => {
-                if (currentMode === 'pan') return;
+                if (currentMode === 'pan' || e.target.tagName === 'TD' || e.target.tagName === 'TH') return;
                 e.preventDefault();
                 e.stopPropagation();
                 selectElement(el);
@@ -567,7 +574,7 @@
             };
 
             el.ontouchstart = (e) => {
-                if (currentMode === 'pan') return;
+                if (currentMode === 'pan' || e.target.tagName === 'TD' || e.target.tagName === 'TH') return;
                 e.stopPropagation();
                 selectElement(el);
                 const touch = e.touches[0];
@@ -593,7 +600,6 @@
             if (currentMode === 'edit') selectElement(null);
         });
 
-        // Výber prvku a zobrazovač vlastností
         function selectElement(el) {
             wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element').forEach(item => item.classList.remove('selected'));
             activeElement = el;
@@ -627,7 +633,6 @@
             }
         }
 
-        // Živé úpravy z panelu
         document.getElementById('prop-text').addEventListener('input', (e) => {
             if (activeElement && activeElement.classList.contains('canvas-element')) {
                 activeElement.innerText = e.target.value;
@@ -660,14 +665,13 @@
         });
 
         window.addEventListener('keydown', (e) => {
-            if ((e.key === 'Delete' || e.key === 'Backspace') && activeElement && document.activeElement.tagName !== 'INPUT') {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && activeElement && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TD' && document.activeElement.tagName !== 'TH') {
                 activeElement.remove();
                 selectElement(null);
                 saveAnnotations();
             }
         });
 
-        // Zoom
         document.getElementById('zoom-in-btn').addEventListener('click', () => {
             if (!pdfDoc) return;
             userZoom += 0.15;
@@ -687,11 +691,10 @@
             renderPage(pageNum);
         });
 
-        // Stránkovanie
         document.getElementById('prev-page').addEventListener('click', () => { if (pageNum > 1) renderPage(--pageNum); });
         document.getElementById('next-page').addEventListener('click', () => { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(++pageNum); });
 
-        // Export do PDF
+        // Presný export 1:1 bez orezania
         document.getElementById('export-pdf-btn').addEventListener('click', async () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
             saveAnnotations();
@@ -709,8 +712,8 @@
                     pageNum = i;
                     renderPage(i);
                     setTimeout(async () => {
-                        const canvasCap = await html2canvas(wrapper, { scale: 2, useCORS: true });
-                        const imgData = canvasCap.toDataURL('image/jpeg', 0.95);
+                        const canvasCap = await html2canvas(wrapper, { scale: 2, useCORS: true, logging: false });
+                        const imgData = canvasCap.toDataURL('image/jpeg', 0.98);
                         if (i > 1) pdf.addPage([wrapper.offsetWidth, wrapper.offsetHeight]);
                         pdf.addImage(imgData, 'JPEG', 0, 0, wrapper.offsetWidth, wrapper.offsetHeight);
                         resolve();
@@ -720,13 +723,12 @@
             pdf.save('ErikAI_OS_Master_Dokument.pdf');
         });
 
-        // Tlač
         document.getElementById('print-pdf-btn').addEventListener('click', async () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
             saveAnnotations();
             selectElement(null);
 
-            const canvasCap = await html2canvas(wrapper, { scale: 2 });
+            const canvasCap = await html2canvas(wrapper, { scale: 2, useCORS: true });
             const imgData = canvasCap.toDataURL('image/png');
             const w = window.open('', '_blank');
             w.document.write(`<html><head><title>Tlač - ErikAI OS</title></head><body style="margin:0;display:flex;justify-content:center;"><img style="max-width:100%;" src="${imgData}" onload="window.print();window.close();"/></body></html>`);
