@@ -2,7 +2,6 @@
 <html lang="sk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ErikAI OS - Master PDF & Document Studio</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,66 +12,62 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body {
-            background-color: #0f172a;
+            background-color: #0b0f19;
             color: #f8fafc;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: manipulation;
+            overflow: hidden;
+            margin: 0;
         }
         #main-viewport {
-            cursor: default;
-            position: relative;
             overflow: auto;
-            user-select: none;
+            position: relative;
+            width: 100vw;
+            height: calc(100vh - 115px);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px;
         }
         #main-viewport.pan-mode {
-            cursor: grab;
+            cursor: grab !important;
         }
         #main-viewport.pan-mode:active {
-            cursor: grabbing;
-        }
-        #main-viewport.pan-mode .canvas-element,
-        #main-viewport.pan-mode .whiteout-box,
-        #main-viewport.pan-mode .image-element,
-        #main-viewport.pan-mode .table-element {
-            pointer-events: none !important;
+            cursor: grabbing !important;
         }
         #canvas-wrapper {
             position: relative;
-            box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.9);
-            display: inline-block;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9);
             background: white;
             transform-origin: top left;
+            margin: auto;
+        }
+        .canvas-element, .whiteout-box, .image-element, .table-element {
+            position: absolute;
+            box-sizing: border-box;
+            touch-action: none;
         }
         .canvas-element {
-            position: absolute;
             cursor: move;
-            border: 1px dashed rgba(239, 68, 68, 0.6);
+            border: 1px dashed rgba(239, 68, 68, 0.7);
             user-select: none;
-            touch-action: none;
-            box-sizing: border-box;
+            padding: 2px 4px;
         }
-        .canvas-element:hover, .canvas-element.selected {
+        .canvas-element.selected {
             border-color: #ef4444;
-            background-color: rgba(239, 68, 68, 0.08);
+            background-color: rgba(239, 68, 68, 0.12);
         }
         .whiteout-box {
-            position: absolute;
             cursor: move;
             background-color: white;
-            border: 1px dashed #cbd5e1;
-            touch-action: none;
-            box-sizing: border-box;
+            border: 1px dashed #94a3b8;
         }
-        .whiteout-box:hover, .whiteout-box.selected {
+        .whiteout-box.selected {
             border-color: #3b82f6;
-            background-color: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
         }
         .image-element {
-            position: absolute;
             cursor: move;
             border: 1px dashed #eab308;
-            touch-action: none;
-            box-sizing: border-box;
         }
         .image-element img {
             width: 100%;
@@ -85,16 +80,13 @@
             box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
         }
         .table-element {
-            position: absolute;
             cursor: move;
             border: 1px dashed #10b981;
             background: white;
-            touch-action: none;
-            box-sizing: border-box;
         }
         .table-element.selected {
             border-color: #10b981;
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
         }
         .table-element table {
             width: 100%;
@@ -104,73 +96,67 @@
         }
         .table-element td, .table-element th {
             border: 1px solid #64748b;
-            padding: 5px;
+            padding: 6px;
             text-align: left;
             font-size: 13px;
             outline: none;
         }
         .table-element td:focus, .table-element th:focus {
-            background-color: rgba(16, 185, 129, 0.15);
-            border-color: #10b981;
+            background-color: rgba(16, 185, 129, 0.2);
+        }
+        .pan-mode .canvas-element,
+        .pan-mode .whiteout-box,
+        .pan-mode .image-element,
+        .pan-mode .table-element {
+            pointer-events: none !important;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="h-screen w-screen flex flex-col">
 
     <!-- Header -->
-    <header class="bg-slate-900 border-b border-slate-800 p-3 sm:p-4 flex justify-between items-center flex-wrap gap-3">
+    <header class="bg-slate-900 border-b border-slate-800 p-3 flex justify-between items-center gap-3 z-20 shadow-md">
         <div class="flex items-center gap-3">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center font-bold text-white shadow-lg shadow-red-600/30">
                 E
             </div>
             <div>
-                <h1 class="text-base sm:text-lg font-bold tracking-wide text-white">
-                    ErikAI OS <span class="text-xs px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">Master Studio</span>
+                <h1 class="text-base font-bold tracking-wide text-white flex items-center gap-2">
+                    ErikAI OS <span class="text-xs px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">Master Studio Pro</span>
                 </h1>
-                <p class="text-xs text-slate-400 hidden sm:block">Profesionálny serverless PDF editor</p>
+                <p class="text-xs text-slate-400">Bezserverový PDF editor bez obmedzení</p>
             </div>
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
-            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 sm:py-2 rounded-lg border border-slate-700 transition flex items-center gap-1.5 text-xs sm:text-sm font-medium">
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 text-xs font-medium">
                 📄 Nahrať PDF
                 <input type="file" id="pdf-input" accept="application/pdf" class="hidden">
             </label>
-            <button id="add-whiteout-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-slate-700 flex items-center gap-1">
-                ⬜ Zakryť
-            </button>
-            <button id="add-text-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-slate-700 flex items-center gap-1">
-                ✏️ Text
-            </button>
-            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-slate-700 flex items-center gap-1">
+            <button id="add-whiteout-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">⬜ Zakryť</button>
+            <button id="add-text-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">✏️ Text</button>
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-medium">
                 🖼️ Obrázok
                 <input type="file" id="image-input" accept="image/*" multiple class="hidden">
             </label>
-            <button id="add-table-modal-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-slate-700 flex items-center gap-1">
-                📊 Tabuľka
-            </button>
-            <button id="export-pdf-btn" class="bg-red-600 hover:bg-red-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition shadow-lg shadow-red-600/25 flex items-center gap-1.5">
-                💾 Uložiť PDF
-            </button>
-            <button id="print-pdf-btn" class="bg-sky-600 hover:bg-sky-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition shadow-lg shadow-sky-600/25 flex items-center gap-1.5">
-                🖨️ Tlač
-            </button>
+            <button id="add-table-modal-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">📊 Tabuľka</button>
+            <button id="export-pdf-btn" class="bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded-lg text-xs font-medium shadow-lg shadow-red-600/25">💾 Uložiť PDF (1:1)</button>
         </div>
     </header>
 
-    <!-- Toolbar: Zoom, Mode & Controls -->
-    <div class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 flex items-center justify-between flex-wrap gap-3 text-xs">
-        <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-slate-400 font-semibold">Nástroj:</span>
-            <button id="mode-edit-btn" class="px-3 py-1 bg-red-600 text-white rounded font-medium transition shadow">✏️ Úpravy</button>
-            <button id="mode-pan-btn" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium transition">✋ Posúvať (Pan)</button>
+    <!-- Toolbar -->
+    <div class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 flex items-center justify-between gap-3 text-xs z-20">
+        <div class="flex items-center gap-2">
+            <span class="text-slate-400 font-semibold">Režim:</span>
+            <button id="mode-edit-btn" class="px-3 py-1 bg-red-600 text-white rounded font-medium">✏️ Úpravy</button>
+            <button id="mode-pan-btn" class="px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium">✋ Ruka (Pan)</button>
             
-            <div class="h-4 w-[1px] bg-slate-700 mx-1"></div>
+            <div class="h-4 w-[1px] bg-slate-700 mx-2"></div>
 
             <span class="text-slate-400 font-semibold">Lupa:</span>
-            <button id="zoom-out-btn" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded font-bold text-white flex items-center justify-center">-</button>
+            <button id="zoom-out-btn" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded font-bold text-white">-</button>
             <span id="zoom-val" class="font-mono text-slate-200">100%</span>
-            <button id="zoom-in-btn" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded font-bold text-white flex items-center justify-center">+</button>
+            <button id="zoom-in-btn" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded font-bold text-white">+</button>
             <button id="zoom-reset-btn" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-slate-300">Reset</button>
         </div>
 
@@ -184,90 +170,75 @@
     </div>
 
     <!-- Workspace -->
-    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
-
-        <!-- Sidebar Controls & Layer Overview -->
-        <aside class="w-full lg:w-80 bg-slate-900/80 border-r border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto max-h-[40vh] lg:max-h-none">
-            
-            <!-- Inspector / Properties -->
-            <div class="space-y-3 bg-slate-950/50 p-3.5 rounded-xl border border-slate-800" id="inspector-panel">
-                <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Vlastnosti vybraného prvku</h2>
-                
-                <div id="no-selection" class="text-xs text-slate-500 italic py-2">
-                    Kliknite na objekt na plátne pre jeho úpravu.
-                </div>
-
+    <div class="flex-1 flex overflow-hidden relative">
+        <!-- Sidebar -->
+        <aside class="w-80 bg-slate-900/90 border-r border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto z-10 shrink-0">
+            <div class="space-y-3 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
+                <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Vlastnosti objektu</h2>
+                <div id="no-selection" class="text-xs text-slate-500 italic py-2">Kliknite na objekt pre úpravu.</div>
                 <div id="inspector-content" class="space-y-3 hidden">
                     <div id="text-prop-group">
                         <label class="text-xs text-slate-400 mb-1 block">Text:</label>
-                        <input type="text" id="prop-text" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-red-500">
+                        <input type="text" id="prop-text" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                     </div>
-
                     <div class="grid grid-cols-2 gap-2" id="font-prop-group">
                         <div>
-                            <label class="text-xs text-slate-400 mb-1 block">Veľkosť:</label>
-                            <input type="number" id="prop-size" min="8" max="72" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
+                            <label class="text-xs text-slate-400 mb-1 block">Veľkosť (px):</label>
+                            <input type="number" id="prop-size" min="8" max="150" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                         </div>
                         <div>
-                            <label class="text-xs text-slate-400 mb-1 block">Farba textu:</label>
+                            <label class="text-xs text-slate-400 mb-1 block">Farba:</label>
                             <input type="color" id="prop-color" class="w-full h-9 bg-slate-800 border border-slate-700 rounded p-1 cursor-pointer">
                         </div>
                     </div>
-
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="text-xs text-slate-400 mb-1 block">Šírka (px):</label>
-                            <input type="number" id="prop-width" min="10" max="1500" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
+                            <input type="number" id="prop-width" min="10" max="3000" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                         </div>
                         <div>
                             <label class="text-xs text-slate-400 mb-1 block">Výška (px):</label>
-                            <input type="number" id="prop-height" min="10" max="1500" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
+                            <input type="number" id="prop-height" min="10" max="3000" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                         </div>
                     </div>
-
-                    <button id="delete-btn" class="w-full bg-red-950/60 hover:bg-red-900 border border-red-800/60 text-red-300 py-2 rounded-lg text-sm transition font-medium">
-                        🗑️ Odstrániť prvok (Delete)
-                    </button>
+                    <button id="delete-btn" class="w-full bg-red-950/60 hover:bg-red-900 border border-red-800/60 text-red-300 py-2 rounded-lg text-sm font-medium">🗑️ Vymazať objekt</button>
                 </div>
             </div>
 
-            <!-- Layer Manager / Overview -->
-            <div class="space-y-2 bg-slate-950/50 p-3.5 rounded-xl border border-slate-800">
+            <div class="space-y-2 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Všetky vytvorené prvky</h2>
+                    <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Vrstvy</h2>
                     <span id="elements-count" class="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono">0</span>
                 </div>
-                <div id="layers-list" class="space-y-1.5 max-h-40 overflow-y-auto text-xs text-slate-300">
-                    <p class="text-slate-500 italic">Žiadne pridané prvky na tejto strane.</p>
-                </div>
+                <div id="layers-list" class="space-y-1.5 max-h-56 overflow-y-auto text-xs"></div>
             </div>
         </aside>
 
-        <!-- Main Viewport -->
-        <main id="main-viewport" class="flex-1 p-4 sm:p-6 flex justify-center items-start bg-slate-950">
-            <div id="canvas-wrapper" class="relative rounded-lg overflow-hidden">
+        <!-- Main Viewport (Voľný priestor) -->
+        <main id="main-viewport" class="flex-1 bg-slate-950">
+            <div id="canvas-wrapper">
                 <canvas id="pdf-render"></canvas>
             </div>
         </main>
     </div>
 
-    <!-- Modal pre vlastnú tabuľku -->
+    <!-- Modal pre tabuľku -->
     <div id="table-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-80 space-y-4 shadow-2xl">
-            <h3 class="text-base font-bold text-white">Vytvoriť novú tabuľku</h3>
+            <h3 class="text-base font-bold text-white">Nová Tabuľka</h3>
             <div class="space-y-3">
                 <div>
-                    <label class="text-xs text-slate-400 mb-1 block">Počet riadkov:</label>
-                    <input type="number" id="modal-rows" value="3" min="1" max="20" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
+                    <label class="text-xs text-slate-400 mb-1 block">Riadky:</label>
+                    <input type="number" id="modal-rows" value="3" min="1" max="40" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                 </div>
                 <div>
-                    <label class="text-xs text-slate-400 mb-1 block">Počet stĺpcov:</label>
-                    <input type="number" id="modal-cols" value="3" min="1" max="10" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
+                    <label class="text-xs text-slate-400 mb-1 block">Stĺpce:</label>
+                    <input type="number" id="modal-cols" value="3" min="1" max="20" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                 </div>
             </div>
             <div class="flex gap-2 pt-2">
-                <button id="modal-cancel" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded text-sm">Zrušiť</button>
-                <button id="modal-create" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded text-sm font-medium">Vytvoriť</button>
+                <button id="modal-cancel" class="flex-1 bg-slate-800 text-slate-300 py-2 rounded text-sm">Zrušiť</button>
+                <button id="modal-create" class="flex-1 bg-red-600 text-white py-2 rounded text-sm font-medium">Vytvoriť</button>
             </div>
         </div>
     </div>
@@ -277,8 +248,7 @@
 
         let pdfDoc = null;
         let pageNum = 1;
-        let userZoom = 1.0;
-        let baseScale = 1.3;
+        let currentZoom = 1.0;
         let currentMode = 'edit';
         
         const canvas = document.getElementById('pdf-render');
@@ -289,23 +259,22 @@
         let pageAnnotations = {};
         let activeElement = null;
 
-        // Mode Switching (Edit vs Pan)
+        // Režim Ruka (Pan)
         document.getElementById('mode-edit-btn').addEventListener('click', () => {
             currentMode = 'edit';
-            document.getElementById('mode-edit-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium transition shadow";
-            document.getElementById('mode-pan-btn').className = "px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium transition";
+            document.getElementById('mode-edit-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
+            document.getElementById('mode-pan-btn').className = "px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium";
             viewport.classList.remove('pan-mode');
         });
 
         document.getElementById('mode-pan-btn').addEventListener('click', () => {
             currentMode = 'pan';
-            document.getElementById('mode-pan-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium transition shadow";
-            document.getElementById('mode-edit-btn').className = "px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium transition";
+            document.getElementById('mode-pan-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
+            document.getElementById('mode-edit-btn').className = "px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium";
             viewport.classList.add('pan-mode');
             selectElement(null);
         });
 
-        // Fixed Panning Logic
         let isPanning = false, startX, startY, scrollLeft, scrollTop;
         viewport.addEventListener('mousedown', (e) => {
             if (currentMode !== 'pan') return;
@@ -319,13 +288,11 @@
         window.addEventListener('mousemove', (e) => {
             if (!isPanning || currentMode !== 'pan') return;
             e.preventDefault();
-            const walkX = (e.clientX - startX);
-            const walkY = (e.clientY - startY);
-            viewport.scrollLeft = scrollLeft - walkX;
-            viewport.scrollTop = scrollTop - walkY;
+            viewport.scrollLeft = scrollLeft - (e.clientX - startX);
+            viewport.scrollTop = scrollTop - (e.clientY - startY);
         });
 
-        // Load PDF
+        // Nahranie PDF a automatické prispôsobenie na celú stranu bez orezania
         document.getElementById('pdf-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file && file.type === 'application/pdf') {
@@ -335,7 +302,18 @@
                         pdfDoc = pdf;
                         pageNum = 1;
                         pageAnnotations = {};
-                        renderPage(pageNum);
+                        
+                        // Zistíme ideálny Zoom tak, aby sa celý papier zmestil hneď na obrazovku
+                        pdfDoc.getPage(1).then((page) => {
+                            const baseVp = page.getViewport({ scale: 1.0 });
+                            const availableWidth = viewport.clientWidth - 80;
+                            const availableHeight = viewport.clientHeight - 80;
+                            const scaleX = availableWidth / baseVp.width;
+                            const scaleY = availableHeight / baseVp.height;
+                            currentZoom = Math.min(scaleX, scaleY, 1.2); // Zmestí sa celý, bez orezania
+                            document.getElementById('zoom-val').textContent = Math.round(currentZoom * 100) + '%';
+                            renderPage(pageNum);
+                        });
                     });
                 };
                 reader.readAsArrayBuffer(file);
@@ -345,28 +323,24 @@
         function renderPage(num) {
             saveAnnotations();
             pdfDoc.getPage(num).then((page) => {
-                const currentScale = baseScale * userZoom;
-                const pageViewport = page.getViewport({ scale: currentScale });
-                
-                canvas.height = pageViewport.height;
-                canvas.width = pageViewport.width;
-                wrapper.style.width = pageViewport.width + 'px';
-                wrapper.style.height = pageViewport.height + 'px';
+                const scaledViewport = page.getViewport({ scale: 1.3 * currentZoom });
+                canvas.width = scaledViewport.width;
+                canvas.height = scaledViewport.height;
 
-                page.render({ canvasContext: ctx, viewport: pageViewport }).promise.then(() => {
+                wrapper.style.width = scaledViewport.width + 'px';
+                wrapper.style.height = scaledViewport.height + 'px';
+
+                page.render({ canvasContext: ctx, viewport: scaledViewport }).promise.then(() => {
                     document.getElementById('page-num-display').textContent = `Strana: ${num} / ${pdfDoc.numPages}`;
                     restoreAnnotations(num);
                 });
             });
         }
 
-        // Relative Coordinate Storage (% based)
         function saveAnnotations() {
             if (!pdfDoc) return;
             const elements = wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element');
             const data = [];
-            const wrapperWidth = wrapper.offsetWidth || 1;
-            const wrapperHeight = wrapper.offsetHeight || 1;
 
             elements.forEach(el => {
                 let type = 'whiteout';
@@ -379,11 +353,11 @@
                     text: el.dataset.rawText || el.innerText,
                     html: el.innerHTML,
                     src: el.querySelector('img') ? el.querySelector('img').src : null,
-                    leftPct: (parseFloat(el.style.left) / wrapperWidth) * 100,
-                    topPct: (parseFloat(el.style.top) / wrapperHeight) * 100,
-                    widthPct: (parseFloat(el.style.width) / wrapperWidth) * 100,
-                    heightPct: (parseFloat(el.style.height) / wrapperHeight) * 100,
-                    fontSize: el.style.fontSize,
+                    baseLeft: parseFloat(el.dataset.baseLeft || (parseFloat(el.style.left) / currentZoom)),
+                    baseTop: parseFloat(el.dataset.baseTop || (parseFloat(el.style.top) / currentZoom)),
+                    baseWidth: parseFloat(el.dataset.baseWidth || (parseFloat(el.style.width) / currentZoom)),
+                    baseHeight: parseFloat(el.dataset.baseHeight || (parseFloat(el.style.height) / currentZoom)),
+                    fontSize: parseFloat(el.dataset.baseFontSize || parseFloat(el.style.fontSize) / currentZoom),
                     color: el.style.color
                 });
             });
@@ -396,23 +370,30 @@
             selectElement(null);
 
             const saved = pageAnnotations[num] || [];
-            const wrapperWidth = wrapper.offsetWidth;
-            const wrapperHeight = wrapper.offsetHeight;
-
             saved.forEach(item => {
-                const left = (item.leftPct * wrapperWidth / 100) + 'px';
-                const top = (item.topPct * wrapperHeight / 100) + 'px';
-                const width = (item.widthPct * wrapperWidth / 100) + 'px';
-                const height = (item.heightPct * wrapperHeight / 100) + 'px';
+                const scaledLeft = (item.baseLeft * currentZoom) + 'px';
+                const scaledTop = (item.baseTop * currentZoom) + 'px';
+                const scaledWidth = (item.baseWidth * currentZoom) + 'px';
+                const scaledHeight = (item.baseHeight * currentZoom) + 'px';
+                const scaledFontSize = (item.fontSize * currentZoom) + 'px';
 
+                let el;
                 if (item.type === 'whiteout') {
-                    createBox('whiteout-box', left, top, width, height, false);
+                    el = createBox('whiteout-box', scaledLeft, scaledTop, scaledWidth, scaledHeight, false);
                 } else if (item.type === 'text') {
-                    createText(item.text, left, top, item.fontSize, item.color, width, height, false);
+                    el = createText(item.text, scaledLeft, scaledTop, scaledFontSize, item.color, scaledWidth, scaledHeight, false);
                 } else if (item.type === 'image') {
-                    createImage(item.src, left, top, width, height, false);
+                    el = createImage(item.src, scaledLeft, scaledTop, scaledWidth, scaledHeight, false);
                 } else if (item.type === 'table') {
-                    createTable(item.html, left, top, width, height, false);
+                    el = createTable(item.html, scaledLeft, scaledTop, scaledWidth, scaledHeight, false);
+                }
+
+                if (el) {
+                    el.dataset.baseLeft = item.baseLeft;
+                    el.dataset.baseTop = item.baseTop;
+                    el.dataset.baseWidth = item.baseWidth;
+                    el.dataset.baseHeight = item.baseHeight;
+                    el.dataset.baseFontSize = item.fontSize;
                 }
             });
             updateLayersList();
@@ -424,69 +405,72 @@
             document.getElementById('elements-count').textContent = elements.length;
 
             if (elements.length === 0) {
-                listContainer.innerHTML = '<p class="text-slate-500 italic">Žiadne pridané prvky na tejto strane.</p>';
+                listContainer.innerHTML = '<p class="text-slate-500 italic">Žiadne objekty.</p>';
                 return;
             }
 
             listContainer.innerHTML = '';
             elements.forEach((el, index) => {
-                let name = `Prvok #${index + 1}`;
-                let icon = '📦';
-                if (el.classList.contains('canvas-element')) { icon = '✏️'; name = `Text: "${el.dataset.rawText || 'Nový text'}"`; }
-                else if (el.classList.contains('whiteout-box')) { icon = '⬜'; name = 'Zakrytie (Whiteout)'; }
-                else if (el.classList.contains('image-element')) { icon = '🖼️'; name = 'Obrázok / Logo'; }
+                let icon = '📦', name = `Objekt #${index + 1}`;
+                if (el.classList.contains('canvas-element')) { icon = '✏️'; name = `Text: "${el.dataset.rawText || 'Nový'}"`; }
+                else if (el.classList.contains('whiteout-box')) { icon = '⬜'; name = 'Zakrytie'; }
+                else if (el.classList.contains('image-element')) { icon = '🖼️'; name = 'Obrázok'; }
                 else if (el.classList.contains('table-element')) { icon = '📊'; name = 'Tabuľka'; }
 
                 const item = document.createElement('div');
                 item.className = "flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-800 hover:border-slate-700 cursor-pointer";
-                item.innerHTML = `<span class="truncate pr-2">${icon} ${name}</span><span class="text-[10px] text-slate-500">Upraviť</span>`;
-                item.onclick = (e) => {
-                    e.stopPropagation();
-                    selectElement(el);
-                };
+                item.innerHTML = `<span class="truncate pr-2">${icon} ${name}</span>`;
+                item.onclick = (e) => { e.stopPropagation(); selectElement(el); };
                 listContainer.appendChild(item);
             });
         }
 
         document.getElementById('add-whiteout-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            createBox('whiteout-box', '60px', '60px', '160px', '35px', true);
+            createBox('whiteout-box', '100px', '100px', '200px', '40px', true);
         });
 
         function createBox(className, left, top, width, height, shouldSave = true) {
             const el = document.createElement('div');
             el.className = className;
-            el.style.left = left;
-            el.style.top = top;
-            el.style.width = width;
-            el.style.height = height;
+            el.style.left = left; el.style.top = top;
+            el.style.width = width; el.style.height = height;
+            el.dataset.baseLeft = parseFloat(left) / currentZoom;
+            el.dataset.baseTop = parseFloat(top) / currentZoom;
+            el.dataset.baseWidth = parseFloat(width) / currentZoom;
+            el.dataset.baseHeight = parseFloat(height) / currentZoom;
+
             makeInteractive(el);
             wrapper.appendChild(el);
             selectElement(el);
             if (shouldSave) saveAnnotations();
+            return el;
         }
 
         document.getElementById('add-text-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            createText('Nový text', '60px', '120px', '16px', '#000000', '180px', '35px', true);
+            createText('Môj text', '100px', '160px', (16 * currentZoom) + 'px', '#000000', '200px', '40px', true);
         });
 
         function createText(text, left, top, fontSize, color, width, height, shouldSave = true) {
             const el = document.createElement('div');
             el.className = 'canvas-element';
-            el.innerText = text;
-            el.dataset.rawText = text;
-            el.style.left = left;
-            el.style.top = top;
-            el.style.fontSize = fontSize || '16px';
-            el.style.color = color || '#000000';
-            if (width) el.style.width = width;
-            if (height) el.style.height = height;
+            el.innerText = text; el.dataset.rawText = text;
+            el.style.left = left; el.style.top = top;
+            el.style.fontSize = fontSize; el.style.color = color || '#000000';
+            el.style.width = width; el.style.height = height;
+
+            el.dataset.baseLeft = parseFloat(left) / currentZoom;
+            el.dataset.baseTop = parseFloat(top) / currentZoom;
+            el.dataset.baseWidth = parseFloat(width) / currentZoom;
+            el.dataset.baseHeight = parseFloat(height) / currentZoom;
+            el.dataset.baseFontSize = parseFloat(fontSize) / currentZoom;
 
             makeInteractive(el);
             wrapper.appendChild(el);
             selectElement(el);
             if (shouldSave) saveAnnotations();
+            return el;
         }
 
         document.getElementById('image-input').addEventListener('change', (e) => {
@@ -496,7 +480,7 @@
                 Array.from(files).forEach((file, idx) => {
                     const reader = new FileReader();
                     reader.onload = function(event) {
-                        createImage(event.target.result, (60 + idx * 20) + 'px', (180 + idx * 20) + 'px', '120px', '120px', true);
+                        createImage(event.target.result, (100 + idx * 30) + 'px', (220 + idx * 30) + 'px', '150px', '150px', true);
                     };
                     reader.readAsDataURL(file);
                 });
@@ -506,19 +490,22 @@
         function createImage(src, left, top, width, height, shouldSave = true) {
             const el = document.createElement('div');
             el.className = 'image-element';
-            el.style.left = left;
-            el.style.top = top;
-            el.style.width = width;
-            el.style.height = height;
+            el.style.left = left; el.style.top = top;
+            el.style.width = width; el.style.height = height;
 
-            const img = document.createElement('img');
-            img.src = src;
+            el.dataset.baseLeft = parseFloat(left) / currentZoom;
+            el.dataset.baseTop = parseFloat(top) / currentZoom;
+            el.dataset.baseWidth = parseFloat(width) / currentZoom;
+            el.dataset.baseHeight = parseFloat(height) / currentZoom;
+
+            const img = document.createElement('img'); img.src = src;
             el.appendChild(img);
 
             makeInteractive(el);
             wrapper.appendChild(el);
             selectElement(el);
             if (shouldSave) saveAnnotations();
+            return el;
         }
 
         const modal = document.getElementById('table-modal');
@@ -537,26 +524,28 @@
             tableHTML += '</tr>';
             for (let r = 0; r < rows - 1; r++) {
                 tableHTML += '<tr>';
-                for (let c = 0; c < cols; c++) tableHTML += `<td contenteditable="true">Údaj ${r+1},${c+1}</td>`;
+                for (let c = 0; c < cols; c++) tableHTML += `<td contenteditable="true">Bunka ${r+1},${c+1}</td>`;
                 tableHTML += '</tr>';
             }
             tableHTML += '</table>';
 
-            createTable(tableHTML, '60px', '220px', (cols * 95) + 'px', (rows * 35) + 'px', true);
+            createTable(tableHTML, '100px', '300px', (cols * 100 * currentZoom) + 'px', (rows * 35 * currentZoom) + 'px', true);
         });
 
         function createTable(html, left, top, width, height, shouldSave = true) {
             const el = document.createElement('div');
             el.className = 'table-element';
             el.innerHTML = html;
-            el.style.left = left;
-            el.style.top = top;
-            el.style.width = width;
-            el.style.height = height;
+            el.style.left = left; el.style.top = top;
+            el.style.width = width; el.style.height = height;
+
+            el.dataset.baseLeft = parseFloat(left) / currentZoom;
+            el.dataset.baseTop = parseFloat(top) / currentZoom;
+            el.dataset.baseWidth = parseFloat(width) / currentZoom;
+            el.dataset.baseHeight = parseFloat(height) / currentZoom;
 
             el.querySelectorAll('td, th').forEach(cell => {
                 cell.addEventListener('mousedown', (e) => e.stopPropagation());
-                cell.addEventListener('touchstart', (e) => e.stopPropagation());
                 cell.addEventListener('input', () => saveAnnotations());
             });
 
@@ -564,58 +553,47 @@
             wrapper.appendChild(el);
             selectElement(el);
             if (shouldSave) saveAnnotations();
+            return el;
         }
 
         function makeInteractive(el) {
-            let startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
+            let startX = 0, startY = 0, initLeft = 0, initTop = 0;
 
-            el.onmousedown = (e) => {
-                if (currentMode === 'pan' || e.target.tagName === 'TD' || e.target.tagName === 'TH') return;
-                e.preventDefault();
-                e.stopPropagation();
-                selectElement(el);
-                startX = e.clientX;
-                startY = e.clientY;
-                initialLeft = parseFloat(el.style.left);
-                initialTop = parseFloat(el.style.top);
-
-                document.onmousemove = (e) => {
-                    el.style.left = (initialLeft + (e.clientX - startX)) + 'px';
-                    el.style.top = (initialTop + (e.clientY - startY)) + 'px';
-                };
-                document.onmouseup = () => {
-                    document.onmousemove = null;
-                    document.onmouseup = null;
-                    saveAnnotations();
-                };
-            };
-
-            el.ontouchstart = (e) => {
+            const onStart = (clientX, clientY, e) => {
                 if (currentMode === 'pan' || e.target.tagName === 'TD' || e.target.tagName === 'TH') return;
                 e.stopPropagation();
                 selectElement(el);
-                const touch = e.touches[0];
-                startX = touch.clientX;
-                startY = touch.clientY;
-                initialLeft = parseFloat(el.style.left);
-                initialTop = parseFloat(el.style.top);
+                startX = clientX;
+                startY = clientY;
+                initLeft = parseFloat(el.style.left);
+                initTop = parseFloat(el.style.top);
 
-                document.ontouchmove = (e) => {
-                    const touchMove = e.touches[0];
-                    el.style.left = (initialLeft + (touchMove.clientX - startX)) + 'px';
-                    el.style.top = (initialTop + (touchMove.clientY - startY)) + 'px';
+                const onMove = (moveX, moveY) => {
+                    const newLeft = initLeft + (moveX - startX);
+                    const newTop = initTop + (moveY - startY);
+                    el.style.left = newLeft + 'px';
+                    el.style.top = newTop + 'px';
+                    el.dataset.baseLeft = newLeft / currentZoom;
+                    el.dataset.baseTop = newTop / currentZoom;
                 };
-                document.ontouchend = () => {
-                    document.ontouchmove = null;
-                    document.ontouchend = null;
+
+                const onEnd = () => {
+                    window.removeEventListener('mousemove', mouseMoveHandler);
+                    window.removeEventListener('mouseup', mouseUpHandler);
                     saveAnnotations();
                 };
+
+                const mouseMoveHandler = (e) => onMove(e.clientX, e.clientY);
+                const mouseUpHandler = () => onEnd();
+
+                window.addEventListener('mousemove', mouseMoveHandler);
+                window.addEventListener('mouseup', mouseUpHandler);
             };
+
+            el.onmousedown = (e) => onStart(e.clientX, e.clientY, e);
         }
 
-        wrapper.addEventListener('click', () => {
-            if (currentMode === 'edit') selectElement(null);
-        });
+        wrapper.addEventListener('click', () => { if (currentMode === 'edit') selectElement(null); });
 
         function selectElement(el) {
             wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element').forEach(item => item.classList.remove('selected'));
@@ -631,14 +609,14 @@
                 inspector.classList.remove('hidden');
                 noSelection.classList.add('hidden');
 
-                document.getElementById('prop-width').value = Math.round(parseFloat(el.style.width));
-                document.getElementById('prop-height').value = Math.round(parseFloat(el.style.height));
+                document.getElementById('prop-width').value = Math.round(parseFloat(el.dataset.baseWidth || parseFloat(el.style.width) / currentZoom));
+                document.getElementById('prop-height').value = Math.round(parseFloat(el.dataset.baseHeight || parseFloat(el.style.height) / currentZoom));
 
                 if (el.classList.contains('canvas-element')) {
                     textGroup.style.display = 'block';
                     fontGroup.style.display = 'grid';
                     document.getElementById('prop-text').value = el.dataset.rawText || el.innerText;
-                    document.getElementById('prop-size').value = parseInt(el.style.fontSize) || 16;
+                    document.getElementById('prop-size').value = Math.round(parseFloat(el.dataset.baseFontSize || parseFloat(el.style.fontSize) / currentZoom));
                     document.getElementById('prop-color').value = rgbToHex(window.getComputedStyle(el).color);
                 } else {
                     textGroup.style.display = 'none';
@@ -660,7 +638,9 @@
         });
         document.getElementById('prop-size').addEventListener('input', (e) => {
             if (activeElement && activeElement.classList.contains('canvas-element')) {
-                activeElement.style.fontSize = e.target.value + 'px';
+                const val = parseFloat(e.target.value);
+                activeElement.style.fontSize = (val * currentZoom) + 'px';
+                activeElement.dataset.baseFontSize = val;
                 saveAnnotations();
             }
         });
@@ -672,13 +652,17 @@
         });
         document.getElementById('prop-width').addEventListener('input', (e) => {
             if (activeElement) {
-                activeElement.style.width = e.target.value + 'px';
+                const val = parseFloat(e.target.value);
+                activeElement.style.width = (val * currentZoom) + 'px';
+                activeElement.dataset.baseWidth = val;
                 saveAnnotations();
             }
         });
         document.getElementById('prop-height').addEventListener('input', (e) => {
             if (activeElement) {
-                activeElement.style.height = e.target.value + 'px';
+                const val = parseFloat(e.target.value);
+                activeElement.style.height = (val * currentZoom) + 'px';
+                activeElement.dataset.baseHeight = val;
                 saveAnnotations();
             }
         });
@@ -700,19 +684,19 @@
 
         document.getElementById('zoom-in-btn').addEventListener('click', () => {
             if (!pdfDoc) return;
-            userZoom += 0.15;
-            document.getElementById('zoom-val').textContent = Math.round(userZoom * 100) + '%';
+            currentZoom += 0.2;
+            document.getElementById('zoom-val').textContent = Math.round(currentZoom * 100) + '%';
             renderPage(pageNum);
         });
         document.getElementById('zoom-out-btn').addEventListener('click', () => {
-            if (!pdfDoc || userZoom <= 0.4) return;
-            userZoom -= 0.15;
-            document.getElementById('zoom-val').textContent = Math.round(userZoom * 100) + '%';
+            if (!pdfDoc || currentZoom <= 0.3) return;
+            currentZoom -= 0.2;
+            document.getElementById('zoom-val').textContent = Math.round(currentZoom * 100) + '%';
             renderPage(pageNum);
         });
         document.getElementById('zoom-reset-btn').addEventListener('click', () => {
             if (!pdfDoc) return;
-            userZoom = 1.0;
+            currentZoom = 1.0;
             document.getElementById('zoom-val').textContent = '100%';
             renderPage(pageNum);
         });
@@ -720,64 +704,64 @@
         document.getElementById('prev-page').addEventListener('click', () => { if (pageNum > 1) renderPage(--pageNum); });
         document.getElementById('next-page').addEventListener('click', () => { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(++pageNum); });
 
-        // Presný Export bez Orezania a pri Zoom 100%
+        // Export 1:1 bez orezania
         document.getElementById('export-pdf-btn').addEventListener('click', async () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
             saveAnnotations();
             selectElement(null);
 
-            const oldZoom = userZoom;
-            userZoom = 1.0;
-            
+            const oldZoom = currentZoom;
+            currentZoom = 1.0;
+
             const { jsPDF } = window.jspdf;
+            let finalPdf = null;
 
             for (let i = 1; i <= pdfDoc.numPages; i++) {
                 await new Promise((resolve) => {
                     pageNum = i;
-                    renderPage(i);
-                    setTimeout(async () => {
-                        const canvasCap = await html2canvas(wrapper, { scale: 2, useCORS: true, logging: false });
-                        const imgData = canvasCap.toDataURL('image/jpeg', 0.98);
-                        
-                        if (i === 1) {
-                            window.generatedPdf = new jsPDF({
-                                orientation: wrapper.offsetWidth > wrapper.offsetHeight ? 'landscape' : 'portrait',
-                                unit: 'px',
-                                format: [wrapper.offsetWidth, wrapper.offsetHeight]
-                            });
-                        } else {
-                            window.generatedPdf.addPage([wrapper.offsetWidth, wrapper.offsetHeight]);
-                        }
-                        window.generatedPdf.addImage(imgData, 'JPEG', 0, 0, wrapper.offsetWidth, wrapper.offsetHeight);
-                        resolve();
-                    }, 400);
+                    pdfDoc.getPage(i).then((page) => {
+                        const viewport1x = page.getViewport({ scale: 1.3 });
+                        canvas.width = viewport1x.width;
+                        canvas.height = viewport1x.height;
+                        wrapper.style.width = viewport1x.width + 'px';
+                        wrapper.style.height = viewport1x.height + 'px';
+
+                        page.render({ canvasContext: ctx, viewport: viewport1x }).promise.then(async () => {
+                            restoreAnnotations(i);
+                            selectElement(null);
+
+                            setTimeout(async () => {
+                                const canvasCap = await html2canvas(wrapper, {
+                                    scale: 2,
+                                    useCORS: true,
+                                    logging: false,
+                                    windowWidth: wrapper.scrollWidth,
+                                    windowHeight: wrapper.scrollHeight
+                                });
+
+                                const imgData = canvasCap.toDataURL('image/jpeg', 0.98);
+
+                                if (i === 1) {
+                                    finalPdf = new jsPDF({
+                                        orientation: viewport1x.width > viewport1x.height ? 'landscape' : 'portrait',
+                                        unit: 'px',
+                                        format: [viewport1x.width, viewport1x.height]
+                                    });
+                                } else {
+                                    finalPdf.addPage([viewport1x.width, viewport1x.height]);
+                                }
+
+                                finalPdf.addImage(imgData, 'JPEG', 0, 0, viewport1x.width, viewport1x.height);
+                                resolve();
+                            }, 300);
+                        });
+                    });
                 });
             }
 
-            window.generatedPdf.save('ErikAI_OS_Master_Dokument.pdf');
-            userZoom = oldZoom;
+            finalPdf.save('ErikAI_OS_Master_Dokument_1to1.pdf');
+            currentZoom = oldZoom;
             renderPage(pageNum);
-        });
-
-        document.getElementById('print-pdf-btn').addEventListener('click', async () => {
-            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            saveAnnotations();
-            selectElement(null);
-
-            const oldZoom = userZoom;
-            userZoom = 1.0;
-            renderPage(pageNum);
-
-            setTimeout(async () => {
-                const canvasCap = await html2canvas(wrapper, { scale: 2, useCORS: true });
-                const imgData = canvasCap.toDataURL('image/png');
-                const w = window.open('', '_blank');
-                w.document.write(`<html><head><title>Tlač - ErikAI OS</title></head><body style="margin:0;display:flex;justify-content:center;"><img style="max-width:100%;" src="${imgData}" onload="window.print();window.close();"/></body></html>`);
-                w.document.close();
-                
-                userZoom = oldZoom;
-                renderPage(pageNum);
-            }, 400);
         });
 
         function rgbToHex(rgb) {
