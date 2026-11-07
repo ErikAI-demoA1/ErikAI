@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ErikAI OS - PDF Studio & Editor</title>
+    <!-- Tailwind CSS for UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js library for rendering PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- jsPDF & html2canvas for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #canvas-container {
+            position: relative;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            display: inline-block;
+        }
+        .text-element {
+            position: absolute;
+            cursor: move;
+            border: 1px dashed transparent;
+            padding: 2px 4px;
+            border-radius: 4px;
+            user-select: none;
+        }
+        .text-element:hover, .text-element.selected {
+            border-color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center flex-wrap gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white shadow-lg shadow-red-600/30">
+                E
+            </div>
+            <h1 class="text-xl font-bold tracking-wide bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+                ErikAI OS <span class="text-xs px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">PDF Studio</span>
+            </h1>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2 text-sm font-medium">
+                📄 Nahrať PDF
+                <input type="file" id="pdf-input" accept="application/pdf" class="hidden">
+            </label>
+            <button id="add-text-btn" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-red-600/20 flex items-center gap-2">
+                ✏️ Pridať Text
+            </button>
+            <button id="export-pdf-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-emerald-600/20 flex items-center gap-2">
+                💾 Stiahnuť PDF
+            </button>
+            <button id="print-pdf-btn" class="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-sky-600/20 flex items-center gap-2">
+                🖨️ Vytlačiť
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+
+        <!-- Controls Sidebar -->
+        <aside class="w-full lg:w-80 bg-slate-900/60 border-r border-slate-800 p-4 flex flex-col gap-6">
+            <div class="space-y-4">
+                <h2 class="text-sm uppercase tracking-wider text-slate-400 font-semibold">Navigácia Stránok</h2>
+                <div class="flex items-center justify-between bg-slate-800 p-2 rounded-lg border border-slate-700">
+                    <button id="prev-page" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm disabled:opacity-50">◄ Prev</button>
+                    <span id="page-num-display" class="text-sm font-medium">Strana: 0 / 0</span>
+                    <button id="next-page" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm disabled:opacity-50">Next ►</button>
+                </div>
+            </div>
+
+            <!-- Text Formatting Tool -->
+            <div class="space-y-4">
+                <h2 class="text-sm uppercase tracking-wider text-slate-400 font-semibold">Úprava Textu</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">Obsah textu:</label>
+                        <input type="text" id="element-text-input" placeholder="Kliknite na text na plátne..." class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-red-500">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs text-slate-400 mb-1 block">Veľkosť písma (px):</label>
+                            <input type="number" id="element-size-input" value="18" min="8" max="72" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-red-500">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-400 mb-1 block">Farba:</label>
+                            <input type="color" id="element-color-input" value="#ff0000" class="w-full h-10 bg-slate-800 border border-slate-700 rounded p-1 cursor-pointer">
+                        </div>
+                    </div>
+
+                    <button id="delete-element-btn" class="w-full bg-red-950/50 hover:bg-red-900 border border-red-800 text-red-300 py-2 rounded text-sm transition font-medium">
+                        🗑️ Vymazať vybraný text
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-auto p-3 bg-slate-800/40 rounded-lg border border-slate-800 text-xs text-slate-400">
+                <p class="font-semibold text-slate-300 mb-1">💡 ErikAI OS Tip:</p>
+                Nahráš PDF, klikneš "Pridať Text", nastavíš pozíciu a text, a vyexportuješ čistý upravený dokument bez poplatkov a bez serverov!
+            </div>
+        </aside>
+
+        <!-- PDF Viewport / Canvas Container -->
+        <main class="flex-1 p-6 overflow-auto flex justify-center items-start bg-slate-950">
+            <div id="canvas-container" class="relative rounded overflow-hidden">
+                <canvas id="pdf-render"></canvas>
+                <!-- Dynamic Overlay Elements will be injected here -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let pdfDoc = null;
+        let pageNum = 1;
+        let pageRendering = false;
+        let pageNumPending = null;
+        let scale = 1.2;
+        const canvas = document.getElementById('pdf-render');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+
+        let activeElement = null;
+
+        // Load Local PDF
+        document.getElementById('pdf-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                const fileReader = new FileReader();
+                fileReader.onload = function() {
+                    const typedarray = new Uint8Array(this.result);
+                    pdfjsLib.getDocument(typedarray).promise.then((pdfDoc_) => {
+                        pdfDoc = pdfDoc_;
+                        pageNum = 1;
+                        renderPage(pageNum);
+                    });
+                };
+                fileReader.readAsArrayBuffer(file);
+            }
+        });
+
+        // Render Specific Page
+        function renderPage(num) {
+            pageRendering = true;
+            pdfDoc.getPage(num).then((page) => {
+                const viewport = page.getViewport({ scale: scale });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+                const renderTask = page.render(renderContext);
+
+                renderTask.promise.then(() => {
+                    pageRendering = false;
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                });
+
+                document.getElementById('page-num-display').textContent = `Strana: ${num} / ${pdfDoc.numPages}`;
+            });
+        }
+
+        // Add Floating Editable Text Box
+        document.getElementById('add-text-btn').addEventListener('click', () => {
+            if (!pdfDoc) {
+                alert('Najprv prosím nahrajte PDF dokument!');
+                return;
+            }
+
+            const textEl = document.createElement('div');
+            textEl.className = 'text-element selected';
+            textEl.textContent = 'Nový text / úprava';
+            textEl.style.left = '50px';
+            textEl.style.top = '50px';
+            textEl.style.fontSize = '18px';
+            textEl.style.color = '#ff0000';
+
+            container.appendChild(textEl);
+            selectElement(textEl);
+            makeDraggable(textEl);
+        });
+
+        // Select and Bind Controls to Selected Text Element
+        function selectElement(el) {
+            document.querySelectorAll('.text-element').forEach(item => item.classList.remove('selected'));
+            activeElement = el;
+            if (el) {
+                el.classList.add('selected');
+                document.getElementById('element-text-input').value = el.textContent;
+                document.getElementById('element-size-input').value = parseInt(window.getComputedStyle(el).fontSize);
+                document.getElementById('element-color-input').value = rgbToHex(window.getComputedStyle(el).color);
+            }
+        }
+
+        // Inputs Event Listeners
+        document.getElementById('element-text-input').addEventListener('input', (e) => {
+            if (activeElement) activeElement.textContent = e.target.value;
+        });
+
+        document.getElementById('element-size-input').addEventListener('input', (e) => {
+            if (activeElement) activeElement.style.fontSize = `${e.target.value}px`;
+        });
+
+        document.getElementById('element-color-input').addEventListener('input', (e) => {
+            if (activeElement) activeElement.style.color = e.target.value;
+        });
+
+        document.getElementById('delete-element-btn').addEventListener('click', () => {
+            if (activeElement) {
+                activeElement.remove();
+                activeElement = null;
+                document.getElementById('element-text-input').value = '';
+            }
+        });
+
+        // Dragging Logic for Text Boxes
+        function makeDraggable(el) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            
+            el.onmousedown = dragMouseDown;
+            el.onclick = (e) => {
+                e.stopPropagation();
+                selectElement(el);
+            };
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+                selectElement(el);
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                el.style.top = (el.offsetTop - pos2) + "px";
+                el.style.left = (el.offsetLeft - pos1) + "px";
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        // Click outside to deselect
+        container.addEventListener('click', () => {
+            selectElement(null);
+        });
+
+        // Pagination Buttons
+        document.getElementById('prev-page').addEventListener('click', () => {
+            if (pageNum <= 1) return;
+            pageNum--;
+            renderPage(pageNum);
+        });
+
+        document.getElementById('next-page').addEventListener('click', () => {
+            if (!pdfDoc || pageNum >= pdfDoc.numPages) return;
+            pageNum++;
+            renderPage(pageNum);
+        });
+
+        // Export PDF
+        document.getElementById('export-pdf-btn').addEventListener('click', () => {
+            if (!pdfDoc) return alert('Nahrajte najprv PDF!');
+            
+            // Remove highlight styles before canvas capture
+            selectElement(null);
+
+            html2canvas(container).then(canvasCaptured => {
+                const imgData = canvasCaptured.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: canvasCaptured.width > canvasCaptured.height ? 'landscape' : 'portrait',
+                    unit: 'px',
+                    format: [canvasCaptured.width, canvasCaptured.height]
+                });
+                pdf.addImage(imgData, 'PNG', 0, 0, canvasCaptured.width, canvasCaptured.height);
+                pdf.save('ErikAI_OS_Upravene_PDF.pdf');
+            });
+        });
+
+        // Print PDF
+        document.getElementById('print-pdf-btn').addEventListener('click', () => {
+            if (!pdfDoc) return alert('Nahrajte najprv PDF!');
+            selectElement(null);
+            
+            html2canvas(container).then(canvasCaptured => {
+                const imgData = canvasCaptured.toDataURL('image/png');
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`<html><head><title>Tlač - ErikAI OS</title></head><body style="margin:0;display:flex;justify-content:center;"><img src="${imgData}" onload="window.print();window.close();"/></body></html>`);
+                printWindow.document.close();
+            });
+        });
+
+        // Helper Color Converter
+        function rgbToHex(rgb) {
+            if (/^#/.test(rgb)) return rgb;
+            const res = rgb.match(/\d+/g);
+            return res ? "#" + res.slice(0, 3).map(x => (+x).toString(16).padStart(2, '0')).join('') : '#ff0000';
+        }
+    </script>
+</body>
+</html>
