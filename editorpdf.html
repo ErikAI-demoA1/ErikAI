@@ -22,12 +22,19 @@
             cursor: default;
             position: relative;
             overflow: auto;
+            user-select: none;
         }
         #main-viewport.pan-mode {
             cursor: grab;
         }
         #main-viewport.pan-mode:active {
             cursor: grabbing;
+        }
+        #main-viewport.pan-mode .canvas-element,
+        #main-viewport.pan-mode .whiteout-box,
+        #main-viewport.pan-mode .image-element,
+        #main-viewport.pan-mode .table-element {
+            pointer-events: none !important;
         }
         #canvas-wrapper {
             position: relative;
@@ -103,7 +110,7 @@
             outline: none;
         }
         .table-element td:focus, .table-element th:focus {
-            background-color: rgba(16, 185, 129, 0.1);
+            background-color: rgba(16, 185, 129, 0.15);
             border-color: #10b981;
         }
     </style>
@@ -272,7 +279,7 @@
         let pageNum = 1;
         let userZoom = 1.0;
         let baseScale = 1.3;
-        let currentMode = 'edit'; // 'edit' alebo 'pan'
+        let currentMode = 'edit';
         
         const canvas = document.getElementById('pdf-render');
         const ctx = canvas.getContext('2d');
@@ -282,7 +289,7 @@
         let pageAnnotations = {};
         let activeElement = null;
 
-        // Prepínanie režimov (Úpravy vs Posúvanie / Pan)
+        // Mode Switching (Edit vs Pan)
         document.getElementById('mode-edit-btn').addEventListener('click', () => {
             currentMode = 'edit';
             document.getElementById('mode-edit-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium transition shadow";
@@ -298,28 +305,27 @@
             selectElement(null);
         });
 
-        // Panning logika (posúvanie myšou/prstom pri zapnutom pan režíme)
+        // Fixed Panning Logic
         let isPanning = false, startX, startY, scrollLeft, scrollTop;
         viewport.addEventListener('mousedown', (e) => {
             if (currentMode !== 'pan') return;
             isPanning = true;
-            startX = e.pageX - viewport.offsetLeft;
-            startY = e.pageY - viewport.offsetTop;
+            startX = e.clientX;
+            startY = e.clientY;
             scrollLeft = viewport.scrollLeft;
             scrollTop = viewport.scrollTop;
         });
-        viewport.addEventListener('mouseleave', () => isPanning = false);
-        viewport.addEventListener('mouseup', () => isPanning = false);
-        viewport.addEventListener('mousemove', (e) => {
+        window.addEventListener('mouseup', () => isPanning = false);
+        window.addEventListener('mousemove', (e) => {
             if (!isPanning || currentMode !== 'pan') return;
             e.preventDefault();
-            const x = e.pageX - viewport.offsetLeft;
-            const y = e.pageY - viewport.offsetTop;
-            viewport.scrollLeft = scrollLeft - (x - startX);
-            viewport.scrollTop = scrollTop - (y - startY);
+            const walkX = (e.clientX - startX);
+            const walkY = (e.clientY - startY);
+            viewport.scrollLeft = scrollLeft - walkX;
+            viewport.scrollTop = scrollTop - walkY;
         });
 
-        // Načítanie PDF súboru
+        // Load PDF
         document.getElementById('pdf-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file && file.type === 'application/pdf') {
@@ -354,10 +360,14 @@
             });
         }
 
+        // Relative Coordinate Storage (% based)
         function saveAnnotations() {
             if (!pdfDoc) return;
             const elements = wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element');
             const data = [];
+            const wrapperWidth = wrapper.offsetWidth || 1;
+            const wrapperHeight = wrapper.offsetHeight || 1;
+
             elements.forEach(el => {
                 let type = 'whiteout';
                 if (el.classList.contains('canvas-element')) type = 'text';
@@ -369,10 +379,10 @@
                     text: el.dataset.rawText || el.innerText,
                     html: el.innerHTML,
                     src: el.querySelector('img') ? el.querySelector('img').src : null,
-                    left: el.style.left,
-                    top: el.style.top,
-                    width: el.style.width,
-                    height: el.style.height,
+                    leftPct: (parseFloat(el.style.left) / wrapperWidth) * 100,
+                    topPct: (parseFloat(el.style.top) / wrapperHeight) * 100,
+                    widthPct: (parseFloat(el.style.width) / wrapperWidth) * 100,
+                    heightPct: (parseFloat(el.style.height) / wrapperHeight) * 100,
                     fontSize: el.style.fontSize,
                     color: el.style.color
                 });
@@ -386,15 +396,23 @@
             selectElement(null);
 
             const saved = pageAnnotations[num] || [];
+            const wrapperWidth = wrapper.offsetWidth;
+            const wrapperHeight = wrapper.offsetHeight;
+
             saved.forEach(item => {
+                const left = (item.leftPct * wrapperWidth / 100) + 'px';
+                const top = (item.topPct * wrapperHeight / 100) + 'px';
+                const width = (item.widthPct * wrapperWidth / 100) + 'px';
+                const height = (item.heightPct * wrapperHeight / 100) + 'px';
+
                 if (item.type === 'whiteout') {
-                    createBox('whiteout-box', item.left, item.top, item.width, item.height);
+                    createBox('whiteout-box', left, top, width, height, false);
                 } else if (item.type === 'text') {
-                    createText(item.text, item.left, item.top, item.fontSize, item.color, item.width, item.height);
+                    createText(item.text, left, top, item.fontSize, item.color, width, height, false);
                 } else if (item.type === 'image') {
-                    createImage(item.src, item.left, item.top, item.width, item.height);
+                    createImage(item.src, left, top, width, height, false);
                 } else if (item.type === 'table') {
-                    createTable(item.html, item.left, item.top, item.width, item.height);
+                    createTable(item.html, left, top, width, height, false);
                 }
             });
             updateLayersList();
@@ -432,10 +450,10 @@
 
         document.getElementById('add-whiteout-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            createBox('whiteout-box', '60px', '60px', '160px', '35px');
+            createBox('whiteout-box', '60px', '60px', '160px', '35px', true);
         });
 
-        function createBox(className, left, top, width, height) {
+        function createBox(className, left, top, width, height, shouldSave = true) {
             const el = document.createElement('div');
             el.className = className;
             el.style.left = left;
@@ -445,15 +463,15 @@
             makeInteractive(el);
             wrapper.appendChild(el);
             selectElement(el);
-            saveAnnotations();
+            if (shouldSave) saveAnnotations();
         }
 
         document.getElementById('add-text-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            createText('Nový text', '60px', '120px', '16px', '#000000', '180px', '35px');
+            createText('Nový text', '60px', '120px', '16px', '#000000', '180px', '35px', true);
         });
 
-        function createText(text, left, top, fontSize, color, width, height) {
+        function createText(text, left, top, fontSize, color, width, height, shouldSave = true) {
             const el = document.createElement('div');
             el.className = 'canvas-element';
             el.innerText = text;
@@ -468,7 +486,7 @@
             makeInteractive(el);
             wrapper.appendChild(el);
             selectElement(el);
-            saveAnnotations();
+            if (shouldSave) saveAnnotations();
         }
 
         document.getElementById('image-input').addEventListener('change', (e) => {
@@ -478,14 +496,14 @@
                 Array.from(files).forEach((file, idx) => {
                     const reader = new FileReader();
                     reader.onload = function(event) {
-                        createImage(event.target.result, (60 + idx * 20) + 'px', (180 + idx * 20) + 'px', '120px', '120px');
+                        createImage(event.target.result, (60 + idx * 20) + 'px', (180 + idx * 20) + 'px', '120px', '120px', true);
                     };
                     reader.readAsDataURL(file);
                 });
             }
         });
 
-        function createImage(src, left, top, width, height) {
+        function createImage(src, left, top, width, height, shouldSave = true) {
             const el = document.createElement('div');
             el.className = 'image-element';
             el.style.left = left;
@@ -500,7 +518,7 @@
             makeInteractive(el);
             wrapper.appendChild(el);
             selectElement(el);
-            saveAnnotations();
+            if (shouldSave) saveAnnotations();
         }
 
         const modal = document.getElementById('table-modal');
@@ -524,10 +542,10 @@
             }
             tableHTML += '</table>';
 
-            createTable(tableHTML, '60px', '220px', (cols * 95) + 'px', (rows * 35) + 'px');
+            createTable(tableHTML, '60px', '220px', (cols * 95) + 'px', (rows * 35) + 'px', true);
         });
 
-        function createTable(html, left, top, width, height) {
+        function createTable(html, left, top, width, height, shouldSave = true) {
             const el = document.createElement('div');
             el.className = 'table-element';
             el.innerHTML = html;
@@ -536,7 +554,6 @@
             el.style.width = width;
             el.style.height = height;
 
-            // Zamedzenie posúvania priamo pri písaní v tabuľke
             el.querySelectorAll('td, th').forEach(cell => {
                 cell.addEventListener('mousedown', (e) => e.stopPropagation());
                 cell.addEventListener('touchstart', (e) => e.stopPropagation());
@@ -546,7 +563,7 @@
             makeInteractive(el);
             wrapper.appendChild(el);
             selectElement(el);
-            saveAnnotations();
+            if (shouldSave) saveAnnotations();
         }
 
         function makeInteractive(el) {
@@ -559,8 +576,8 @@
                 selectElement(el);
                 startX = e.clientX;
                 startY = e.clientY;
-                initialLeft = el.offsetLeft;
-                initialTop = el.offsetTop;
+                initialLeft = parseFloat(el.style.left);
+                initialTop = parseFloat(el.style.top);
 
                 document.onmousemove = (e) => {
                     el.style.left = (initialLeft + (e.clientX - startX)) + 'px';
@@ -580,8 +597,8 @@
                 const touch = e.touches[0];
                 startX = touch.clientX;
                 startY = touch.clientY;
-                initialLeft = el.offsetLeft;
-                initialTop = el.offsetTop;
+                initialLeft = parseFloat(el.style.left);
+                initialTop = parseFloat(el.style.top);
 
                 document.ontouchmove = (e) => {
                     const touchMove = e.touches[0];
@@ -614,8 +631,8 @@
                 inspector.classList.remove('hidden');
                 noSelection.classList.add('hidden');
 
-                document.getElementById('prop-width').value = parseInt(el.style.width) || el.offsetWidth;
-                document.getElementById('prop-height').value = parseInt(el.style.height) || el.offsetHeight;
+                document.getElementById('prop-width').value = Math.round(parseFloat(el.style.width));
+                document.getElementById('prop-height').value = Math.round(parseFloat(el.style.height));
 
                 if (el.classList.contains('canvas-element')) {
                     textGroup.style.display = 'block';
@@ -638,23 +655,32 @@
                 activeElement.innerText = e.target.value;
                 activeElement.dataset.rawText = e.target.value;
                 updateLayersList();
+                saveAnnotations();
             }
         });
         document.getElementById('prop-size').addEventListener('input', (e) => {
             if (activeElement && activeElement.classList.contains('canvas-element')) {
                 activeElement.style.fontSize = e.target.value + 'px';
+                saveAnnotations();
             }
         });
         document.getElementById('prop-color').addEventListener('input', (e) => {
             if (activeElement && activeElement.classList.contains('canvas-element')) {
                 activeElement.style.color = e.target.value;
+                saveAnnotations();
             }
         });
         document.getElementById('prop-width').addEventListener('input', (e) => {
-            if (activeElement) activeElement.style.width = e.target.value + 'px';
+            if (activeElement) {
+                activeElement.style.width = e.target.value + 'px';
+                saveAnnotations();
+            }
         });
         document.getElementById('prop-height').addEventListener('input', (e) => {
-            if (activeElement) activeElement.style.height = e.target.value + 'px';
+            if (activeElement) {
+                activeElement.style.height = e.target.value + 'px';
+                saveAnnotations();
+            }
         });
         document.getElementById('delete-btn').addEventListener('click', () => {
             if (activeElement) {
@@ -694,18 +720,16 @@
         document.getElementById('prev-page').addEventListener('click', () => { if (pageNum > 1) renderPage(--pageNum); });
         document.getElementById('next-page').addEventListener('click', () => { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(++pageNum); });
 
-        // Presný export 1:1 bez orezania
+        // Presný Export bez Orezania a pri Zoom 100%
         document.getElementById('export-pdf-btn').addEventListener('click', async () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
             saveAnnotations();
             selectElement(null);
 
+            const oldZoom = userZoom;
+            userZoom = 1.0;
+            
             const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: wrapper.offsetWidth > wrapper.offsetHeight ? 'landscape' : 'portrait',
-                unit: 'px',
-                format: [wrapper.offsetWidth, wrapper.offsetHeight]
-            });
 
             for (let i = 1; i <= pdfDoc.numPages; i++) {
                 await new Promise((resolve) => {
@@ -714,13 +738,25 @@
                     setTimeout(async () => {
                         const canvasCap = await html2canvas(wrapper, { scale: 2, useCORS: true, logging: false });
                         const imgData = canvasCap.toDataURL('image/jpeg', 0.98);
-                        if (i > 1) pdf.addPage([wrapper.offsetWidth, wrapper.offsetHeight]);
-                        pdf.addImage(imgData, 'JPEG', 0, 0, wrapper.offsetWidth, wrapper.offsetHeight);
+                        
+                        if (i === 1) {
+                            window.generatedPdf = new jsPDF({
+                                orientation: wrapper.offsetWidth > wrapper.offsetHeight ? 'landscape' : 'portrait',
+                                unit: 'px',
+                                format: [wrapper.offsetWidth, wrapper.offsetHeight]
+                            });
+                        } else {
+                            window.generatedPdf.addPage([wrapper.offsetWidth, wrapper.offsetHeight]);
+                        }
+                        window.generatedPdf.addImage(imgData, 'JPEG', 0, 0, wrapper.offsetWidth, wrapper.offsetHeight);
                         resolve();
                     }, 400);
                 });
             }
-            pdf.save('ErikAI_OS_Master_Dokument.pdf');
+
+            window.generatedPdf.save('ErikAI_OS_Master_Dokument.pdf');
+            userZoom = oldZoom;
+            renderPage(pageNum);
         });
 
         document.getElementById('print-pdf-btn').addEventListener('click', async () => {
@@ -728,11 +764,20 @@
             saveAnnotations();
             selectElement(null);
 
-            const canvasCap = await html2canvas(wrapper, { scale: 2, useCORS: true });
-            const imgData = canvasCap.toDataURL('image/png');
-            const w = window.open('', '_blank');
-            w.document.write(`<html><head><title>Tlač - ErikAI OS</title></head><body style="margin:0;display:flex;justify-content:center;"><img style="max-width:100%;" src="${imgData}" onload="window.print();window.close();"/></body></html>`);
-            w.document.close();
+            const oldZoom = userZoom;
+            userZoom = 1.0;
+            renderPage(pageNum);
+
+            setTimeout(async () => {
+                const canvasCap = await html2canvas(wrapper, { scale: 2, useCORS: true });
+                const imgData = canvasCap.toDataURL('image/png');
+                const w = window.open('', '_blank');
+                w.document.write(`<html><head><title>Tlač - ErikAI OS</title></head><body style="margin:0;display:flex;justify-content:center;"><img style="max-width:100%;" src="${imgData}" onload="window.print();window.close();"/></body></html>`);
+                w.document.close();
+                
+                userZoom = oldZoom;
+                renderPage(pageNum);
+            }, 400);
         });
 
         function rgbToHex(rgb) {
