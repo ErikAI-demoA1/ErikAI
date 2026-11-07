@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ErikAI OS - Direct PDF Studio</title>
-    <!-- Tailwind CSS for UI -->
+    <title>ErikAI OS - Master PDF & Document Studio</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF.js library for rendering PDF -->
+    <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- html2canvas & jsPDF for PDF Export -->
+    <!-- html2canvas & jsPDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -19,133 +19,154 @@
         }
         #canvas-container {
             position: relative;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.8);
             display: inline-block;
             background: white;
+            transform-origin: top center;
         }
-        .editable-element {
+        .canvas-element {
             position: absolute;
             cursor: move;
-            border: 1px dashed rgba(239, 68, 68, 0.5);
-            padding: 2px 4px;
-            border-radius: 4px;
+            border: 1px dashed rgba(239, 68, 68, 0.6);
             user-select: none;
         }
-        .editable-element:hover, .editable-element.selected {
+        .canvas-element:hover, .canvas-element.selected {
             border-color: #ef4444;
-            background-color: rgba(239, 68, 68, 0.1);
+            background-color: rgba(239, 68, 68, 0.05);
         }
         .whiteout-box {
             position: absolute;
             cursor: move;
             background-color: white;
-            border: 1px dashed #94a3b8;
+            border: 1px dashed #cbd5e1;
         }
         .whiteout-box:hover, .whiteout-box.selected {
             border-color: #3b82f6;
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(255, 255, 255, 0.95);
+        }
+        .image-element {
+            position: absolute;
+            cursor: move;
+            border: 1px dashed #eab308;
+        }
+        .image-element img {
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .image-element.selected {
+            border-color: #eab308;
+            box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Header / Navbar -->
+    <!-- Header -->
     <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center flex-wrap gap-4">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white shadow-lg shadow-red-600/30">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center font-bold text-white shadow-lg shadow-red-600/30">
                 E
             </div>
-            <h1 class="text-xl font-bold tracking-wide bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-                ErikAI OS <span class="text-xs px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">Direct PDF Studio</span>
-            </h1>
+            <div>
+                <h1 class="text-lg font-bold tracking-wide text-white">
+                    ErikAI OS <span class="text-xs px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">Master Studio</span>
+                </h1>
+                <p class="text-xs text-slate-400">Bezserverový editor PDF, textov a obrázkov</p>
+            </div>
         </div>
 
-        <div class="flex items-center gap-3 flex-wrap">
-            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2 text-sm font-medium">
+        <div class="flex items-center gap-2 flex-wrap">
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2 text-sm font-medium">
                 📄 Nahrať PDF
                 <input type="file" id="pdf-input" accept="application/pdf" class="hidden">
             </label>
-            <button id="add-whiteout-btn" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg font-medium text-sm transition flex items-center gap-2" title="Zakryje starý text bielym obdĺžnikom">
-                ⬜ Zakryť text
+            <button id="add-whiteout-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition border border-slate-700 flex items-center gap-1.5" title="Zakryje starý text alebo tabuľku bielym poľom">
+                ⬜ Vymazať miesto
             </button>
-            <button id="add-text-btn" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-red-600/20 flex items-center gap-2">
-                ✏️ Pridať nový text
+            <button id="add-text-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition border border-slate-700 flex items-center gap-1.5">
+                ✏️ Pridať text
             </button>
-            <button id="export-pdf-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-emerald-600/20 flex items-center gap-2">
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition border border-slate-700 flex items-center gap-1.5">
+                🖼️ Pridať obrázok
+                <input type="file" id="image-input" accept="image/*" class="hidden">
+            </label>
+            <button id="export-pdf-btn" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-lg shadow-red-600/25 flex items-center gap-2">
                 💾 Stiahnuť PDF
             </button>
-            <button id="print-pdf-btn" class="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg font-medium text-sm transition shadow-lg shadow-sky-600/20 flex items-center gap-2">
+            <button id="print-pdf-btn" class="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-lg shadow-sky-600/25 flex items-center gap-2">
                 🖨️ Vytlačiť
             </button>
         </div>
     </header>
 
-    <!-- Main Workspace -->
+    <!-- Workspace -->
     <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
 
-        <!-- Controls Sidebar -->
-        <aside class="w-full lg:w-80 bg-slate-900/60 border-r border-slate-800 p-4 flex flex-col gap-6 overflow-y-auto">
-            <div class="space-y-4">
-                <h2 class="text-sm uppercase tracking-wider text-slate-400 font-semibold">Navigácia Stránok</h2>
-                <div class="flex items-center justify-between bg-slate-800 p-2 rounded-lg border border-slate-700">
-                    <button id="prev-page" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm disabled:opacity-50">◄ Predch.</button>
-                    <span id="page-num-display" class="text-sm font-medium">Strana: 0 / 0</span>
-                    <button id="next-page" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm disabled:opacity-50">Ďalšia ►</button>
+        <!-- Sidebar / Controls -->
+        <aside class="w-full lg:w-80 bg-slate-900/80 border-r border-slate-800 p-4 flex flex-col gap-6 overflow-y-auto">
+            <div class="space-y-3">
+                <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Stránky dokumentu</h2>
+                <div class="flex items-center justify-between bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                    <button id="prev-page" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm disabled:opacity-40">◄ Predch.</button>
+                    <span id="page-num-display" class="text-sm font-medium">0 / 0</span>
+                    <button id="next-page" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm disabled:opacity-40">Ďalšia ►</button>
                 </div>
             </div>
 
-            <!-- Element Control Panel -->
-            <div class="space-y-4" id="controls-panel">
-                <h2 class="text-sm uppercase tracking-wider text-slate-400 font-semibold">Úprava Vybraného Prvku</h2>
-                <div class="space-y-3" id="text-controls">
-                    <div>
+            <!-- Property Inspector -->
+            <div class="space-y-4 bg-slate-950/40 p-3.5 rounded-xl border border-slate-800" id="inspector-panel">
+                <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Vlastnosti vybraného prvku</h2>
+                
+                <div id="no-selection" class="text-xs text-slate-500 italic py-2">
+                    Kliknite na text, biely obdĺžnik alebo obrázok na plátne pre jeho úpravu.
+                </div>
+
+                <div id="inspector-content" class="space-y-3 hidden">
+                    <div id="text-prop-group">
                         <label class="text-xs text-slate-400 mb-1 block">Textový obsah:</label>
-                        <input type="text" id="element-text-input" placeholder="Kliknite na text..." class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-red-500">
+                        <input type="text" id="prop-text" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-red-500">
                     </div>
-                    
-                    <div class="grid grid-cols-2 gap-2">
+
+                    <div class="grid grid-cols-2 gap-2" id="font-prop-group">
                         <div>
                             <label class="text-xs text-slate-400 mb-1 block">Veľkosť (px):</label>
-                            <input type="number" id="element-size-input" value="16" min="8" max="72" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-red-500">
+                            <input type="number" id="prop-size" min="8" max="72" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                         </div>
                         <div>
                             <label class="text-xs text-slate-400 mb-1 block">Farba:</label>
-                            <input type="color" id="element-color-input" value="#000000" class="w-full h-10 bg-slate-800 border border-slate-700 rounded p-1 cursor-pointer">
+                            <input type="color" id="prop-color" class="w-full h-10 bg-slate-800 border border-slate-700 rounded p-1 cursor-pointer">
                         </div>
                     </div>
-                </div>
 
-                <div class="space-y-3 pt-2">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-xs text-slate-400 mb-1 block">Šírka boxu:</label>
-                            <input type="number" id="box-width-input" value="100" min="20" max="600" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none">
+                            <label class="text-xs text-slate-400 mb-1 block">Šírka:</label>
+                            <input type="number" id="prop-width" min="10" max="800" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                         </div>
                         <div>
-                            <label class="text-xs text-slate-400 mb-1 block">Výška boxu:</label>
-                            <input type="number" id="box-height-input" value="30" min="10" max="200" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none">
+                            <label class="text-xs text-slate-400 mb-1 block">Výška:</label>
+                            <input type="number" id="prop-height" min="10" max="800" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                         </div>
                     </div>
-                </div>
 
-                <button id="delete-element-btn" class="w-full bg-red-950/50 hover:bg-red-900 border border-red-800 text-red-300 py-2 rounded text-sm transition font-medium">
-                    🗑️ Vymazať vybraný prvok
-                </button>
+                    <button id="delete-btn" class="w-full bg-red-950/60 hover:bg-red-900 border border-red-800/60 text-red-300 py-2 rounded-lg text-sm transition font-medium">
+                        🗑️ Odstrániť prvok
+                    </button>
+                </div>
             </div>
 
-            <div class="mt-auto p-3 bg-slate-800/40 rounded-lg border border-slate-800 text-xs text-slate-400">
-                <p class="font-semibold text-slate-300 mb-1">💡 Ako upravovať PDF:</p>
-                1. Klikni na <b>Zakryť text</b> pre vytvorenie bieleho obdĺžnika na starý text.<br>
-                2. Klikni na <b>Pridať nový text</b> a napíš nové údaje.<br>
-                3. Prvky môžeš voľne ťahať myšou.
+            <div class="mt-auto p-3 bg-slate-800/40 rounded-xl border border-slate-800/80 text-xs text-slate-400 space-y-1.5">
+                <p class="font-semibold text-slate-300">💡 ErikAI OS Tip:</p>
+                <p>1. <b>Vymazať miesto:</b> Zakryje starú cenu, text alebo tabuľku bielym boxom.</p>
+                <p>2. <b>Obrázok:</b> Nahrá logo alebo pečiatku priamo do PDF.</p>
             </div>
         </aside>
 
-        <!-- PDF Viewport / Canvas Container -->
+        <!-- Main Viewport -->
         <main class="flex-1 p-6 overflow-auto flex justify-center items-start bg-slate-950">
-            <div id="canvas-container" class="relative rounded">
+            <div id="canvas-container" class="relative rounded-lg overflow-hidden">
                 <canvas id="pdf-render"></canvas>
-                <!-- Overlay elements will be added dynamically here -->
             </div>
         </main>
     </div>
@@ -160,7 +181,6 @@
         const ctx = canvas.getContext('2d');
         const container = document.getElementById('canvas-container');
 
-        // Ukladanie úprav pre každú stránku zvlášť: { 1: [elements], 2: [elements] }
         let pageAnnotations = {};
         let activeElement = null;
 
@@ -168,23 +188,21 @@
         document.getElementById('pdf-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file && file.type === 'application/pdf') {
-                const fileReader = new FileReader();
-                fileReader.onload = function() {
-                    const typedarray = new Uint8Array(this.result);
-                    pdfjsLib.getDocument(typedarray).promise.then((pdfDoc_) => {
-                        pdfDoc = pdfDoc_;
+                const reader = new FileReader();
+                reader.onload = function() {
+                    pdfjsLib.getDocument(new Uint8Array(this.result)).promise.then((pdf) => {
+                        pdfDoc = pdf;
                         pageNum = 1;
                         pageAnnotations = {};
                         renderPage(pageNum);
                     });
                 };
-                fileReader.readAsArrayBuffer(file);
+                reader.readAsArrayBuffer(file);
             }
         });
 
-        // Vykreslenie stránky a obnova uložených prvkov pre danú stranu
         function renderPage(num) {
-            saveCurrentPageAnnotations();
+            saveAnnotations();
             pdfDoc.getPage(num).then((page) => {
                 const viewport = page.getViewport({ scale: scale });
                 canvas.height = viewport.height;
@@ -192,27 +210,27 @@
                 container.style.width = viewport.width + 'px';
                 container.style.height = viewport.height + 'px';
 
-                const renderContext = {
-                    canvasContext: ctx,
-                    viewport: viewport
-                };
-                
-                page.render(renderContext).promise.then(() => {
-                    document.getElementById('page-num-display').textContent = `Strana: ${num} / ${pdfDoc.numPages}`;
-                    restorePageAnnotations(num);
+                page.render({ canvasContext: ctx, viewport: viewport }).promise.then(() => {
+                    document.getElementById('page-num-display').textContent = `${num} / ${pdfDoc.numPages}`;
+                    restoreAnnotations(num);
                 });
             });
         }
 
-        function saveCurrentPageAnnotations() {
+        function saveAnnotations() {
             if (!pdfDoc) return;
-            const elements = container.querySelectorAll('.editable-element, .whiteout-box');
+            const elements = container.querySelectorAll('.canvas-element, .whiteout-box, .image-element');
             const data = [];
             elements.forEach(el => {
+                let type = 'whiteout';
+                if (el.classList.contains('canvas-element')) type = 'text';
+                if (el.classList.contains('image-element')) type = 'image';
+
                 data.push({
-                    type: el.classList.contains('whiteout-box') ? 'whiteout' : 'text',
-                    html: el.innerHTML,
+                    type: type,
                     text: el.dataset.rawText || el.innerText,
+                    html: el.innerHTML,
+                    src: el.querySelector('img') ? el.querySelector('img').src : null,
                     left: el.style.left,
                     top: el.style.top,
                     width: el.style.width,
@@ -224,122 +242,99 @@
             pageAnnotations[pageNum] = data;
         }
 
-        function restorePageAnnotations(num) {
-            // Vymaž aktuálne prvky z DOM
-            container.querySelectorAll('.editable-element, .whiteout-box').forEach(el => el.remove());
-            activeElement = null;
+        function restoreAnnotations(num) {
+            container.querySelectorAll('.canvas-element, .whiteout-box, .image-element').forEach(el => el.remove());
+            selectElement(null);
 
             const saved = pageAnnotations[num] || [];
             saved.forEach(item => {
                 if (item.type === 'whiteout') {
-                    createWhiteoutBox(item.left, item.top, item.width, item.height);
-                } else {
-                    createTextElement(item.text, item.left, item.top, item.fontSize, item.color);
+                    createBox('whiteout-box', item.left, item.top, item.width, item.height);
+                } else if (item.type === 'text') {
+                    createText(item.text, item.left, item.top, item.fontSize, item.color, item.width, item.height);
+                } else if (item.type === 'image') {
+                    createImage(item.src, item.left, item.top, item.width, item.height);
                 }
             });
         }
 
-        // Pridanie bieleho obdĺžnika na zakrytie textu
+        // Pridanie bieleho boxu
         document.getElementById('add-whiteout-btn').addEventListener('click', () => {
-            if (!pdfDoc) return alert('Najprv nahrajte PDF dokument!');
-            createWhiteoutBox('100px', '100px', '150px', '30px');
+            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
+            createBox('whiteout-box', '100px', '100px', '160px', '35px');
         });
 
-        function createWhiteoutBox(left, top, width, height) {
-            const box = document.createElement('div');
-            box.className = 'whiteout-box';
-            box.style.left = left;
-            box.style.top = top;
-            box.style.width = width;
-            box.style.height = height;
-
-            makeInteractive(box, 'whiteout');
-            container.appendChild(box);
-            selectElement(box);
+        function createBox(className, left, top, width, height) {
+            const el = document.createElement('div');
+            el.className = className;
+            el.style.left = left;
+            el.style.top = top;
+            el.style.width = width;
+            el.style.height = height;
+            makeInteractive(el);
+            container.appendChild(el);
+            selectElement(el);
         }
 
-        // Pridanie nového textu
+        // Pridanie textu
         document.getElementById('add-text-btn').addEventListener('click', () => {
-            if (!pdfDoc) return alert('Najprv nahrajte PDF dokument!');
-            createTextElement('Nový text', '100px', '150px', '16px', '#000000');
+            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
+            createText('Nový text / položka', '100px', '150px', '16px', '#000000', '180px', '35px');
         });
 
-        function createTextElement(text, left, top, fontSize, color) {
+        function createText(text, left, top, fontSize, color, width, height) {
             const el = document.createElement('div');
-            el.className = 'editable-element';
+            el.className = 'canvas-element';
             el.innerText = text;
             el.dataset.rawText = text;
             el.style.left = left;
             el.style.top = top;
             el.style.fontSize = fontSize || '16px';
             el.style.color = color || '#000000';
+            if (width) el.style.width = width;
+            if (height) el.style.height = height;
 
-            makeInteractive(el, 'text');
+            makeInteractive(el);
             container.appendChild(el);
             selectElement(el);
         }
 
-        // Výber prvku a prepojenie s ovládacím panelom
-        function selectElement(el) {
-            container.querySelectorAll('.editable-element, .whiteout-box').forEach(item => item.classList.remove('selected'));
-            activeElement = el;
-            
-            const textControls = document.getElementById('text-controls');
-            if (el) {
-                el.classList.add('selected');
-                document.getElementById('box-width-input').value = parseInt(el.style.width) || el.offsetWidth;
-                document.getElementById('box-height-input').value = parseInt(el.style.height) || el.offsetHeight;
-
-                if (el.classList.contains('whiteout-box')) {
-                    textControls.style.display = 'none';
-                } else {
-                    textControls.style.display = 'block';
-                    document.getElementById('element-text-input').value = el.dataset.rawText || el.innerText;
-                    document.getElementById('element-size-input').value = parseInt(el.style.fontSize) || 16;
-                    document.getElementById('element-color-input').value = rgbToHex(window.getComputedStyle(el).color);
-                }
+        // Pridanie obrázka (Logo / Pečiatka)
+        document.getElementById('image-input').addEventListener('change', (e) => {
+            if (!pdfDoc) {
+                alert('Najprv nahrajte PDF!');
+                return;
             }
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    createImage(event.target.result, '100px', '100px', '120px', '120px');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function createImage(src, left, top, width, height) {
+            const el = document.createElement('div');
+            el.className = 'image-element';
+            el.style.left = left;
+            el.style.top = top;
+            el.style.width = width;
+            el.style.height = height;
+
+            const img = document.createElement('img');
+            img.src = src;
+            el.appendChild(img);
+
+            makeInteractive(el);
+            container.appendChild(el);
+            selectElement(el);
         }
 
-        // Eventy pre ovládacie prvky
-        document.getElementById('element-text-input').addEventListener('input', (e) => {
-            if (activeElement && activeElement.classList.contains('editable-element')) {
-                activeElement.innerText = e.target.value;
-                activeElement.dataset.rawText = e.target.value;
-            }
-        });
-
-        document.getElementById('element-size-input').addEventListener('input', (e) => {
-            if (activeElement && activeElement.classList.contains('editable-element')) {
-                activeElement.style.fontSize = `${e.target.value}px`;
-            }
-        });
-
-        document.getElementById('element-color-input').addEventListener('input', (e) => {
-            if (activeElement && activeElement.classList.contains('editable-element')) {
-                activeElement.style.color = e.target.value;
-            }
-        });
-
-        document.getElementById('box-width-input').addEventListener('input', (e) => {
-            if (activeElement) activeElement.style.width = `${e.target.value}px`;
-        });
-
-        document.getElementById('box-height-input').addEventListener('input', (e) => {
-            if (activeElement) activeElement.style.height = `${e.target.value}px`;
-        });
-
-        document.getElementById('delete-element-btn').addEventListener('click', () => {
-            if (activeElement) {
-                activeElement.remove();
-                activeElement = null;
-            }
-        });
-
-        // Interaktivita (presúvanie myšou / dotykom)
-        function makeInteractive(el, type) {
+        // Interaktivita (drag & drop)
+        function makeInteractive(el) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            
             el.onmousedown = dragMouseDown;
             el.onclick = (e) => {
                 e.stopPropagation();
@@ -347,17 +342,15 @@
             };
 
             function dragMouseDown(e) {
-                e = e || window.event;
                 e.preventDefault();
                 selectElement(el);
                 pos3 = e.clientX;
                 pos4 = e.clientY;
-                document.onmouseup = closeDragElement;
+                document.onmouseup = closeDrag;
                 document.onmousemove = elementDrag;
             }
 
             function elementDrag(e) {
-                e = e || window.event;
                 e.preventDefault();
                 pos1 = pos3 - e.clientX;
                 pos2 = pos4 - e.clientY;
@@ -367,33 +360,86 @@
                 el.style.left = (el.offsetLeft - pos1) + "px";
             }
 
-            function closeDragElement() {
+            function closeDrag() {
                 document.onmouseup = null;
                 document.onmousemove = null;
             }
         }
 
-        container.addEventListener('click', () => {
-            selectElement(null);
+        container.addEventListener('click', () => { selectElement(null); });
+
+        // Výber prvku a zobrazovač vlastností
+        function selectElement(el) {
+            container.querySelectorAll('.canvas-element, .whiteout-box, .image-element').forEach(item => item.classList.remove('selected'));
+            activeElement = el;
+
+            const inspector = document.getElementById('inspector-content');
+            const noSelection = document.getElementById('no-selection');
+            const textGroup = document.getElementById('text-prop-group');
+            const fontGroup = document.getElementById('font-prop-group');
+
+            if (el) {
+                el.classList.add('selected');
+                inspector.classList.remove('hidden');
+                noSelection.classList.add('hidden');
+
+                document.getElementById('prop-width').value = parseInt(el.style.width) || el.offsetWidth;
+                document.getElementById('prop-height').value = parseInt(el.style.height) || el.offsetHeight;
+
+                if (el.classList.contains('canvas-element')) {
+                    textGroup.style.display = 'block';
+                    fontGroup.style.display = 'grid';
+                    document.getElementById('prop-text').value = el.dataset.rawText || el.innerText;
+                    document.getElementById('prop-size').value = parseInt(el.style.fontSize) || 16;
+                    document.getElementById('prop-color').value = rgbToHex(window.getComputedStyle(el).color);
+                } else {
+                    textGroup.style.display = 'none';
+                    fontGroup.style.display = 'none';
+                }
+            } else {
+                inspector.classList.add('hidden');
+                noSelection.classList.remove('hidden');
+            }
+        }
+
+        // Live úpravy z panelu
+        document.getElementById('prop-text').addEventListener('input', (e) => {
+            if (activeElement && activeElement.classList.contains('canvas-element')) {
+                activeElement.innerText = e.target.value;
+                activeElement.dataset.rawText = e.target.value;
+            }
+        });
+        document.getElementById('prop-size').addEventListener('input', (e) => {
+            if (activeElement && activeElement.classList.contains('canvas-element')) {
+                activeElement.style.fontSize = e.target.value + 'px';
+            }
+        });
+        document.getElementById('prop-color').addEventListener('input', (e) => {
+            if (activeElement && activeElement.classList.contains('canvas-element')) {
+                activeElement.style.color = e.target.value;
+            }
+        });
+        document.getElementById('prop-width').addEventListener('input', (e) => {
+            if (activeElement) activeElement.style.width = e.target.value + 'px';
+        });
+        document.getElementById('prop-height').addEventListener('input', (e) => {
+            if (activeElement) activeElement.style.height = e.target.value + 'px';
+        });
+        document.getElementById('delete-btn').addEventListener('click', () => {
+            if (activeElement) {
+                activeElement.remove();
+                selectElement(null);
+            }
         });
 
         // Stránkovanie
-        document.getElementById('prev-page').addEventListener('click', () => {
-            if (pageNum <= 1) return;
-            pageNum--;
-            renderPage(pageNum);
-        });
+        document.getElementById('prev-page').addEventListener('click', () => { if (pageNum > 1) renderPage(--pageNum); });
+        document.getElementById('next-page').addEventListener('click', () => { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(++pageNum); });
 
-        document.getElementById('next-page').addEventListener('click', () => {
-            if (!pdfDoc || pageNum >= pdfDoc.numPages) return;
-            pageNum++;
-            renderPage(pageNum);
-        });
-
-        // Export do PDF cez html2canvas + jsPDF
+        // Export do PDF
         document.getElementById('export-pdf-btn').addEventListener('click', async () => {
-            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            saveCurrentPageAnnotations();
+            if (!pdfDoc) return alert('Nahrajte najprv PDF!');
+            saveAnnotations();
             selectElement(null);
 
             const { jsPDF } = window.jspdf;
@@ -408,36 +454,34 @@
                     pageNum = i;
                     renderPage(i);
                     setTimeout(async () => {
-                        const canvasCaptured = await html2canvas(container, { scale: 2, useCORS: true });
-                        const imgData = canvasCaptured.toDataURL('image/jpeg', 0.95);
-                        
+                        const canvasCap = await html2canvas(container, { scale: 2, useCORS: true });
+                        const imgData = canvasCap.toDataURL('image/jpeg', 0.95);
                         if (i > 1) pdf.addPage([container.offsetWidth, container.offsetHeight]);
                         pdf.addImage(imgData, 'JPEG', 0, 0, container.offsetWidth, container.offsetHeight);
                         resolve();
-                    }, 400); // Čas na render stránky
+                    }, 350);
                 });
             }
-
             pdf.save('ErikAI_OS_Upraveny_Dokument.pdf');
         });
 
-        // Tlač dokumentu
+        // Tlač
         document.getElementById('print-pdf-btn').addEventListener('click', async () => {
-            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            saveCurrentPageAnnotations();
+            if (!pdfDoc) return alert('Nahrajte najprv PDF!');
+            saveAnnotations();
             selectElement(null);
 
-            const canvasCaptured = await html2canvas(container, { scale: 2 });
-            const imgData = canvasCaptured.toDataURL('image/png');
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`<html><head><title>Tlač - ErikAI OS</title></head><body style="margin:0;display:flex;justify-content:center;"><img style="max-width:100%;" src="${imgData}" onload="window.print();window.close();"/></body></html>`);
-            printWindow.document.close();
+            const canvasCap = await html2canvas(container, { scale: 2 });
+            const imgData = canvasCap.toDataURL('image/png');
+            const w = window.open('', '_blank');
+            w.document.write(`<html><head><title>Tlač - ErikAI OS</title></head><body style="margin:0;display:flex;justify-content:center;"><img style="max-width:100%;" src="${imgData}" onload="window.print();window.close();"/></body></html>`);
+            w.document.close();
         });
 
         function rgbToHex(rgb) {
             if (/^#/.test(rgb)) return rgb;
-            const res = rgb.match(/\d+/g);
-            return res ? "#" + res.slice(0, 3).map(x => (+x).toString(16).padStart(2, '0')).join('') : '#000000';
+            const m = rgb.match(/\d+/g);
+            return m ? "#" + m.slice(0, 3).map(x => (+x).toString(16).padStart(2, '0')).join('') : '#000000';
         }
     </script>
 </body>
