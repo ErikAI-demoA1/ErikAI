@@ -511,7 +511,7 @@ function init3D() {
   animate();
 }
 
-// FUNKCIA 1: SKOPÍROVAŤ 3D KÓD DO SCHRÁNKY
+// SKOPÍROVAŤ 3D KÓD
 function copy3DCode(){
   const data = JSON.stringify({ shapes, blueprintMeta, manualDimensions, viewLayoutCount, paperFormat }, null, 2);
   navigator.clipboard.writeText(data).then(() => {
@@ -522,7 +522,6 @@ function copy3DCode(){
   });
 }
 
-// FUNKCIA 2: OTVORIŤ OKNO NA VLOŽENIE 3D KÓDU
 function openImport3DModal(){
   document.getElementById('codeModal').style.display = 'flex';
 }
@@ -530,7 +529,7 @@ function closeImport3DModal(){
   document.getElementById('codeModal').style.display = 'none';
 }
 
-// FUNKCIA 2: VLOŽIŤ 3D KÓD A OKAMŽITE VYGENEROVAŤ 2D VÝKRES
+// VLOŽIŤ 3D KÓD A OKAMŽITE VYGENEROVAŤ 2D VÝKRES S PRESNÝMI TVARMI
 function render2DFromPasted3DCode(){
   const pastedText = document.getElementById('importedCodeInput').value.trim();
   if(!pastedText){
@@ -548,7 +547,10 @@ function render2DFromPasted3DCode(){
     document.getElementById('viewCountSelector').value = viewLayoutCount;
     document.getElementById('paperFormatSelector').value = paperFormat;
     changePaperFormat();
+    
+    // Okamžitá obnova 3D scény a aktualizácia počtu dielov
     rebuild3DScene();
+    saveToLocalStorage();
     
     closeImport3DModal();
     if(!isDraftingMode) toggleDraftingMode();
@@ -787,6 +789,7 @@ function rebuild3DScene(){
     meshesMap.set(sub.index, sub.mesh);
   });
 
+  infoCount.textContent = `Počet dielov: ${shapes.length}`;
   if(editMode) updateDimensionsPanel();
   if(isDraftingMode) generateEngineeringBlueprint();
 }
