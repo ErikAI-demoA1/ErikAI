@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro CAD & 2D Drafting Studio (Z-Up Coordinate System)</title>
+<title>ErikAI Pro CAD & 2D Drafting Studio (Z-Up Pro Strojárska Edícia)</title>
 <!-- Three.js, OrbitControls a Three-CSG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -318,7 +318,7 @@ input[type="file"] { display: none; }
 </div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI Pro CAD Engine. Os Z je nastavená ako VÝŠKA. Všetky rozmery v mm podľa ISO noriem.</div></div>
+  <div id="commandHistory"><div>ErikAI Pro CAD Engine. Z-Up systém aktívny. Všetky rozmery v mm podľa ISO noriem.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
     <input type="text" id="commandInput" placeholder="Príkaz (box, pipe, elbow, drafting, clear)..." autocomplete="off">
@@ -334,7 +334,6 @@ input[type="file"] { display: none; }
 </div>
 
 <script>
-// Nastavenie zvislej osi Z pre celú aplikáciu
 THREE.Object3D.DefaultUp.set(0, 0, 1);
 
 let scene, camera, renderer, controls;
@@ -343,7 +342,6 @@ let shapes = [], undoStack = [], redoStack = [], meshesMap = new Map();
 let selectedShapeIndex = null;
 let currentShapeType = 'box', currentCsgOp = 'add', tool = 'create', editMode = false, isDraftingMode = false;
 
-// 2D Výkres & Kótovanie
 let bpScale = 1.0, bpPanX = 50, bpPanY = 50, isBpDragging = false, bpStartMouse = {x:0, y:0};
 let manualDimensions = [];
 let manualDimStep = 0, firstDimPoint = null, manualDimModeActive = false;
@@ -416,7 +414,6 @@ function init3D() {
   dirLight.position.set(150, 200, 250);
   scene.add(dirLight);
 
-  // Mriežka leží v rovinnom základe XY
   const gridHelper = new THREE.GridHelper(300, 30, 0x10b981, 0x2e364f);
   gridHelper.rotateX(Math.PI / 2);
   scene.add(gridHelper);
@@ -568,14 +565,14 @@ function createGeometryForShape(s){
     geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: false, curveSegments: 32 });
     geo.center();
   } else if(s.type === 'elbow') {
+    // Opravené 90° koleno správne orientované v Z-up systéme (vychádza z roviny XY smerom hore do Z)
     const rBend = scR * 2.0;
     const curve = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0, 0, rBend),
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(rBend, 0, 0)
+      new THREE.Vector3(0, 0, rBend),
+      new THREE.Vector3(rBend, 0, rBend)
     );
     geo = new THREE.TubeGeometry(curve, 36, scR, 24, false);
-    geo.center();
   } else if(s.type === 'wedge') {
     geo = new THREE.BufferGeometry();
     const w = scW/2, h = scH/2, d = scD/2;
@@ -602,7 +599,6 @@ function rebuild3DScene(){
     const mat = new THREE.MeshStandardMaterial({ color: s.color || 0x10b981, roughness: 0.3, metalness: 0.1 });
     const mesh = new THREE.Mesh(geo, mat);
     
-    // Pozícia: Z je Výška
     mesh.position.set((s.x||0)/10, (s.y||0)/10, (s.z||0)/10);
     mesh.rotation.set(
       (s.rx || 0) * Math.PI / 180,
@@ -674,7 +670,7 @@ function onPointerDown(e){
     pushState();
     let shape = {
       type: currentShapeType, op: currentCsgOp,
-      x: snapX, y: snapY, z: currentCsgOp === 'subtract' ? 25 : 50, // Z je Výška
+      x: snapX, y: snapY, z: currentCsgOp === 'subtract' ? 25 : 50,
       rx: 0, ry: 0, rz: 0,
       w: 100, h: 100, d: 100, r: 50, wall: 10, fillet: 10, chamfer: 10, tube: 15,
       color: currentCsgOp === 'subtract' ? '#ef4444' : '#10b981'
@@ -850,7 +846,6 @@ function detectClickedEdge(cx, cy){
   for(let s of shapes){
     const autoSc = calculateDynamicScale();
     for(let v of views){
-      // Výpočet prispôsobený pre Z ako zvislú os
       let px = v.offsetX + (s.x || 0) * autoSc * 0.1;
       let py = v.offsetY + (v.name==='top' ? -(s.y || 0) : -(s.z || 0)) * autoSc * 0.1;
       
@@ -992,7 +987,6 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   ctx.save();
   const autoSc = calculateDynamicScale();
   
-  // Z os premietnutá ako zvislá poloha vo výkrese
   let px = offsetX + (s.x || 0) * autoSc * 0.1;
   let py = offsetY + (viewType==='top' ? -(s.y || 0) : -(s.z || 0)) * autoSc * 0.1;
   
@@ -1011,7 +1005,7 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
 
   let w = (s.w || 100) * autoSc * 0.1;
   let h = (s.h || 100) * autoSc * 0.1;
-  let d = (s.d || 100) * autoSc * 0.1; // Hĺbka/Z
+  let d = (s.d || 100) * autoSc * 0.1;
   let r = (s.r || 50) * autoSc * 0.1;
   let tubeR = (s.tube || 15) * autoSc * 0.1;
   let filletR = (s.fillet || 10) * autoSc * 0.1;
@@ -1401,7 +1395,6 @@ function updateDimensionsPanel(){
     card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
     card.innerHTML = `<div class="shape-title-row"><strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong><button class="danger" style="padding:2px 5px;" onclick="shapes.splice(${i},1);rebuild3DScene();updateDimensionsPanel();">🗑️ Zmazať diel</button></div>`;
     
-    // Pozícia s vyznačeným Z ako VÝŠKA
     const posRow = document.createElement('div');
     posRow.className = 'input-row';
     posRow.innerHTML = `<div class="input-group-title">Pozícia X, Y, Z-Výška (mm):</div><label>X:</label><input type="number" step="5" value="${s.x||0}"><label>Y:</label><input type="number" step="5" value="${s.y||0}"><label style="color:var(--accent-green);font-weight:bold;">Z (Výška):</label><input type="number" step="5" value="${s.z||0}">`;
@@ -1411,7 +1404,6 @@ function updateDimensionsPanel(){
     pInps[2].onchange = (e) => { s.z = parseFloat(e.target.value)||0; rebuild3DScene(); };
     card.appendChild(posRow);
 
-    // Rotácia RX, RY, RZ
     const rotRow = document.createElement('div');
     rotRow.className = 'input-row';
     rotRow.innerHTML = `<div class="input-group-title">Rotácia (°):</div><label>RX:</label><input type="number" step="15" value="${s.rx||0}"><label>RY:</label><input type="number" step="15" value="${s.ry||0}"><label>RZ:</label><input type="number" step="15" value="${s.rz||0}">`;
@@ -1421,7 +1413,6 @@ function updateDimensionsPanel(){
     rInps[2].onchange = (e) => { s.rz = parseFloat(e.target.value)||0; rebuild3DScene(); };
     card.appendChild(rotRow);
 
-    // Parametre tvarov
     const dimRow = document.createElement('div');
     dimRow.className = 'input-row';
     dimRow.innerHTML = `<div class="input-group-title">Parametre / Rozmery (mm):</div>`;
