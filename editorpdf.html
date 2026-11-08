@@ -40,6 +40,12 @@
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9);
             background: white;
             transform-origin: top center;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .page-container.active-page {
+            border-color: #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4), 0 30px 60px rgba(0, 0, 0, 0.9);
         }
         .canvas-element, .whiteout-box, .image-element, .table-element {
             position: absolute;
@@ -165,7 +171,7 @@
                 <h1 class="text-base font-bold tracking-wide text-white flex items-center gap-2">
                     ErikAI OS <span class="text-xs px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">Master Studio Pro</span>
                 </h1>
-                <p class="text-xs text-slate-400">Bezserverový PDF editor s plynulým skrolovaním</p>
+                <p class="text-xs text-slate-400">Bezserverový PDF editor s automatickým ukladaním</p>
             </div>
         </div>
 
@@ -174,7 +180,7 @@
                 📄 Nahrať PDF
                 <input type="file" id="pdf-input" accept="application/pdf" class="hidden">
             </label>
-            <button id="add-whiteout-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">⬜ Zakryť (Strana 1)</button>
+            <button id="add-whiteout-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">⬜ Zakryť</button>
             <button id="add-text-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">✏️ Text</button>
             <button id="open-sign-modal-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">✍️ Podpísať</button>
             <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-medium">
@@ -206,6 +212,7 @@
 
         <div class="flex items-center gap-3">
             <span id="doc-info" class="font-medium text-slate-300">Žiadny dokument</span>
+            <span id="active-page-indicator" class="px-2 py-0.5 bg-blue-900/60 border border-blue-700 text-blue-300 rounded text-[11px]">Aktívna strana: 1</span>
         </div>
     </div>
 
@@ -266,13 +273,13 @@
             </div>
         </aside>
 
-        <!-- Main Viewport (Plynulé skrolovanie strán pod sebou) -->
+        <!-- Main Viewport -->
         <main id="main-viewport" class="flex-1 bg-slate-950">
             <div id="pages-wrapper" class="flex flex-col items-center gap-10 w-full"></div>
         </main>
     </div>
 
-    <!-- Modal pre uloženie PDF -->
+    <!-- Modals -->
     <div id="pdf-name-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-80 space-y-4 shadow-2xl">
             <h3 class="text-base font-bold text-white">Uložiť PDF</h3>
@@ -287,7 +294,6 @@
         </div>
     </div>
 
-    <!-- Modal pre tabuľku -->
     <div id="table-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-80 space-y-4 shadow-2xl">
             <h3 class="text-base font-bold text-white">Nová Tabuľka</h3>
@@ -308,7 +314,6 @@
         </div>
     </div>
 
-    <!-- Modal pre podpisovanie -->
     <div id="sign-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-96 space-y-4 shadow-2xl">
             <h3 class="text-base font-bold text-white">Vytvoriť Podpis</h3>
@@ -336,8 +341,9 @@
         const pagesWrapper = document.getElementById('pages-wrapper');
         const viewport = document.getElementById('main-viewport');
 
-        let pageAnnotations = {}; // { pageNum: [ objekty ] }
+        let pageAnnotations = {}; 
         let activeElement = null;
+        let activePageNum = 1; // Aktuálne zvolená strana pre pridávanie objektov
 
         function setMode(mode) {
             currentMode = mode;
@@ -379,7 +385,7 @@
             viewport.scrollTop = scrollTop - (e.clientY - startY);
         });
 
-        // Automatické načítanie pri štarte z pamäte prehliadača
+        // Automatické načítanie pri štarte z localStorage
         window.addEventListener('DOMContentLoaded', () => {
             const savedPdf = localStorage.getItem('erikai_pdf_data');
             const savedAnno = localStorage.getItem('erikai_annotations');
@@ -406,11 +412,11 @@
                     try { 
                         localStorage.setItem('erikai_pdf_data', JSON.stringify(Array.from(typedarray))); 
                         localStorage.removeItem('erikai_annotations');
+                        pageAnnotations = {};
                     } catch(err) {}
 
                     pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
                         pdfDoc = pdf;
-                        pageAnnotations = {};
                         renderAllPages();
                     });
                 };
@@ -437,9 +443,15 @@
 
                 const container = document.createElement('div');
                 container.className = 'page-container';
+                if (i === activePageNum) container.classList.add('active-page');
                 container.style.width = baseVp.width + 'px';
                 container.style.height = baseVp.height + 'px';
                 container.dataset.pageNum = i;
+
+                // Kliknutie na stranu ju označí ako aktívnu pre pridávanie prvkov
+                container.addEventListener('click', () => {
+                    setActivePage(i);
+                });
 
                 const canvas = document.createElement('canvas');
                 canvas.width = baseVp.width;
@@ -453,6 +465,24 @@
                 restorePageAnnotations(i, container);
             }
             updateLayersList();
+        }
+
+        function setActivePage(num) {
+            activePageNum = num;
+            document.getElementById('active-page-indicator').textContent = `Aktívna strana: ${num}`;
+            document.querySelectorAll('.page-container').forEach(c => {
+                if (parseInt(c.dataset.pageNum) === num) {
+                    c.classList.add('active-page');
+                } else {
+                    c.classList.remove('active-page');
+                }
+            });
+        }
+
+        function getActivePageContainer() {
+            let container = pagesWrapper.querySelector(`.page-container[data-page-num="${activePageNum}"]`);
+            if (!container) container = pagesWrapper.querySelector('.page-container');
+            return container;
         }
 
         function saveAllAnnotations() {
@@ -526,15 +556,11 @@
             });
         }
 
-        function getFirstPageContainer() {
-            return pagesWrapper.querySelector('.page-container');
-        }
-
         document.getElementById('add-whiteout-btn').addEventListener('click', () => {
-            const firstPage = getFirstPageContainer();
-            if (!firstPage) return alert('Najprv nahrajte PDF!');
+            const page = getActivePageContainer();
+            if (!page) return alert('Najprv nahrajte PDF!');
             const el = createBoxElement('whiteout-box', '50px', '50px', '200px', '40px', true);
-            firstPage.appendChild(el);
+            page.appendChild(el);
             selectElement(el);
         });
 
@@ -554,10 +580,10 @@
         }
 
         document.getElementById('add-text-btn').addEventListener('click', () => {
-            const firstPage = getFirstPageContainer();
-            if (!firstPage) return alert('Najprv nahrajte PDF!');
+            const page = getActivePageContainer();
+            if (!page) return alert('Najprv nahrajte PDF!');
             const el = createTextElement('Môj text', '50px', '110px', (16 * currentZoom) + 'px', '#000000', '200px', '40px', '', true);
-            firstPage.appendChild(el);
+            page.appendChild(el);
             selectElement(el);
         });
 
@@ -583,15 +609,15 @@
         }
 
         document.getElementById('image-input').addEventListener('change', (e) => {
-            const firstPage = getFirstPageContainer();
-            if (!firstPage) return alert('Najprv nahrajte PDF!');
+            const page = getActivePageContainer();
+            if (!page) return alert('Najprv nahrajte PDF!');
             const files = e.target.files;
             if (files.length > 0) {
                 Array.from(files).forEach((file, idx) => {
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         const el = createImageElement(event.target.result, (50 + idx * 30) + 'px', (180 + idx * 30) + 'px', '150px', '150px', true);
-                        firstPage.appendChild(el);
+                        page.appendChild(el);
                         selectElement(el);
                     };
                     reader.readAsDataURL(file);
@@ -706,12 +732,12 @@
         signCanvas.addEventListener('pointercancel', stopSign);
 
         document.getElementById('sign-insert').addEventListener('click', () => {
-            const firstPage = getFirstPageContainer();
-            if (!firstPage) return;
+            const page = getActivePageContainer();
+            if (!page) return;
             const dataURL = signCanvas.toDataURL('image/png');
             signModal.classList.add('hidden');
             const el = createImageElement(dataURL, '50px', '250px', '180px', '70px', true);
-            firstPage.appendChild(el);
+            page.appendChild(el);
             selectElement(el);
         });
 
@@ -723,8 +749,8 @@
         });
         document.getElementById('modal-cancel').addEventListener('click', () => modal.classList.add('hidden'));
         document.getElementById('modal-create').addEventListener('click', () => {
-            const firstPage = getFirstPageContainer();
-            if (!firstPage) return;
+            const page = getActivePageContainer();
+            if (!page) return;
             const rows = parseInt(document.getElementById('modal-rows').value) || 3;
             const cols = parseInt(document.getElementById('modal-cols').value) || 3;
             modal.classList.add('hidden');
@@ -740,7 +766,7 @@
             tableHTML += '</table>';
 
             const el = createTableElement(tableHTML, '50px', '350px', (cols * 100 * currentZoom) + 'px', ((rows * 35) + 18) + 'px', true);
-            firstPage.appendChild(el);
+            page.appendChild(el);
             selectElement(el);
         });
 
@@ -860,6 +886,12 @@
                 el.classList.add('selected');
                 inspector.classList.remove('hidden');
                 noSelection.classList.add('hidden');
+
+                // Automaticky prepne aktívnu stranu podľa zvoleného objektu
+                const pageContainer = el.closest('.page-container');
+                if (pageContainer) {
+                    setActivePage(parseInt(pageContainer.dataset.pageNum));
+                }
 
                 document.getElementById('prop-width').value = Math.round(parseFloat(el.dataset.baseWidth || parseFloat(el.style.width) / currentZoom));
                 document.getElementById('prop-height').value = Math.round(parseFloat(el.dataset.baseHeight || parseFloat(el.style.height) / currentZoom));
