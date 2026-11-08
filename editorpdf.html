@@ -303,9 +303,9 @@
     <div id="sign-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-96 space-y-4 shadow-2xl">
             <h3 class="text-base font-bold text-white">Vytvoriť Podpis</h3>
-            <p class="text-xs text-slate-400">Nakreslite svoj podpis myšou alebo prstom do poľa nižšie:</p>
-            <div class="bg-white rounded-lg overflow-hidden border border-slate-700">
-                <canvas id="sign-canvas" width="340" height="150" class="cursor-crosshair w-full"></canvas>
+            <p class="text-xs text-slate-400">Podpíšte sa myšou alebo prstom priamo v poli:</p>
+            <div class="bg-white rounded-lg overflow-hidden border border-slate-700 touch-none">
+                <canvas id="sign-canvas" width="340" height="150" class="cursor-crosshair w-full block"></canvas>
             </div>
             <div class="flex justify-between items-center">
                 <button id="sign-clear" class="text-xs text-red-400 hover:text-red-300 underline">Vymazať plátno</button>
@@ -595,7 +595,7 @@
             return el;
         }
 
-        /* Podpisovanie - logika modálneho okna a kreslenia */
+        /* Univerzálne podpisovanie pre PC aj mobily/tablety (Pointer Events) */
         const signModal = document.getElementById('sign-modal');
         const signCanvas = document.getElementById('sign-canvas');
         const signCtx = signCanvas.getContext('2d');
@@ -613,17 +613,41 @@
         document.getElementById('sign-cancel').addEventListener('click', () => signModal.classList.add('hidden'));
         document.getElementById('sign-clear').addEventListener('click', () => signCtx.clearRect(0, 0, signCanvas.width, signCanvas.height));
 
-        signCanvas.addEventListener('mousedown', (e) => {
+        function getSignPos(e, canvasEl) {
+            const rect = canvasEl.getBoundingClientRect();
+            const scaleX = canvasEl.width / rect.width;
+            const scaleY = canvasEl.height / rect.height;
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        signCanvas.addEventListener('pointerdown', (e) => {
             isDrawing = true;
+            signCanvas.setPointerCapture(e.pointerId);
+            const pos = getSignPos(e, signCanvas);
             signCtx.beginPath();
-            signCtx.moveTo(e.offsetX, e.offsetY);
+            signCtx.moveTo(pos.x, pos.y);
+            e.preventDefault();
         });
-        signCanvas.addEventListener('mousemove', (e) => {
+
+        signCanvas.addEventListener('pointermove', (e) => {
             if (!isDrawing) return;
-            signCtx.lineTo(e.offsetX, e.offsetY);
+            const pos = getSignPos(e, signCanvas);
+            signCtx.lineTo(pos.x, pos.y);
             signCtx.stroke();
+            e.preventDefault();
         });
-        window.addEventListener('mouseup', () => isDrawing = false);
+
+        const stopSign = (e) => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            try { signCanvas.releasePointerCapture(e.pointerId); } catch(err) {}
+        };
+
+        signCanvas.addEventListener('pointerup', stopSign);
+        signCanvas.addEventListener('pointercancel', stopSign);
 
         document.getElementById('sign-insert').addEventListener('click', () => {
             const dataURL = signCanvas.toDataURL('image/png');
@@ -672,7 +696,6 @@
                 cell.addEventListener('input', () => saveAnnotations());
             });
 
-            // Uchopenie tabuľky iba za hornú lištu
             const handle = el.querySelector('.table-drag-handle');
             makeInteractive(el, handle);
 
@@ -682,7 +705,6 @@
             return el;
         }
 
-        // Vylepšený mechanizmus ťahania – pre tabuľky sa ťahá za lištu, pre ostatné za celý element
         function makeInteractive(el, handleElement) {
             let isDragging = false;
             let startX, startY, initLeft, initTop;
