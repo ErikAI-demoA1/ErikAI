@@ -224,7 +224,6 @@
             <div class="space-y-3 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
                 <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Vlastnosti objektu</h2>
                 <div id="no-selection" class="text-xs text-slate-500 italic py-2">Kliknite na objekt pre úpravu.</div>
-                <!-- Inspector content je vždy viditeľný pre ovládanie šírok/výšok a mazanie/duplikovanie, textové polia sa prispôsobia -->
                 <div id="inspector-content" class="space-y-3 hidden">
                     <div id="text-prop-group">
                         <label class="text-xs text-slate-400 mb-1 block">Text:</label>
@@ -399,7 +398,10 @@
                 const reader = new FileReader();
                 reader.onload = function() {
                     const typedarray = new Uint8Array(this.result);
-                    try { localStorage.setItem('erikai_pdf_data', JSON.stringify(Array.from(typedarray))); } catch(err) {}
+                    try { 
+                        localStorage.setItem('erikai_pdf_data', JSON.stringify(Array.from(typedarray))); 
+                        localStorage.removeItem('erikai_annotations');
+                    } catch(err) {}
 
                     pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
                         pdfDoc = pdf;
@@ -445,7 +447,7 @@
         });
 
         function renderPage(num) {
-            saveAnnotations();
+            saveAnnotations(); // Najprv ulož aktuálnu stranu pred prekliknutím
             pdfDoc.getPage(num).then((page) => {
                 const scaledViewport = page.getViewport({ scale: 1.0 * currentZoom });
                 canvas.width = scaledViewport.width;
@@ -456,7 +458,7 @@
 
                 page.render({ canvasContext: ctx, viewport: scaledViewport }).promise.then(() => {
                     document.getElementById('page-num-display').textContent = `Strana: ${num} / ${pdfDoc.numPages}`;
-                    restoreAnnotations(num);
+                    restoreAnnotations(num); // Potom načítaj objekty pre novú stranu
                 });
             });
         }
@@ -535,7 +537,7 @@
             document.getElementById('elements-count').textContent = elements.length;
 
             if (elements.length === 0) {
-                listContainer.innerHTML = '<p class="text-slate-500 italic">Žiadne objekty.</p>';
+                listContainer.innerHTML = '<p class="text-slate-500 italic">Žiadne objekty na tejto strane.</p>';
                 return;
             }
 
@@ -1076,12 +1078,12 @@
                 });
             }
 
-            wrapper.classList.remove('exporting-pdf');
-            finalPdf.save(filename);
-            
-            currentZoom = oldZoom;
-            renderPage(pageNum);
-        });
+    wrapper.classList.remove('exporting-pdf');
+    finalPdf.save(filename);
+    
+    currentZoom = oldZoom;
+    renderPage(pageNum);
+});
 
         function rgbToHex(rgb) {
             if (/^#/.test(rgb)) return rgb;
