@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>ErikAI Pro 3D CAD — Ultimate Assembly Edition</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+:root{
+  --bg-color: #121216;
+  --panel-bg: #1e222d;
+  --border-color: #2e364f;
+  --accent-green: #10b981;
+  --accent-blue: #3b82f6;
+  --text-main: #ffffff;
+  --text-muted: #94a3b8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-color);
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  touch-action: none;
+}
+header{
+  padding: 8px 10px;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border-color);
+  display:flex;
+  gap:6px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content: space-between;
+  z-index: 10;
+}
+.panel{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+
+#canvasContainer {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: #0b0d13;
+  touch-action: none;
+}
+
+button, label.file-btn, select.format-select{
+  padding:8px 12px;
+  border:none;
+  border-radius:8px;
+  background: var(--accent-green);
+  color:#000;
+  font-weight: bold;
+  cursor:pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+button:hover, label.file-btn:hover, select.format-select:hover{filter: brightness(1.1); transform: translateY(-1px);}
+button.ghost{background: var(--panel-bg);border:1px solid var(--border-color);color:var(--text-main);}
+button.active{background: var(--accent-blue); color:white;}
+button.danger{background: #dc2626; color:white;}
+button.warning{background: #f59e0b; color:black;}
+
+select.format-select {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-family: inherit;
+  outline: none;
+}
+
+label.file-btn {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+input[type="file"] { display: none; }
+
+#commandLineContainer{
+  background: #090b10;
+  border-top: 1px solid var(--border-color);
+  padding: 6px 12px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#commandHistory{
+  height: 30px;
+  overflow-y: auto;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#commandInputRow{display: flex; align-items: center; gap: 6px;}
+#commandPrompt{color: var(--accent-green); font-weight: bold;}
+#commandInput{
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.info{padding:4px 12px;background: var(--panel-bg);font-size:0.8rem;color:var(--text-muted);border-top:1px solid var(--border-color);}
+
+#dimensionsPanel{
+  position:fixed;
+  top:60px;
+  right:15px;
+  background:var(--panel-bg);
+  border:1px solid var(--border-color);
+  padding:10px;
+  border-radius:12px;
+  max-height:78vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display:none;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+  width: 460px;
+  max-width: 95vw;
+  z-index: 1000;
+}
+.panel-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  cursor: grab;
+  user-select: none;
+  background: rgba(255,255,255,0.03);
+  padding: 8px;
+  border-radius: 6px;
+}
+.panel-header:active{ cursor: grabbing; }
+#dimensionsPanel h3{margin:0;color:var(--accent-green);font-size:0.9rem;}
+.close-btn{
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0 4px;
+  box-shadow: none;
+}
+
+.shape-card{
+  background: #121216;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.shape-card.active{
+  border-color: var(--accent-blue);
+  background: #1a233a;
+}
+.shape-title-row{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.shape-actions{ display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.input-row{ display: flex; gap: 4px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+.input-row label{ font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; }
+.input-row input, .input-row select{
+  width: 55px;
+  padding: 3px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: #090b10;
+  color: white;
+  font-size: 0.8rem;
+}
+.input-row input[type="color"]{ width: 26px; height: 24px; padding: 0; border: none; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="panel">
+    <button id="boxBtn" class="active" onclick="setTool('box')">🧊 Kváder</button>
+    <button id="cylinderBtn" class="ghost" onclick="setTool('cylinder')">🧪 Valec</button>
+    <button id="sphereBtn" class="ghost" onclick="setTool('sphere')">🔮 Guľa</button>
+    <button id="selectBtn" class="ghost" onclick="setTool('select')">👆 Vybrať / Posun</button>
+    
+    <button class="ghost" onclick="resetCamera()" title="Reset Pohľadu">🎥 Reset Kamera</button>
+    <button id="undoBtn" class="ghost" onclick="undo()">↩️</button>
+    <button id="redoBtn" class="ghost" onclick="redo()">↪️</button>
+    <button id="editDimsBtn" class="ghost">📋 3D Dielce & Kóty</button>
+  </div>
+  <div class="panel">
+    <button id="exportJSON" class="ghost" onclick="exportJSON()">💾 Uložiť 3D</button>
+    <label for="fileInput" class="file-btn">📂 Otvoriť 3D</label>
+    <input type="file" id="fileInput" accept=".json" onchange="importJSON(event)">
+    <button class="ghost" onclick="importFromText()" style="background:#3b82f6; color:white;">📋 Vložiť text</button>
+    <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Zmazať všetko</button>
+  </div>
+</header>
+
+<div id="canvasContainer"></div>
+
+<div class="info" id="info">X: 0.00, Y: 0.00, Z: 0.00 | Nástroj: KVÁDER (Kliknite na podlahu pre vloženie)</div>
+
+<div id="commandLineContainer">
+  <div id="commandHistory"><div>ErikAI 3D CAD pripravený na parametrické 3D modelovanie...</div></div>
+  <div id="commandInputRow">
+    <span id="commandPrompt">&gt;</span>
+    <input type="text" id="commandInput" placeholder="Príkaz (box, cylinder, sphere, select, undo, clear)..." autocomplete="off">
+  </div>
+</div>
+
+<div id="dimensionsPanel">
+  <div class="panel-header" id="panelHeader">
+    <h3>Zoznam 3D Dielov & Parametre</h3>
+    <button class="close-btn" onclick="closeDimensionsPanel()">✕</button>
+  </div>
+  <div id="dimsContent">Žiadne 3D tvary</div>
+</div>
+
+<script>
+let scene, camera, renderer, controls;
+let raycaster, mouse;
+let floorPlane;
+
+let shapes = [], undoStack = [], redoStack = [];
+let meshesMap = new Map();
+let selectedShapeIndex = null;
+let tool = 'box';
+let editMode = false;
+
+const container = document.getElementById('canvasContainer');
+const info = document.getElementById('info');
+const dimsPanel = document.getElementById('dimensionsPanel');
+const panelHeader = document.getElementById('panelHeader');
+const dimsContent = document.getElementById('dimsContent');
+const editDimsBtn = document.getElementById('editDimsBtn');
+const commandHistory = document.getElementById('commandHistory');
+const commandInput = document.getElementById('commandInput');
+
+// Dragging panelu
+let isDraggingPanel = false, panelDragOffset = {x: 0, y: 0};
+function startPanelDrag(clientX, clientY){
+  isDraggingPanel = true;
+  const rect = dimsPanel.getBoundingClientRect();
+  panelDragOffset.x = clientX - rect.left; panelDragOffset.y = clientY - rect.top;
+}
+function movePanelDrag(clientX, clientY){
+  if(!isDraggingPanel) return;
+  dimsPanel.style.left = (clientX - panelDragOffset.x) + 'px';
+  dimsPanel.style.top = (clientY - panelDragOffset.y) + 'px';
+  dimsPanel.style.right = 'auto';
+}
+panelHeader.onmousedown = (e) => { if(e.target.tagName !== 'BUTTON'){ startPanelDrag(e.clientX, e.clientY); e.preventDefault(); } };
+window.onmousemove = (e) => movePanelDrag(e.clientX, e.clientY);
+window.onmouseup = () => { isDraggingPanel = false; };
+
+function logCommand(text){
+  const div = document.createElement('div');
+  div.textContent = `> ${text}`;
+  commandHistory.appendChild(div);
+  commandHistory.scrollTop = commandHistory.scrollHeight;
+}
+
+function init3D() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b0d13);
+
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+  camera.position.set(10, 12, 16);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  container.appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+  scene.add(ambientLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(15, 25, 20);
+  scene.add(dirLight);
+
+  const gridHelper = new THREE.GridHelper(30, 30, 0x10b981, 0x2e364f);
+  scene.add(gridHelper);
+
+  const planeGeo = new THREE.PlaneGeometry(100, 100);
+  planeGeo.rotateX(-Math.PI / 2);
+  floorPlane = new THREE.Mesh(planeGeo, new THREE.MeshBasicMaterial({ visible: false }));
+  scene.add(floorPlane);
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  container.addEventListener('pointerdown', onPointerDown);
+  container.addEventListener('pointermove', onPointerMove);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+
+  loadFromLocalStorage();
+  animate();
+}
+
+function setTool(t){
+  tool = t;
+  document.querySelectorAll('header button').forEach(b => {
+    if(b.id && b.id.endsWith('Btn')) b.classList.replace('active', 'ghost');
+  });
+  const activeBtn = document.getElementById(t + 'Btn');
+  if(activeBtn) activeBtn.classList.replace('ghost', 'active');
+  logCommand(`Nástroj: ${t.toUpperCase()}`);
+}
+
+function pushState(){
+  undoStack.push(JSON.parse(JSON.stringify(shapes)));
+  redoStack = [];
+  saveToLocalStorage();
+}
+function undo(){
+  if(undoStack.length){
+    redoStack.push(JSON.parse(JSON.stringify(shapes)));
+    shapes = undoStack.pop();
+    rebuild3DScene();
+    saveToLocalStorage();
+  }
+}
+function redo(){
+  if(redoStack.length){
+    undoStack.push(JSON.parse(JSON.stringify(shapes)));
+    shapes = redoStack.pop();
+    rebuild3DScene();
+    saveToLocalStorage();
+  }
+}
+function clearAll(){
+  pushState();
+  shapes = [];
+  selectedShapeIndex = null;
+  rebuild3DScene();
+  saveToLocalStorage();
+}
+
+function saveToLocalStorage(){
+  localStorage.setItem('erikai_3d_cad_autosave', JSON.stringify(shapes));
+}
+function loadFromLocalStorage(){
+  const saved = localStorage.getItem('erikai_3d_cad_autosave');
+  if(saved){
+    try {
+      shapes = JSON.parse(saved);
+      rebuild3DScene();
+      logCommand("3D Projekt úspešne obnovený z pamäte.");
+    } catch(e){}
+  }
+}
+
+function rebuild3DScene(){
+  meshesMap.forEach(mesh => scene.remove(mesh));
+  meshesMap.clear();
+
+  shapes.forEach((s, idx) => {
+    let geo;
+    if(s.type === 'box') geo = new THREE.BoxGeometry(s.w, s.h, s.d);
+    else if(s.type === 'cylinder') geo = new THREE.CylinderGeometry(s.r, s.r, s.h, 32);
+    else if(s.type === 'sphere') geo = new THREE.SphereGeometry(s.r, 32, 32);
+
+    const isSel = idx === selectedShapeIndex;
+    const mat = new THREE.MeshStandardMaterial({
+      color: isSel ? 0x3b82f6 : (s.color || 0x10b981),
+      roughness: 0.3,
+      metalness: 0.1
+    });
+
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(s.x, s.y, s.z);
+    mesh.userData = { index: idx };
+    scene.add(mesh);
+    meshesMap.set(idx, mesh);
+  });
+
+  if(editMode) updateDimensionsPanel();
+}
+
+function onPointerDown(e){
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  if(tool === 'select'){
+    const interactiveMeshes = Array.from(meshesMap.values());
+    const intersects = raycaster.intersectObjects(interactiveMeshes);
+    if(intersects.length > 0){
+      selectedShapeIndex = intersects[0].object.userData.index;
+      logCommand(`Označený 3D diel #${selectedShapeIndex + 1}`);
+    } else {
+      selectedShapeIndex = null;
+    }
+    rebuild3DScene();
+    return;
+  }
+
+  const intersects = raycaster.intersectObject(floorPlane);
+  if(intersects.length > 0){
+    const p = intersects[0].point;
+    const snapX = Math.round(p.x * 2) / 2;
+    const snapZ = Math.round(p.z * 2) / 2;
+
+    pushState();
+    let shape = null;
+    if(tool === 'box'){
+      shape = { type: 'box', x: snapX, y: 1, z: snapZ, w: 2, h: 2, d: 2, color: '#10b981' };
+    } else if(tool === 'cylinder'){
+      shape = { type: 'cylinder', x: snapX, y: 1.5, z: snapZ, r: 1, h: 3, color: '#10b981' };
+    } else if(tool === 'sphere'){
+      shape = { type: 'sphere', x: snapX, y: 1, z: snapZ, r: 1, color: '#10b981' };
+    }
+
+    if(shape){
+      shapes.push(shape);
+      selectedShapeIndex = shapes.length - 1;
+      saveToLocalStorage();
+      rebuild3DScene();
+      logCommand(`Pridaný 3D diel ${shape.type.toUpperCase()} na [${snapX}, ${snapZ}]`);
+    }
+  }
+}
+
+function onPointerMove(e){
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObject(floorPlane);
+  if(intersects.length > 0){
+    const p = intersects[0].point;
+    info.textContent = `X: ${p.x.toFixed(2)}, Y: 0.00, Z: ${p.z.toFixed(2)} | Nástroj: ${tool.toUpperCase()}`;
+  }
+}
+
+function resetCamera(){
+  camera.position.set(10, 12, 16);
+  controls.target.set(0, 0, 0);
+  controls.update();
+}
+
+function exportJSON(){
+  const jsonText = JSON.stringify(shapes, null, 2);
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonText);
+  const link = document.createElement('a');
+  link.download = 'erikai_3d_cad_projekt.json';
+  link.href = dataStr;
+  link.click();
+  logCommand("3D Projekt stiahnutý vo formáte JSON!");
+}
+
+function importJSON(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const data = JSON.parse(e.target.result);
+      if(Array.isArray(data)){
+        pushState();
+        shapes = data;
+        selectedShapeIndex = null;
+        rebuild3DScene();
+        saveToLocalStorage();
+        logCommand("3D Projekt úspešne načítaný zo súboru!");
+      }
+    } catch(err){ alert("Chyba súboru."); }
+  };
+  reader.readAsText(file);
+}
+
+function importFromText(){
+  const input = prompt("Sem vložte skopírovaný JSON text 3D projektu:");
+  if(!input) return;
+  try {
+    const data = JSON.parse(input);
+    if(Array.isArray(data)){
+      pushState();
+      shapes = data;
+      rebuild3DScene();
+      saveToLocalStorage();
+      logCommand("3D Projekt načítaný z textu!");
+    }
+  } catch(e){ alert("Neplatný JSON."); }
+}
+
+editDimsBtn.onclick = () => {
+  editMode = !editMode;
+  dimsPanel.style.display = editMode ? 'block' : 'none';
+  if(editMode) editDimsBtn.classList.replace('ghost', 'active');
+  else editDimsBtn.classList.replace('active', 'ghost');
+  updateDimensionsPanel();
+};
+
+function closeDimensionsPanel(){
+  editMode = false;
+  dimsPanel.style.display = 'none';
+  editDimsBtn.classList.replace('active', 'ghost');
+}
+
+function updateDimensionsPanel(){
+  if(document.activeElement && document.activeElement.tagName === 'INPUT' && dimsPanel.contains(document.activeElement)) return;
+  dimsContent.innerHTML = '';
+  if(shapes.length === 0){ dimsContent.innerHTML = 'Žiadne 3D tvary v zostave'; return; }
+
+  shapes.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
+    
+    card.onclick = (e) => {
+      if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON'){
+        selectedShapeIndex = i;
+        rebuild3DScene();
+      }
+    };
+
+    const title = document.createElement('div');
+    title.className = 'shape-title-row';
+    title.innerHTML = `<strong>#${i+1} (${s.type.toUpperCase()})</strong>`;
+
+    const actions = document.createElement('div');
+    actions.className = 'shape-actions';
+
+    const colInp = document.createElement('input');
+    colInp.type = 'color'; colInp.value = s.color || '#10b981';
+    colInp.onchange = (e) => { pushState(); s.color = e.target.value; rebuild3DScene(); saveToLocalStorage(); };
+    actions.appendChild(colInp);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'danger'; delBtn.textContent = '🗑️'; delBtn.style.padding = '2px 6px';
+    delBtn.onclick = () => { pushState(); shapes.splice(i, 1); selectedShapeIndex = null; rebuild3DScene(); saveToLocalStorage(); };
+    actions.appendChild(delBtn);
+
+    title.appendChild(actions);
+    card.appendChild(title);
+
+    // Súradnice Pozície 3D
+    const posRow = document.createElement('div');
+    posRow.className = 'input-row';
+    posRow.innerHTML = `<label>X:</label><input type="number" step="0.5" value="${s.x}">` +
+                       `<label>Y:</label><input type="number" step="0.5" value="${s.y}">` +
+                       `<label>Z:</label><input type="number" step="0.5" value="${s.z}">`;
+    const pInps = posRow.querySelectorAll('input');
+    pInps[0].onchange = (e) => { pushState(); s.x = parseFloat(e.target.value)||0; rebuild3DScene(); saveToLocalStorage(); };
+    pInps[1].onchange = (e) => { pushState(); s.y = parseFloat(e.target.value)||0; rebuild3DScene(); saveToLocalStorage(); };
+    pInps[2].onchange = (e) => { pushState(); s.z = parseFloat(e.target.value)||0; rebuild3DScene(); saveToLocalStorage(); };
+    card.appendChild(posRow);
+
+    // Parametre 3D rozmerov
+    const dimRow = document.createElement('div');
+    dimRow.className = 'input-row';
+    if(s.type === 'box'){
+      dimRow.innerHTML = `<label>Š:</label><input type="number" value="${s.w}">` +
+                         `<label>V:</label><input type="number" value="${s.h}">` +
+                         `<label>H:</label><input type="number" value="${s.d}">`;
+      const dInps = dimRow.querySelectorAll('input');
+      dInps[0].onchange = (e) => { pushState(); s.w = parseFloat(e.target.value)||1; rebuild3DScene(); saveToLocalStorage(); };
+      dInps[1].onchange = (e) => { pushState(); s.h = parseFloat(e.target.value)||1; rebuild3DScene(); saveToLocalStorage(); };
+      dInps[2].onchange = (e) => { pushState(); s.d = parseFloat(e.target.value)||1; rebuild3DScene(); saveToLocalStorage(); };
+    } else if(s.type === 'cylinder'){
+      dimRow.innerHTML = `<label>Polomer:</label><input type="number" value="${s.r}">` +
+                         `<label>Výška:</label><input type="number" value="${s.h}">`;
+      const dInps = dimRow.querySelectorAll('input');
+      dInps[0].onchange = (e) => { pushState(); s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); saveToLocalStorage(); };
+      dInps[1].onchange = (e) => { pushState(); s.h = parseFloat(e.target.value)||1; rebuild3DScene(); saveToLocalStorage(); };
+    } else if(s.type === 'sphere'){
+      dimRow.innerHTML = `<label>Polomer:</label><input type="number" value="${s.r}">`;
+      const dInps = dimRow.querySelectorAll('input');
+      dInps[0].onchange = (e) => { pushState(); s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); saveToLocalStorage(); };
+    }
+    card.appendChild(dimRow);
+    dimsContent.appendChild(card);
+  });
+}
+
+commandInput.onkeydown = (e) => {
+  if(e.key === 'Enter'){
+    const val = commandInput.value.trim().toLowerCase();
+    logCommand(val);
+    commandInput.value = '';
+    if(val === 'box' || val === 'b') setTool('box');
+    else if(val === 'cylinder' || val === 'c') setTool('cylinder');
+    else if(val === 'sphere' || val === 's') setTool('sphere');
+    else if(val === 'select') setTool('select');
+    else if(val === 'undo') undo();
+    else if(val === 'redo') redo();
+    else if(val === 'clear') clearAll();
+    else logCommand("Neznámy 3D príkaz");
+  }
+};
+
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+window.onload = init3D;
+</script>
+
+<script>
+  // ==========================================
+  // ERIKAI OS — UNIVERZÁLNY BEZPEČNOSTNÝ STRÁŽCA
+  // ==========================================
+  const povolenyHostitel = "erikai-demoa1.github.io";
+  const jeOvereny = sessionStorage.getItem('erikai_auth_token') === 'VERIFIED_OK';
+  let pristupOk = jeOvereny || document.referrer.includes(povolenyHostitel);
+
+  if (!pristupOk && window.location.hostname !== "127.0.0.1" && window.location.hostname !== "localhost") {
+    alert("🚨 Haha, chcel si sa sem dostať zadarmo bez overenia?! Tak takto teda nie! Šup-šup naspäť na začiatok! 🏃‍♂️💨");
+    window.location.href = "https://erikai-demoa1.github.io/ErikAI/";
+  }
+</script>
+
+</body>
+</html>
