@@ -71,6 +71,8 @@ header{
 #sketchContainer {
   background: #0f172a;
   cursor: grab;
+  position: relative;
+  overflow: hidden;
 }
 #sketchContainer:active { cursor: grabbing; }
 
@@ -231,16 +233,18 @@ select.format-select {
 
     <select id="csgOperationSelector" class="format-select" onchange="changeCsgOperation()" style="border-color: var(--accent-blue);">
       <option value="add">➕ Pridať teleso</option>
-      <option value="subtract">➖ Odobrať materiál (Dierovanie)</option>
+      <option value="subtract">➖ Odobrať materiál</option>
     </select>
 
+    <button id="toolModeBtn" class="ghost" onclick="toggleToolMode()" style="background:var(--accent-blue); color:white;">✋ Režim: Posun / Kóta</button>
+
     <select id="paperFormat" class="format-select" onchange="changePaperFormat()">
-      <option value="A4">📄 Formát A4 (1169 x 827)</option>
-      <option value="A3" selected>📜 Formát A3 (1654 x 1169)</option>
+      <option value="A4">📄 A4 (1169 x 827)</option>
+      <option value="A3" selected>📜 A3 (1654 x 1169)</option>
     </select>
 
     <button class="ghost" onclick="resetSketchPanZoom()">🔍 Reset Zoom</button>
-    <button id="modeToggleBtn" class="ghost" onclick="toggleMode()" style="background:var(--accent-purple); color:white;">🚀 Generovať 3D Model</button>
+    <button id="modeToggleBtn" class="ghost" onclick="toggleMode()" style="background:var(--accent-purple); color:white;">🚀 Generovať 3D</button>
     <button class="ghost" onclick="toggleDimensionsPanel()">📋 Správca Prvkov & Kót</button>
   </div>
   <div class="panel">
@@ -256,12 +260,12 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">X: 0 mm, Y: 0 mm | 2D Výkres (Pohyb: ťahanie myšou, Zoom: koliesko)</span>
+  <span id="infoCoords">Režim: Pridávanie tvarov | Ťahanie prstom/myšou = posun plátna</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI ISO 2D-to-3D Studio pripravené. Všetky rozmery v mm.</div></div>
+  <div id="commandHistory"><div>ErikAI Studio pripravené. Voľný pohyb a interaktívne kótovanie zapnuté.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
     <input type="text" id="commandInput" placeholder="Príkaz (box, pipe, clear)..." autocomplete="off">
@@ -270,7 +274,7 @@ select.format-select {
 
 <div id="dimensionsPanel">
   <div class="panel-header" id="panelHeader">
-    <h3>Správca 2D Dielov & 3D Parametrov (mm / °)</h3>
+    <h3>Správca 2D Dielov, Kotvenia & Rotácií</h3>
     <button class="close-btn" onclick="toggleDimensionsPanel()">✕</button>
   </div>
   <div id="dimsContent">Žiadne diely v skici</div>
@@ -283,9 +287,11 @@ let shapes = [];
 let currentShapeType = 'box', currentCsgOp = 'add';
 let selectedShapeIndex = null;
 let editMode = false, is3DMode = false;
+let interactionMode = 'create'; // 'create' alebo 'select'
 
-// Pan & Zoom pre 2D výkres
-let bpScale = 1.0, bpPanX = 50, bpPanY = 50, isBpDragging = false, bpStartMouse = {x:0, y:0};
+// Voľný Pan & Zoom pre 2D výkres (podpora pre myš aj dotyk)
+let bpScale = 1.0, bpPanX = 100, bpPanY = 100;
+let isDragging = false, startMouse = {x:0, y:0};
 
 let scene, camera, renderer, controls;
 
@@ -333,6 +339,22 @@ function changeCsgOperation(){
   logCommand(`Operácia: ${currentCsgOp === 'add' ? 'Pridať teleso' : 'Odobrať materiál'}`);
 }
 
+function toggleToolMode(){
+  if(interactionMode === 'create'){
+    interactionMode = 'select';
+    document.getElementById('toolModeBtn').textContent = '🎯 Režim: Výber / Kótovanie';
+    document.getElementById('toolModeBtn').style.background = '#10b981';
+    infoCoords.textContent = "Režim: Výber a kliknutie na hrany / diely";
+    logCommand("Prepnuté do režimu výberu a kótovania.");
+  } else {
+    interactionMode = 'create';
+    document.getElementById('toolModeBtn').textContent = '✋ Režim: Posun / Kóta';
+    document.getElementById('toolModeBtn').style.background = '#3b82f6';
+    infoCoords.textContent = "Režim: Pridávanie tvarov | Ťahanie = posun plátna";
+    logCommand("Prepnuté do režimu pridávania a posunu plátna.");
+  }
+}
+
 function changePaperFormat(){
   const fmt = document.getElementById('paperFormat').value;
   if(fmt === 'A4'){ canvas.width = 1169; canvas.height = 827; }
@@ -342,22 +364,50 @@ function changePaperFormat(){
   logCommand(`Formát výkresu zmenený na ${fmt}`);
 }
 
+// Univerzálne ovládanie plátna (Myš aj Dotyk pre voľný pohyb)
 function setupSketchInteraction(){
+  const startDrag = (clientX, clientY) => {
+    isDragging = true;
+    startMouse = { x: clientX - bpPanX, y: clientY - bpPanY };
+  };
+
+  const moveDrag = (clientX, clientY) => {
+    if(!isDragging) return;
+    bpPanX = clientX - startMouse.x;
+    bpPanY = clientY - startMouse.y;
+    applyCanvasTransform();
+  };
+
+  const endDrag = () => { isDragging = false; };
+
   container.addEventListener('mousedown', (e) => {
     if(e.target.closest('#dimensionsPanel') || e.target.closest('header')) return;
-    isBpDragging = true;
-    bpStartMouse = { x: e.clientX - bpPanX, y: e.clientY - bpPanY };
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if(isBpDragging){
-      bpPanX = e.clientX - bpStartMouse.x;
-      bpPanY = e.clientY - bpStartMouse.y;
-      applyCanvasTransform();
+    if(interactionMode === 'create'){
+      startDrag(e.clientX, e.clientY);
     }
   });
 
-  window.addEventListener('mouseup', () => { isBpDragging = false; });
+  window.addEventListener('mousemove', (e) => {
+    if(isDragging) moveDrag(e.clientX, e.clientY);
+  });
+
+  window.addEventListener('mouseup', endDrag);
+
+  // Podpora pre mobily (dotyky)
+  container.addEventListener('touchstart', (e) => {
+    if(e.target.closest('#dimensionsPanel') || e.target.closest('header')) return;
+    if(e.touches.length === 1 && interactionMode === 'create'){
+      startDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, {passive: true});
+
+  window.addEventListener('touchmove', (e) => {
+    if(isDragging && e.touches.length === 1){
+      moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, {passive: true});
+
+  window.addEventListener('touchend', endDrag);
 
   container.addEventListener('wheel', (e) => {
     e.preventDefault();
@@ -372,7 +422,7 @@ function applyCanvasTransform(){
 }
 
 function resetSketchPanZoom(){
-  bpScale = 1.0; bpPanX = 50; bpPanY = 50;
+  bpScale = 1.0; bpPanX = 100; bpPanY = 100;
   applyCanvasTransform();
 }
 
@@ -392,27 +442,25 @@ function toggleMode(){
   } else {
     container3D.style.display = 'none';
     container.style.display = 'block';
-    btn.textContent = '🚀 Generovať 3D Model';
+    btn.textContent = '🚀 Generovať 3D';
     btn.style.background = '#8b5cf6';
     btn.style.color = '#fff';
-    infoCoords.textContent = "2D Výkres (Pohyb: ťahanie myšou, Zoom: koliesko)";
+    infoCoords.textContent = "2D Výkres (Voľný pohyb aktívny)";
     logCommand("Návrat do 2D výkresu.");
   }
 }
 
 // ----------------------------------------------------
-// 📐 2D VÝKRES SO 3 POHĽADMI (NÁRYS, PÔDORYS, BOKORYS) + RAZÍTKO
+// 📐 2D VÝKRES SO 3 POHĽADMI A INTERAKTÍVNYM KÓTOVANÍM
 // ----------------------------------------------------
 function draw2DSketch(){
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Hlavný obdĺžnik výkresu
   ctx.strokeStyle = '#0f172a';
   ctx.lineWidth = 3;
   ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
 
-  // Rozvrhnutie 3 pohľadov
   const w = canvas.width, h = canvas.height;
   const views = [
     { name: 'front', title: 'NÁRYS (X-Z)', offsetX: w * 0.3, offsetY: h * 0.35 },
@@ -424,9 +472,8 @@ function draw2DSketch(){
   ctx.font = 'bold 12px Segoe UI, sans-serif';
   views.forEach(v => ctx.fillText(v.title, v.offsetX - 70, v.offsetY - 170));
 
-  // Vykreslenie geometrie v 3 pohľadoch
   shapes.forEach((s, i) => {
-    views.forEach(v => render2DProjection(ctx, s, v.offsetX, v.offsetY, v.name, i + 1));
+    views.forEach(v => render2DProjection(ctx, s, v.offsetX, v.offsetY, v.name, i + 1, i === selectedShapeIndex));
   });
 
   renderTitleBlock(ctx, canvas.width - 480, canvas.height - 185);
@@ -435,13 +482,12 @@ function draw2DSketch(){
   infoCount.textContent = `Počet dielov: ${shapes.length}`;
 }
 
-function render2DProjection(ctx, s, offsetX, offsetY, viewType, index){
+function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelected){
   ctx.save();
   let isSub = s.op === 'subtract';
-  ctx.strokeStyle = isSub ? '#dc2626' : '#0f172a';
-  ctx.lineWidth = 2.0;
+  ctx.strokeStyle = isSelected ? '#3b82f6' : (isSub ? '#dc2626' : '#0f172a');
+  ctx.lineWidth = isSelected ? 3.5 : 2.0;
 
-  // Pozícia na plátne + posun podľa X, Y, Z
   ctx.translate(
     offsetX + (s.x || 0) * 0.5, 
     offsetY + (viewType === 'top' ? -(s.y || 0) * 0.5 : -(s.z || 0) * 0.5)
@@ -456,7 +502,13 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index){
   if(s.type === 'box' || s.type === 'filletBox' || s.type === 'chamferBox'){
     let dimY = viewType === 'top' ? h : d;
     ctx.strokeRect(-w/2, -dimY, w, dimY);
-    if(viewType === 'section' || isSub) drawHatching(ctx, -w/2, -dimY, w, dimY);
+    if(isSub) drawHatching(ctx, -w/2, -dimY, w, dimY);
+    
+    // Zobrazenie kót na kliknutom prvku
+    if(isSelected && viewType === 'front'){
+      drawDimensionLine(ctx, -w/2, -dimY - 15, w/2, -dimY - 15, `W: ${s.w} mm`);
+      drawDimensionLine(ctx, w/2 + 15, -dimY, w/2 + 15, 0, `V: ${s.d || s.h} mm`);
+    }
   } else if(s.type === 'cylinder' || s.type === 'threadedRod' || s.type === 'cone' || s.type === 'pipe' || s.type === 'sphere'){
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
@@ -464,11 +516,15 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index){
         let innerR = Math.max(2, r - (s.wall||10)*0.6);
         ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI * 2); ctx.stroke();
       }
+      if(isSelected) drawDimensionLine(ctx, 0, 0, r, 0, `R: ${s.r} mm`);
     } else {
       let topR = s.type === 'cone' ? 0 : r;
       ctx.beginPath();
       ctx.moveTo(-r, 0); ctx.lineTo(-topR, -d); ctx.lineTo(topR, -d); ctx.lineTo(r, 0); ctx.closePath();
       ctx.stroke();
+      if(isSelected && viewType === 'front') {
+        drawDimensionLine(ctx, r + 15, -d, r + 15, 0, `V: ${s.d} mm`);
+      }
     }
     if(isSub) drawHatching(ctx, -r, -d, r*2, d);
   } else if(s.type === 'elbow'){
@@ -478,19 +534,31 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index){
     ctx.lineTo(bendR + r, 0);
     ctx.arc(0, 0, bendR - r, Math.PI * 1.5, Math.PI, true);
     ctx.closePath(); ctx.stroke();
+    if(isSelected) drawDimensionLine(ctx, 0, -bendR-r-15, bendR, -bendR-r-15, `R_koleno: ${s.r} mm`);
   } else if(s.type === 'wedge'){
     ctx.beginPath(); ctx.moveTo(-w/2, 0); ctx.lineTo(w/2, 0); ctx.lineTo(w/2, -d); ctx.closePath(); ctx.stroke();
   } else if(s.type === 'torus'){
     ctx.beginPath(); ctx.ellipse(0, -r, r, r*0.4, 0, 0, Math.PI * 2); ctx.stroke();
   }
 
-  // Popisok prvku
   if(viewType === 'front'){
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = isSelected ? '#3b82f6' : '#0f172a';
     ctx.font = 'bold 10px monospace';
-    ctx.fillText(`#${index} ${s.type.toUpperCase()} (${s.op})`, -w/2, -d - 6);
+    ctx.fillText(`#${index} ${s.type.toUpperCase()}`, -w/2, -d - 6);
   }
 
+  ctx.restore();
+}
+
+function drawDimensionLine(ctx, x1, y1, x2, y2, text){
+  ctx.save();
+  ctx.strokeStyle = '#3b82f6';
+  ctx.fillStyle = '#3b82f6';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  ctx.font = '10px monospace';
+  ctx.fillText(text, (x1+x2)/2 + 4, (y1+y2)/2 - 4);
   ctx.restore();
 }
 
@@ -529,25 +597,43 @@ function renderTitleBlock(ctx, x, y){
   ctx.restore();
 }
 
-canvas.onmousedown = (e) => {
-  if(e.button !== 0) return;
+canvas.onclick = (e) => {
   const rect = canvas.getBoundingClientRect();
   const clickX = (e.clientX - rect.left) / bpScale;
   const clickY = (e.clientY - rect.top) / bpScale;
 
-  let newShape = {
-    type: currentShapeType, op: currentCsgOp,
-    x: Math.round(clickX - canvas.width/4), 
-    y: Math.round(canvas.height/2 - clickY), 
-    z: 0,
-    rx: 0, ry: 0, rz: 0,
-    w: 100, h: 100, d: 100, r: 50, wall: 10, fillet: 10, chamfer: 10, tube: 15
-  };
-
-  shapes.push(newShape);
-  selectedShapeIndex = shapes.length - 1;
-  draw2DSketch();
-  logCommand(`Pridaný diel: ${newShape.type.toUpperCase()}`);
+  if(interactionMode === 'select'){
+    // Detekcia kliknutia na tvar pre výber a kótovanie
+    let found = null;
+    shapes.forEach((s, i) => {
+      let wx = 1654 * 0.3 + (s.x || 0) * 0.5;
+      let wy = 1169 * 0.35 - (s.z || 0) * 0.5;
+      if(Math.hypot(clickX - wx, clickY - wy) < 60){
+        found = i;
+      }
+    });
+    selectedShapeIndex = found;
+    if(found !== null){
+      logCommand(`Označený prvok #${found + 1} (${shapes[found].type.toUpperCase()}) — kótovanie aktívne.`);
+    } else {
+      logCommand("Žiadny prvok nebol zvolený.");
+    }
+    draw2DSketch();
+  } else {
+    // Režim pridávania nového tvaru
+    let newShape = {
+      type: currentShapeType, op: currentCsgOp,
+      x: Math.round(clickX - canvas.width/4), 
+      y: Math.round(canvas.height/2 - clickY), 
+      z: 0,
+      rx: 0, ry: 0, rz: 0,
+      w: 100, h: 100, d: 100, r: 50, wall: 10, fillet: 10, chamfer: 10, tube: 15
+    };
+    shapes.push(newShape);
+    selectedShapeIndex = shapes.length - 1;
+    draw2DSketch();
+    logCommand(`Pridaný diel: ${newShape.type.toUpperCase()}`);
+  }
 };
 
 function clearAll(){
