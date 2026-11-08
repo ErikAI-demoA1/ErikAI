@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 3D CAD — Ultimate Assembly Edition</title>
+<title>ErikAI Pro 3D CAD — CSG & Multi-Shape Edition</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
@@ -13,6 +13,7 @@
   --border-color: #2e364f;
   --accent-green: #10b981;
   --accent-blue: #3b82f6;
+  --accent-red: #ef4444;
   --text-main: #ffffff;
   --text-muted: #94a3b8;
 }
@@ -198,11 +199,24 @@ input[type="file"] { display: none; }
 
 <header>
   <div class="panel">
-    <button id="boxBtn" class="active" onclick="setTool('box')">🧊 Kváder</button>
-    <button id="cylinderBtn" class="ghost" onclick="setTool('cylinder')">🧪 Valec</button>
-    <button id="sphereBtn" class="ghost" onclick="setTool('sphere')">🔮 Guľa</button>
+    <!-- Výber Tvaru cez drop-down menu pre prehľadnosť -->
+    <select id="shapeSelector" class="format-select" onchange="changeActiveShape()">
+      <option value="box">🧊 Kváder / Blok</option>
+      <option value="cylinder">🧪 Valec / Čap</option>
+      <option value="pipe">⭕ Rúra / Potrubie</option>
+      <option value="sphere">🔮 Guľa</option>
+      <option value="wedge">📐 Klin / Šikmá doska</option>
+      <option value="torus">🍩 Tórus / O-Krúžok</option>
+      <option value="cone">🔺 Kužeľ</option>
+    </select>
+
+    <!-- Prepínač operácie CSG (Pridať / Odobrať materiál) -->
+    <select id="csgOperationSelector" class="format-select" onchange="changeCsgOperation()" style="border-color: var(--accent-blue);">
+      <option value="add">➕ Pridať materiál (Add)</option>
+      <option value="subtract">➖ Odobrať materiál (Subtract/Diera)</option>
+    </select>
+
     <button id="selectBtn" class="ghost" onclick="setTool('select')">👆 Vybrať / Posun</button>
-    
     <button class="ghost" onclick="resetCamera()" title="Reset Pohľadu">🎥 Reset Kamera</button>
     <button id="undoBtn" class="ghost" onclick="undo()">↩️</button>
     <button id="redoBtn" class="ghost" onclick="redo()">↪️</button>
@@ -219,19 +233,19 @@ input[type="file"] { display: none; }
 
 <div id="canvasContainer"></div>
 
-<div class="info" id="info">X: 0.00, Y: 0.00, Z: 0.00 | Nástroj: KVÁDER (Kliknite na podlahu pre vloženie)</div>
+<div class="info" id="info">X: 0.00, Y: 0.00, Z: 0.00 | Nástroj: KVÁDER (Pridať materiál)</div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI 3D CAD pripravený na parametrické 3D modelovanie...</div></div>
+  <div id="commandHistory"><div>ErikAI 3D CAD CSG Edition pripravený...</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
-    <input type="text" id="commandInput" placeholder="Príkaz (box, cylinder, sphere, select, undo, clear)..." autocomplete="off">
+    <input type="text" id="commandInput" placeholder="Príkaz (box, cylinder, pipe, sphere, add, sub, select, undo)..." autocomplete="off">
   </div>
 </div>
 
 <div id="dimensionsPanel">
   <div class="panel-header" id="panelHeader">
-    <h3>Zoznam 3D Dielov & Parametre</h3>
+    <h3>Zoznam 3D Dielov, CSG & Parametre</h3>
     <button class="close-btn" onclick="closeDimensionsPanel()">✕</button>
   </div>
   <div id="dimsContent">Žiadne 3D tvary</div>
@@ -245,7 +259,10 @@ let floorPlane;
 let shapes = [], undoStack = [], redoStack = [];
 let meshesMap = new Map();
 let selectedShapeIndex = null;
-let tool = 'box';
+
+let currentShapeType = 'box';
+let currentCsgOp = 'add';
+let tool = 'create'; // 'create' alebo 'select'
 let editMode = false;
 
 const container = document.getElementById('canvasContainer');
@@ -257,7 +274,6 @@ const editDimsBtn = document.getElementById('editDimsBtn');
 const commandHistory = document.getElementById('commandHistory');
 const commandInput = document.getElementById('commandInput');
 
-// Dragging panelu
 let isDraggingPanel = false, panelDragOffset = {x: 0, y: 0};
 function startPanelDrag(clientX, clientY){
   isDraggingPanel = true;
@@ -327,13 +343,25 @@ function init3D() {
   animate();
 }
 
+function changeActiveShape(){
+  currentShapeType = document.getElementById('shapeSelector').value;
+  tool = 'create';
+  document.getElementById('selectBtn').classList.replace('active', 'ghost');
+  logCommand(`Vybraný tvar: ${currentShapeType.toUpperCase()}`);
+}
+
+function changeCsgOperation(){
+  currentCsgOp = document.getElementById('csgOperationSelector').value;
+  logCommand(`Režim CSG: ${currentCsgOp === 'add' ? 'PRIDAŤ MATERIÁL' : 'ODOBRAŤ MATERIÁL (DIERA)'}`);
+}
+
 function setTool(t){
   tool = t;
-  document.querySelectorAll('header button').forEach(b => {
-    if(b.id && b.id.endsWith('Btn')) b.classList.replace('active', 'ghost');
-  });
-  const activeBtn = document.getElementById(t + 'Btn');
-  if(activeBtn) activeBtn.classList.replace('ghost', 'active');
+  if(t === 'select'){
+    document.getElementById('selectBtn').classList.replace('ghost', 'active');
+  } else {
+    document.getElementById('selectBtn').classList.replace('active', 'ghost');
+  }
   logCommand(`Nástroj: ${t.toUpperCase()}`);
 }
 
@@ -380,26 +408,87 @@ function loadFromLocalStorage(){
   }
 }
 
+// Generovanie 3D Geometrií pre všetky priemyselné tvary
+function createGeometryForShape(s){
+  if(s.type === 'box') return new THREE.BoxGeometry(s.w, s.h, s.d);
+  if(s.type === 'cylinder') return new THREE.CylinderGeometry(s.r, s.r, s.h, 32);
+  if(s.type === 'sphere') return new THREE.SphereGeometry(s.r, 32, 32);
+  if(s.type === 'cone') return new THREE.CylinderGeometry(0, s.r, s.h, 32);
+  if(s.type === 'torus') return new THREE.TorusGeometry(s.r, s.tube || 0.3, 16, 100);
+  if(s.type === 'pipe') {
+    // Vytvorenie dutého valca / rúry pomocou špeciálneho profilu (ExtrudeGeometry)
+    const shape = new THREE.Shape();
+    shape.absarc(0, 0, s.r, 0, Math.PI * 2, false);
+    const holePath = new THREE.Path();
+    holePath.absarc(0, 0, Math.max(0.1, s.r - (s.wall || 0.3)), 0, Math.PI * 2, true);
+    shape.holes.push(holePath);
+    const extrudeSettings = { depth: s.h, bevelEnabled: false, curveSegments: 32 };
+    const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geo.rotateX(Math.PI / 2);
+    return geo;
+  }
+  if(s.type === 'wedge') {
+    // Klin / Šikmá doska ako prispôsobený hranol
+    const geo = new THREE.BufferGeometry();
+    const w = s.w/2, h = s.h/2, d = s.d/2;
+    const vertices = new Float32Array([
+      -w,-h,-d,  w,-h,-d,  w,-h, d, -w,-h, d, // spodná strana
+      -w, h,-d,  w, h,-d                     // vrchná hrana
+    ]);
+    const indices = [
+      0,2,1, 0,3,2, // spodok
+      0,1,5, 0,5,4, // zadok
+      1,2,5,        // pravý bok
+      2,3,4, 2,4,5, // šikmá predná strana
+      3,0,4         // ľavý bok
+    ];
+    geo.setIndex(indices);
+    geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geo.computeVertexNormals();
+    return geo;
+  }
+  return new THREE.BoxGeometry(1,1,1);
+}
+
 function rebuild3DScene(){
   meshesMap.forEach(mesh => scene.remove(mesh));
   meshesMap.clear();
 
   shapes.forEach((s, idx) => {
-    let geo;
-    if(s.type === 'box') geo = new THREE.BoxGeometry(s.w, s.h, s.d);
-    else if(s.type === 'cylinder') geo = new THREE.CylinderGeometry(s.r, s.r, s.h, 32);
-    else if(s.type === 'sphere') geo = new THREE.SphereGeometry(s.r, 32, 32);
-
+    const geo = createGeometryForShape(s);
     const isSel = idx === selectedShapeIndex;
-    const mat = new THREE.MeshStandardMaterial({
-      color: isSel ? 0x3b82f6 : (s.color || 0x10b981),
-      roughness: 0.3,
-      metalness: 0.1
-    });
+    const isSubtract = s.op === 'subtract';
+
+    let mat;
+    if(isSubtract){
+      // Vzhľad odčítaného materiálu (Diera): Polopriehľadná červená s obrysom
+      mat = new THREE.MeshStandardMaterial({
+        color: 0xef4444,
+        transparent: true,
+        opacity: 0.45,
+        wireframe: false
+      });
+    } else {
+      // Štandardný plný materiál
+      mat = new THREE.MeshStandardMaterial({
+        color: isSel ? 0x3b82f6 : (s.color || 0x10b981),
+        roughness: 0.3,
+        metalness: 0.1
+      });
+    }
 
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(s.x, s.y, s.z);
     mesh.userData = { index: idx };
+
+    // Ak ide o odčítanie materiálu, pridáme drôtený obrys pre lepšiu viditeľnosť
+    if(isSubtract){
+      const wireGeo = new THREE.WireframeGeometry(geo);
+      const wireMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
+      const wireframe = new THREE.LineSegments(wireGeo, wireMat);
+      mesh.add(wireframe);
+    }
+
     scene.add(mesh);
     meshesMap.set(idx, mesh);
   });
@@ -434,22 +523,19 @@ function onPointerDown(e){
     const snapZ = Math.round(p.z * 2) / 2;
 
     pushState();
-    let shape = null;
-    if(tool === 'box'){
-      shape = { type: 'box', x: snapX, y: 1, z: snapZ, w: 2, h: 2, d: 2, color: '#10b981' };
-    } else if(tool === 'cylinder'){
-      shape = { type: 'cylinder', x: snapX, y: 1.5, z: snapZ, r: 1, h: 3, color: '#10b981' };
-    } else if(tool === 'sphere'){
-      shape = { type: 'sphere', x: snapX, y: 1, z: snapZ, r: 1, color: '#10b981' };
-    }
+    let shape = {
+      type: currentShapeType,
+      op: currentCsgOp,
+      x: snapX, y: 1, z: snapZ,
+      w: 2, h: 2, d: 2, r: 1, wall: 0.3, tube: 0.3,
+      color: currentCsgOp === 'subtract' ? '#ef4444' : '#10b981'
+    };
 
-    if(shape){
-      shapes.push(shape);
-      selectedShapeIndex = shapes.length - 1;
-      saveToLocalStorage();
-      rebuild3DScene();
-      logCommand(`Pridaný 3D diel ${shape.type.toUpperCase()} na [${snapX}, ${snapZ}]`);
-    }
+    shapes.push(shape);
+    selectedShapeIndex = shapes.length - 1;
+    saveToLocalStorage();
+    rebuild3DScene();
+    logCommand(`Pridaný 3D diel ${shape.type.toUpperCase()} (${shape.op === 'add' ? '➕ Pridať' : '➖ Odobrať'}) na [${snapX}, ${snapZ}]`);
   }
 }
 
@@ -462,7 +548,7 @@ function onPointerMove(e){
   const intersects = raycaster.intersectObject(floorPlane);
   if(intersects.length > 0){
     const p = intersects[0].point;
-    info.textContent = `X: ${p.x.toFixed(2)}, Y: 0.00, Z: ${p.z.toFixed(2)} | Nástroj: ${tool.toUpperCase()}`;
+    info.textContent = `X: ${p.x.toFixed(2)}, Y: 0.00, Z: ${p.z.toFixed(2)} | Tvar: ${currentShapeType.toUpperCase()} | Operácia: ${currentCsgOp === 'add' ? '➕ PRIDAŤ' : '➖ ODOBRAŤ'}`;
   }
 }
 
@@ -476,10 +562,10 @@ function exportJSON(){
   const jsonText = JSON.stringify(shapes, null, 2);
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonText);
   const link = document.createElement('a');
-  link.download = 'erikai_3d_cad_projekt.json';
+  link.download = 'erikai_3d_csg_cad.json';
   link.href = dataStr;
   link.click();
-  logCommand("3D Projekt stiahnutý vo formáte JSON!");
+  logCommand("3D CSG Projekt stiahnutý vo formáte JSON!");
 }
 
 function importJSON(event){
@@ -541,7 +627,7 @@ function updateDimensionsPanel(){
     card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
     
     card.onclick = (e) => {
-      if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON'){
+      if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'BUTTON'){
         selectedShapeIndex = i;
         rebuild3DScene();
       }
@@ -553,6 +639,19 @@ function updateDimensionsPanel(){
 
     const actions = document.createElement('div');
     actions.className = 'shape-actions';
+
+    // Výber operácie CSG priamo v paneli (Pridať / Odobrať)
+    const opSel = document.createElement('select');
+    opSel.style.width = '75px';
+    opSel.innerHTML = `<option value="add" ${s.op !== 'subtract' ? 'selected' : ''}>➕ Pridať</option>` +
+                      `<option value="subtract" ${s.op === 'subtract' ? 'selected' : ''}>➖ Odobrať</option>`;
+    opSel.onchange = (e) => {
+      pushState();
+      s.op = e.target.value;
+      rebuild3DScene();
+      saveToLocalStorage();
+    };
+    actions.appendChild(opSel);
 
     const colInp = document.createElement('input');
     colInp.type = 'color'; colInp.value = s.color || '#10b981';
@@ -567,7 +666,7 @@ function updateDimensionsPanel(){
     title.appendChild(actions);
     card.appendChild(title);
 
-    // Súradnice Pozície 3D
+    // Súradnice Pozície 3D (X, Y, Z)
     const posRow = document.createElement('div');
     posRow.className = 'input-row';
     posRow.innerHTML = `<label>X:</label><input type="number" step="0.5" value="${s.x}">` +
@@ -579,10 +678,11 @@ function updateDimensionsPanel(){
     pInps[2].onchange = (e) => { pushState(); s.z = parseFloat(e.target.value)||0; rebuild3DScene(); saveToLocalStorage(); };
     card.appendChild(posRow);
 
-    // Parametre 3D rozmerov
+    // Parametre rozmerov podľa tvaru
     const dimRow = document.createElement('div');
     dimRow.className = 'input-row';
-    if(s.type === 'box'){
+    
+    if(s.type === 'box' || s.type === 'wedge'){
       dimRow.innerHTML = `<label>Š:</label><input type="number" value="${s.w}">` +
                          `<label>V:</label><input type="number" value="${s.h}">` +
                          `<label>H:</label><input type="number" value="${s.d}">`;
@@ -590,17 +690,32 @@ function updateDimensionsPanel(){
       dInps[0].onchange = (e) => { pushState(); s.w = parseFloat(e.target.value)||1; rebuild3DScene(); saveToLocalStorage(); };
       dInps[1].onchange = (e) => { pushState(); s.h = parseFloat(e.target.value)||1; rebuild3DScene(); saveToLocalStorage(); };
       dInps[2].onchange = (e) => { pushState(); s.d = parseFloat(e.target.value)||1; rebuild3DScene(); saveToLocalStorage(); };
-    } else if(s.type === 'cylinder'){
+    } else if(s.type === 'cylinder' || s.type === 'cone'){
       dimRow.innerHTML = `<label>Polomer:</label><input type="number" value="${s.r}">` +
                          `<label>Výška:</label><input type="number" value="${s.h}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { pushState(); s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); saveToLocalStorage(); };
       dInps[1].onchange = (e) => { pushState(); s.h = parseFloat(e.target.value)||1; rebuild3DScene(); saveToLocalStorage(); };
+    } else if(s.type === 'pipe'){
+      dimRow.innerHTML = `<label>Polomer:</label><input type="number" value="${s.r}">` +
+                         `<label>Výška:</label><input type="number" value="${s.h}">` +
+                         `<label>Stena:</label><input type="number" step="0.1" value="${s.wall || 0.3}">`;
+      const dInps = dimRow.querySelectorAll('input');
+      dInps[0].onchange = (e) => { pushState(); s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); saveToLocalStorage(); };
+      dInps[1].onchange = (e) => { pushState(); s.h = parseFloat(e.target.value)||1; rebuild3DScene(); saveToLocalStorage(); };
+      dInps[2].onchange = (e) => { pushState(); s.wall = parseFloat(e.target.value)||0.1; rebuild3DScene(); saveToLocalStorage(); };
     } else if(s.type === 'sphere'){
       dimRow.innerHTML = `<label>Polomer:</label><input type="number" value="${s.r}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { pushState(); s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); saveToLocalStorage(); };
+    } else if(s.type === 'torus'){
+      dimRow.innerHTML = `<label>Polomer:</label><input type="number" value="${s.r}">` +
+                         `<label>Hrubka:</label><input type="number" step="0.1" value="${s.tube || 0.3}">`;
+      const dInps = dimRow.querySelectorAll('input');
+      dInps[0].onchange = (e) => { pushState(); s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); saveToLocalStorage(); };
+      dInps[1].onchange = (e) => { pushState(); s.tube = parseFloat(e.target.value)||0.1; rebuild3DScene(); saveToLocalStorage(); };
     }
+
     card.appendChild(dimRow);
     dimsContent.appendChild(card);
   });
@@ -611,14 +726,25 @@ commandInput.onkeydown = (e) => {
     const val = commandInput.value.trim().toLowerCase();
     logCommand(val);
     commandInput.value = '';
-    if(val === 'box' || val === 'b') setTool('box');
-    else if(val === 'cylinder' || val === 'c') setTool('cylinder');
-    else if(val === 'sphere' || val === 's') setTool('sphere');
-    else if(val === 'select') setTool('select');
+    
+    if(['box', 'cylinder', 'pipe', 'sphere', 'wedge', 'torus', 'cone'].includes(val)){
+      currentShapeType = val;
+      document.getElementById('shapeSelector').value = val;
+      tool = 'create';
+      logCommand(`Tvar nastavený na: ${val.toUpperCase()}`);
+    } else if(val === 'add' || val === '+'){
+      currentCsgOp = 'add';
+      document.getElementById('csgOperationSelector').value = 'add';
+      logCommand("Režim: PRIDAŤ MATERIÁL");
+    } else if(val === 'sub' || val === 'subtract' || val === '-'){
+      currentCsgOp = 'subtract';
+      document.getElementById('csgOperationSelector').value = 'subtract';
+      logCommand("Režim: ODOBRAŤ MATERIÁL (DIERA)");
+    } else if(val === 'select') setTool('select');
     else if(val === 'undo') undo();
     else if(val === 'redo') redo();
     else if(val === 'clear') clearAll();
-    else logCommand("Neznámy 3D príkaz");
+    else logCommand("Neznámy príkaz.");
   }
 };
 
@@ -630,6 +756,8 @@ function animate(){
 
 window.onload = init3D;
 </script>
+
+
 
 </body>
 </html>
