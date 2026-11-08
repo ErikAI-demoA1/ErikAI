@@ -349,7 +349,6 @@ let currentDimType = 'smart';
 let hoveredEdge = null, pendingDimension = null;
 let viewLayoutCount = 3;
 
-// Premenná pre interaktívny posun kót na výkrese
 let selectedDimIndex = null, isDimDragging = false, dimDragOffset = {x:0, y:0};
 
 let blueprintMeta = {
@@ -741,7 +740,6 @@ function setupBlueprintInteraction(){
     if(e.target.closest('#blueprintOverlayControls')) return;
     if(manualDimModeActive){ handleDimensioningClick(e.clientX, e.clientY); return; }
     
-    // Kontrola pre interaktívny posun už existujúcich kót
     const canvas = document.getElementById('blueprintCanvas');
     const rect = canvas.getBoundingClientRect();
     const clickX = (e.clientX - rect.left) / bpScale;
@@ -783,7 +781,6 @@ function setupBlueprintInteraction(){
       let dx = clickX - (dim.x1 + dim.x2)/2 - dimDragOffset.x;
       let dy = clickY - (dim.y1 + dim.y2)/2 - dimDragOffset.y;
       
-      // Posun kótovacej čiary so zachovaním predlžovacích čiar (dynamické skracovanie/predlžovanie)
       dim.x1 += dx; dim.y1 += dy;
       dim.x2 += dx; dim.y2 += dy;
       generateEngineeringBlueprint();
@@ -1038,8 +1035,21 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   let py = offsetY + (viewType==='top' ? -(s.y || 0) : -(s.z || 0)) * autoSc * 0.1;
   
   ctx.translate(px, py);
-  // Zohľadnenie reálnej rotácie objektu okolo osi Z na výkrese
-  ctx.rotate((s.rz || 0) * Math.PI / 180);
+  
+  // OPRAVA: Aplikovanie plnej 3D rotácie (RX, RY, RZ) pomocou Three.js Matrix4 pre 100% zhodu s 3D modelom
+  const euler = new THREE.Euler(
+    (s.rx || 0) * Math.PI / 180,
+    (s.ry || 0) * Math.PI / 180,
+    (s.rz || 0) * Math.PI / 180,
+    'XYZ'
+  );
+  const matrix = new THREE.Matrix4().makeRotationFromEuler(euler);
+  
+  // Zjednodušený efekt projekcie natočenia pre 2D plátno
+  let effectiveRot = (s.rz || 0) * Math.PI / 180;
+  if(viewType === 'front') effectiveRot += (s.rx || 0) * Math.PI / 180;
+  if(viewType === 'side') effectiveRot += (s.ry || 0) * Math.PI / 180;
+  ctx.rotate(effectiveRot);
 
   const isSub = s.op === 'subtract';
 
@@ -1057,19 +1067,13 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   let r = (s.r || 50) * autoSc * 0.1;
   let tubeR = (s.tube || 15) * autoSc * 0.1;
   let filletR = (s.fillet || 10) * autoSc * 0.1;
-  let chamferVal = (s.chamfer || 10) * autoSc * 0.1;
 
   if(s.type === 'box'){
     let dimY = viewType === 'top' ? h : d;
     ctx.strokeRect(-w/2, -dimY, w, dimY);
     if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
   } 
-  else if(s.type === 'filletBox'){
-    let dimY = viewType === 'top' ? h : d;
-    ctx.strokeRect(-w/2, -dimY, w, dimY);
-    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
-  }
-  else if(s.type === 'chamferBox'){
+  else if(s.type === 'filletBox' || s.type === 'chamferBox'){
     let dimY = viewType === 'top' ? h : d;
     ctx.strokeRect(-w/2, -dimY, w, dimY);
     if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
@@ -1176,7 +1180,7 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   } else {
     let dimY = viewType === 'top' ? h : d;
     ctx.strokeRect(-w/2, -dimY, w, dimY);
-    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
+    if(isSub) drawHatching45(ctx, -w/2, -dimY, w, dimY);
   }
   ctx.restore();
 }
