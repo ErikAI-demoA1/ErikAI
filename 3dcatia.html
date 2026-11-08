@@ -562,14 +562,15 @@ function createGeometryForShape(s){
     geo.rotateX(Math.PI / 2);
     geo.center();
   } else if(s.type === 'elbow') {
-    // Presná 3D reprezentácia 90° kolena s polomerom ohybu
-    const curve = new THREE.CubicBezierCurve3(
-      new THREE.Vector3(0, -scR * 2, 0),
+    // Opravená 3D reprezentácia 90° kolena s presnou kruhovou osou zakrivenia
+    const rBend = scR * 2.0;
+    const curve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(0, rBend, 0),
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(scR * 2, 0, 0),
-      new THREE.Vector3(scR * 2, scR * 2, 0)
+      new THREE.Vector3(rBend, 0, 0)
     );
-    geo = new THREE.TubeGeometry(curve, 32, scR, 24, false);
+    geo = new THREE.TubeGeometry(curve, 36, scR, 24, false);
+    geo.center();
   } else if(s.type === 'wedge') {
     geo = new THREE.BufferGeometry();
     const w = scW/2, h = scH/2, d = scD/2;
@@ -979,7 +980,6 @@ function generateEngineeringBlueprint(){
   renderTitleBlock(ctx, canvas.width - 430, canvas.height - 160);
 }
 
-// Presné ISO 2D vykresľovanie pre všetky mechanické diely vrátane kolena 90°
 function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   ctx.save();
   const autoSc = calculateDynamicScale();
@@ -1095,16 +1095,13 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
     }
   }
   else if(s.type === 'elbow'){
-    // Správne technické zobrazenie 90° kolena (oblúk s polomerom zakrivenia R = 2*r)
     let rBend = r * 2.0;
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
       ctx.beginPath();
-      // Vonkajší polomer zakrivenia 90° kolena
       ctx.arc(0, 0, rBend + r, 0, Math.PI / 2, false);
-      // Vnútorný polomer zakrivenia 90° kolena
       ctx.arc(0, 0, Math.max(2, rBend - r), Math.PI / 2, 0, true);
       ctx.closePath();
       ctx.stroke();
