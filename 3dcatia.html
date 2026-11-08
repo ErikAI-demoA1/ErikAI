@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro ISO CAD Studio v4.1</title>
+<title>ErikAI Pro ISO CAD Studio v4.2</title>
 <!-- Three.js, OrbitControls a Three-CSG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -268,12 +268,12 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">Súradnicový stred: [X: Stred, Y: Stred, Z: Spodok] + Synchronizovaná rotácia 3D/2D</span>
+  <span id="infoCoords">Súradnicový stred: [X: Stred, Y: Stred, Z: Spodok] | Optimalizované rozostupy pohľadov</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI ISO CAD Studio v4.1 – Plne synchronizované rotácie a detailné samostatné kótovanie.</div></div>
+  <div id="commandHistory"><div>ErikAI ISO CAD Studio v4.2 – Opravené prekrývanie textov a vylepšené odsadenie kót.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
     <input type="text" id="commandInput" placeholder="Príkaz..." autocomplete="off">
@@ -358,7 +358,7 @@ function toggleToolMode(){
     interactionMode = 'pan';
     btn.textContent = '✋ Režim: Posun plátna';
     btn.style.background = '#3b82f6';
-    infoCoords.textContent = "Režim: Posun plátna | Synchronizované 3D/2D rotácie";
+    infoCoords.textContent = "Režim: Posun plátna | Optimalizované rozostupy pohľadov";
     logCommand("Prepnuté do režimu posunu plátna.");
   }
 }
@@ -457,7 +457,7 @@ function toggleMode(){
 }
 
 // ----------------------------------------------------
-// 📐 2D VÝKRES S ROTÁCIAMI A DETAILNÝMI SAMOSTATNÝMI KÓTAMI
+// 📐 2D VÝKRES S UPRAVENÝMI ROZOSTUPMI A ODSADENÍM KÓT
 // ----------------------------------------------------
 function draw2DSketch(){
   ctx.fillStyle = '#ffffff';
@@ -468,18 +468,19 @@ function draw2DSketch(){
   ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
 
   const w = canvas.width, h = canvas.height;
-  const originX = w * 0.35;
-  const originY = h * 0.40;
+  // Zväčšené rozostupy medzi pohľadmi, aby sa neprekrývali
+  const originX = w * 0.30;
+  const originY = h * 0.38;
 
   const views = [
     { name: 'front', title: 'NÁRYS (X-Z)', offsetX: originX, offsetY: originY },
-    { name: 'top', title: 'PÔDORYS (X-Y)', offsetX: originX, offsetY: originY + 340 },
-    { name: 'side', title: 'BOKORYS (Y-Z)', offsetX: originX + 480, offsetY: originY }
+    { name: 'top', title: 'PÔDORYS (X-Y)', offsetX: originX, offsetY: originY + 420 },
+    { name: 'side', title: 'BOKORYS (Y-Z)', offsetX: originX + 580, offsetY: originY }
   ];
 
   ctx.fillStyle = '#0f172a';
   ctx.font = 'bold 12px Segoe UI, sans-serif';
-  views.forEach(v => ctx.fillText(v.title, v.offsetX - 70, v.offsetY - 170));
+  views.forEach(v => ctx.fillText(v.title, v.offsetX - 90, v.offsetY - 210));
 
   views.forEach(v => {
     ctx.save();
@@ -487,8 +488,8 @@ function draw2DSketch(){
     ctx.lineWidth = 1;
     ctx.setLineDash([6, 3]);
     ctx.beginPath();
-    ctx.moveTo(v.offsetX - 70, v.offsetY); ctx.lineTo(v.offsetX + 70, v.offsetY);
-    ctx.moveTo(v.offsetX, v.offsetY - 70); ctx.lineTo(v.offsetX, v.offsetY + 70);
+    ctx.moveTo(v.offsetX - 90, v.offsetY); ctx.lineTo(v.offsetX + 90, v.offsetY);
+    ctx.moveTo(v.offsetX, v.offsetY - 90); ctx.lineTo(v.offsetX, v.offsetY + 90);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = '#64748b';
@@ -536,7 +537,6 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
 
   ctx.translate(projX, projY);
 
-  // Zohľadnenie rotácií pre každý pohľad osobitne
   if (viewType === 'front') {
     ctx.rotate(((s.rz || 0) + (s.ry || 0)) * Math.PI / 180);
   } else if (viewType === 'top') {
@@ -547,13 +547,16 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
 
   if(!s.hide) s.hide = { name: false, frontW: false, frontD: false, topW: false, topH: false, sideH: false, sideD: false, radius: false };
 
+  // Dynamický posun kót podľa indexu dielu, aby sa kóty viacerých dielov neprekrývali
+  let offsetStep = (index - 1) * 22;
+
   // 1. Kocka / Kváder / Závitová kocka
   if(s.type === 'box' || s.type === 'threadedBox'){
     if(viewType === 'front'){
       ctx.strokeRect(-scaleW/2, -scaleD, scaleW, scaleD);
       if(isSub) drawHatching(ctx, -scaleW/2, -scaleD, scaleW, scaleD);
-      if(!s.hide.frontW) drawDimensionLine(ctx, -scaleW/2, -scaleD - 25, scaleW/2, -scaleD - 25, `Š: ${s.w} mm`);
-      if(!s.hide.frontD) drawDimensionLine(ctx, scaleW/2 + 25, -scaleD, scaleW/2 + 25, 0, `V: ${s.d} mm`);
+      if(!s.hide.frontW) drawDimensionLine(ctx, -scaleW/2, -scaleD - 28 - offsetStep, scaleW/2, -scaleD - 28 - offsetStep, `Š: ${s.w} mm`);
+      if(!s.hide.frontD) drawDimensionLine(ctx, scaleW/2 + 28 + offsetStep, -scaleD, scaleW/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
     } else if(viewType === 'top'){
       ctx.strokeRect(-scaleW/2, -scaleH/2, scaleW, scaleH);
       if(s.type === 'threadedBox'){
@@ -561,13 +564,13 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
         drawThreadHatch(ctx, 0, 0, scaleR*0.5);
       }
       if(isSub) drawHatching(ctx, -scaleW/2, -scaleH/2, scaleW, scaleH);
-      if(!s.hide.topW) drawDimensionLine(ctx, -scaleW/2, -scaleH/2 - 25, scaleW/2, -scaleH/2 - 25, `Š: ${s.w} mm`);
-      if(!s.hide.topH) drawDimensionLine(ctx, scaleW/2 + 25, -scaleH/2, scaleW/2 + 25, scaleH/2, `H: ${s.h} mm`);
+      if(!s.hide.topW) drawDimensionLine(ctx, -scaleW/2, -scaleH/2 - 28 - offsetStep, scaleW/2, -scaleH/2 - 28 - offsetStep, `Š: ${s.w} mm`);
+      if(!s.hide.topH) drawDimensionLine(ctx, scaleW/2 + 28 + offsetStep, -scaleH/2, scaleW/2 + 28 + offsetStep, scaleH/2, `H: ${s.h} mm`);
     } else if(viewType === 'side'){
       ctx.strokeRect(-scaleH/2, -scaleD, scaleH, scaleD);
       if(isSub) drawHatching(ctx, -scaleH/2, -scaleD, scaleH, scaleD);
-      if(!s.hide.sideH) drawDimensionLine(ctx, -scaleH/2, -scaleD - 25, scaleH/2, -scaleD - 25, `H: ${s.h} mm`);
-      if(!s.hide.sideD) drawDimensionLine(ctx, scaleH/2 + 25, -scaleD, scaleH/2 + 25, 0, `V: ${s.d} mm`);
+      if(!s.hide.sideH) drawDimensionLine(ctx, -scaleH/2, -scaleD - 28 - offsetStep, scaleH/2, -scaleD - 28 - offsetStep, `H: ${s.h} mm`);
+      if(!s.hide.sideD) drawDimensionLine(ctx, scaleH/2 + 28 + offsetStep, -scaleD, scaleH/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
     }
   } 
   // 2. Valec / Závitový valec / Rúra
@@ -582,7 +585,7 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
         ctx.beginPath(); ctx.arc(0, 0, scaleR*0.7, 0, Math.PI * 2); ctx.stroke();
         drawThreadHatch(ctx, 0, 0, scaleR*0.7);
       }
-      if(!s.hide.radius) drawDimensionLine(ctx, 0, 0, scaleR, 0, `Ø: ${s.r*2} mm`);
+      if(!s.hide.radius) drawDimensionLine(ctx, 0, 0, scaleR + offsetStep*0.5, 0, `Ø: ${s.r*2} mm`);
     } else {
       ctx.strokeRect(-scaleR, -scaleD, scaleR * 2, scaleD);
       ctx.save();
@@ -603,9 +606,9 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
         ctx.restore();
       }
 
-      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, scaleR + 25, -scaleD, scaleR + 25, 0, `V: ${s.d} mm`);
-      if(viewType === 'side' && !s.hide.sideD) drawDimensionLine(ctx, scaleR + 25, -scaleD, scaleR + 25, 0, `V: ${s.d} mm`);
-      if(!s.hide.radius) drawDimensionLine(ctx, -scaleR, -scaleD - 25, scaleR, -scaleD - 25, `Ø: ${s.r*2} mm`);
+      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
+      if(viewType === 'side' && !s.hide.sideD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
+      if(!s.hide.radius) drawDimensionLine(ctx, -scaleR, -scaleD - 28 - offsetStep, scaleR, -scaleD - 28 - offsetStep, `Ø: ${s.r*2} mm`);
 
       if(isSub) drawHatching(ctx, -scaleR, -scaleD, scaleR*2, scaleD);
     }
@@ -618,19 +621,19 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
     ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.moveTo(0, -scaleR*2 - 10); ctx.lineTo(0, 10); ctx.stroke();
     ctx.restore();
-    if(!s.hide.radius) drawDimensionLine(ctx, 0, -scaleR, scaleR, -scaleR, `R: ${s.r} mm`);
+    if(!s.hide.radius) drawDimensionLine(ctx, 0, -scaleR, scaleR + offsetStep*0.5, -scaleR, `R: ${s.r} mm`);
   } 
   // 4. Kužeľ
   else if(s.type === 'cone'){
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, scaleR, 0, Math.PI * 2); ctx.stroke();
-      if(!s.hide.radius) drawDimensionLine(ctx, 0, 0, scaleR, 0, `Ø: ${s.r*2} mm`);
+      if(!s.hide.radius) drawDimensionLine(ctx, 0, 0, scaleR + offsetStep*0.5, 0, `Ø: ${s.r*2} mm`);
     } else {
       ctx.beginPath();
       ctx.moveTo(-scaleR, 0); ctx.lineTo(0, -scaleD); ctx.lineTo(scaleR, 0); ctx.closePath();
       ctx.stroke();
-      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, scaleR + 25, -scaleD, scaleR + 25, 0, `V: ${s.d} mm`);
-      if(viewType === 'side' && !s.hide.sideD) drawDimensionLine(ctx, scaleR + 25, -scaleD, scaleR + 25, 0, `V: ${s.d} mm`);
+      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
+      if(viewType === 'side' && !s.hide.sideD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
     }
   } 
   // 5. Ihlan
@@ -638,21 +641,21 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
     if(viewType === 'top'){
       ctx.strokeRect(-scaleW/2, -scaleH/2, scaleW, scaleH);
       ctx.beginPath(); ctx.moveTo(-scaleW/2, -scaleH/2); ctx.lineTo(scaleW/2, scaleH/2); ctx.moveTo(scaleW/2, -scaleH/2); ctx.lineTo(-scaleW/2, scaleH/2); ctx.stroke();
-      if(!s.hide.topW) drawDimensionLine(ctx, -scaleW/2, -scaleH/2 - 25, scaleW/2, -scaleH/2 - 25, `Š: ${s.w} mm`);
+      if(!s.hide.topW) drawDimensionLine(ctx, -scaleW/2, -scaleH/2 - 28 - offsetStep, scaleW/2, -scaleH/2 - 28 - offsetStep, `Š: ${s.w} mm`);
     } else {
       ctx.beginPath();
       let baseDim = viewType === 'front' ? scaleW : scaleH;
       ctx.moveTo(-baseDim/2, 0); ctx.lineTo(0, -scaleD); ctx.lineTo(baseDim/2, 0); ctx.closePath();
       ctx.stroke();
-      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, baseDim/2 + 25, -scaleD, baseDim/2 + 25, 0, `V: ${s.d} mm`);
-      if(viewType === 'side' && !s.hide.sideD) drawDimensionLine(ctx, baseDim/2 + 25, -scaleD, baseDim/2 + 25, 0, `V: ${s.d} mm`);
+      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(baseDim/2 + 28 + offsetStep, -scaleD, baseDim/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
+      if(viewType === 'side' && !s.hide.sideD) drawDimensionLine(baseDim/2 + 28 + offsetStep, -scaleD, baseDim/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
     }
   }
 
   if(viewType === 'front' && !s.hide.name){
     ctx.fillStyle = isSelected ? '#3b82f6' : '#0f172a';
     ctx.font = 'bold 10px monospace';
-    ctx.fillText(`#${index} ${s.type.toUpperCase()}`, -scaleW/2, -scaleD - 10);
+    ctx.fillText(`#${index} ${s.type.toUpperCase()}`, -scaleW/2, -scaleD - 12);
   }
 
   ctx.restore();
@@ -670,16 +673,16 @@ function drawDimensionLine(ctx, x1, y1, x2, y2, text){
   ctx.strokeStyle = '#94a3b8';
   ctx.setLineDash([2, 2]);
   if(y1 === y2){
-    ctx.beginPath(); ctx.moveTo(x1, y1 + 15); ctx.lineTo(x1, y1 - 5); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x2, y2 + 15); ctx.lineTo(x2, y2 - 5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1, y1 + 18); ctx.lineTo(x1, y1 - 5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2, y2 + 18); ctx.lineTo(x2, y2 - 5); ctx.stroke();
   } else if(x1 === x2){
-    ctx.beginPath(); ctx.moveTo(x1 - 15, y1); ctx.lineTo(x1 + 5, y1); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x2 - 15, y2); ctx.lineTo(x2 + 5, y2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1 - 18, y1); ctx.lineTo(x1 + 5, y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2 - 18, y2); ctx.lineTo(x2 + 5, y2); ctx.stroke();
   }
   ctx.restore();
 
   ctx.font = '10px monospace';
-  ctx.fillText(text, (x1+x2)/2 - 15, (y1+y2)/2 - 5);
+  ctx.fillText(text, (x1+x2)/2 - 18, (y1+y2)/2 - 5);
   ctx.restore();
 }
 
@@ -724,7 +727,7 @@ function renderTitleBlock(ctx, x, y){
   ctx.fillText("Materiál: S235JR / Oceľ", x + 10, y + 48);
   ctx.fillText("Vypracoval: ErikAI CAD", x + 10, y + 90);
   ctx.fillText("Mierka: 1:1", x + 190, y + 90);
-  ctx.fillText("Výkres: DWG-2026-v4.1", x + 190, y + 130);
+  ctx.fillText("Výkres: DWG-2026-v4.2", x + 190, y + 130);
   ctx.restore();
 }
 
@@ -734,8 +737,8 @@ canvas.onclick = (e) => {
   const clickX = (e.clientX - rect.left) / bpScale;
   const clickY = (e.clientY - rect.top) / bpScale;
 
-  let originX = canvas.width * 0.35;
-  let originY = canvas.height * 0.40;
+  let originX = canvas.width * 0.30;
+  let originY = canvas.height * 0.38;
 
   let relX = Math.round((clickX - originX) * 2);
   let relY = Math.round((originY - clickY) * 2);
