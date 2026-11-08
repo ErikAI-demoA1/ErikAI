@@ -257,6 +257,7 @@
                             <input type="number" id="prop-height" min="10" max="3000" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
                         </div>
                     </div>
+                    <button id="duplicate-btn" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 py-2 rounded-lg text-sm font-medium">📋 Duplikovať objekt</button>
                     <button id="delete-btn" class="w-full bg-red-950/60 hover:bg-red-900 border border-red-800/60 text-red-300 py-2 rounded-lg text-sm font-medium">🗑️ Vymazať objekt</button>
                 </div>
             </div>
@@ -378,7 +379,11 @@
             if (file && file.type === 'application/pdf') {
                 const reader = new FileReader();
                 reader.onload = function() {
-                    pdfjsLib.getDocument(new Uint8Array(this.result)).promise.then((pdf) => {
+                    const typedarray = new Uint8Array(this.result);
+                    // Uloženie PDF do lokálnej pamäte pre obnovenie pri výpadku
+                    try { localStorage.setItem('erikai_pdf_data', JSON.stringify(Array.from(typedarray))); } catch(err) {}
+
+                    pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
                         pdfDoc = pdf;
                         pageNum = 1;
                         pageAnnotations = {};
@@ -396,6 +401,30 @@
                     });
                 };
                 reader.readAsArrayBuffer(file);
+            }
+        });
+
+        // Automatické načítanie pri spustení, ak bolo niečo uložené v pamäti
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedPdf = localStorage.getItem('erikai_pdf_data');
+            const savedAnno = localStorage.getItem('erikai_annotations');
+            if (savedAnno) {
+                try { pageAnnotations = JSON.parse(savedAnno); } catch(err) {}
+            }
+            if (savedPdf) {
+                try {
+                    const typedarray = new Uint8Array(JSON.parse(savedPdf));
+                    pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
+                        pdfDoc = pdf;
+                        pageNum = 1;
+                        pdfDoc.getPage(1).then((page) => {
+                            const baseVp = page.getViewport({ scale: 1.0 });
+                            currentZoom = 1.0;
+                            document.getElementById('zoom-val').textContent = '100%';
+                            renderPage(pageNum);
+                        });
+                    });
+                } catch(err) {}
             }
         });
 
@@ -442,6 +471,12 @@
                 });
             });
             pageAnnotations[pageNum] = data;
+            
+            // Ukladanie do localStorage pre auto-save pri výpadku
+            try {
+                localStorage.setItem('erikai_annotations', JSON.stringify(pageAnnotations));
+            } catch(err) {}
+
             updateLayersList();
         }
 
@@ -595,6 +630,37 @@
             return el;
         }
 
+        /* Funkcia na duplikovanie aktívneho objektu */
+        function duplicateActiveElement() {
+            if (!activeElement) return;
+            const currentLeft = parseFloat(activeElement.style.left) || 0;
+            const currentTop = parseFloat(activeElement.style.top) || 0;
+            const newLeft = (currentLeft + 20) + 'px';
+            const newTop = (currentTop + 20) + 'px';
+            const width = activeElement.style.width;
+            const height = activeElement.style.height;
+
+            let newEl = null;
+            if (activeElement.classList.contains('canvas-element')) {
+                const text = activeElement.dataset.rawText || activeElement.innerText;
+                const fontSize = activeElement.style.fontSize;
+                const color = activeElement.style.color;
+                const fontFamily = activeElement.style.fontFamily;
+                newEl = createText(text, newLeft, newTop, fontSize, color, width, height, fontFamily, true);
+            } else if (activeElement.classList.contains('whiteout-box')) {
+                newEl = createBox('whiteout-box', newLeft, newTop, width, height, true);
+            } else if (activeElement.classList.contains('image-element')) {
+                const src = activeElement.querySelector('img').src;
+                newEl = createImage(src, newLeft, newTop, width, height, true);
+            } else if (activeElement.classList.contains('table-element')) {
+                const html = activeElement.innerHTML;
+                newEl = createTable(html, newLeft, newTop, width, height, true);
+            }
+            if (newEl) selectElement(newEl);
+        }
+
+        document.getElementById('duplicate-btn').addEventListener('click', duplicateActiveElement);
+
         /* Univerzálne podpisovanie pre PC aj mobily/tablety (Pointer Events) */
         const signModal = document.getElementById('sign-modal');
         const signCanvas = document.getElementById('sign-canvas');
@@ -697,7 +763,11 @@
             });
 
             const handle = el.querySelector('.table-drag-handle');
-            makeInteractive(el, handle);
+            if (handle) {
+                makeInteractive(el, handle);
+            } else {
+                makeInteractive(el, el);
+            }
 
             wrapper.appendChild(el);
             selectElement(el);
@@ -848,11 +918,18 @@
             }
         });
 
+        // Klávesové skratky: Delete/Backspace na mazanie, Ctrl+D na duplikovanie
         window.addEventListener('keydown', (e) => {
-            if ((e.key === 'Delete' || e.key === 'Backspace') && activeElement && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TD' && document.activeElement.tagName !== 'TH') {
+            const isInputActive = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TD' || document.activeElement.tagName === 'TH' || document.activeElement.isContentEditable;
+            
+            if ((e.key === 'Delete' || e.key === 'Backspace') && activeElement && !isInputActive) {
                 activeElement.remove();
                 selectElement(null);
                 saveAnnotations();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && activeElement && !isInputActive) {
+                e.preventDefault();
+                duplicateActiveElement();
             }
         });
 
