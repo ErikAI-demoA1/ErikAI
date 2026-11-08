@@ -562,12 +562,14 @@ function createGeometryForShape(s){
     geo.rotateX(Math.PI / 2);
     geo.center();
   } else if(s.type === 'elbow') {
-    const curve = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(-scR * 1.5, -scR * 1.5, 0),
-      new THREE.Vector3(-scR * 1.5, scR * 1.5, 0),
-      new THREE.Vector3(scR * 1.5, scR * 1.5, 0)
+    // Presná 3D reprezentácia 90° kolena s polomerom ohybu
+    const curve = new THREE.CubicBezierCurve3(
+      new THREE.Vector3(0, -scR * 2, 0),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(scR * 2, 0, 0),
+      new THREE.Vector3(scR * 2, scR * 2, 0)
     );
-    geo = new THREE.TubeGeometry(curve, 32, scR * 0.5, 24, false);
+    geo = new THREE.TubeGeometry(curve, 32, scR, 24, false);
   } else if(s.type === 'wedge') {
     geo = new THREE.BufferGeometry();
     const w = scW/2, h = scH/2, d = scD/2;
@@ -848,10 +850,9 @@ function detectClickedEdge(cx, cy){
           { x1: px + r + 12, y1: py - h/2, x2: px + r + 12, y2: py + h/2, mmValue: s.h || 100, isThread: false }
         ];
       } else if(s.type === 'elbow'){
-        let bendR = r * 1.5;
+        let rBend = r * 2.0;
         edges = [
-          { x1: px - bendR, y1: py, x2: px + bendR, y2: py, mmValue: (s.r || 50) * 2 },
-          { x1: px, y1: py - bendR, x2: px, y2: py + bendR, mmValue: (s.r || 50) * 2 }
+          { x1: px - rBend, y1: py - rBend - 12, x2: px, y2: py - rBend - 12, mmValue: (s.r || 50) * 2 }
         ];
       } else {
         edges = [
@@ -978,7 +979,7 @@ function generateEngineeringBlueprint(){
   renderTitleBlock(ctx, canvas.width - 430, canvas.height - 160);
 }
 
-// Kompletne vylepšené a presné 2D vykresľovanie pre VŠETKY tvary podľa noriem ISO / SolidWorks
+// Presné ISO 2D vykresľovanie pre všetky mechanické diely vrátane kolena 90°
 function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   ctx.save();
   const autoSc = calculateDynamicScale();
@@ -1052,23 +1053,17 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
     }
   }
   else if(s.type === 'threadedRod'){
-    let threadR = r * 0.85; // Tenká čiara d1 = 0.85*d pre závit
+    let threadR = r * 0.85;
     if(viewType === 'top'){
-      // Hrubý obvodový kruh
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-      // Tenká čiara závitu (3/4 kruh podla ISO)
       ctx.save();
       ctx.lineWidth = 1.0;
       ctx.strokeStyle = isSub ? '#dc2626' : '#2563eb';
-      ctx.beginPath();
-      ctx.arc(0, 0, threadR, 0, Math.PI * 1.5);
-      ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, threadR, 0, Math.PI * 1.5); ctx.stroke();
       ctx.restore();
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
-      // Hrubá vonkajšia kontúra tyče
       ctx.strokeRect(-r, -h/2, r*2, h);
-      // Tenké čiary jadra závitu po bokoch
       ctx.save();
       ctx.lineWidth = 1.0;
       ctx.strokeStyle = isSub ? '#dc2626' : '#2563eb';
@@ -1100,27 +1095,24 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
     }
   }
   else if(s.type === 'elbow'){
-    // ISO strojarne zobrazenie 90° kolena
-    let R_bend = r * 1.5;
-    let pipeR = (s.wall ? (s.r - s.wall) : s.r*0.5) * autoSc * 0.1;
+    // Správne technické zobrazenie 90° kolena (oblúk s polomerom zakrivenia R = 2*r)
+    let rBend = r * 2.0;
     if(viewType === 'top'){
-      ctx.beginPath(); ctx.arc(0, 0, R_bend + pipeR, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, R_bend - pipeR, 0, Math.PI * 2); ctx.stroke();
-      drawCenterCross(ctx, 0, 0, R_bend + pipeR + 10);
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+      drawCenterCross(ctx, 0, 0, r + 10);
     } else {
-      // Štvrťkruhové zahnutie v Náryse / Bokoryse
       ctx.beginPath();
-      ctx.arc(-R_bend, R_bend, R_bend + pipeR, -Math.PI/2, 0);
+      // Vonkajší polomer zakrivenia 90° kolena
+      ctx.arc(0, 0, rBend + r, 0, Math.PI / 2, false);
+      // Vnútorný polomer zakrivenia 90° kolena
+      ctx.arc(0, 0, Math.max(2, rBend - r), Math.PI / 2, 0, true);
+      ctx.closePath();
       ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(-R_bend, R_bend, R_bend - pipeR, -Math.PI/2, 0);
-      ctx.stroke();
-      // Koncové príruby / zakončenia kolena
-      ctx.strokeRect(-R_bend - pipeR - 2, 0, (pipeR*2 + 4), 6);
-      ctx.strokeRect(0, R_bend - pipeR - 2, 6, (pipeR*2 + 4));
-      // Os zakrivenia kolena
-      drawCenterLine(ctx, -R_bend, 0, 10, 0);
-      if(isSub) drawHatching45(ctx, -R_bend, 0, R_bend*2, R_bend*2);
+      if(viewType === 'section' || isSub){
+        drawHatching45(ctx, -rBend - r, 0, (rBend + r)*2, (rBend + r)*2);
+      }
+      drawCenterLine(ctx, 0, 0, rBend + r + 10, 0);
+      drawCenterLine(ctx, 0, 0, 0, rBend + r + 10);
     }
   }
   else if(s.type === 'cone'){
@@ -1129,10 +1121,7 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
       ctx.beginPath();
-      ctx.moveTo(-r, h/2);
-      ctx.lineTo(0, -h/2);
-      ctx.lineTo(r, h/2);
-      ctx.closePath();
+      ctx.moveTo(-r, h/2); ctx.lineTo(0, -h/2); ctx.lineTo(r, h/2); ctx.closePath();
       ctx.stroke();
       if(isSub) drawHatching45(ctx, -r, -h/2, r*2, h);
       drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
@@ -1144,15 +1133,12 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       ctx.beginPath(); ctx.arc(0, 0, Math.max(2, r - tubeR), 0, Math.PI * 2); ctx.stroke();
       drawCenterCross(ctx, 0, 0, r + tubeR + 10);
     } else {
-      // Dva kruhové prierezy po bokoch
       ctx.beginPath(); ctx.arc(-r, 0, tubeR, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.arc(r, 0, tubeR, 0, Math.PI * 2); ctx.stroke();
       drawCenterLine(ctx, -r - tubeR - 10, 0, r + tubeR + 10, 0);
       drawCenterCross(ctx, -r, 0, tubeR + 5);
       drawCenterCross(ctx, r, 0, tubeR + 5);
-      if(isSub){
-        drawHatching45Circle(ctx, tubeR);
-      }
+      if(isSub) drawHatching45Circle(ctx, tubeR);
     }
   }
   else if(s.type === 'wedge'){
