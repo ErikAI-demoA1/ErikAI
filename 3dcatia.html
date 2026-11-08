@@ -1036,20 +1036,10 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   
   ctx.translate(px, py);
   
-  // OPRAVA: Aplikovanie plnej 3D rotácie (RX, RY, RZ) pomocou Three.js Matrix4 pre 100% zhodu s 3D modelom
-  const euler = new THREE.Euler(
-    (s.rx || 0) * Math.PI / 180,
-    (s.ry || 0) * Math.PI / 180,
-    (s.rz || 0) * Math.PI / 180,
-    'XYZ'
-  );
-  const matrix = new THREE.Matrix4().makeRotationFromEuler(euler);
-  
-  // Zjednodušený efekt projekcie natočenia pre 2D plátno
-  let effectiveRot = (s.rz || 0) * Math.PI / 180;
-  if(viewType === 'front') effectiveRot += (s.rx || 0) * Math.PI / 180;
-  if(viewType === 'side') effectiveRot += (s.ry || 0) * Math.PI / 180;
-  ctx.rotate(effectiveRot);
+  // Aplikovanie plnej 3D rotácie (RX, RY, RZ) na projekciu pre presnú zhodu s 3D modelom
+  ctx.rotate((s.rz || 0) * Math.PI / 180);
+  if(viewType === 'front') ctx.rotate((s.rx || 0) * Math.PI / 180);
+  if(viewType === 'side') ctx.rotate((s.ry || 0) * Math.PI / 180);
 
   const isSub = s.op === 'subtract';
 
@@ -1067,15 +1057,44 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   let r = (s.r || 50) * autoSc * 0.1;
   let tubeR = (s.tube || 15) * autoSc * 0.1;
   let filletR = (s.fillet || 10) * autoSc * 0.1;
+  let chamferVal = (s.chamfer || 10) * autoSc * 0.1;
 
   if(s.type === 'box'){
     let dimY = viewType === 'top' ? h : d;
     ctx.strokeRect(-w/2, -dimY, w, dimY);
     if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
   } 
-  else if(s.type === 'filletBox' || s.type === 'chamferBox'){
+  else if(s.type === 'filletBox'){
     let dimY = viewType === 'top' ? h : d;
-    ctx.strokeRect(-w/2, -dimY, w, dimY);
+    let fr = Math.min(filletR, w/4, dimY/4);
+    ctx.beginPath();
+    ctx.moveTo(-w/2 + fr, -dimY);
+    ctx.lineTo(w/2 - fr, -dimY);
+    ctx.quadraticCurveTo(w/2, -dimY, w/2, -dimY + fr);
+    ctx.lineTo(w/2, 0 - fr);
+    ctx.quadraticCurveTo(w/2, 0, w/2 - fr, 0);
+    ctx.lineTo(-w/2 + fr, 0);
+    ctx.quadraticCurveTo(-w/2, 0, -w/2, 0 - fr);
+    ctx.lineTo(-w/2, -dimY + fr);
+    ctx.quadraticCurveTo(-w/2, -dimY, -w/2 + fr, -dimY);
+    ctx.closePath();
+    ctx.stroke();
+    if(viewType === 'section' || isSub){ ctx.fill(); drawHatching45(ctx, -w/2, -dimY, w, dimY); }
+  }
+  else if(s.type === 'chamferBox'){
+    let dimY = viewType === 'top' ? h : d;
+    let cr = Math.min(chamferVal, w/4, dimY/4);
+    ctx.beginPath();
+    ctx.moveTo(-w/2 + cr, -dimY);
+    ctx.lineTo(w/2 - cr, -dimY);
+    ctx.lineTo(w/2, -dimY + cr);
+    ctx.lineTo(w/2, -cr);
+    ctx.lineTo(w/2 - cr, 0);
+    ctx.lineTo(-w/2 + cr, 0);
+    ctx.lineTo(-w/2, -cr);
+    ctx.lineTo(-w/2, -dimY + cr);
+    ctx.closePath();
+    ctx.stroke();
     if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
   }
   else if(s.type === 'cylinder'){
