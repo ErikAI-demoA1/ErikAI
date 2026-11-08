@@ -184,7 +184,12 @@
                 <input type="file" id="image-input" accept="image/*" multiple class="hidden">
             </label>
             <button id="add-table-modal-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">📊 Tabuľka</button>
-            <button id="export-pdf-btn" class="bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded-lg text-xs font-medium shadow-lg shadow-red-600/25">💾 Uložiť PDF (1:1)</button>
+            <button id="save-project-btn" class="bg-slate-800 hover:bg-slate-700 text-sky-300 px-3 py-1.5 rounded-lg text-xs font-medium border border-sky-800">💾 Uložiť projekt</button>
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-amber-300 px-3 py-1.5 rounded-lg border border-amber-800 text-xs font-medium">
+                📂 Nahrať projekt
+                <input type="file" id="load-project-input" accept=".json" class="hidden">
+            </label>
+            <button id="export-pdf-modal-btn" class="bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded-lg text-xs font-medium shadow-lg shadow-red-600/25">💾 Stiahnuť PDF (1:1)</button>
         </div>
     </header>
 
@@ -277,6 +282,21 @@
                 <canvas id="pdf-render"></canvas>
             </div>
         </main>
+    </div>
+
+    <!-- Modal pre uloženie PDF s vlastným názvom -->
+    <div id="pdf-name-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-80 space-y-4 shadow-2xl">
+            <h3 class="text-base font-bold text-white">Uložiť PDF</h3>
+            <div>
+                <label class="text-xs text-slate-400 mb-1 block">Názov súboru:</label>
+                <input type="text" id="pdf-filename-input" value="Upraveny_Dokument" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button id="pdf-modal-cancel" class="flex-1 bg-slate-800 text-slate-300 py-2 rounded text-sm">Zrušiť</button>
+                <button id="pdf-modal-confirm" class="flex-1 bg-red-600 text-white py-2 rounded text-sm font-medium">Stiahnuť</button>
+            </div>
+        </div>
     </div>
 
     <!-- Modal pre tabuľku -->
@@ -380,7 +400,6 @@
                 const reader = new FileReader();
                 reader.onload = function() {
                     const typedarray = new Uint8Array(this.result);
-                    // Uloženie PDF do lokálnej pamäte pre obnovenie pri výpadku
                     try { localStorage.setItem('erikai_pdf_data', JSON.stringify(Array.from(typedarray))); } catch(err) {}
 
                     pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
@@ -404,7 +423,7 @@
             }
         });
 
-        // Automatické načítanie pri spustení, ak bolo niečo uložené v pamäti
+        // Automatické načítanie pri spustení
         window.addEventListener('DOMContentLoaded', () => {
             const savedPdf = localStorage.getItem('erikai_pdf_data');
             const savedAnno = localStorage.getItem('erikai_annotations');
@@ -418,7 +437,6 @@
                         pdfDoc = pdf;
                         pageNum = 1;
                         pdfDoc.getPage(1).then((page) => {
-                            const baseVp = page.getViewport({ scale: 1.0 });
                             currentZoom = 1.0;
                             document.getElementById('zoom-val').textContent = '100%';
                             renderPage(pageNum);
@@ -472,7 +490,6 @@
             });
             pageAnnotations[pageNum] = data;
             
-            // Ukladanie do localStorage pre auto-save pri výpadku
             try {
                 localStorage.setItem('erikai_annotations', JSON.stringify(pageAnnotations));
             } catch(err) {}
@@ -630,7 +647,6 @@
             return el;
         }
 
-        /* Funkcia na duplikovanie aktívneho objektu */
         function duplicateActiveElement() {
             if (!activeElement) return;
             const currentLeft = parseFloat(activeElement.style.left) || 0;
@@ -661,7 +677,51 @@
 
         document.getElementById('duplicate-btn').addEventListener('click', duplicateActiveElement);
 
-        /* Univerzálne podpisovanie pre PC aj mobily/tablety (Pointer Events) */
+        /* Tlačidlá pre uloženie a načítanie projektu */
+        document.getElementById('save-project-btn').addEventListener('click', () => {
+            if (!pdfDoc) return alert('Žiadny aktívny projekt!');
+            saveAnnotations();
+            const projectData = {
+                pdf: localStorage.getItem('erikai_pdf_data'),
+                annotations: pageAnnotations
+            };
+            const blob = new Blob([JSON.stringify(projectData)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'erikai_projekt.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('load-project-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    if (data.pdf && data.annotations) {
+                        localStorage.setItem('erikai_pdf_data', data.pdf);
+                        localStorage.setItem('erikai_annotations', JSON.stringify(data.annotations));
+                        pageAnnotations = data.annotations;
+                        
+                        const typedarray = new Uint8Array(JSON.parse(data.pdf));
+                        pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
+                            pdfDoc = pdf;
+                            pageNum = 1;
+                            renderPage(pageNum);
+                            alert('Projekt úspešne načítaný!');
+                        });
+                    }
+                } catch(err) {
+                    alert('Chyba pri načítaní projektu!');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        /* Podpisovanie */
         const signModal = document.getElementById('sign-modal');
         const signCanvas = document.getElementById('sign-canvas');
         const signCtx = signCanvas.getContext('2d');
@@ -918,7 +978,6 @@
             }
         });
 
-        // Klávesové skratky: Delete/Backspace na mazanie, Ctrl+D na duplikovanie
         window.addEventListener('keydown', (e) => {
             const isInputActive = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TD' || document.activeElement.tagName === 'TH' || document.activeElement.isContentEditable;
             
@@ -955,9 +1014,19 @@
         document.getElementById('prev-page').addEventListener('click', () => { if (pageNum > 1) renderPage(--pageNum); });
         document.getElementById('next-page').addEventListener('click', () => { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(++pageNum); });
 
-        // Export 1:1 bez orezania a bez čiarkovaných rámčekov
-        document.getElementById('export-pdf-btn').addEventListener('click', async () => {
+        /* Vlastný názov PDF pri exporte */
+        const pdfNameModal = document.getElementById('pdf-name-modal');
+        document.getElementById('export-pdf-modal-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
+            pdfNameModal.classList.remove('hidden');
+        });
+        document.getElementById('pdf-modal-cancel').addEventListener('click', () => pdfNameModal.classList.add('hidden'));
+
+        document.getElementById('pdf-modal-confirm').addEventListener('click', async () => {
+            pdfNameModal.classList.add('hidden');
+            let filename = document.getElementById('pdf-filename-input').value.trim() || 'Upraveny_Dokument';
+            if (!filename.endsWith('.pdf')) filename += '.pdf';
+
             saveAnnotations();
             selectElement(null);
 
@@ -1013,7 +1082,7 @@
             }
 
             wrapper.classList.remove('exporting-pdf');
-            finalPdf.save('ErikAI_OS_Master_Dokument_1to1.pdf');
+            finalPdf.save(filename);
             
             currentZoom = oldZoom;
             renderPage(pageNum);
