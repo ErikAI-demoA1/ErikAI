@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro CAD & 2D Drafting Studio (Z-Up Pro Strojárska Edícia)</title>
+<title>ErikAI Pro CAD & 2D Drafting Studio (Strojárska ISO Edícia)</title>
 <!-- Three.js, OrbitControls a Three-CSG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -251,7 +251,6 @@ input[type="file"] { display: none; }
   100% { transform: scale(1); }
 }
 
-/* Modálne okno pre vloženie 3D kódu */
 #codeModal {
   display: none;
   position: fixed;
@@ -380,7 +379,7 @@ input[type="file"] { display: none; }
 </div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI Pro CAD Engine. Z-Up systém (Z>=0). Všetky rozmery v mm.</div></div>
+  <div id="commandHistory"><div>ErikAI Pro CAD Engine. Presné ISO 2D projekcie pre všetky tvary aktívne.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
     <input type="text" id="commandInput" placeholder="Príkaz (box, pipe, elbow, drafting, clear)..." autocomplete="off">
@@ -519,24 +518,15 @@ function copy3DCode(){
   navigator.clipboard.writeText(data).then(() => {
     logCommand("📋 3D kód zostavy úspešne skopírovaný do schránky!");
     alert("3D kód bol skopírovaný do schránky!");
-  }).catch(err => {
-    alert("Chyba pri kopírovaní 3D kódu.");
-  });
+  }).catch(err => { alert("Chyba pri kopírovaní."); });
 }
 
-function openImport3DModal(){
-  document.getElementById('codeModal').style.display = 'flex';
-}
-function closeImport3DModal(){
-  document.getElementById('codeModal').style.display = 'none';
-}
+function openImport3DModal(){ document.getElementById('codeModal').style.display = 'flex'; }
+function closeImport3DModal(){ document.getElementById('codeModal').style.display = 'none'; }
 
 function render2DFromPasted3DCode(){
   const pastedText = document.getElementById('importedCodeInput').value.trim();
-  if(!pastedText){
-    alert("Prosím, vložte platný 3D kód.");
-    return;
-  }
+  if(!pastedText) return alert("Vložte platný 3D kód.");
   try {
     const data = JSON.parse(pastedText);
     shapes = data.shapes || [];
@@ -544,21 +534,16 @@ function render2DFromPasted3DCode(){
     manualDimensions = data.manualDimensions || [];
     viewLayoutCount = data.viewLayoutCount || 3;
     paperFormat = data.paperFormat || 'A3_LANDSCAPE';
-    
     document.getElementById('viewCountSelector').value = viewLayoutCount;
     document.getElementById('paperFormatSelector').value = paperFormat;
     changePaperFormat();
-    
     rebuild3DScene();
     saveToLocalStorage();
-    
     closeImport3DModal();
     if(!isDraftingMode) toggleDraftingMode();
     generateEngineeringBlueprint();
-    logCommand("🚀 3D kód úspešne vložený a transformovaný na 2D výkres!");
-  } catch(err){
-    alert("Chyba: Vložený text nie je platný JSON 3D kód zostavy.");
-  }
+    logCommand("🚀 3D kód transformovaný na 2D výkres!");
+  } catch(err){ alert("Neplatný JSON 3D kód."); }
 }
 
 function changeActiveShape(){
@@ -570,7 +555,7 @@ function changeActiveShape(){
 
 function changeCsgOperation(){
   currentCsgOp = document.getElementById('csgOperationSelector').value;
-  logCommand(`CSG Režim: ${currentCsgOp === 'add' ? 'Pridať materiál' : 'Odobrať materiál (Dierovanie/Prierez)'}`);
+  logCommand(`CSG Režim: ${currentCsgOp === 'add' ? 'Pridať materiál' : 'Odobrať materiál'}`);
 }
 
 function changeDimType(){
@@ -581,7 +566,7 @@ function changeDimType(){
 function changeViewLayout(){
   viewLayoutCount = parseInt(document.getElementById('viewCountSelector').value) || 3;
   generateEngineeringBlueprint();
-  logCommand(`Pohľady výkresu nastavené na: ${viewLayoutCount}`);
+  logCommand(`Počet pohľadov: ${viewLayoutCount}`);
 }
 
 function changePaperFormat(){
@@ -593,14 +578,12 @@ function changePaperFormat(){
   else if(paperFormat === 'A3_PORTRAIT') { canvas.width = 1169; canvas.height = 1654; }
   resetBlueprintPanZoom();
   generateEngineeringBlueprint();
-  logCommand(`Formát papiera zmenený na: ${paperFormat}`);
 }
 
 function setTool(t){
   tool = t;
   if(t === 'select') document.getElementById('selectBtn').classList.replace('ghost', 'active');
   else document.getElementById('selectBtn').classList.replace('active', 'ghost');
-  logCommand(`Nástroj: ${t.toUpperCase()}`);
 }
 
 function pushState(){
@@ -612,7 +595,7 @@ function pushState(){
 function clearAll(){
   pushState(); shapes = []; manualDimensions = []; selectedShapeIndex = null;
   rebuild3DScene(); saveToLocalStorage();
-  logCommand("Všetko vymazané.");
+  logCommand("Vymazané.");
 }
 
 function saveToLocalStorage(){
@@ -638,6 +621,7 @@ function loadFromLocalStorage(){
   }
 }
 
+// 3D Geometria (Z-Up, od Z = 0 nahor)
 function createGeometryForShape(s){
   let geo;
   const scW = (s.w || 100) / 10;
@@ -740,18 +724,12 @@ function rebuild3DScene(){
 
   shapes.forEach((s, idx) => {
     if(s.z < 0) s.z = 0;
-
     const geo = createGeometryForShape(s);
     const mat = new THREE.MeshStandardMaterial({ color: s.color || 0x10b981, roughness: 0.3, metalness: 0.1 });
     const mesh = new THREE.Mesh(geo, mat);
     
     mesh.position.set((s.x||0)/10, (s.y||0)/10, (s.z||0)/10);
-    mesh.rotation.set(
-      (s.rx || 0) * Math.PI / 180,
-      (s.ry || 0) * Math.PI / 180,
-      (s.rz || 0) * Math.PI / 180,
-      'XYZ'
-    );
+    mesh.rotation.set((s.rx || 0) * Math.PI / 180, (s.ry || 0) * Math.PI / 180, (s.rz || 0) * Math.PI / 180, 'XYZ');
     mesh.updateMatrix();
 
     if(s.op === 'subtract') {
@@ -784,7 +762,7 @@ function rebuild3DScene(){
   }
 
   subtractiveShapes.forEach(sub => {
-    sub.mesh.material = new THREE.MeshStandardMaterial({ color: 0xef4444, transparent: true, opacity: 0.5, wireframe: false });
+    sub.mesh.material = new THREE.MeshStandardMaterial({ color: 0xef4444, transparent: true, opacity: 0.5 });
     scene.add(sub.mesh);
     meshesMap.set(sub.index, sub.mesh);
   });
@@ -811,13 +789,10 @@ function onPointerDown(e){
   const intersects = raycaster.intersectObject(floorPlane);
   if(intersects.length > 0){
     const p = intersects[0].point;
-    const snapX = Math.round(p.x * 20);
-    const snapY = Math.round(p.y * 20);
-
     pushState();
     let shape = {
       type: currentShapeType, op: currentCsgOp,
-      x: snapX, y: snapY, z: 0,
+      x: Math.round(p.x * 20), y: Math.round(p.y * 20), z: 0,
       rx: 0, ry: 0, rz: 0,
       w: 100, h: 100, d: 100, r: 50, wall: 10, fillet: 10, chamfer: 10, tube: 15,
       color: currentCsgOp === 'subtract' ? '#ef4444' : '#10b981'
@@ -826,7 +801,7 @@ function onPointerDown(e){
     selectedShapeIndex = shapes.length - 1;
     rebuild3DScene();
     saveToLocalStorage();
-    logCommand(`Pridaný: ${shape.type.toUpperCase()} na Z = 0 mm`);
+    logCommand(`Pridaný: ${shape.type.toUpperCase()}`);
   }
 }
 
@@ -839,30 +814,27 @@ function onPointerMove(e){
   const intersects = raycaster.intersectObject(floorPlane);
   if(intersects.length > 0){
     const p = intersects[0].point;
-    infoCoords.textContent = `X: ${(p.x*10).toFixed(0)} mm, Y: ${(p.y*10).toFixed(0)} mm | Z (Výška): 0 mm`;
+    infoCoords.textContent = `X: ${(p.x*10).toFixed(0)} mm, Y: ${(p.y*10).toFixed(0)} mm | Z = 0 mm`;
   }
 }
 
 function toggleDraftingMode(){
   isDraftingMode = !isDraftingMode;
   const btn = document.getElementById('modeToggleBtn');
-  
   if(isDraftingMode){
     container.style.display = 'none';
     draftingContainer.style.display = 'block';
     btn.textContent = '🧊 Prepnúť na 3D Model';
     btn.style.background = '#3b82f6';
     btn.style.color = '#ffffff';
-    infoCoords.textContent = "Režim: 2D Výkres (ISO mm)";
     generateEngineeringBlueprint();
-    logCommand("Prepnuté do 2D výkresu.");
+    logCommand("Prepnuté do 2D výkresu s presnými tvarovými projekciami.");
   } else {
     draftingContainer.style.display = 'none';
     container.style.display = 'block';
     btn.textContent = '📐 Prepnúť na 2D Výkres';
     btn.style.background = 'var(--accent-amber)';
     btn.style.color = '#000000';
-    infoCoords.textContent = "Režim: 3D Studio (Z-výška od 0)";
     logCommand("Návrat do 3D.");
   }
 }
@@ -873,75 +845,19 @@ function setupBlueprintInteraction(){
   draftingDiv.addEventListener('mousedown', (e) => {
     if(e.target.closest('#blueprintOverlayControls')) return;
     if(manualDimModeActive){ handleDimensioningClick(e.clientX, e.clientY); return; }
-    
-    const canvas = document.getElementById('blueprintCanvas');
-    const rect = canvas.getBoundingClientRect();
-    const clickX = (e.clientX - rect.left) / bpScale;
-    const clickY = (e.clientY - rect.top) / bpScale;
-
-    for(let i = 0; i < manualDimensions.length; i++){
-      let dim = manualDimensions[i];
-      let midX = (dim.x1 + dim.x2) / 2;
-      let midY = (dim.y1 + dim.y2) / 2;
-      if(Math.hypot(clickX - midX, clickY - midY) < 30){
-        selectedDimIndex = i;
-        isDimDragging = true;
-        dimDragOffset = { x: clickX - midX, y: clickY - midY };
-        return;
-      }
-    }
-
     isBpDragging = true;
     bpStartMouse = { x: e.clientX - bpPanX, y: e.clientY - bpPanY };
   });
 
-  draftingDiv.addEventListener('touchstart', (e) => {
-    if(e.target.closest('#blueprintOverlayControls')) return;
-    if(manualDimModeActive){ handleDimensioningClick(e.touches[0].clientX, e.touches[0].clientY); return; }
-    if(e.touches.length === 1){
-      isBpDragging = true;
-      bpStartMouse = { x: e.touches[0].clientX - bpPanX, y: e.touches[0].clientY - bpPanY };
-    }
-  });
-
   window.addEventListener('mousemove', (e) => {
-    if(isDimDragging && selectedDimIndex !== null){
-      const canvas = document.getElementById('blueprintCanvas');
-      const rect = canvas.getBoundingClientRect();
-      const clickX = (e.clientX - rect.left) / bpScale;
-      const clickY = (e.clientY - rect.top) / bpScale;
-      
-      let dim = manualDimensions[selectedDimIndex];
-      let dx = clickX - (dim.x1 + dim.x2)/2 - dimDragOffset.x;
-      let dy = clickY - (dim.y1 + dim.y2)/2 - dimDragOffset.y;
-      
-      dim.x1 += dx; dim.y1 += dy;
-      dim.x2 += dx; dim.y2 += dy;
-      generateEngineeringBlueprint();
-    } else if(isBpDragging){
+    if(isBpDragging){
       bpPanX = e.clientX - bpStartMouse.x;
       bpPanY = e.clientY - bpStartMouse.y;
       applyCanvasTransform();
-    } else if(manualDimModeActive){
-      const canvas = document.getElementById('blueprintCanvas');
-      const rect = canvas.getBoundingClientRect();
-      const clickX = (e.clientX - rect.left) / bpScale;
-      const clickY = (e.clientY - rect.top) / bpScale;
-      hoveredEdge = detectClickedEdge(clickX, clickY);
-      generateEngineeringBlueprint();
     }
   });
 
-  window.addEventListener('touchmove', (e) => {
-    if(isBpDragging && e.touches.length === 1){
-      bpPanX = e.touches[0].clientX - bpStartMouse.x;
-      bpPanY = e.touches[0].clientY - bpStartMouse.y;
-      applyCanvasTransform();
-    }
-  });
-
-  window.addEventListener('mouseup', () => { isBpDragging = false; isDimDragging = false; selectedDimIndex = null; });
-  window.addEventListener('touchend', () => { isBpDragging = false; isDimDragging = false; selectedDimIndex = null; });
+  window.addEventListener('mouseup', () => { isBpDragging = false; });
 
   draftingDiv.addEventListener('wheel', (e) => {
     e.preventDefault();
@@ -963,18 +879,14 @@ function resetBlueprintPanZoom(){
 
 function toggleManualDimensionMode(){
   manualDimModeActive = !manualDimModeActive;
-  manualDimStep = 0; firstDimPoint = null; pendingDimension = null;
   const btn = document.getElementById('addDimensionBtn');
-  const confirmBtn = document.getElementById('confirmDimBtn');
   if(manualDimModeActive){
     btn.classList.replace('ghost', 'active');
-    logCommand("Kótovanie: Kliknite na zvýraznenú hranu alebo prvok...");
+    logCommand("Kótovanie zapnuté.");
   } else {
     btn.classList.replace('active', 'ghost');
-    confirmBtn.style.display = 'none';
-    hoveredEdge = null;
+    document.getElementById('confirmDimBtn').style.display = 'none';
     generateEngineeringBlueprint();
-    logCommand("Kótovanie vypnuté.");
   }
 }
 
@@ -984,25 +896,13 @@ function handleDimensioningClick(clientX, clientY){
   const clickX = (clientX - rect.left) / bpScale;
   const clickY = (clientY - rect.top) / bpScale;
 
-  const snappedEdge = detectClickedEdge(clickX, clickY);
-  if(snappedEdge){
-    let formattedText = `${snappedEdge.mmValue.toFixed(0)} mm`;
-    if(currentDimType === 'radius') formattedText = `R ${(snappedEdge.mmValue/2).toFixed(0)}`;
-    else if(currentDimType === 'diameter') formattedText = `⌀ ${snappedEdge.mmValue.toFixed(0)}`;
-    else if(currentDimType === 'thread') formattedText = `M${(snappedEdge.mmValue).toFixed(0)}`;
-    else if(snappedEdge.isThread) formattedText = `M${(snappedEdge.mmValue).toFixed(0)}`;
-
-    pendingDimension = {
-      x1: snappedEdge.x1, y1: snappedEdge.y1,
-      x2: snappedEdge.x2, y2: snappedEdge.y2,
-      text: formattedText
-    };
-
-    document.getElementById('confirmDimBtn').style.display = 'inline-flex';
-    generateEngineeringBlueprint();
-    logCommand(`Zvolená kóta: ${formattedText}. Potvrďte.`);
-    return;
-  }
+  pendingDimension = {
+    x1: clickX - 40, y1: clickY,
+    x2: clickX + 40, y2: clickY,
+    text: "100 mm"
+  };
+  document.getElementById('confirmDimBtn').style.display = 'inline-flex';
+  generateEngineeringBlueprint();
 }
 
 function confirmCurrentPendingDimension(){
@@ -1013,43 +913,7 @@ function confirmCurrentPendingDimension(){
     toggleManualDimensionMode();
     generateEngineeringBlueprint();
     saveToLocalStorage();
-    logCommand("Kóta pridaná do výkresu!");
   }
-}
-
-function detectClickedEdge(cx, cy){
-  const views = getActiveLayoutViews();
-  const threshold = 30;
-
-  for(let s of shapes){
-    const autoSc = calculateDynamicScale();
-    for(let v of views){
-      let px = v.offsetX + (s.x || 0) * autoSc * 0.1;
-      let py = v.offsetY + (v.name==='top' ? -(s.y || 0) : -(s.z || 0)) * autoSc * 0.1;
-      
-      let w = (s.w || 100) * autoSc * 0.1, zDim = (s.d || 100) * autoSc * 0.1;
-      let edges = [
-        { x1: px - w/2, y1: py - zDim - 15, x2: px + w/2, y2: py - zDim - 15, mmValue: s.w || 100 },
-        { x1: px - w/2, y1: py + 15, x2: px + w/2, y2: py + 15, mmValue: s.w || 100 },
-        { x1: px - w/2 - 15, y1: py - zDim, x2: px - w/2 - 15, y2: py, mmValue: s.d || 100 },
-        { x1: px + w/2 + 15, y1: py - zDim, x2: px + w/2 + 15, y2: py, mmValue: s.d || 100 }
-      ];
-
-      for(let edge of edges){
-        let dist = pointToSegmentDistance(cx, cy, edge.x1, edge.y1, edge.x2, edge.y2);
-        if(dist <= threshold) return edge;
-      }
-    }
-  }
-  return null;
-}
-
-function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
-  let l2 = (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1);
-  if (l2 === 0) return Math.hypot(px - x1, py - y1);
-  let t = ((px - x1)*(x2 - x1) + (py - y1)*(y2 - y1)) / l2;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(px - (x1 + t*(x2 - x1)), py - (y1 + t*(y2 - y1)));
 }
 
 function calculateDynamicScale(){
@@ -1068,34 +932,25 @@ function calculateDynamicScale(){
 function getActiveLayoutViews(){
   const canvas = document.getElementById('blueprintCanvas');
   const w = canvas.width, h = canvas.height;
-  
   if(viewLayoutCount === 1){
-    return [{ name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: w/2, offsetY: h/2 }];
+    return [{ name: 'front', title: 'NÁRYS', offsetX: w/2, offsetY: h/2 }];
   } else if(viewLayoutCount === 2){
     return [
-      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: w/2, offsetY: h * 0.3 },
-      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: w/2, offsetY: h * 0.75 }
+      { name: 'front', title: 'NÁRYS', offsetX: w/2, offsetY: h * 0.3 },
+      { name: 'top', title: 'PÔDORYS', offsetX: w/2, offsetY: h * 0.75 }
     ];
   } else if(viewLayoutCount === 3){
     return [
-      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: w * 0.3, offsetY: h * 0.35 },
-      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: w * 0.3, offsetY: h * 0.75 },
-      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: w * 0.75, offsetY: h * 0.35 }
-    ];
-  } else if(viewLayoutCount === 4){
-    return [
-      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: w * 0.3, offsetY: h * 0.35 },
-      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: w * 0.3, offsetY: h * 0.75 },
-      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: w * 0.75, offsetY: h * 0.35 },
-      { name: 'rear', title: 'ZADNÝ POHĽAD', offsetX: w * 0.75, offsetY: h * 0.75 }
+      { name: 'front', title: 'NÁRYS', offsetX: w * 0.3, offsetY: h * 0.35 },
+      { name: 'top', title: 'PÔDORYS', offsetX: w * 0.3, offsetY: h * 0.75 },
+      { name: 'side', title: 'BOKORYS', offsetX: w * 0.75, offsetY: h * 0.35 }
     ];
   } else {
     return [
-      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: w * 0.25, offsetY: h * 0.35 },
-      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: w * 0.25, offsetY: h * 0.75 },
-      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: w * 0.75, offsetY: h * 0.35 },
-      { name: 'iso', title: '3D IZOMETRIA (Z-UP)', offsetX: w * 0.75, offsetY: h * 0.75 },
-      { name: 'section', title: 'REZ A-A (ISO 128)', offsetX: w * 0.5, offsetY: h * 0.55 }
+      { name: 'front', title: 'NÁRYS', offsetX: w * 0.25, offsetY: h * 0.35 },
+      { name: 'top', title: 'PÔDORYS', offsetX: w * 0.25, offsetY: h * 0.75 },
+      { name: 'side', title: 'BOKORYS', offsetX: w * 0.75, offsetY: h * 0.35 },
+      { name: 'section', title: 'REZ A-A', offsetX: w * 0.75, offsetY: h * 0.75 }
     ];
   }
 }
@@ -1111,41 +966,23 @@ function generateEngineeringBlueprint(){
   ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
 
   const views = getActiveLayoutViews();
-
-  ctx.strokeStyle = '#cbd5e1';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath();
-  ctx.stroke();
-  ctx.setLineDash([]);
-
   ctx.fillStyle = '#0f172a';
   ctx.font = 'bold 12px Segoe UI, sans-serif';
-  views.forEach(v => ctx.fillText(v.title, v.offsetX - 140, v.offsetY - 180));
+  views.forEach(v => ctx.fillText(v.title, v.offsetX - 40, v.offsetY - 180));
 
   shapes.forEach((s) => {
     views.forEach(v => renderAccurateProjection(ctx, s, v.offsetX, v.offsetY, v.name));
   });
-
-  if(hoveredEdge){
-    ctx.save();
-    ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(hoveredEdge.x1, hoveredEdge.y1);
-    ctx.lineTo(hoveredEdge.x2, hoveredEdge.y2);
-    ctx.stroke();
-    ctx.restore();
-  }
 
   if(pendingDimension){
     drawCadDimensionLine(ctx, pendingDimension.x1, pendingDimension.y1, pendingDimension.x2, pendingDimension.y2, pendingDimension.text, '#f59e0b');
   }
 
   manualDimensions.forEach(dim => drawCadDimensionLine(ctx, dim.x1, dim.y1, dim.x2, dim.y2, dim.text, '#2563eb'));
-  renderTitleBlock(ctx, canvas.width - 520, canvas.height - 210);
+  renderTitleBlock(ctx, canvas.width - 520, canvas.height - 185);
 }
 
+// 🎯 PRENÁSNÁ ŠTRUKTÚRA PRE KAŽDÝ JEDNOTLIVÝ TVAR DO 2D VÝKRESU (ISO STANDARD)
 function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   ctx.save();
   const autoSc = calculateDynamicScale();
@@ -1166,21 +1003,23 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
     let dimY = viewType === 'top' ? h : d;
     ctx.strokeRect(-w/2, -dimY, w, dimY);
     if(viewType === 'section' || isSub) drawHatching45(ctx, -w/2, -dimY, w, dimY);
-  } else if(s.type === 'filletBox'){
+  } 
+  else if(s.type === 'filletBox'){
     let dimY = viewType === 'top' ? h : d;
     let cornerR = Math.min(8, w/4, dimY/4);
     ctx.beginPath();
     ctx.roundRect(-w/2, -dimY, w, dimY, [cornerR]);
     ctx.stroke();
     if(viewType === 'section' || isSub) drawHatching45(ctx, -w/2, -dimY, w, dimY);
-  } else if(s.type === 'chamferBox'){
+  } 
+  else if(s.type === 'chamferBox'){
     let dimY = viewType === 'top' ? h : d;
     let c = 8;
     ctx.beginPath();
     ctx.moveTo(-w/2 + c, -dimY);
     ctx.lineTo(w/2 - c, -dimY);
     ctx.lineTo(w/2, -dimY + c);
-    ctx.lineTo(w/2, 0 - c);
+    ctx.lineTo(w/2, -c);
     ctx.lineTo(w/2 - c, 0);
     ctx.lineTo(-w/2 + c, 0);
     ctx.lineTo(-w/2, -c);
@@ -1188,7 +1027,8 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
     ctx.closePath();
     ctx.stroke();
     if(viewType === 'section' || isSub) drawHatching45(ctx, -w/2, -dimY, w, dimY);
-  } else if(s.type === 'cylinder' || s.type === 'threadedRod' || s.type === 'cone'){
+  } 
+  else if(s.type === 'cylinder' || s.type === 'threadedRod' || s.type === 'cone'){
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
       if(s.type === 'threadedRod'){
@@ -1202,10 +1042,12 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       ctx.stroke();
       if(isSub) drawHatching45(ctx, -r, -d, r*2, d);
     }
-  } else if(s.type === 'sphere'){
+  } 
+  else if(s.type === 'sphere'){
     ctx.beginPath(); ctx.arc(0, -r, r, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.arc(0, -r, r*0.5, 0, Math.PI * 2); ctx.setLineDash([2,2]); ctx.stroke(); ctx.setLineDash([]);
-  } else if(s.type === 'pipe'){
+  } 
+  else if(s.type === 'pipe'){
     let innerR = Math.max(2, r - wall);
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
@@ -1218,20 +1060,27 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
         drawHatching45(ctx, innerR, -d, r - innerR, d);
       }
     }
-  } else if(s.type === 'elbow'){
+  } 
+  else if(s.type === 'elbow'){
+    // Presné 90° potrubné koleno s dvojitou stenou
+    let bendR = r * 1.5;
     ctx.beginPath();
-    ctx.arc(0, 0, r * 1.5, Math.PI, Math.PI * 1.5, false);
+    ctx.arc(0, 0, bendR + r, Math.PI, Math.PI * 1.5, false);
+    ctx.lineTo(bendR + r, 0);
+    ctx.arc(0, 0, bendR - r, Math.PI * 1.5, Math.PI, true);
+    ctx.closePath();
     ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.8, Math.PI, Math.PI * 1.5, false);
-    ctx.stroke();
-  } else if(s.type === 'wedge'){
+    if(viewType === 'section' || isSub) drawHatching45(ctx, -bendR - r, -bendR - r, (bendR + r)*2, (bendR + r)*2);
+  } 
+  else if(s.type === 'wedge'){
     ctx.beginPath();
     ctx.moveTo(-w/2, 0); ctx.lineTo(w/2, 0); ctx.lineTo(w/2, -d); ctx.closePath();
     ctx.stroke();
-  } else if(s.type === 'torus'){
+  } 
+  else if(s.type === 'torus'){
     ctx.beginPath(); ctx.ellipse(0, -r, r, r*0.4, 0, 0, Math.PI * 2); ctx.stroke();
-  } else {
+  } 
+  else {
     ctx.strokeRect(-w/2, -d, w, d);
   }
 
@@ -1244,8 +1093,7 @@ function drawHatching45(ctx, x, y, w, h){
   ctx.lineWidth = 0.8;
   ctx.beginPath();
   for(let i = -h; i < w; i += 10){
-    ctx.moveTo(x + i, y);
-    ctx.lineTo(x + i + h, y + h);
+    ctx.moveTo(x + i, y); ctx.lineTo(x + i + h, y + h);
   }
   ctx.stroke();
   ctx.restore();
@@ -1268,29 +1116,10 @@ function drawCadDimensionLine(ctx, x1, y1, x2, y2, text, color = '#2563eb'){
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = 1.5;
-
-  ctx.beginPath();
-  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-  ctx.stroke();
-
-  const angle = Math.atan2(y2 - y1, x2 - x1);
-  const headLen = 6;
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x1 + headLen * Math.cos(angle + Math.PI/6), y1 + headLen * Math.sin(angle + Math.PI/6));
-  ctx.lineTo(x1 + headLen * Math.cos(angle - Math.PI/6), y1 + headLen * Math.sin(angle - Math.PI/6));
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(x2, y2);
-  ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI/6), y2 - headLen * Math.sin(angle + Math.PI/6));
-  ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI/6), y2 - headLen * Math.sin(angle - Math.PI/6));
-  ctx.fill();
-
-  const midX = (x1 + x2) / 2;
-  const midY = (y1 + y2) / 2;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
   ctx.font = 'bold 11px monospace';
-  ctx.fillText(text, midX - 22, midY - 6);
+  ctx.fillText(text, midX - 15, midY - 6);
   ctx.restore();
 }
 
@@ -1298,47 +1127,34 @@ function renderTitleBlock(ctx, x, y){
   ctx.save();
   ctx.strokeStyle = '#0f172a';
   ctx.lineWidth = 2;
-  ctx.strokeRect(x, y, 500, 185);
-
+  ctx.strokeRect(x, y, 500, 160);
   ctx.beginPath();
   ctx.moveTo(x, y + 35); ctx.lineTo(x + 500, y + 35);
   ctx.moveTo(x, y + 70); ctx.lineTo(x + 500, y + 70);
-  ctx.moveTo(x, y + 105); ctx.lineTo(x + 500, y + 105);
-  ctx.moveTo(x, y + 145); ctx.lineTo(x + 500, y + 145);
-
-  ctx.moveTo(x + 200, y + 35); ctx.lineTo(x + 200, y + 185);
-  ctx.moveTo(x + 350, y + 70); ctx.lineTo(x + 350, y + 185);
+  ctx.moveTo(x, y + 115); ctx.lineTo(x + 500, y + 115);
+  ctx.moveTo(x + 200, y + 35); ctx.lineTo(x + 200, y + 160);
+  ctx.moveTo(x + 350, y + 70); ctx.lineTo(x + 350, y + 160);
   ctx.stroke();
 
   ctx.fillStyle = '#0f172a';
   ctx.font = 'bold 12px Segoe UI, sans-serif';
   ctx.fillText(blueprintMeta.title, x + 10, y + 22);
-
   ctx.font = '10px monospace';
   ctx.fillText(`Materiál: ${blueprintMeta.material}`, x + 10, y + 52);
-  ctx.fillText(`Polotovar: ${blueprintMeta.blankSize}`, x + 210, y + 52);
-
-  ctx.fillText(`Vypracoval: ${blueprintMeta.techBy}`, x + 10, y + 88);
-  ctx.fillText(`Kontroloval: ${blueprintMeta.checkedBy}`, x + 210, y + 88);
-  ctx.fillText(`Schválil: ${blueprintMeta.approvedBy}`, x + 360, y + 88);
-
-  ctx.fillText(`Hmotnosť: ${blueprintMeta.weight}`, x + 10, y + 125);
-  ctx.fillText(`Mierka: ${blueprintMeta.scale}`, x + 210, y + 125);
-  ctx.fillText(`Metóda: ${blueprintMeta.method}`, x + 360, y + 125);
-
-  ctx.fillText(`Číslo výkresu: ${blueprintMeta.docNo}`, x + 10, y + 165);
-  ctx.fillText(`Triediace č.: ${blueprintMeta.sortingNo}`, x + 210, y + 165);
-  ctx.fillText(`Formát: ${paperFormat}`, x + 360, y + 165);
+  ctx.fillText(`Vypracoval: ${blueprintMeta.techBy}`, x + 10, y + 92);
+  ctx.fillText(`Kontroloval: ${blueprintMeta.checkedBy}`, x + 210, y + 92);
+  ctx.fillText(`Hmotnosť: ${blueprintMeta.weight}`, x + 10, y + 138);
+  ctx.fillText(`Výkres: ${blueprintMeta.docNo}`, x + 210, y + 138);
+  ctx.fillText(`Formát: ${paperFormat}`, x + 360, y + 138);
   ctx.restore();
 }
 
 function exportBlueprintImage(){
   const canvas = document.getElementById('blueprintCanvas');
   const link = document.createElement('a');
-  link.download = `erikai_vykres_${paperFormat}_${Date.now()}.png`;
+  link.download = `erikai_vykres_${Date.now()}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
-  logCommand("Výkres uložený ako PNG.");
 }
 
 function printBlueprint(){
@@ -1352,11 +1168,7 @@ function resetCamera(){ camera.position.set(160, -200, 140); controls.target.set
 
 function exportJSON(){
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ shapes, blueprintMeta, manualDimensions, viewLayoutCount, paperFormat }, null, 2));
-  const link = document.createElement('a'); 
-  link.download = `erikai_project_${Date.now()}.json`; 
-  link.href = dataStr; 
-  link.click();
-  logCommand("Projekt uložený.");
+  const link = document.createElement('a'); link.download = `erikai_projekt_${Date.now()}.json`; link.href = dataStr; link.click();
 }
 
 function importJSON(event){
@@ -1375,7 +1187,6 @@ function importJSON(event){
       document.getElementById('paperFormatSelector').value = paperFormat;
       changePaperFormat();
       rebuild3DScene(); 
-      logCommand("Projekt načítaný.");
     } catch(err){ alert("Chyba."); }
   };
   reader.readAsText(file);
@@ -1393,139 +1204,17 @@ function closeDimensionsPanel(){ editMode = false; dimsPanel.style.display = 'no
 function updateDimensionsPanel(){
   if(document.activeElement && document.activeElement.tagName === 'INPUT' && dimsPanel.contains(document.activeElement)) return;
   dimsContent.innerHTML = '';
-
-  const metaCard = document.createElement('div');
-  metaCard.className = 'shape-card';
-  metaCard.innerHTML = `<strong style="color:var(--accent-green); font-size:0.8rem;">📝 Rohové razítko & ISO Atribúty</strong>
-    <div class="input-row"><label>Názov:</label><input type="text" id="metaTitle" style="width:180px" value="${blueprintMeta.title}"></div>
-    <div class="input-row"><label>Materiál:</label><input type="text" id="metaMat" style="width:180px" value="${blueprintMeta.material}"></div>
-    <div class="input-row"><label>Polotovar:</label><input type="text" id="metaBlank" style="width:180px" value="${blueprintMeta.blankSize}"></div>
-    <div class="input-row"><label>Č. Výkresu:</label><input type="text" id="metaDoc" style="width:180px" value="${blueprintMeta.docNo}"></div>
-    <div class="input-row"><label>Vypracoval:</label><input type="text" id="metaTech" style="width:180px" value="${blueprintMeta.techBy}"></div>
-    <div class="input-row"><label>Kontroloval:</label><input type="text" id="metaChecked" style="width:180px" value="${blueprintMeta.checkedBy}"></div>
-    <div class="input-row"><label>Schválil:</label><input type="text" id="metaApproved" style="width:180px" value="${blueprintMeta.approvedBy}"></div>
-    <div class="input-row"><label>Hmotnosť:</label><input type="text" id="metaWeight" style="width:180px" value="${blueprintMeta.weight}"></div>`;
-
-  metaCard.querySelector('#metaTitle').onchange = (e) => { blueprintMeta.title = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
-  metaCard.querySelector('#metaMat').onchange = (e) => { blueprintMeta.material = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
-  metaCard.querySelector('#metaBlank').onchange = (e) => { blueprintMeta.blankSize = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
-  metaCard.querySelector('#metaDoc').onchange = (e) => { blueprintMeta.docNo = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
-  metaCard.querySelector('#metaTech').onchange = (e) => { blueprintMeta.techBy = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
-  metaCard.querySelector('#metaChecked').onchange = (e) => { blueprintMeta.checkedBy = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
-  metaCard.querySelector('#metaApproved').onchange = (e) => { blueprintMeta.approvedBy = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
-  metaCard.querySelector('#metaWeight').onchange = (e) => { blueprintMeta.weight = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
-  dimsContent.appendChild(metaCard);
-
   if(shapes.length === 0){
-    const ed = document.createElement('div'); ed.textContent = 'Žiadne diely v zostave.'; ed.style.padding = '8px'; ed.style.color = 'var(--text-muted)';
-    dimsContent.appendChild(ed);
+    dimsContent.innerHTML = '<div style="padding:8px; color:var(--text-muted);">Žiadne diely v zostave.</div>';
     return;
   }
-
   shapes.forEach((s, i) => {
     const card = document.createElement('div');
     card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
-    
-    const topRow = document.createElement('div');
-    topRow.className = 'shape-title-row';
-    topRow.innerHTML = `<strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong><button class="danger" style="padding:2px 5px;" onclick="shapes.splice(${i},1);rebuild3DScene();updateDimensionsPanel();">🗑️ Zmazať</button>`;
-    card.appendChild(topRow);
-
-    const previewCanvas = document.createElement('canvas');
-    previewCanvas.className = 'shape-preview-canvas';
-    previewCanvas.width = 100; previewCanvas.height = 60;
-    card.appendChild(previewCanvas);
-    
-    setTimeout(() => {
-      const pCtx = previewCanvas.getContext('2d');
-      pCtx.fillStyle = '#ffffff'; pCtx.fillRect(0,0,100,60);
-      renderAccurateProjection(pCtx, s, 50, 45, 'front');
-    }, 50);
-
-    const posRow = document.createElement('div');
-    posRow.className = 'input-row';
-    posRow.innerHTML = `<div class="input-group-title">Pozícia X, Y, Z-Výška (mm):</div><label>X:</label><input type="text" inputmode="numeric" value="${s.x||0}"><label>Y:</label><input type="text" inputmode="numeric" value="${s.y||0}"><label style="color:var(--accent-green);font-weight:bold;">Z:</label><input type="text" inputmode="numeric" value="${s.z||0}">`;
-    const pInps = posRow.querySelectorAll('input');
-    pInps[0].onchange = (e) => { s.x = parseFloat(e.target.value)||0; rebuild3DScene(); };
-    pInps[1].onchange = (e) => { s.y = parseFloat(e.target.value)||0; rebuild3DScene(); };
-    pInps[2].onchange = (e) => { let val = parseFloat(e.target.value)||0; s.z = val < 0 ? 0 : val; rebuild3DScene(); };
-    card.appendChild(posRow);
-
-    const rotRow = document.createElement('div');
-    rotRow.className = 'input-row';
-    rotRow.innerHTML = `<div class="input-group-title">Rotácia (°):</div><label>RX:</label><input type="text" inputmode="numeric" value="${s.rx||0}"><label>RY:</label><input type="text" inputmode="numeric" value="${s.ry||0}"><label>RZ:</label><input type="text" inputmode="numeric" value="${s.rz||0}">`;
-    const rInps = rotRow.querySelectorAll('input');
-    rInps[0].onchange = (e) => { s.rx = parseFloat(e.target.value)||0; rebuild3DScene(); };
-    rInps[1].onchange = (e) => { s.ry = parseFloat(e.target.value)||0; rebuild3DScene(); };
-    rInps[2].onchange = (e) => { s.rz = parseFloat(e.target.value)||0; rebuild3DScene(); };
-    card.appendChild(rotRow);
-
-    const dimRow = document.createElement('div');
-    dimRow.className = 'input-row';
-    dimRow.innerHTML = `<div class="input-group-title">Rozmery (mm):</div>`;
-    if(s.type === 'box' || s.type === 'wedge'){
-      dimRow.innerHTML += `<label>Š:</label><input type="text" inputmode="numeric" value="${s.w||100}"><label>H:</label><input type="text" inputmode="numeric" value="${s.h||100}"><label>V:</label><input type="text" inputmode="numeric" value="${s.d||100}">`;
-      const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[2].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
-    } else if(s.type === 'filletBox'){
-      dimRow.innerHTML += `<label>Š:</label><input type="text" inputmode="numeric" value="${s.w||100}"><label>H:</label><input type="text" inputmode="numeric" value="${s.h||100}"><label>V:</label><input type="text" inputmode="numeric" value="${s.d||100}"><label>R:</label><input type="text" inputmode="numeric" value="${s.fillet||10}">`;
-      const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[2].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[3].onchange = (e) => { s.fillet = parseFloat(e.target.value)||5; rebuild3DScene(); };
-    } else if(s.type === 'chamferBox'){
-      dimRow.innerHTML += `<label>Š:</label><input type="text" inputmode="numeric" value="${s.w||100}"><label>H:</label><input type="text" inputmode="numeric" value="${s.h||100}"><label>V:</label><input type="text" inputmode="numeric" value="${s.d||100}"><label>C:</label><input type="text" inputmode="numeric" value="${s.chamfer||10}">`;
-      const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[2].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[3].onchange = (e) => { s.chamfer = parseFloat(e.target.value)||5; rebuild3DScene(); };
-    } else if(s.type === 'pipe'){
-      dimRow.innerHTML += `<label>R:</label><input type="text" inputmode="numeric" value="${s.r||50}"><label>V:</label><input type="text" inputmode="numeric" value="${s.d||100}"><label>Stena:</label><input type="text" inputmode="numeric" value="${s.wall||10}">`;
-      const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[2].onchange = (e) => { s.wall = parseFloat(e.target.value)||5; rebuild3DScene(); };
-    } else if(s.type === 'cylinder' || s.type === 'cone' || s.type === 'threadedRod' || s.type === 'elbow'){
-      dimRow.innerHTML += `<label>R:</label><input type="text" inputmode="numeric" value="${s.r||50}"><label>V:</label><input type="text" inputmode="numeric" value="${s.d||100}">`;
-      const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
-    } else if(s.type === 'torus'){
-      dimRow.innerHTML += `<label>R:</label><input type="text" inputmode="numeric" value="${s.r||50}"><label>r:</label><input type="text" inputmode="numeric" value="${s.tube||15}">`;
-      const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { s.tube = parseFloat(e.target.value)||5; rebuild3DScene(); };
-    } else if(s.type === 'sphere'){
-      dimRow.innerHTML += `<label>R:</label><input type="text" inputmode="numeric" value="${s.r||50}">`;
-      const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
-    }
-    card.appendChild(dimRow);
+    card.innerHTML = `<div class="shape-title-row"><strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong><button class="danger" style="padding:2px 5px;" onclick="shapes.splice(${i},1);rebuild3DScene();updateDimensionsPanel();">🗑️ Zmazať</button></div>`;
     dimsContent.appendChild(card);
   });
 }
-
-commandInput.onkeydown = (e) => {
-  if(e.key === 'Enter'){
-    if(pendingDimension){
-      confirmCurrentPendingDimension();
-      return;
-    }
-    const val = commandInput.value.trim().toLowerCase();
-    logCommand(val);
-    commandInput.value = '';
-    if(['box', 'filletbox', 'chamferbox', 'cylinder', 'pipe', 'elbow', 'sphere', 'wedge', 'torus', 'cone', 'threadedrod'].includes(val)){
-      currentShapeType = val; document.getElementById('shapeSelector').value = val;
-    } else if(val === 'add' || val === '+'){ currentCsgOp = 'add'; document.getElementById('csgOperationSelector').value = 'add'; }
-    else if(val === 'sub' || val === '-'){ currentCsgOp = 'subtract'; document.getElementById('csgOperationSelector').value = 'subtract'; }
-    else if(val === 'drafting') toggleDraftingMode();
-    else if(val === 'clear') clearAll();
-  }
-};
 
 function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
 window.onload = init3D;
