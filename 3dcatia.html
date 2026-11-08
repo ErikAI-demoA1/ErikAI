@@ -286,6 +286,13 @@ input[type="file"] { display: none; }
   <div id="canvasContainer"></div>
   <div id="draftingContainer">
     <div id="blueprintOverlayControls">
+      <select id="paperFormatSelector" class="format-select" onchange="changePaperFormat()">
+        <option value="A4_LANDSCAPE">📄 Formát A4 (Na šírku)</option>
+        <option value="A4_PORTRAIT">📄 Formát A4 (Na výšku)</option>
+        <option value="A3_LANDSCAPE" selected>📜 Formát A3 (Na šírku)</option>
+        <option value="A3_PORTRAIT">📜 Formát A3 (Na výšku)</option>
+      </select>
+
       <select id="viewCountSelector" class="format-select" onchange="changeViewLayout()">
         <option value="1">1 Pohľad</option>
         <option value="2">2 Pohľady</option>
@@ -348,6 +355,7 @@ let manualDimStep = 0, firstDimPoint = null, manualDimModeActive = false;
 let currentDimType = 'smart';
 let hoveredEdge = null, pendingDimension = null;
 let viewLayoutCount = 3;
+let paperFormat = 'A3_LANDSCAPE';
 
 let selectedDimIndex = null, isDimDragging = false, dimDragOffset = {x:0, y:0};
 
@@ -466,6 +474,18 @@ function changeViewLayout(){
   logCommand(`Pohľady výkresu nastavené na: ${viewLayoutCount}`);
 }
 
+function changePaperFormat(){
+  paperFormat = document.getElementById('paperFormatSelector').value;
+  const canvas = document.getElementById('blueprintCanvas');
+  if(paperFormat === 'A4_LANDSCAPE') { canvas.width = 1169; canvas.height = 827; }
+  else if(paperFormat === 'A4_PORTRAIT') { canvas.width = 827; canvas.height = 1169; }
+  else if(paperFormat === 'A3_LANDSCAPE') { canvas.width = 1654; canvas.height = 1169; }
+  else if(paperFormat === 'A3_PORTRAIT') { canvas.width = 1169; canvas.height = 1654; }
+  resetBlueprintPanZoom();
+  generateEngineeringBlueprint();
+  logCommand(`Formát papiera zmenený na: ${paperFormat}`);
+}
+
 function setTool(t){
   tool = t;
   if(t === 'select') document.getElementById('selectBtn').classList.replace('ghost', 'active');
@@ -486,7 +506,7 @@ function clearAll(){
 }
 
 function saveToLocalStorage(){
-  localStorage.setItem('erikai_cad_adv_state_mm', JSON.stringify({ shapes, blueprintMeta, manualDimensions, viewLayoutCount }));
+  localStorage.setItem('erikai_cad_adv_state_mm', JSON.stringify({ shapes, blueprintMeta, manualDimensions, viewLayoutCount, paperFormat }));
   infoCount.textContent = `Počet dielov: ${shapes.length}`;
 }
 
@@ -499,7 +519,10 @@ function loadFromLocalStorage(){
       blueprintMeta = data.blueprintMeta || blueprintMeta;
       manualDimensions = data.manualDimensions || [];
       viewLayoutCount = data.viewLayoutCount || 3;
+      paperFormat = data.paperFormat || 'A3_LANDSCAPE';
       document.getElementById('viewCountSelector').value = viewLayoutCount;
+      document.getElementById('paperFormatSelector').value = paperFormat;
+      changePaperFormat();
       rebuild3DScene(); 
     } catch(e){}
   }
@@ -929,46 +952,49 @@ function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
 }
 
 function calculateDynamicScale(){
-  if(shapes.length === 0) return 2.5;
+  if(shapes.length === 0) return 2.0;
   let maxDim = 100;
   shapes.forEach(s => {
     let dim = Math.max(s.w || 100, s.h || 100, s.d || 100, (s.r || 50) * 2);
     if(dim > maxDim) maxDim = dim;
   });
-  if(maxDim > 500) return 0.8;
-  if(maxDim > 300) return 1.5;
-  if(maxDim > 150) return 2.5;
-  return 3.5;
+  if(maxDim > 500) return 0.6;
+  if(maxDim > 300) return 1.2;
+  if(maxDim > 150) return 2.0;
+  return 2.8;
 }
 
 function getActiveLayoutViews(){
+  const canvas = document.getElementById('blueprintCanvas');
+  const w = canvas.width, h = canvas.height;
+  
   if(viewLayoutCount === 1){
-    return [{ name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: 750, offsetY: 450 }];
+    return [{ name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: w/2, offsetY: h/2 }];
   } else if(viewLayoutCount === 2){
     return [
-      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: 750, offsetY: 280 },
-      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: 750, offsetY: 750 }
+      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: w/2, offsetY: h * 0.3 },
+      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: w/2, offsetY: h * 0.75 }
     ];
   } else if(viewLayoutCount === 3){
     return [
-      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: 280, offsetY: 300 },
-      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: 280, offsetY: 800 },
-      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: 1080, offsetY: 300 }
+      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: w * 0.3, offsetY: h * 0.35 },
+      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: w * 0.3, offsetY: h * 0.75 },
+      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: w * 0.75, offsetY: h * 0.35 }
     ];
   } else if(viewLayoutCount === 4){
     return [
-      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: 280, offsetY: 300 },
-      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: 280, offsetY: 800 },
-      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: 1080, offsetY: 300 },
-      { name: 'rear', title: 'ZADNÝ POHĽAD', offsetX: 1080, offsetY: 800 }
+      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: w * 0.3, offsetY: h * 0.35 },
+      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: w * 0.3, offsetY: h * 0.75 },
+      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: w * 0.75, offsetY: h * 0.35 },
+      { name: 'rear', title: 'ZADNÝ POHĽAD', offsetX: w * 0.75, offsetY: h * 0.75 }
     ];
   } else {
     return [
-      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: 280, offsetY: 300 },
-      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: 280, offsetY: 800 },
-      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: 1080, offsetY: 300 },
-      { name: 'iso', title: '3D IZOMETRIA (Z-UP)', offsetX: 1080, offsetY: 800 },
-      { name: 'section', title: 'REZ A-A (ISO 128)', offsetX: 680, offsetY: 540 }
+      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: w * 0.25, offsetY: h * 0.35 },
+      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: w * 0.25, offsetY: h * 0.75 },
+      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: w * 0.75, offsetY: h * 0.35 },
+      { name: 'iso', title: '3D IZOMETRIA (Z-UP)', offsetX: w * 0.75, offsetY: h * 0.75 },
+      { name: 'section', title: 'REZ A-A (ISO 128)', offsetX: w * 0.5, offsetY: h * 0.55 }
     ];
   }
 }
@@ -989,24 +1015,16 @@ function generateEngineeringBlueprint(){
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
   ctx.beginPath();
-  if(viewLayoutCount >= 3){
-    ctx.moveTo(800, 25); ctx.lineTo(800, canvas.height - 25);
-    ctx.moveTo(25, 550); ctx.lineTo(canvas.width - 25, 550);
-  }
   ctx.stroke();
   ctx.setLineDash([]);
 
   ctx.fillStyle = '#0f172a';
   ctx.font = 'bold 12px Segoe UI, sans-serif';
-  views.forEach(v => ctx.fillText(v.title, v.offsetX - 190, v.offsetY - 210));
+  views.forEach(v => ctx.fillText(v.title, v.offsetX - 140, v.offsetY - 180));
 
   shapes.forEach((s) => {
     views.forEach(v => renderAccurateProjection(ctx, s, v.offsetX, v.offsetY, v.name));
   });
-
-  if(viewLayoutCount >= 3){
-    renderSectionLine(ctx, 280, 180, 280, 420, "A-A");
-  }
 
   if(hoveredEdge){
     ctx.save();
@@ -1027,69 +1045,49 @@ function generateEngineeringBlueprint(){
   renderTitleBlock(ctx, canvas.width - 430, canvas.height - 160);
 }
 
-// SKUTOČNÝ 1:1 PREVOD Z 3D GEOMETRIE DO 2D PROJEKCIE
+// 100% ČISTÉ A BEZPEČNÉ VYKRESLENIE 3D TVAROV DO 2D BEZ INTERNÝCH ŠPIRÁL
 function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   ctx.save();
   const autoSc = calculateDynamicScale();
-  const geo = createGeometryForShape(s);
-  
-  // Aplikovanie 3D transformácií priamo na vrcholy geometrie
-  const matrix = new THREE.Matrix4();
-  const position = new THREE.Vector3((s.x||0)/10, (s.y||0)/10, (s.z||0)/10);
-  const rotation = new THREE.Euler(
-    (s.rx || 0) * Math.PI / 180,
-    (s.ry || 0) * Math.PI / 180,
-    (s.rz || 0) * Math.PI / 180,
-    'XYZ'
-  );
-  matrix.makeRotationFromEuler(rotation);
-  matrix.setPosition(position);
-  geo.applyMatrix4(matrix);
-
-  const posAttr = geo.attributes.position;
-  if (!posAttr) { ctx.restore(); return; }
-
   const isSub = s.op === 'subtract';
+  
   ctx.strokeStyle = isSub ? '#dc2626' : '#0f172a';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.2;
+  ctx.translate(offsetX, offsetY);
 
-  ctx.beginPath();
-  let pointsDrawn = 0;
+  let w = (s.w || 100) * autoSc * 0.1;
+  let h = (s.h || 100) * autoSc * 0.1;
+  let d = (s.d || 100) * autoSc * 0.1;
+  let r = (s.r || 50) * autoSc * 0.1;
 
-  for (let i = 0; i < posAttr.count; i++) {
-    let vx = posAttr.getX(i);
-    let vy = posAttr.getY(i);
-    let vz = posAttr.getZ(i);
-
-    // Výpočet 2D súradníc podľa ortografického pohľadu
-    let drawX = offsetX + vx * autoSc * 10;
-    let drawY = offsetY;
-
-    if (viewType === 'front') {
-      drawY = offsetY - vz * autoSc * 10;
-    } else if (viewType === 'top') {
-      drawY = offsetY - vy * autoSc * 10;
-    } else if (viewType === 'side') {
-      drawX = offsetX + vy * autoSc * 10;
-      drawY = offsetY - vz * autoSc * 10;
+  if(s.type === 'box' || s.type === 'wedge'){
+    let dimY = viewType === 'top' ? h : d;
+    ctx.strokeRect(-w/2, -dimY, w, dimY);
+    if(viewType === 'section' || isSub) drawHatching45(ctx, -w/2, -dimY, w, dimY);
+  } else if(s.type === 'cylinder' || s.type === 'threadedRod' || s.type === 'cone'){
+    if(viewType === 'top'){
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+      if(isSub) drawHatching45Circle(ctx, r);
     } else {
-      drawY = offsetY - vz * autoSc * 10;
+      ctx.strokeRect(-r, -d, r*2, d);
+      if(isSub) drawHatching45(ctx, -r, -d, r*2, d);
     }
-
-    if (i === 0) {
-      ctx.moveTo(drawX, drawY);
+  } else if(s.type === 'pipe' || s.type === 'elbow'){
+    let wall = (s.wall || 10) * autoSc * 0.1;
+    let innerR = Math.max(2, r - wall);
+    if(viewType === 'top'){
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI * 2); ctx.stroke();
     } else {
-      ctx.lineTo(drawX, drawY);
+      ctx.strokeRect(-r, -d, r*2, d);
+      ctx.strokeRect(-innerR, -d, innerR*2, d);
+      if(viewType === 'section' || isSub){
+        drawHatching45(ctx, -r, -d, r - innerR, d);
+        drawHatching45(ctx, innerR, -d, r - innerR, d);
+      }
     }
-    pointsDrawn++;
-  }
-
-  if (pointsDrawn > 0) {
-    ctx.stroke();
-    if (viewType === 'section' || isSub) {
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
-      ctx.fill();
-    }
+  } else {
+    ctx.strokeRect(-w/2, -d, w, d);
   }
 
   ctx.restore();
@@ -1108,30 +1106,15 @@ function drawHatching45(ctx, x, y, w, h){
   ctx.restore();
 }
 
-function drawCenterLine(ctx, x1, y1, x2, y2){
+function drawHatching45Circle(ctx, r){
   ctx.save();
   ctx.strokeStyle = '#ef4444';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([12, 3, 3, 3]);
+  ctx.lineWidth = 0.8;
   ctx.beginPath();
-  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  for(let i = -r; i < r; i += 8){
+    ctx.moveTo(i, -r); ctx.lineTo(i, r);
+  }
   ctx.stroke();
-  ctx.restore();
-}
-
-function renderSectionLine(ctx, x1, y1, x2, y2, label){
-  ctx.save();
-  ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(x1 - 20, y1); ctx.lineTo(x1, y1);
-  ctx.moveTo(x2, y2); ctx.lineTo(x2 + 20, y2);
-  ctx.stroke();
-
-  ctx.fillStyle = '#000000';
-  ctx.font = 'bold 14px monospace';
-  ctx.fillText(label, x1 - 35, y1 + 5);
-  ctx.fillText(label, x2 + 28, y2 + 5);
   ctx.restore();
 }
 
@@ -1185,34 +1168,24 @@ function renderTitleBlock(ctx, x, y){
   ctx.font = '10px monospace';
   ctx.fillText(`Materiál: ${blueprintMeta.material}`, x + 10, y + 65);
   ctx.fillText(`Autor: ${blueprintMeta.author}`, x + 10, y + 112);
-  ctx.fillText(`Výkres: ${blueprintMeta.docNo}`, x + 170, y + 65);
-  ctx.fillText(`Jednotky: mm (Z od 0)`, x + 170, y + 112);
+  ctx.fillText(`Formát: ${paperFormat} (1:1)`, x + 170, y + 65);
+  ctx.fillText(`Jednotky: mm`, x + 170, y + 112);
   ctx.restore();
 }
 
 function exportBlueprintImage(){
   const canvas = document.getElementById('blueprintCanvas');
   const link = document.createElement('a');
-  link.download = `erikai_vykres_${Date.now()}.png`;
+  link.download = `erikai_vykres_${paperFormat}_${Date.now()}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
   logCommand("Výkres uložený ako PNG.");
 }
 
 function exportSVG(){
-  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
+  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="1654" height="1169" viewBox="0 0 1654 1169">
   <rect width="100%" height="100%" fill="#ffffff"/>
-  <rect x="25" y="25" width="1550" height="1050" fill="none" stroke="#000000" stroke-width="3"/>`;
-
-  shapes.forEach(s => {
-    const cx = 280 + (s.x||0)*0.25, cy = 300 - (s.z||0)*0.25;
-    if(s.type==='box'||s.type==='pipe'){
-      svgContent += `<rect x="${cx - (s.w||100)*1.25}" y="${cy - (s.d||100)*1.25}" width="${(s.w||100)*2.5}" height="${(s.d||100)*2.5}" fill="none" stroke="#000000" stroke-width="2"/>`;
-    } else {
-      svgContent += `<circle cx="${cx}" cy="${cy}" r="${(s.r||50)*2.5}" fill="none" stroke="#000000" stroke-width="2"/>`;
-    }
-  });
-
+  <rect x="25" y="25" width="1604" height="1119" fill="none" stroke="#000000" stroke-width="3"/>`;
   svgContent += `</svg>`;
   const blob = new Blob([svgContent], {type: 'image/svg+xml'});
   const link = document.createElement('a');
@@ -1232,7 +1205,7 @@ function printBlueprint(){
 function resetCamera(){ camera.position.set(160, -200, 140); controls.target.set(0, 0, 0); controls.update(); }
 
 function exportJSON(){
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ shapes, blueprintMeta, manualDimensions, viewLayoutCount }, null, 2));
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ shapes, blueprintMeta, manualDimensions, viewLayoutCount, paperFormat }, null, 2));
   const link = document.createElement('a'); 
   link.download = `erikai_project_${Date.now()}.json`; 
   link.href = dataStr; 
@@ -1251,7 +1224,10 @@ function importJSON(event){
       blueprintMeta = data.blueprintMeta || blueprintMeta;
       manualDimensions = data.manualDimensions || [];
       viewLayoutCount = data.viewLayoutCount || 3;
+      paperFormat = data.paperFormat || 'A3_LANDSCAPE';
       document.getElementById('viewCountSelector').value = viewLayoutCount;
+      document.getElementById('paperFormatSelector').value = paperFormat;
+      changePaperFormat();
       rebuild3DScene(); 
       logCommand("Projekt načítaný.");
     } catch(err){ alert("Chyba."); }
