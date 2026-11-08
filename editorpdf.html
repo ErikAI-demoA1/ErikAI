@@ -24,9 +24,10 @@
             width: 100vw;
             height: calc(100vh - 115px);
             display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 40px;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 0;
+            gap: 40px;
         }
         #main-viewport.pan-mode {
             cursor: grab !important;
@@ -34,12 +35,11 @@
         #main-viewport.pan-mode:active {
             cursor: grabbing !important;
         }
-        #canvas-wrapper {
+        .page-container {
             position: relative;
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9);
             background: white;
-            transform-origin: top left;
-            margin: auto;
+            transform-origin: top center;
         }
         .canvas-element, .whiteout-box, .image-element, .table-element {
             position: absolute;
@@ -165,7 +165,7 @@
                 <h1 class="text-base font-bold tracking-wide text-white flex items-center gap-2">
                     ErikAI OS <span class="text-xs px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">Master Studio Pro</span>
                 </h1>
-                <p class="text-xs text-slate-400">Bezserverový PDF editor bez obmedzení</p>
+                <p class="text-xs text-slate-400">Bezserverový PDF editor s plynulým skrolovaním</p>
             </div>
         </div>
 
@@ -174,7 +174,7 @@
                 📄 Nahrať PDF
                 <input type="file" id="pdf-input" accept="application/pdf" class="hidden">
             </label>
-            <button id="add-whiteout-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">⬜ Zakryť</button>
+            <button id="add-whiteout-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">⬜ Zakryť (Strana 1)</button>
             <button id="add-text-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">✏️ Text</button>
             <button id="open-sign-modal-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">✍️ Podpísať</button>
             <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-medium">
@@ -182,11 +182,7 @@
                 <input type="file" id="image-input" accept="image/*" multiple class="hidden">
             </label>
             <button id="add-table-modal-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">📊 Tabuľka</button>
-            <button id="save-project-btn" class="bg-slate-800 hover:bg-slate-700 text-sky-300 px-3 py-1.5 rounded-lg text-xs font-medium border border-sky-800">💾 Uložiť projekt</button>
-            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-amber-300 px-3 py-1.5 rounded-lg border border-amber-800 text-xs font-medium">
-                📂 Nahrať projekt
-                <input type="file" id="load-project-input" accept=".json" class="hidden">
-            </label>
+            <button id="clear-storage-btn" class="bg-red-950 hover:bg-red-900 text-red-300 px-3 py-1.5 rounded-lg text-xs font-medium border border-red-800">🗑️ Vymazať pamäť</button>
             <button id="export-pdf-modal-btn" class="bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded-lg text-xs font-medium shadow-lg shadow-red-600/25">💾 Stiahnuť PDF (1:1)</button>
         </div>
     </header>
@@ -209,11 +205,7 @@
         </div>
 
         <div class="flex items-center gap-3">
-            <span id="page-num-display" class="font-medium text-slate-300">Strana: 0 / 0</span>
-            <div class="flex items-center gap-1">
-                <button id="prev-page" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded disabled:opacity-40">◄</button>
-                <button id="next-page" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded disabled:opacity-40">►</button>
-            </div>
+            <span id="doc-info" class="font-medium text-slate-300">Žiadny dokument</span>
         </div>
     </div>
 
@@ -274,15 +266,13 @@
             </div>
         </aside>
 
-        <!-- Main Viewport -->
+        <!-- Main Viewport (Plynulé skrolovanie strán pod sebou) -->
         <main id="main-viewport" class="flex-1 bg-slate-950">
-            <div id="canvas-wrapper">
-                <canvas id="pdf-render"></canvas>
-            </div>
+            <div id="pages-wrapper" class="flex flex-col items-center gap-10 w-full"></div>
         </main>
     </div>
 
-    <!-- Modal pre uloženie PDF s vlastným názvom -->
+    <!-- Modal pre uloženie PDF -->
     <div id="pdf-name-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-80 space-y-4 shadow-2xl">
             <h3 class="text-base font-bold text-white">Uložiť PDF</h3>
@@ -340,16 +330,13 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         let pdfDoc = null;
-        let pageNum = 1;
         let currentZoom = 1.0;
         let currentMode = 'edit';
         
-        const canvas = document.getElementById('pdf-render');
-        const ctx = canvas.getContext('2d');
-        const wrapper = document.getElementById('canvas-wrapper');
+        const pagesWrapper = document.getElementById('pages-wrapper');
         const viewport = document.getElementById('main-viewport');
 
-        let pageAnnotations = {};
+        let pageAnnotations = {}; // { pageNum: [ objekty ] }
         let activeElement = null;
 
         function setMode(mode) {
@@ -392,6 +379,24 @@
             viewport.scrollTop = scrollTop - (e.clientY - startY);
         });
 
+        // Automatické načítanie pri štarte z pamäte prehliadača
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedPdf = localStorage.getItem('erikai_pdf_data');
+            const savedAnno = localStorage.getItem('erikai_annotations');
+            if (savedAnno) {
+                try { pageAnnotations = JSON.parse(savedAnno); } catch(err) {}
+            }
+            if (savedPdf) {
+                try {
+                    const typedarray = new Uint8Array(JSON.parse(savedPdf));
+                    pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
+                        pdfDoc = pdf;
+                        renderAllPages();
+                    });
+                } catch(err) {}
+            }
+        });
+
         document.getElementById('pdf-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file && file.type === 'application/pdf') {
@@ -405,91 +410,84 @@
 
                     pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
                         pdfDoc = pdf;
-                        pageNum = 1;
                         pageAnnotations = {};
-                        
-                        pdfDoc.getPage(1).then((page) => {
-                            const baseVp = page.getViewport({ scale: 1.0 });
-                            const availableWidth = viewport.clientWidth - 80;
-                            const availableHeight = viewport.clientHeight - 80;
-                            const scaleX = availableWidth / baseVp.width;
-                            const scaleY = availableHeight / baseVp.height;
-                            currentZoom = Math.min(scaleX, scaleY, 1.2);
-                            document.getElementById('zoom-val').textContent = Math.round(currentZoom * 100) + '%';
-                            renderPage(pageNum);
-                        });
+                        renderAllPages();
                     });
                 };
                 reader.readAsArrayBuffer(file);
             }
         });
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedPdf = localStorage.getItem('erikai_pdf_data');
-            const savedAnno = localStorage.getItem('erikai_annotations');
-            if (savedAnno) {
-                try { pageAnnotations = JSON.parse(savedAnno); } catch(err) {}
-            }
-            if (savedPdf) {
-                try {
-                    const typedarray = new Uint8Array(JSON.parse(savedPdf));
-                    pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
-                        pdfDoc = pdf;
-                        pageNum = 1;
-                        pdfDoc.getPage(1).then((page) => {
-                            currentZoom = 1.0;
-                            document.getElementById('zoom-val').textContent = '100%';
-                            renderPage(pageNum);
-                        });
-                    });
-                } catch(err) {}
+        document.getElementById('clear-storage-btn').addEventListener('click', () => {
+            if (confirm('Naozaj chcete vymazať uložený dokument a úpravy z pamäte?')) {
+                localStorage.removeItem('erikai_pdf_data');
+                localStorage.removeItem('erikai_annotations');
+                location.reload();
             }
         });
 
-        function renderPage(num) {
-            saveAnnotations(); // Najprv ulož aktuálnu stranu pred prekliknutím
-            pdfDoc.getPage(num).then((page) => {
-                const scaledViewport = page.getViewport({ scale: 1.0 * currentZoom });
-                canvas.width = scaledViewport.width;
-                canvas.height = scaledViewport.height;
+        async function renderAllPages() {
+            if (!pdfDoc) return;
+            pagesWrapper.innerHTML = '';
+            document.getElementById('doc-info').textContent = `Počet strán: ${pdfDoc.numPages}`;
 
-                wrapper.style.width = scaledViewport.width + 'px';
-                wrapper.style.height = scaledViewport.height + 'px';
+            for (let i = 1; i <= pdfDoc.numPages; i++) {
+                const page = await pdfDoc.getPage(i);
+                const baseVp = page.getViewport({ scale: 1.0 * currentZoom });
 
-                page.render({ canvasContext: ctx, viewport: scaledViewport }).promise.then(() => {
-                    document.getElementById('page-num-display').textContent = `Strana: ${num} / ${pdfDoc.numPages}`;
-                    restoreAnnotations(num); // Potom načítaj objekty pre novú stranu
-                });
-            });
+                const container = document.createElement('div');
+                container.className = 'page-container';
+                container.style.width = baseVp.width + 'px';
+                container.style.height = baseVp.height + 'px';
+                container.dataset.pageNum = i;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = baseVp.width;
+                canvas.height = baseVp.height;
+                canvas.style.display = 'block';
+                container.appendChild(canvas);
+
+                pagesWrapper.appendChild(container);
+
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport: baseVp }).promise;
+                restorePageAnnotations(i, container);
+            }
+            updateLayersList();
         }
 
-        function saveAnnotations() {
+        function saveAllAnnotations() {
             if (!pdfDoc) return;
-            const elements = wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element');
-            const data = [];
+            pageAnnotations = {};
+            const containers = pagesWrapper.querySelectorAll('.page-container');
 
-            elements.forEach(el => {
-                let type = 'whiteout';
-                if (el.classList.contains('canvas-element')) type = 'text';
-                if (el.classList.contains('image-element')) type = 'image';
-                if (el.classList.contains('table-element')) type = 'table';
+            containers.forEach(container => {
+                const pageNum = container.dataset.pageNum;
+                const elements = container.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element');
+                const data = [];
 
-                data.push({
-                    type: type,
-                    text: el.dataset.rawText || el.innerText,
-                    html: el.innerHTML,
-                    src: el.querySelector('img') ? el.querySelector('img').src : null,
-                    baseLeft: parseFloat(el.dataset.baseLeft || (parseFloat(el.style.left) / currentZoom)),
-                    baseTop: parseFloat(el.dataset.baseTop || (parseFloat(el.style.top) / currentZoom)),
-                    baseWidth: parseFloat(el.dataset.baseWidth || (parseFloat(el.style.width) / currentZoom)),
-                    baseHeight: parseFloat(el.dataset.baseHeight || (parseFloat(el.style.height) / currentZoom)),
-                    fontSize: parseFloat(el.dataset.baseFontSize || parseFloat(el.style.fontSize) / currentZoom),
-                    fontFamily: el.style.fontFamily || '',
-                    color: el.style.color
+                elements.forEach(el => {
+                    let type = 'whiteout';
+                    if (el.classList.contains('canvas-element')) type = 'text';
+                    if (el.classList.contains('image-element')) type = 'image';
+                    if (el.classList.contains('table-element')) type = 'table';
+
+                    data.push({
+                        type: type,
+                        text: el.dataset.rawText || el.innerText,
+                        html: el.innerHTML,
+                        src: el.querySelector('img') ? el.querySelector('img').src : null,
+                        baseLeft: parseFloat(el.dataset.baseLeft || (parseFloat(el.style.left) / currentZoom)),
+                        baseTop: parseFloat(el.dataset.baseTop || (parseFloat(el.style.top) / currentZoom)),
+                        baseWidth: parseFloat(el.dataset.baseWidth || (parseFloat(el.style.width) / currentZoom)),
+                        baseHeight: parseFloat(el.dataset.baseHeight || (parseFloat(el.style.height) / currentZoom)),
+                        fontSize: parseFloat(el.dataset.baseFontSize || parseFloat(el.style.fontSize) / currentZoom),
+                        fontFamily: el.style.fontFamily || '',
+                        color: el.style.color
+                    });
                 });
+                pageAnnotations[pageNum] = data;
             });
-            pageAnnotations[pageNum] = data;
-            
+
             try {
                 localStorage.setItem('erikai_annotations', JSON.stringify(pageAnnotations));
             } catch(err) {}
@@ -497,11 +495,8 @@
             updateLayersList();
         }
 
-        function restoreAnnotations(num) {
-            wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element').forEach(el => el.remove());
-            selectElement(null);
-
-            const saved = pageAnnotations[num] || [];
+        function restorePageAnnotations(pageNum, container) {
+            const saved = pageAnnotations[pageNum] || [];
             saved.forEach(item => {
                 const scaledLeft = (item.baseLeft * currentZoom) + 'px';
                 const scaledTop = (item.baseTop * currentZoom) + 'px';
@@ -511,13 +506,13 @@
 
                 let el;
                 if (item.type === 'whiteout') {
-                    el = createBox('whiteout-box', scaledLeft, scaledTop, scaledWidth, scaledHeight, false);
+                    el = createBoxElement('whiteout-box', scaledLeft, scaledTop, scaledWidth, scaledHeight, false);
                 } else if (item.type === 'text') {
-                    el = createText(item.text, scaledLeft, scaledTop, scaledFontSize, item.color, scaledWidth, scaledHeight, item.fontFamily, false);
+                    el = createTextElement(item.text, scaledLeft, scaledTop, scaledFontSize, item.color, scaledWidth, scaledHeight, item.fontFamily, false);
                 } else if (item.type === 'image') {
-                    el = createImage(item.src, scaledLeft, scaledTop, scaledWidth, scaledHeight, false);
+                    el = createImageElement(item.src, scaledLeft, scaledTop, scaledWidth, scaledHeight, false);
                 } else if (item.type === 'table') {
-                    el = createTable(item.html, scaledLeft, scaledTop, scaledWidth, scaledHeight, false);
+                    el = createTableElement(item.html, scaledLeft, scaledTop, scaledWidth, scaledHeight, false);
                 }
 
                 if (el) {
@@ -526,48 +521,24 @@
                     el.dataset.baseWidth = item.baseWidth;
                     el.dataset.baseHeight = item.baseHeight;
                     el.dataset.baseFontSize = item.fontSize;
+                    container.appendChild(el);
                 }
             });
-            updateLayersList();
         }
 
-        function updateLayersList() {
-            const listContainer = document.getElementById('layers-list');
-            const elements = wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element');
-            document.getElementById('elements-count').textContent = elements.length;
-
-            if (elements.length === 0) {
-                listContainer.innerHTML = '<p class="text-slate-500 italic">Žiadne objekty na tejto strane.</p>';
-                return;
-            }
-
-            listContainer.innerHTML = '';
-            elements.forEach((el, index) => {
-                let icon = '📦', name = `Objekt #${index + 1}`;
-                if (el.classList.contains('canvas-element')) { icon = '✏️'; name = `Text: "${el.dataset.rawText || 'Nový'}"`; }
-                else if (el.classList.contains('whiteout-box')) { icon = '⬜'; name = 'Zakrytie'; }
-                else if (el.classList.contains('image-element')) { icon = '🖼️'; name = 'Obrázok / Podpis'; }
-                else if (el.classList.contains('table-element')) { icon = '📊'; name = 'Tabuľka'; }
-
-                const item = document.createElement('div');
-                item.className = "flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-800 hover:border-slate-700 cursor-pointer";
-                if (el === activeElement) item.classList.add('border-red-500', 'bg-slate-800');
-                
-                item.innerHTML = `<span class="truncate pr-2">${icon} ${name}</span>`;
-                item.onclick = (e) => { 
-                    e.stopPropagation(); 
-                    selectElement(el); 
-                };
-                listContainer.appendChild(item);
-            });
+        function getFirstPageContainer() {
+            return pagesWrapper.querySelector('.page-container');
         }
 
         document.getElementById('add-whiteout-btn').addEventListener('click', () => {
-            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            createBox('whiteout-box', '100px', '100px', '200px', '40px', true);
+            const firstPage = getFirstPageContainer();
+            if (!firstPage) return alert('Najprv nahrajte PDF!');
+            const el = createBoxElement('whiteout-box', '50px', '50px', '200px', '40px', true);
+            firstPage.appendChild(el);
+            selectElement(el);
         });
 
-        function createBox(className, left, top, width, height, shouldSave = true) {
+        function createBoxElement(className, left, top, width, height, shouldSave = true) {
             const el = document.createElement('div');
             el.className = className;
             el.style.left = left; el.style.top = top;
@@ -578,18 +549,19 @@
             el.dataset.baseHeight = parseFloat(height) / currentZoom;
 
             makeInteractive(el, el);
-            wrapper.appendChild(el);
-            selectElement(el);
-            if (shouldSave) saveAnnotations();
+            if (shouldSave) saveAllAnnotations();
             return el;
         }
 
         document.getElementById('add-text-btn').addEventListener('click', () => {
-            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            createText('Môj text', '100px', '160px', (16 * currentZoom) + 'px', '#000000', '200px', '40px', '', true);
+            const firstPage = getFirstPageContainer();
+            if (!firstPage) return alert('Najprv nahrajte PDF!');
+            const el = createTextElement('Môj text', '50px', '110px', (16 * currentZoom) + 'px', '#000000', '200px', '40px', '', true);
+            firstPage.appendChild(el);
+            selectElement(el);
         });
 
-        function createText(text, left, top, fontSize, color, width, height, fontFamily, shouldSave = true) {
+        function createTextElement(text, left, top, fontSize, color, width, height, fontFamily, shouldSave = true) {
             const el = document.createElement('div');
             el.className = 'canvas-element';
             el.innerText = text; el.dataset.rawText = text;
@@ -606,27 +578,28 @@
             el.dataset.baseFontSize = parseFloat(fontSize) / currentZoom;
 
             makeInteractive(el, el);
-            wrapper.appendChild(el);
-            selectElement(el);
-            if (shouldSave) saveAnnotations();
+            if (shouldSave) saveAllAnnotations();
             return el;
         }
 
         document.getElementById('image-input').addEventListener('change', (e) => {
-            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
+            const firstPage = getFirstPageContainer();
+            if (!firstPage) return alert('Najprv nahrajte PDF!');
             const files = e.target.files;
             if (files.length > 0) {
                 Array.from(files).forEach((file, idx) => {
                     const reader = new FileReader();
                     reader.onload = function(event) {
-                        createImage(event.target.result, (100 + idx * 30) + 'px', (220 + idx * 30) + 'px', '150px', '150px', true);
+                        const el = createImageElement(event.target.result, (50 + idx * 30) + 'px', (180 + idx * 30) + 'px', '150px', '150px', true);
+                        firstPage.appendChild(el);
+                        selectElement(el);
                     };
                     reader.readAsDataURL(file);
                 });
             }
         });
 
-        function createImage(src, left, top, width, height, shouldSave = true) {
+        function createImageElement(src, left, top, width, height, shouldSave = true) {
             const el = document.createElement('div');
             el.className = 'image-element';
             el.style.left = left; el.style.top = top;
@@ -641,14 +614,13 @@
             el.appendChild(img);
 
             makeInteractive(el, el);
-            wrapper.appendChild(el);
-            selectElement(el);
-            if (shouldSave) saveAnnotations();
+            if (shouldSave) saveAllAnnotations();
             return el;
         }
 
         function duplicateActiveElement() {
             if (!activeElement) return;
+            const parentPage = activeElement.parentElement;
             const currentLeft = parseFloat(activeElement.style.left) || 0;
             const currentTop = parseFloat(activeElement.style.top) || 0;
             const newLeft = (currentLeft + 20) + 'px';
@@ -662,64 +634,25 @@
                 const fontSize = activeElement.style.fontSize;
                 const color = activeElement.style.color;
                 const fontFamily = activeElement.style.fontFamily;
-                newEl = createText(text, newLeft, newTop, fontSize, color, width, height, fontFamily, true);
+                newEl = createTextElement(text, newLeft, newTop, fontSize, color, width, height, fontFamily, true);
             } else if (activeElement.classList.contains('whiteout-box')) {
-                newEl = createBox('whiteout-box', newLeft, newTop, width, height, true);
+                newEl = createBoxElement('whiteout-box', newLeft, newTop, width, height, true);
             } else if (activeElement.classList.contains('image-element')) {
                 const src = activeElement.querySelector('img').src;
-                newEl = createImage(src, newLeft, newTop, width, height, true);
+                newEl = createImageElement(src, newLeft, newTop, width, height, true);
             } else if (activeElement.classList.contains('table-element')) {
                 const html = activeElement.innerHTML;
-                newEl = createTable(html, newLeft, newTop, width, height, true);
+                newEl = createTableElement(html, newLeft, newTop, width, height, true);
             }
-            if (newEl) selectElement(newEl);
+            if (newEl) {
+                parentPage.appendChild(newEl);
+                selectElement(newEl);
+            }
         }
 
         document.getElementById('duplicate-btn').addEventListener('click', duplicateActiveElement);
 
-        document.getElementById('save-project-btn').addEventListener('click', () => {
-            if (!pdfDoc) return alert('Žiadny aktívny projekt!');
-            saveAnnotations();
-            const projectData = {
-                pdf: localStorage.getItem('erikai_pdf_data'),
-                annotations: pageAnnotations
-            };
-            const blob = new Blob([JSON.stringify(projectData)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'erikai_projekt.json';
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-
-        document.getElementById('load-project-input').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    if (data.pdf && data.annotations) {
-                        localStorage.setItem('erikai_pdf_data', data.pdf);
-                        localStorage.setItem('erikai_annotations', JSON.stringify(data.annotations));
-                        pageAnnotations = data.annotations;
-                        
-                        const typedarray = new Uint8Array(JSON.parse(data.pdf));
-                        pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
-                            pdfDoc = pdf;
-                            pageNum = 1;
-                            renderPage(pageNum);
-                            alert('Projekt úspešne načítaný!');
-                        });
-                    }
-                } catch(err) {
-                    alert('Chyba pri načítaní projektu!');
-                }
-            };
-            reader.readAsText(file);
-        });
-
+        /* Podpisovanie */
         const signModal = document.getElementById('sign-modal');
         const signCanvas = document.getElementById('sign-canvas');
         const signCtx = signCanvas.getContext('2d');
@@ -769,16 +702,20 @@
             isDrawing = false;
             try { signCanvas.releasePointerCapture(e.pointerId); } catch(err) {}
         };
-
         signCanvas.addEventListener('pointerup', stopSign);
         signCanvas.addEventListener('pointercancel', stopSign);
 
         document.getElementById('sign-insert').addEventListener('click', () => {
+            const firstPage = getFirstPageContainer();
+            if (!firstPage) return;
             const dataURL = signCanvas.toDataURL('image/png');
             signModal.classList.add('hidden');
-            createImage(dataURL, '100px', '200px', '180px', '70px', true);
+            const el = createImageElement(dataURL, '50px', '250px', '180px', '70px', true);
+            firstPage.appendChild(el);
+            selectElement(el);
         });
 
+        /* Tabuľka */
         const modal = document.getElementById('table-modal');
         document.getElementById('add-table-modal-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
@@ -786,6 +723,8 @@
         });
         document.getElementById('modal-cancel').addEventListener('click', () => modal.classList.add('hidden'));
         document.getElementById('modal-create').addEventListener('click', () => {
+            const firstPage = getFirstPageContainer();
+            if (!firstPage) return;
             const rows = parseInt(document.getElementById('modal-rows').value) || 3;
             const cols = parseInt(document.getElementById('modal-cols').value) || 3;
             modal.classList.add('hidden');
@@ -800,10 +739,12 @@
             }
             tableHTML += '</table>';
 
-            createTable(tableHTML, '100px', '300px', (cols * 100 * currentZoom) + 'px', ((rows * 35) + 18) + 'px', true);
+            const el = createTableElement(tableHTML, '50px', '350px', (cols * 100 * currentZoom) + 'px', ((rows * 35) + 18) + 'px', true);
+            firstPage.appendChild(el);
+            selectElement(el);
         });
 
-        function createTable(html, left, top, width, height, shouldSave = true) {
+        function createTableElement(html, left, top, width, height, shouldSave = true) {
             const el = document.createElement('div');
             el.className = 'table-element';
             el.innerHTML = html;
@@ -817,19 +758,14 @@
 
             el.querySelectorAll('td, th').forEach(cell => {
                 cell.addEventListener('mousedown', (e) => e.stopPropagation());
-                cell.addEventListener('input', () => saveAnnotations());
+                cell.addEventListener('input', () => saveAllAnnotations());
             });
 
             const handle = el.querySelector('.table-drag-handle');
-            if (handle) {
-                makeInteractive(el, handle);
-            } else {
-                makeInteractive(el, el);
-            }
+            if (handle) makeInteractive(el, handle);
+            else makeInteractive(el, el);
 
-            wrapper.appendChild(el);
-            selectElement(el);
-            if (shouldSave) saveAnnotations();
+            if (shouldSave) saveAllAnnotations();
             return el;
         }
 
@@ -854,7 +790,6 @@
 
             handleElement.addEventListener('pointermove', (e) => {
                 if (!isDragging) return;
-                
                 const dx = e.clientX - startX;
                 const dy = e.clientY - startY;
                 
@@ -872,17 +807,47 @@
                 if (!isDragging) return;
                 isDragging = false;
                 try { handleElement.releasePointerCapture(e.pointerId); } catch(err) {}
-                saveAnnotations();
+                saveAllAnnotations();
             };
 
             handleElement.addEventListener('pointerup', stopDrag);
             handleElement.addEventListener('pointercancel', stopDrag);
         }
 
-        wrapper.addEventListener('click', () => { if (currentMode === 'edit') selectElement(null); });
+        function updateLayersList() {
+            const listContainer = document.getElementById('layers-list');
+            const elements = pagesWrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element');
+            document.getElementById('elements-count').textContent = elements.length;
+
+            if (elements.length === 0) {
+                listContainer.innerHTML = '<p class="text-slate-500 italic">Žiadne objekty.</p>';
+                return;
+            }
+
+            listContainer.innerHTML = '';
+            elements.forEach((el, index) => {
+                let icon = '📦', name = `Objekt #${index + 1}`;
+                if (el.classList.contains('canvas-element')) { icon = '✏️'; name = `Text: "${el.dataset.rawText || 'Nový'}"`; }
+                else if (el.classList.contains('whiteout-box')) { icon = '⬜'; name = 'Zakrytie'; }
+                else if (el.classList.contains('image-element')) { icon = '🖼️'; name = 'Obrázok / Podpis'; }
+                else if (el.classList.contains('table-element')) { icon = '📊'; name = 'Tabuľka'; }
+
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-800 hover:border-slate-700 cursor-pointer";
+                if (el === activeElement) item.classList.add('border-red-500', 'bg-slate-800');
+                
+                item.innerHTML = `<span class="truncate pr-2">${icon} ${name}</span>`;
+                item.onclick = (e) => { 
+                    e.stopPropagation(); 
+                    selectElement(el); 
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                };
+                listContainer.appendChild(item);
+            });
+        }
 
         function selectElement(el) {
-            wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element').forEach(item => item.classList.remove('selected'));
+            pagesWrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element').forEach(item => item.classList.remove('selected'));
             activeElement = el;
             updateLayersList();
 
@@ -929,13 +894,13 @@
                 activeElement.innerText = e.target.value;
                 activeElement.dataset.rawText = e.target.value;
                 updateLayersList();
-                saveAnnotations();
+                saveAllAnnotations();
             }
         });
         document.getElementById('prop-font').addEventListener('change', (e) => {
             if (activeElement && activeElement.classList.contains('canvas-element')) {
                 activeElement.style.fontFamily = e.target.value;
-                saveAnnotations();
+                saveAllAnnotations();
             }
         });
         document.getElementById('prop-size').addEventListener('input', (e) => {
@@ -943,13 +908,13 @@
                 const val = parseFloat(e.target.value);
                 activeElement.style.fontSize = (val * currentZoom) + 'px';
                 activeElement.dataset.baseFontSize = val;
-                saveAnnotations();
+                saveAllAnnotations();
             }
         });
         document.getElementById('prop-color').addEventListener('input', (e) => {
             if (activeElement && activeElement.classList.contains('canvas-element')) {
                 activeElement.style.color = e.target.value;
-                saveAnnotations();
+                saveAllAnnotations();
             }
         });
         document.getElementById('prop-width').addEventListener('input', (e) => {
@@ -957,7 +922,7 @@
                 const val = parseFloat(e.target.value);
                 activeElement.style.width = (val * currentZoom) + 'px';
                 activeElement.dataset.baseWidth = val;
-                saveAnnotations();
+                saveAllAnnotations();
             }
         });
         document.getElementById('prop-height').addEventListener('input', (e) => {
@@ -965,14 +930,14 @@
                 const val = parseFloat(e.target.value);
                 activeElement.style.height = (val * currentZoom) + 'px';
                 activeElement.dataset.baseHeight = val;
-                saveAnnotations();
+                saveAllAnnotations();
             }
         });
         document.getElementById('delete-btn').addEventListener('click', () => {
             if (activeElement) {
                 activeElement.remove();
                 selectElement(null);
-                saveAnnotations();
+                saveAllAnnotations();
             }
         });
 
@@ -982,7 +947,7 @@
             if ((e.key === 'Delete' || e.key === 'Backspace') && activeElement && !isInputActive) {
                 activeElement.remove();
                 selectElement(null);
-                saveAnnotations();
+                saveAllAnnotations();
             }
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && activeElement && !isInputActive) {
                 e.preventDefault();
@@ -994,24 +959,22 @@
             if (!pdfDoc) return;
             currentZoom += 0.2;
             document.getElementById('zoom-val').textContent = Math.round(currentZoom * 100) + '%';
-            renderPage(pageNum);
+            renderAllPages();
         });
         document.getElementById('zoom-out-btn').addEventListener('click', () => {
             if (!pdfDoc || currentZoom <= 0.3) return;
             currentZoom -= 0.2;
             document.getElementById('zoom-val').textContent = Math.round(currentZoom * 100) + '%';
-            renderPage(pageNum);
+            renderAllPages();
         });
         document.getElementById('zoom-reset-btn').addEventListener('click', () => {
             if (!pdfDoc) return;
             currentZoom = 1.0;
             document.getElementById('zoom-val').textContent = '100%';
-            renderPage(pageNum);
+            renderAllPages();
         });
 
-        document.getElementById('prev-page').addEventListener('click', () => { if (pageNum > 1) renderPage(--pageNum); });
-        document.getElementById('next-page').addEventListener('click', () => { if (pdfDoc && pageNum < pdfDoc.numPages) renderPage(++pageNum); });
-
+        /* Export PDF */
         const pdfNameModal = document.getElementById('pdf-name-modal');
         document.getElementById('export-pdf-modal-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
@@ -1024,66 +987,50 @@
             let filename = document.getElementById('pdf-filename-input').value.trim() || 'Upraveny_Dokument';
             if (!filename.endsWith('.pdf')) filename += '.pdf';
 
-            saveAnnotations();
+            saveAllAnnotations();
             selectElement(null);
 
             const oldZoom = currentZoom;
             currentZoom = 1.0;
+            await renderAllPages();
 
-            wrapper.classList.add('exporting-pdf');
-
+            pagesWrapper.classList.add('exporting-pdf');
             const { jsPDF } = window.jspdf;
             let finalPdf = null;
 
-            for (let i = 1; i <= pdfDoc.numPages; i++) {
-                await new Promise((resolve) => {
-                    pageNum = i;
-                    pdfDoc.getPage(i).then((page) => {
-                        const viewport1x = page.getViewport({ scale: 1.0 });
-                        canvas.width = viewport1x.width;
-                        canvas.height = viewport1x.height;
-                        wrapper.style.width = viewport1x.width + 'px';
-                        wrapper.style.height = viewport1x.height + 'px';
-
-                        page.render({ canvasContext: ctx, viewport: viewport1x }).promise.then(async () => {
-                            restoreAnnotations(i);
-                            selectElement(null);
-
-                            setTimeout(async () => {
-                                const canvasCap = await html2canvas(wrapper, {
-                                    scale: 2,
-                                    useCORS: true,
-                                    logging: false,
-                                    windowWidth: wrapper.scrollWidth,
-                                    windowHeight: wrapper.scrollHeight
-                                });
-
-                                const imgData = canvasCap.toDataURL('image/jpeg', 0.98);
-
-                                if (i === 1) {
-                                    finalPdf = new jsPDF({
-                                        orientation: viewport1x.width > viewport1x.height ? 'landscape' : 'portrait',
-                                        unit: 'px',
-                                        format: [viewport1x.width, viewport1x.height]
-                                    });
-                                } else {
-                                    finalPdf.addPage([viewport1x.width, viewport1x.height]);
-                                }
-
-                                finalPdf.addImage(imgData, 'JPEG', 0, 0, viewport1x.width, viewport1x.height);
-                                resolve();
-                            }, 300);
-                        });
-                    });
+            const containers = pagesWrapper.querySelectorAll('.page-container');
+            for (let i = 0; i < containers.length; i++) {
+                const container = containers[i];
+                const canvasCap = await html2canvas(container, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    windowWidth: container.scrollWidth,
+                    windowHeight: container.scrollHeight
                 });
+
+                const imgData = canvasCap.toDataURL('image/jpeg', 0.98);
+                const w = container.offsetWidth;
+                const h = container.offsetHeight;
+
+                if (i === 0) {
+                    finalPdf = new jsPDF({
+                        orientation: w > h ? 'landscape' : 'portrait',
+                        unit: 'px',
+                        format: [w, h]
+                    });
+                } else {
+                    finalPdf.addPage([w, h]);
+                }
+                finalPdf.addImage(imgData, 'JPEG', 0, 0, w, h);
             }
 
-    wrapper.classList.remove('exporting-pdf');
-    finalPdf.save(filename);
-    
-    currentZoom = oldZoom;
-    renderPage(pageNum);
-});
+            pagesWrapper.classList.remove('exporting-pdf');
+            finalPdf.save(filename);
+            
+            currentZoom = oldZoom;
+            renderAllPages();
+        });
 
         function rgbToHex(rgb) {
             if (/^#/.test(rgb)) return rgb;
