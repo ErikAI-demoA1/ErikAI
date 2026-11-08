@@ -339,7 +339,7 @@ let shapes = [], undoStack = [], redoStack = [], meshesMap = new Map();
 let selectedShapeIndex = null;
 let currentShapeType = 'box', currentCsgOp = 'add', tool = 'create', editMode = false, isDraftingMode = false;
 
-// 2D Výkres & Kótovanie (Všetky rozmery v milimetroch, napr. 1 jednotka 3D = 10 mm)
+// 2D Výkres & Kótovanie
 let bpScale = 1.0, bpPanX = 50, bpPanY = 50, isBpDragging = false, bpStartMouse = {x:0, y:0};
 let manualDimensions = [];
 let manualDimStep = 0, firstDimPoint = null, manualDimModeActive = false;
@@ -500,10 +500,8 @@ function loadFromLocalStorage(){
   }
 }
 
-// Rozmery v mm (predvolené hodnoty v milimetroch, napr. 100x100x100 mm)
 function createGeometryForShape(s){
   let geo;
-  // Prevod mm na interné Three.js jednotky (/10)
   const scW = (s.w || 100) / 10;
   const scH = (s.h || 100) / 10;
   const scD = (s.d || 100) / 10;
@@ -592,7 +590,6 @@ function rebuild3DScene(){
     const geo = createGeometryForShape(s);
     const mat = new THREE.MeshStandardMaterial({ color: s.color || 0x10b981, roughness: 0.3, metalness: 0.1 });
     const mesh = new THREE.Mesh(geo, mat);
-    // Pozícia v mm prenesená do 3D sveta (/10)
     mesh.position.set((s.x||0)/10, (s.y||0)/10, (s.z||0)/10);
     mesh.rotation.set((s.rx||0)*Math.PI/180, (s.ry||0)*Math.PI/180, (s.rz||0)*Math.PI/180);
     mesh.updateMatrix();
@@ -626,7 +623,6 @@ function rebuild3DScene(){
     } catch(err){}
   }
 
-  // V SolidWorks štýle: odobraté diely sa zobrazujú ako oranžovo-červené priehľadné telesá s reznou štruktúrou
   subtractiveShapes.forEach(sub => {
     sub.mesh.material = new THREE.MeshStandardMaterial({ color: 0xef4444, transparent: true, opacity: 0.5, wireframe: false });
     scene.add(sub.mesh);
@@ -654,7 +650,7 @@ function onPointerDown(e){
   const intersects = raycaster.intersectObject(floorPlane);
   if(intersects.length > 0){
     const p = intersects[0].point;
-    const snapX = Math.round(p.x * 20); // v mm
+    const snapX = Math.round(p.x * 20);
     const snapZ = Math.round(p.z * 20);
 
     pushState();
@@ -800,7 +796,7 @@ function handleDimensioningClick(clientX, clientY){
   if(snappedEdge){
     let formattedText = `${snappedEdge.mmValue.toFixed(0)} mm`;
     if(currentDimType === 'radius') formattedText = `R ${(snappedEdge.mmValue/2).toFixed(0)}`;
-    else if(currentDimType === 'diameter') formattedText = `Ø ${snappedEdge.mmValue.toFixed(0)}`;
+    else if(currentDimType === 'diameter') formattedText = `⌀ ${snappedEdge.mmValue.toFixed(0)}`;
 
     pendingDimension = {
       x1: snappedEdge.x1, y1: snappedEdge.y1,
@@ -838,27 +834,13 @@ function detectClickedEdge(cx, cy){
       let py = v.offsetY + (v.name==='top' ? (s.z || 0) : -(s.y || 0)) * autoSc * 0.1;
       
       let edges = [];
-      if(s.type === 'box' || s.type === 'filletBox' || s.type === 'chamferBox'){
-        let w = (s.w || 100) * autoSc * 0.1, h = (s.h || 100) * autoSc * 0.1;
-        edges = [
-          { x1: px - w/2, y1: py - h/2 - 12, x2: px + w/2, y2: py - h/2 - 12, mmValue: s.w || 100 },
-          { x1: px - w/2, y1: py + h/2 + 12, x2: px + w/2, y2: py + h/2 + 12, mmValue: s.w || 100 },
-          { x1: px - w/2 - 12, y1: py - h/2, x2: px - w/2 - 12, y2: py + h/2, mmValue: s.h || 100 },
-          { x1: px + w/2 + 12, y1: py - h/2, x2: px + w/2 + 12, y2: py + h/2, mmValue: s.h || 100 }
-        ];
-      } else if(s.type === 'cylinder' || s.type === 'pipe' || s.type === 'threadedRod'){
-        let r = (s.r || 50) * autoSc * 0.1;
-        let heightMM = s.h || 100;
-        if(v.name === 'top'){
-          edges = [{ x1: px - r, y1: py - r - 12, x2: px + r, y2: py - r - 12, mmValue: (s.r || 50) * 2 }];
-        } else {
-          let h = heightMM * autoSc * 0.1;
-          edges = [
-            { x1: px - r, y1: py - h/2 - 12, x2: px + r, y2: py - h/2 - 12, mmValue: (s.r || 50) * 2 },
-            { x1: px + r + 12, y1: py - h/2, x2: px + r + 12, y2: py + h/2, mmValue: heightMM }
-          ];
-        }
-      }
+      let w = (s.w || 100) * autoSc * 0.1, h = (s.h || 100) * autoSc * 0.1;
+      edges = [
+        { x1: px - w/2, y1: py - h/2 - 12, x2: px + w/2, y2: py - h/2 - 12, mmValue: s.w || 100 },
+        { x1: px - w/2, y1: py + h/2 + 12, x2: px + w/2, y2: py + h/2 + 12, mmValue: s.w || 100 },
+        { x1: px - w/2 - 12, y1: py - h/2, x2: px - w/2 - 12, y2: py + h/2, mmValue: s.h || 100 },
+        { x1: px + w/2 + 12, y1: py - h/2, x2: px + w/2 + 12, y2: py + h/2, mmValue: s.h || 100 }
+      ];
 
       for(let edge of edges){
         let dist = pointToSegmentDistance(cx, cy, edge.x1, edge.y1, edge.x2, edge.y2);
@@ -877,7 +859,6 @@ function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
   return Math.hypot(px - (x1 + t*(x2 - x1)), py - (y1 + t*(y2 - y1)));
 }
 
-// Automatický výpočet mierky podľa veľkosti nakreslených objektov v mm
 function calculateDynamicScale(){
   if(shapes.length === 0) return 2.5;
   let maxDim = 100;
@@ -885,7 +866,6 @@ function calculateDynamicScale(){
     let dim = Math.max(s.w || 100, s.h || 100, s.d || 100, (s.r || 50) * 2);
     if(dim > maxDim) maxDim = dim;
   });
-  // Dynamická mierka tak, aby sa všetko pohodlne zmestilo na výkres
   if(maxDim > 500) return 0.8;
   if(maxDim > 300) return 1.5;
   if(maxDim > 150) return 2.5;
@@ -951,7 +931,6 @@ function generateEngineeringBlueprint(){
   ctx.font = 'bold 12px Segoe UI, sans-serif';
   views.forEach(v => ctx.fillText(v.title, v.offsetX - 190, v.offsetY - 210));
 
-  // Vykreslenie všetkých tvarov s automatickou mierkou v mm
   shapes.forEach((s) => {
     views.forEach(v => renderAccurateProjection(ctx, s, v.offsetX, v.offsetY, v.name));
   });
@@ -979,7 +958,7 @@ function generateEngineeringBlueprint(){
   renderTitleBlock(ctx, canvas.width - 430, canvas.height - 160);
 }
 
-// Reálny strojársky štandard pohľadov (SolidWorks štýl prierezov so šrafovaním)
+// Opravená projekcia podporujúca VŠETKY tvary a CSG odobraté telesá (subtract)
 function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   ctx.save();
   const autoSc = calculateDynamicScale();
@@ -991,7 +970,6 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   const isSub = s.op === 'subtract';
 
   if(isSub){
-    // SolidWorks štýl pre odobratý materiál (červená plná plná kontúra rezu + šrafovanie)
     ctx.strokeStyle = '#dc2626';
     ctx.lineWidth = 2;
   } else {
@@ -999,61 +977,59 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
     ctx.lineWidth = 2.2;
   }
 
-  if(s.type === 'box' || s.type === 'filletBox' || s.type === 'chamferBox'){
-    let w = (s.w || 100) * autoSc * 0.1, h = (s.h || 100) * autoSc * 0.1;
+  let w = (s.w || 100) * autoSc * 0.1;
+  let h = (s.h || 100) * autoSc * 0.1;
+  let d = (s.d || 100) * autoSc * 0.1;
+  let r = (s.r || 50) * autoSc * 0.1;
+
+  if(['box', 'filletBox', 'chamferBox'].includes(s.type)){
     ctx.strokeRect(-w/2, -h/2, w, h);
     if(viewType === 'section' || isSub){
       drawHatching45(ctx, -w/2, -h/2, w, h);
     }
-  } else if(s.type === 'cylinder' || s.type === 'cone' || s.type === 'sphere'){
-    let r = (s.r || 50) * autoSc * 0.1;
+  } else if(['cylinder', 'cone', 'sphere', 'threadedRod'].includes(s.type)){
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
       if(isSub) drawHatching45Circle(ctx, r);
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
-      let h = (s.h || 100) * autoSc * 0.1;
       ctx.strokeRect(-r, -h/2, r*2, h);
       if(isSub) drawHatching45(ctx, -r, -h/2, r*2, h);
       drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
     }
   } else if(s.type === 'pipe'){
-    let r = (s.r || 50) * autoSc * 0.1, h = (s.h || 100) * autoSc * 0.1;
     let innerR = Math.max(2, (s.r - (s.wall || 10))) * autoSc * 0.1;
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI * 2); ctx.stroke();
-      drawHatching45Ring(ctx, innerR, r);
+      if(isSub) drawHatching45Ring(ctx, innerR, r);
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
       ctx.strokeRect(-r, -h/2, r*2, h);
-      // Vnútorný prierez rúry
-      ctx.strokeStyle = '#dc2626';
+      ctx.strokeStyle = isSub ? '#dc2626' : '#0f172a';
       ctx.strokeRect(-innerR, -h/2, innerR*2, h);
       drawHatching45(ctx, -r, -h/2, r*2, h);
       drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
     }
-  } else if(s.type === 'threadedRod'){
-    let r = (s.r || 50) * autoSc * 0.1, h = (s.h || 100) * autoSc * 0.1;
-    let threadR = r * 0.85;
+  } else if(s.type === 'wedge'){
+    ctx.beginPath();
+    ctx.moveTo(-w/2, h/2); ctx.lineTo(w/2, h/2); ctx.lineTo(w/2, -h/2); ctx.closePath();
+    ctx.stroke();
+    if(isSub) drawHatching45(ctx, -w/2, -h/2, w, h);
+  } else if(s.type === 'torus'){
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(0, 0, threadR, 0, Math.PI * 1.5); ctx.stroke();
     } else {
-      ctx.strokeRect(-r, -h/2, r*2, h);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(-threadR, -h/2); ctx.lineTo(-threadR, h/2);
-      ctx.moveTo(threadR, -h/2); ctx.lineTo(threadR, h/2);
-      ctx.stroke();
-      drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
+      ctx.strokeRect(-r, -r/2, r*2, r);
     }
+  } else {
+    // Všeobecný fallback pre akýkoľvek iný tvar
+    ctx.strokeRect(-w/2, -h/2, w, h);
+    if(isSub) drawHatching45(ctx, -w/2, -h/2, w, h);
   }
   ctx.restore();
 }
 
-// ISO 128 Šrafovanie v reze pod 45°
 function drawHatching45(ctx, x, y, w, h){
   ctx.save();
   ctx.strokeStyle = '#ef4444';
@@ -1086,7 +1062,6 @@ function drawHatching45Ring(ctx, r1, r2){
   ctx.restore();
 }
 
-// ISO Osi súmernosti
 function drawCenterLine(ctx, x1, y1, x2, y2){
   ctx.save();
   ctx.strokeStyle = '#ef4444';
@@ -1252,7 +1227,6 @@ editDimsBtn.onclick = () => {
 };
 function closeDimensionsPanel(){ editMode = false; dimsPanel.style.display = 'none'; editDimsBtn.classList.replace('active', 'ghost'); }
 
-// 📋 KOMPLETNÝ SPRÁVCA PARAMETROV V MILIMETROCH (MM)
 function updateDimensionsPanel(){
   if(document.activeElement && document.activeElement.tagName === 'INPUT' && dimsPanel.contains(document.activeElement)) return;
   dimsContent.innerHTML = '';
@@ -1266,7 +1240,6 @@ function updateDimensionsPanel(){
   metaCard.querySelector('#metaMat').onchange = (e) => { blueprintMeta.material = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
   dimsContent.appendChild(metaCard);
 
-  // Zoznam kót s možnosťou zmazania
   if(manualDimensions.length > 0){
     const dimCard = document.createElement('div');
     dimCard.className = 'shape-card';
@@ -1292,7 +1265,6 @@ function updateDimensionsPanel(){
     card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
     card.innerHTML = `<div class="shape-title-row"><strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong><button class="danger" style="padding:2px 5px;" onclick="shapes.splice(${i},1);rebuild3DScene();updateDimensionsPanel();">🗑️ Zmazať diel</button></div>`;
     
-    // Pozícia v mm
     const posRow = document.createElement('div');
     posRow.className = 'input-row';
     posRow.innerHTML = `<div class="input-group-title">Pozícia X, Y, Z (mm):</div><label>X:</label><input type="number" step="10" value="${s.x||0}"><label>Y:</label><input type="number" step="10" value="${s.y||0}"><label>Z:</label><input type="number" step="10" value="${s.z||0}">`;
@@ -1302,7 +1274,6 @@ function updateDimensionsPanel(){
     pInps[2].onchange = (e) => { s.z = parseFloat(e.target.value)||0; rebuild3DScene(); };
     card.appendChild(posRow);
 
-    // Rotácia
     const rotRow = document.createElement('div');
     rotRow.className = 'input-row';
     rotRow.innerHTML = `<div class="input-group-title">Rotácia (°):</div><label>RX:</label><input type="number" step="15" value="${s.rx||0}"><label>RY:</label><input type="number" step="15" value="${s.ry||0}"><label>RZ:</label><input type="number" step="15" value="${s.rz||0}">`;
@@ -1312,7 +1283,6 @@ function updateDimensionsPanel(){
     rInps[2].onchange = (e) => { s.rz = parseFloat(e.target.value)||0; rebuild3DScene(); };
     card.appendChild(rotRow);
 
-    // Rozmery v mm (Š, V, H, R, atď.)
     const dimRow = document.createElement('div');
     dimRow.className = 'input-row';
     dimRow.innerHTML = `<div class="input-group-title">Rozmery v mm:</div>`;
