@@ -45,30 +45,38 @@
             position: absolute;
             box-sizing: border-box;
             touch-action: none;
-            cursor: grab;
             user-select: none;
         }
-        .canvas-element:active, .whiteout-box:active, .image-element:active, .table-element:active {
-            cursor: grabbing;
-        }
         .canvas-element {
+            cursor: grab;
             border: 1px dashed rgba(239, 68, 68, 0.7);
             padding: 2px 4px;
+        }
+        .canvas-element:active {
+            cursor: grabbing;
         }
         .canvas-element.selected {
             border-color: #ef4444;
             background-color: rgba(239, 68, 68, 0.12);
         }
         .whiteout-box {
+            cursor: grab;
             background-color: white;
             border: 1px dashed #94a3b8;
+        }
+        .whiteout-box:active {
+            cursor: grabbing;
         }
         .whiteout-box.selected {
             border-color: #3b82f6;
             box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
         }
         .image-element {
+            cursor: grab;
             border: 1px dashed #eab308;
+        }
+        .image-element:active {
+            cursor: grabbing;
         }
         .image-element img {
             width: 100%;
@@ -84,13 +92,30 @@
             border: 1px dashed #10b981;
             background: white;
         }
+        /* Špeciálna horná lišta na uchopenie tabuľky, aby sa s ňou dalo voľne hýbať */
+        .table-drag-handle {
+            height: 18px;
+            background: #10b981;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: white;
+            font-weight: bold;
+            letter-spacing: 1px;
+            user-select: none;
+        }
+        .table-drag-handle:active {
+            cursor: grabbing;
+        }
         .table-element.selected {
             border-color: #10b981;
             box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
         }
         .table-element table {
             width: 100%;
-            height: 100%;
+            height: calc(100% - 18px);
             border-collapse: collapse;
             color: #000;
         }
@@ -106,7 +131,7 @@
             background-color: rgba(16, 185, 129, 0.2);
         }
 
-        /* Úplné vymazanie čiarkovaných rámov pri exporte PDF */
+        /* Úplné vymazanie čiarkovaných rámov a manipulačných líšt pri exporte PDF */
         .exporting-pdf .canvas-element,
         .exporting-pdf .whiteout-box,
         .exporting-pdf .image-element,
@@ -117,6 +142,9 @@
         }
         .exporting-pdf .whiteout-box {
             background-color: white !important;
+        }
+        .exporting-pdf .table-drag-handle {
+            display: none !important;
         }
 
         .pan-mode .canvas-element,
@@ -150,6 +178,7 @@
             </label>
             <button id="add-whiteout-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">⬜ Zakryť</button>
             <button id="add-text-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">✏️ Text</button>
+            <button id="open-sign-modal-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-700">✍️ Podpísať</button>
             <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-medium">
                 🖼️ Obrázok
                 <input type="file" id="image-input" accept="image/*" multiple class="hidden">
@@ -266,6 +295,24 @@
             <div class="flex gap-2 pt-2">
                 <button id="modal-cancel" class="flex-1 bg-slate-800 text-slate-300 py-2 rounded text-sm">Zrušiť</button>
                 <button id="modal-create" class="flex-1 bg-red-600 text-white py-2 rounded text-sm font-medium">Vytvoriť</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pre podpisovanie -->
+    <div id="sign-modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-96 space-y-4 shadow-2xl">
+            <h3 class="text-base font-bold text-white">Vytvoriť Podpis</h3>
+            <p class="text-xs text-slate-400">Nakreslite svoj podpis myšou alebo prstom do poľa nižšie:</p>
+            <div class="bg-white rounded-lg overflow-hidden border border-slate-700">
+                <canvas id="sign-canvas" width="340" height="150" class="cursor-crosshair w-full"></canvas>
+            </div>
+            <div class="flex justify-between items-center">
+                <button id="sign-clear" class="text-xs text-red-400 hover:text-red-300 underline">Vymazať plátno</button>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button id="sign-cancel" class="flex-1 bg-slate-800 text-slate-300 py-2 rounded text-sm">Zrušiť</button>
+                <button id="sign-insert" class="flex-1 bg-red-600 text-white py-2 rounded text-sm font-medium">Vložiť podpis</button>
             </div>
         </div>
     </div>
@@ -447,7 +494,7 @@
                 let icon = '📦', name = `Objekt #${index + 1}`;
                 if (el.classList.contains('canvas-element')) { icon = '✏️'; name = `Text: "${el.dataset.rawText || 'Nový'}"`; }
                 else if (el.classList.contains('whiteout-box')) { icon = '⬜'; name = 'Zakrytie'; }
-                else if (el.classList.contains('image-element')) { icon = '🖼️'; name = 'Obrázok'; }
+                else if (el.classList.contains('image-element')) { icon = '🖼️'; name = 'Obrázok / Podpis'; }
                 else if (el.classList.contains('table-element')) { icon = '📊'; name = 'Tabuľka'; }
 
                 const item = document.createElement('div');
@@ -478,7 +525,7 @@
             el.dataset.baseWidth = parseFloat(width) / currentZoom;
             el.dataset.baseHeight = parseFloat(height) / currentZoom;
 
-            makeInteractive(el);
+            makeInteractive(el, el);
             wrapper.appendChild(el);
             selectElement(el);
             if (shouldSave) saveAnnotations();
@@ -506,7 +553,7 @@
             el.dataset.baseHeight = parseFloat(height) / currentZoom;
             el.dataset.baseFontSize = parseFloat(fontSize) / currentZoom;
 
-            makeInteractive(el);
+            makeInteractive(el, el);
             wrapper.appendChild(el);
             selectElement(el);
             if (shouldSave) saveAnnotations();
@@ -541,12 +588,48 @@
             const img = document.createElement('img'); img.src = src;
             el.appendChild(img);
 
-            makeInteractive(el);
+            makeInteractive(el, el);
             wrapper.appendChild(el);
             selectElement(el);
             if (shouldSave) saveAnnotations();
             return el;
         }
+
+        /* Podpisovanie - logika modálneho okna a kreslenia */
+        const signModal = document.getElementById('sign-modal');
+        const signCanvas = document.getElementById('sign-canvas');
+        const signCtx = signCanvas.getContext('2d');
+        let isDrawing = false;
+
+        document.getElementById('open-sign-modal-btn').addEventListener('click', () => {
+            if (!pdfDoc) return alert('Najprv nahrajte PDF!');
+            signModal.classList.remove('hidden');
+            signCtx.clearRect(0, 0, signCanvas.width, signCanvas.height);
+            signCtx.strokeStyle = '#000000';
+            signCtx.lineWidth = 2.5;
+            signCtx.lineCap = 'round';
+        });
+
+        document.getElementById('sign-cancel').addEventListener('click', () => signModal.classList.add('hidden'));
+        document.getElementById('sign-clear').addEventListener('click', () => signCtx.clearRect(0, 0, signCanvas.width, signCanvas.height));
+
+        signCanvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            signCtx.beginPath();
+            signCtx.moveTo(e.offsetX, e.offsetY);
+        });
+        signCanvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            signCtx.lineTo(e.offsetX, e.offsetY);
+            signCtx.stroke();
+        });
+        window.addEventListener('mouseup', () => isDrawing = false);
+
+        document.getElementById('sign-insert').addEventListener('click', () => {
+            const dataURL = signCanvas.toDataURL('image/png');
+            signModal.classList.add('hidden');
+            createImage(dataURL, '100px', '200px', '180px', '70px', true);
+        });
 
         const modal = document.getElementById('table-modal');
         document.getElementById('add-table-modal-btn').addEventListener('click', () => {
@@ -559,7 +642,7 @@
             const cols = parseInt(document.getElementById('modal-cols').value) || 3;
             modal.classList.add('hidden');
 
-            let tableHTML = '<table><tr>';
+            let tableHTML = '<div class="table-drag-handle">☰ UCHOPIT A PRESUNÚŤ</div><table><tr>';
             for (let c = 0; c < cols; c++) tableHTML += `<th contenteditable="true">Hlavička ${c+1}</th>`;
             tableHTML += '</tr>';
             for (let r = 0; r < rows - 1; r++) {
@@ -569,7 +652,7 @@
             }
             tableHTML += '</table>';
 
-            createTable(tableHTML, '100px', '300px', (cols * 100 * currentZoom) + 'px', (rows * 35 * currentZoom) + 'px', true);
+            createTable(tableHTML, '100px', '300px', (cols * 100 * currentZoom) + 'px', ((rows * 35) + 18) + 'px', true);
         });
 
         function createTable(html, left, top, width, height, shouldSave = true) {
@@ -589,23 +672,26 @@
                 cell.addEventListener('input', () => saveAnnotations());
             });
 
-            makeInteractive(el);
+            // Uchopenie tabuľky iba za hornú lištu
+            const handle = el.querySelector('.table-drag-handle');
+            makeInteractive(el, handle);
+
             wrapper.appendChild(el);
             selectElement(el);
             if (shouldSave) saveAnnotations();
             return el;
         }
 
-        // Dokonalý, stabilný mechanizmus ťahania objektov
-        function makeInteractive(el) {
+        // Vylepšený mechanizmus ťahania – pre tabuľky sa ťahá za lištu, pre ostatné za celý element
+        function makeInteractive(el, handleElement) {
             let isDragging = false;
             let startX, startY, initLeft, initTop;
 
-            el.addEventListener('pointerdown', (e) => {
+            handleElement.addEventListener('pointerdown', (e) => {
                 if (currentMode === 'pan' || e.target.tagName === 'TD' || e.target.tagName === 'TH' || e.target.isContentEditable) return;
                 
                 isDragging = true;
-                el.setPointerCapture(e.pointerId);
+                handleElement.setPointerCapture(e.pointerId);
                 selectElement(el);
                 
                 startX = e.clientX;
@@ -616,7 +702,7 @@
                 e.stopPropagation();
             });
 
-            el.addEventListener('pointermove', (e) => {
+            handleElement.addEventListener('pointermove', (e) => {
                 if (!isDragging) return;
                 
                 const dx = e.clientX - startX;
@@ -635,12 +721,12 @@
             const stopDrag = (e) => {
                 if (!isDragging) return;
                 isDragging = false;
-                try { el.releasePointerCapture(e.pointerId); } catch(err) {}
+                try { handleElement.releasePointerCapture(e.pointerId); } catch(err) {}
                 saveAnnotations();
             };
 
-            el.addEventListener('pointerup', stopDrag);
-            el.addEventListener('pointercancel', stopDrag);
+            handleElement.addEventListener('pointerup', stopDrag);
+            handleElement.addEventListener('pointercancel', stopDrag);
         }
 
         wrapper.addEventListener('click', () => { if (currentMode === 'edit') selectElement(null); });
