@@ -267,12 +267,12 @@ input[type="file"] { display: none; }
     </select>
 
     <button id="modeToggleBtn" class="ghost" onclick="toggleDraftingMode()" style="background:var(--accent-amber); color:#000;">📐 Prepnúť na 2D Výkres</button>
+    <button class="ghost" onclick="convert3DTo2DDirectly()" style="background:var(--accent-purple); color:white;" title="Automaticky preloží 3D dáta na čistý 2D výkres">⚡ 3D na 2D Výkres (Kód)</button>
     <button id="selectBtn" class="ghost" onclick="setTool('select')">👆 Vybrať</button>
     <button class="ghost" onclick="resetCamera()">🎥 Kamera</button>
     <button id="editDimsBtn" class="ghost">📋 Parametre & Diely</button>
   </div>
   <div class="panel">
-    <button class="ghost" onclick="copyBlueprintSvgCode()" style="background:var(--accent-purple); color:white;" title="Skopíruje SVG kód priamo do schránky pre vloženie">📋 Skopírovať 2D Kód</button>
     <button class="ghost" onclick="exportBlueprintImage()" style="background:var(--accent-blue); color:white;">📷 PNG</button>
     <button class="ghost" onclick="printBlueprint()" style="background:var(--accent-green); color:#000;">🖨️ Tlačiť</button>
     <button class="ghost" onclick="exportJSON()">💾 Uložiť JSON</button>
@@ -457,6 +457,15 @@ function init3D() {
   setupBlueprintInteraction();
   loadFromLocalStorage();
   animate();
+}
+
+// AUTOMATICKÉ PREPOJENIE 3D NA 2D JEDNÝM KLIKNUTÍM (KÓD)
+function convert3DTo2DDirectly(){
+  if(!isDraftingMode){
+    toggleDraftingMode();
+  }
+  generateEngineeringBlueprint();
+  logCommand("⚡ Úspešne preložené z 3D do 2D výkresu cez interný kód!");
 }
 
 function changeActiveShape(){
@@ -1187,21 +1196,6 @@ function renderTitleBlock(ctx, x, y){
   ctx.restore();
 }
 
-function copyBlueprintSvgCode(){
-  const canvas = document.getElementById('blueprintCanvas');
-  const dataURL = canvas.toDataURL('image/png');
-  const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">
-  <image width="100%" height="100%" href="${dataURL}"/>
-</svg>`;
-  
-  navigator.clipboard.writeText(svgString).then(() => {
-    logCommand("SVG kód výkresu skopírovaný do schránki!");
-    alert("Kód výkresu bol úspešne skopírovaný do schránky. Môžete ho vložiť priamo do akejkoľvek časti vašej stránky.");
-  }).catch(err => {
-    alert("Chyba pri kopírovaní do schránky.");
-  });
-}
-
 function exportBlueprintImage(){
   const canvas = document.getElementById('blueprintCanvas');
   const link = document.createElement('a');
@@ -1212,7 +1206,7 @@ function exportBlueprintImage(){
 }
 
 function exportSVG(){
-  copyBlueprintSvgCode();
+  exportBlueprintImage();
 }
 
 function printBlueprint(){
@@ -1244,7 +1238,7 @@ function importJSON(event){
       blueprintMeta = data.blueprintMeta || blueprintMeta;
       manualDimensions = data.manualDimensions || [];
       viewLayoutCount = data.viewLayoutCount || 3;
-      paperFormat = paperFormat = data.paperFormat || 'A3_LANDSCAPE';
+      paperFormat = data.paperFormat || 'A3_LANDSCAPE';
       document.getElementById('viewCountSelector').value = viewLayoutCount;
       document.getElementById('paperFormatSelector').value = paperFormat;
       changePaperFormat();
