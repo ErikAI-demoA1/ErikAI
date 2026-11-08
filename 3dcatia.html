@@ -241,6 +241,39 @@ input[type="file"] { display: none; }
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
+
+/* Modálne okno pre vloženie 3D kódu */
+#codeModal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+#codeModalContent {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  padding: 20px;
+  border-radius: 10px;
+  width: 600px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#codeModalContent textarea {
+  width: 100%;
+  height: 200px;
+  background: #090b10;
+  color: #10b981;
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+}
 </style>
 </head>
 <body>
@@ -267,7 +300,13 @@ input[type="file"] { display: none; }
     </select>
 
     <button id="modeToggleBtn" class="ghost" onclick="toggleDraftingMode()" style="background:var(--accent-amber); color:#000;">📐 Prepnúť na 2D Výkres</button>
-    <button class="ghost" onclick="convert3DTo2DDirectly()" style="background:var(--accent-purple); color:white;" title="Automaticky preloží 3D dáta na čistý 2D výkres">⚡ 3D na 2D Výkres (Kód)</button>
+    
+    <!-- IKONA 1: SKOPÍROVAŤ 3D KÓD -->
+    <button class="ghost" onclick="copy3DCode()" style="background:var(--accent-purple); color:white;" title="Skopíruje 3D kód zostavy do schránky">📋 1. Skopírovať 3D Kód</button>
+    
+    <!-- IKONA 2: VLOŽIŤ 3D KÓD A GENEROVAŤ 2D VÝKRES -->
+    <button class="ghost" onclick="openImport3DModal()" style="background:var(--accent-blue); color:white;" title="Vložiť 3D kód a vygenerovať 2D výkres">📥 2. Vložiť 3D Kód na 2D Výkres</button>
+
     <button id="selectBtn" class="ghost" onclick="setTool('select')">👆 Vybrať</button>
     <button class="ghost" onclick="resetCamera()">🎥 Kamera</button>
     <button id="editDimsBtn" class="ghost">📋 Parametre & Diely</button>
@@ -281,6 +320,19 @@ input[type="file"] { display: none; }
     <button class="ghost" onclick="clearAll()" style="background:var(--accent-red); color:white;">🗑️ Zmazať</button>
   </div>
 </header>
+
+<!-- MODÁLNE OKNO PRE VLOŽENIE 3D KÓDU -->
+<div id="codeModal">
+  <div id="codeModalContent">
+    <h3 style="color:var(--accent-green); margin:0;">📥 Vložiť 3D Kód pre 2D Výkres</h3>
+    <span style="font-size:0.8rem; color:var(--text-muted);">Sem vložte skopírovaný 3D JSON kód a kliknite na "Generovať 2D Výkres".</span>
+    <textarea id="importedCodeInput" placeholder="Vložte 3D kód sem..."></textarea>
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button class="ghost" onclick="closeImport3DModal()">Zrušiť</button>
+      <button onclick="render2DFromPasted3DCode()" style="background:var(--accent-green); color:#000;">🚀 Generovať 2D Výkres</button>
+    </div>
+  </div>
+</div>
 
 <div id="workspaceContainer">
   <div id="canvasContainer"></div>
@@ -459,13 +511,52 @@ function init3D() {
   animate();
 }
 
-// AUTOMATICKÉ PREPOJENIE 3D NA 2D JEDNÝM KLIKNUTÍM (KÓD)
-function convert3DTo2DDirectly(){
-  if(!isDraftingMode){
-    toggleDraftingMode();
+// FUNKCIA 1: SKOPÍROVAŤ 3D KÓD DO SCHRÁNKY
+function copy3DCode(){
+  const data = JSON.stringify({ shapes, blueprintMeta, manualDimensions, viewLayoutCount, paperFormat }, null, 2);
+  navigator.clipboard.writeText(data).then(() => {
+    logCommand("📋 3D kód zostavy úspešne skopírovaný do schránky!");
+    alert("3D kód bol skopírovaný do schránky!");
+  }).catch(err => {
+    alert("Chyba pri kopírovaní 3D kódu.");
+  });
+}
+
+// FUNKCIA 2: OTVORIŤ OKNO NA VLOŽENIE 3D KÓDU
+function openImport3DModal(){
+  document.getElementById('codeModal').style.display = 'flex';
+}
+function closeImport3DModal(){
+  document.getElementById('codeModal').style.display = 'none';
+}
+
+// FUNKCIA 2: VLOŽIŤ 3D KÓD A OKAMŽITE VYGENEROVAŤ 2D VÝKRES
+function render2DFromPasted3DCode(){
+  const pastedText = document.getElementById('importedCodeInput').value.trim();
+  if(!pastedText){
+    alert("Prosím, vložte platný 3D kód.");
+    return;
   }
-  generateEngineeringBlueprint();
-  logCommand("⚡ Úspešne preložené z 3D do 2D výkresu cez interný kód!");
+  try {
+    const data = JSON.parse(pastedText);
+    shapes = data.shapes || [];
+    blueprintMeta = data.blueprintMeta || blueprintMeta;
+    manualDimensions = data.manualDimensions || [];
+    viewLayoutCount = data.viewLayoutCount || 3;
+    paperFormat = data.paperFormat || 'A3_LANDSCAPE';
+    
+    document.getElementById('viewCountSelector').value = viewLayoutCount;
+    document.getElementById('paperFormatSelector').value = paperFormat;
+    changePaperFormat();
+    rebuild3DScene();
+    
+    closeImport3DModal();
+    if(!isDraftingMode) toggleDraftingMode();
+    generateEngineeringBlueprint();
+    logCommand("🚀 3D kód úspešne vložený a transformovaný na 2D výkres!");
+  } catch(err){
+    alert("Chyba: Vložený text nie je platný JSON 3D kód zostavy.");
+  }
 }
 
 function changeActiveShape(){
