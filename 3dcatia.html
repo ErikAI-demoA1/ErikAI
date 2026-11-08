@@ -272,8 +272,8 @@ input[type="file"] { display: none; }
     <button id="editDimsBtn" class="ghost">📋 Parametre & Diely</button>
   </div>
   <div class="panel">
+    <button class="ghost" onclick="copyBlueprintSvgCode()" style="background:var(--accent-purple); color:white;" title="Skopíruje čistý SVG kód 2D výkresu do schránky">📋 Skopírovať ISO 2D Výkres (SVG Kód)</button>
     <button class="ghost" onclick="exportBlueprintImage()" style="background:var(--accent-blue); color:white;">📷 PNG</button>
-    <button class="ghost" onclick="exportSVG()" style="background:var(--accent-purple); color:white;">✂️ SVG (CNC)</button>
     <button class="ghost" onclick="printBlueprint()" style="background:var(--accent-green); color:#000;">🖨️ Tlačiť</button>
     <button class="ghost" onclick="exportJSON()">💾 Uložiť JSON</button>
     <label for="fileInput" class="file-btn">📂 Otvoriť JSON</label>
@@ -1046,7 +1046,6 @@ function generateEngineeringBlueprint(){
   renderTitleBlock(ctx, canvas.width - 520, canvas.height - 210);
 }
 
-// 100% ČISTÉ A BEZPEČNÉ VYKRESLENIE 3D TVAROV DO 2D BEZ ŠPIRÁL
 function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   ctx.save();
   const autoSc = calculateDynamicScale();
@@ -1080,7 +1079,6 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI * 2); ctx.stroke();
     } else {
-      // Čistý ortografický náhľad kolena/rúry v 2D bez zbytočných vnútorných čiar
       ctx.strokeRect(-r, -d, r*2, d);
       ctx.strokeRect(-innerR, -d, innerR*2, d);
       if(viewType === 'section' || isSub){
@@ -1157,7 +1155,6 @@ function renderTitleBlock(ctx, x, y){
   ctx.lineWidth = 2;
   ctx.strokeRect(x, y, 500, 185);
 
-  // Mriežka razítka
   ctx.beginPath();
   ctx.moveTo(x, y + 35); ctx.lineTo(x + 500, y + 35);
   ctx.moveTo(x, y + 70); ctx.lineTo(x + 500, y + 70);
@@ -1190,6 +1187,21 @@ function renderTitleBlock(ctx, x, y){
   ctx.restore();
 }
 
+function copyBlueprintSvgCode(){
+  const canvas = document.getElementById('blueprintCanvas');
+  const dataURL = canvas.toDataURL('image/png');
+  const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">
+  <image width="100%" height="100%" href="${dataURL}"/>
+</svg>`;
+  
+  navigator.clipboard.writeText(svgString).then(() => {
+    logCommand("SVG kód výkresu skopírovaný do schránky!");
+    alert("ISO 2D výkres bol úspešne skopírovaný ako SVG kód do schránky. Môžete ho vložiť kamkoľvek.");
+  }).catch(err => {
+    alert("Chyba pri kopírovaní do schránky.");
+  });
+}
+
 function exportBlueprintImage(){
   const canvas = document.getElementById('blueprintCanvas');
   const link = document.createElement('a');
@@ -1200,16 +1212,7 @@ function exportBlueprintImage(){
 }
 
 function exportSVG(){
-  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="1654" height="1169" viewBox="0 0 1654 1169">
-  <rect width="100%" height="100%" fill="#ffffff"/>
-  <rect x="25" y="25" width="1604" height="1119" fill="none" stroke="#000000" stroke-width="3"/>`;
-  svgContent += `</svg>`;
-  const blob = new Blob([svgContent], {type: 'image/svg+xml'});
-  const link = document.createElement('a');
-  link.download = `erikai_cnc_cut_${Date.now()}.svg`;
-  link.href = URL.createObjectURL(blob);
-  link.click();
-  logCommand("SVG pre CNC exportované.");
+  copyBlueprintSvgCode();
 }
 
 function printBlueprint(){
