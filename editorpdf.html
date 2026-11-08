@@ -45,9 +45,9 @@
             position: absolute;
             box-sizing: border-box;
             touch-action: none;
+            cursor: move !important;
         }
         .canvas-element {
-            cursor: default;
             border: 1px dashed rgba(239, 68, 68, 0.7);
             user-select: none;
             padding: 2px 4px;
@@ -57,7 +57,6 @@
             background-color: rgba(239, 68, 68, 0.12);
         }
         .whiteout-box {
-            cursor: default;
             background-color: white;
             border: 1px dashed #94a3b8;
         }
@@ -66,7 +65,6 @@
             box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
         }
         .image-element {
-            cursor: default;
             border: 1px dashed #eab308;
         }
         .image-element img {
@@ -80,7 +78,6 @@
             box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
         }
         .table-element {
-            cursor: default;
             border: 1px dashed #10b981;
             background: white;
         }
@@ -103,20 +100,6 @@
         }
         .table-element td:focus, .table-element th:focus {
             background-color: rgba(16, 185, 129, 0.2);
-        }
-
-        /* Režim pohybu objektov */
-        .move-objects-mode .canvas-element,
-        .move-objects-mode .whiteout-box,
-        .move-objects-mode .image-element,
-        .move-objects-mode .table-element {
-            cursor: grab !important;
-        }
-        .move-objects-mode .canvas-element:active,
-        .move-objects-mode .whiteout-box:active,
-        .move-objects-mode .image-element:active,
-        .move-objects-mode .table-element:active {
-            cursor: grabbing !important;
         }
 
         /* Úplné vymazanie čiarkovaných rámov pri exporte PDF */
@@ -247,7 +230,7 @@
 
             <div class="space-y-2 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
                 <div class="flex justify-between items-center">
-                    <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Vrstvy</h2>
+                    <h2 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Vrstvy & Objekty</h2>
                     <span id="elements-count" class="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono">0</span>
                 </div>
                 <div id="layers-list" class="space-y-1.5 max-h-56 overflow-y-auto text-xs"></div>
@@ -301,7 +284,7 @@
 
         function setMode(mode) {
             currentMode = mode;
-            viewport.classList.remove('pan-mode', 'move-objects-mode');
+            viewport.classList.remove('pan-mode');
             
             document.getElementById('mode-edit-btn').className = "px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium";
             document.getElementById('mode-move-objects-btn').className = "px-3 py-1 bg-slate-800 text-slate-300 rounded font-medium";
@@ -311,8 +294,6 @@
                 document.getElementById('mode-edit-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
             } else if (mode === 'move-objects') {
                 document.getElementById('mode-move-objects-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
-                viewport.classList.add('move-objects-mode');
-                selectElement(null); // Odznačíme element pri prechode na voľný pohyb
             } else if (mode === 'pan') {
                 document.getElementById('mode-pan-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
                 viewport.classList.add('pan-mode');
@@ -467,8 +448,13 @@
 
                 const item = document.createElement('div');
                 item.className = "flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-800 hover:border-slate-700 cursor-pointer";
+                if (el === activeElement) item.classList.add('border-red-500', 'bg-slate-800');
+                
                 item.innerHTML = `<span class="truncate pr-2">${icon} ${name}</span>`;
-                item.onclick = (e) => { e.stopPropagation(); selectElement(el); };
+                item.onclick = (e) => { 
+                    e.stopPropagation(); 
+                    selectElement(el); 
+                };
                 listContainer.appendChild(item);
             });
         }
@@ -610,16 +596,11 @@
             let startX = 0, startY = 0, initLeft = 0, initTop = 0;
 
             const onStart = (clientX, clientY, e) => {
-                // Pohyb povolený v režime 'move-objects' alebo 'edit' (ak klikneme)
                 if (currentMode === 'pan' || e.target.tagName === 'TD' || e.target.tagName === 'TH') return;
                 
-                // Ak sme v režime 'edit', kliknutím objekt vyberieme do inspectora. 
-                // V režime 'move-objects' ho môžeme rovnako chytiť a posunúť.
-                if (currentMode === 'edit') {
-                    selectElement(el);
-                }
-
+                selectElement(el);
                 e.stopPropagation();
+                
                 startX = clientX;
                 startY = clientY;
                 initLeft = parseFloat(el.style.left);
@@ -655,6 +636,7 @@
         function selectElement(el) {
             wrapper.querySelectorAll('.canvas-element, .whiteout-box, .image-element, .table-element').forEach(item => item.classList.remove('selected'));
             activeElement = el;
+            updateLayersList();
 
             const inspector = document.getElementById('inspector-content');
             const noSelection = document.getElementById('no-selection');
