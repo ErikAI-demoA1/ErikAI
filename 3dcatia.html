@@ -216,7 +216,6 @@ input[type="file"] { display: none; }
 }
 .input-row input[type="color"]{ width: 28px; height: 26px; padding: 0; border: none; cursor: pointer; }
 
-/* Blueprint controls overlay */
 #blueprintOverlayControls {
   position: absolute;
   top: 15px;
@@ -310,13 +309,11 @@ let shapes = [], undoStack = [], redoStack = [], meshesMap = new Map();
 let selectedShapeIndex = null;
 let currentShapeType = 'box', currentCsgOp = 'add', tool = 'create', editMode = false, isDraftingMode = false;
 
-// 2D Drafting state variables
 let bpScale = 1.0, bpPanX = 50, bpPanY = 50, isBpDragging = false, bpStartMouse = {x:0, y:0};
-let manualDimensions = []; // Array of manual dimension lines [{x1, y1, x2, y2, text}]
+let manualDimensions = [];
 let manualDimStep = 0, firstDimPoint = null;
 let manualDimModeActive = false;
 
-// Editable Drawing Title Block (Rohové Razítko)
 let blueprintMeta = {
   title: "ZOSTAVA MECHANICKÉHO DIELU",
   material: "Oceľ 11 523 / S235JR",
@@ -413,12 +410,12 @@ function changeActiveShape(){
   currentShapeType = document.getElementById('shapeSelector').value;
   tool = 'create';
   document.getElementById('selectBtn').classList.replace('active', 'ghost');
-  logCommand(`Aktívny tvar nastavený na: ${currentShapeType.toUpperCase()}`);
+  logCommand(`Aktívny tvar: ${currentShapeType.toUpperCase()}`);
 }
 
 function changeCsgOperation(){
   currentCsgOp = document.getElementById('csgOperationSelector').value;
-  logCommand(`CSG Režim: ${currentCsgOp === 'add' ? 'Pridať materiál' : 'Odobrať materiál (Diera)'}`);
+  logCommand(`CSG Režim: ${currentCsgOp === 'add' ? 'Pridať' : 'Odobrať'}`);
 }
 
 function setTool(t){
@@ -441,7 +438,7 @@ function clearAll(){
   selectedShapeIndex = null;
   rebuild3DScene(); 
   saveToLocalStorage();
-  logCommand("Všetky tvary a kóty vymazané.");
+  logCommand("Všetko vymazané.");
 }
 
 function saveToLocalStorage(){
@@ -462,13 +459,11 @@ function loadFromLocalStorage(){
   }
 }
 
-// Full 3D Geometries with Fillet, Chamfer, Pipe Wall, Rotation and CSG
 function createGeometryForShape(s){
   let geo;
   if(s.type === 'box') {
     geo = new THREE.BoxGeometry(s.w, s.h, s.d);
   } else if(s.type === 'filletBox') {
-    // Real Filleted Box using ExtrudeGeometry with Rounded Corners
     const filletR = Math.min(s.fillet || 0.2, s.w/2 - 0.05, s.d/2 - 0.05);
     const shape = new THREE.Shape();
     const w2 = s.w/2, d2 = s.d/2;
@@ -484,7 +479,6 @@ function createGeometryForShape(s){
     geo = new THREE.ExtrudeGeometry(shape, { depth: s.h, bevelEnabled: true, bevelSegments: 4, steps: 1, bevelSize: filletR*0.5, bevelThickness: filletR*0.5 });
     geo.center();
   } else if(s.type === 'chamferBox') {
-    // Real Chamfered Box
     const chamf = Math.min(s.chamfer || 0.2, s.w/2 - 0.05, s.d/2 - 0.05);
     const shape = new THREE.Shape();
     const w2 = s.w/2, d2 = s.d/2;
@@ -507,7 +501,6 @@ function createGeometryForShape(s){
   } else if(s.type === 'torus') {
     geo = new THREE.TorusGeometry(s.r, s.tube || 0.3, 16, 100);
   } else if(s.type === 'pipe') {
-    // Pipe with outer radius 'r', wall thickness 'wall' and inner radius
     const shape = new THREE.Shape();
     shape.absarc(0, 0, s.r, 0, Math.PI * 2, false);
     const innerR = Math.max(0.05, s.r - (s.wall || 0.3));
@@ -575,7 +568,6 @@ function rebuild3DScene(){
     }
   });
 
-  // True CSG subtraction boolean processing
   if(baseMesh && subtractiveShapes.length > 0 && typeof CSG !== 'undefined'){
     try {
       let csgBase = CSG.fromMesh(baseMesh);
@@ -588,9 +580,7 @@ function rebuild3DScene(){
       resultingMesh.material = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3, metalness: 0.2 });
       scene.add(resultingMesh);
       meshesMap.set(0, resultingMesh);
-    } catch(err){
-      console.log("CSG processing fallback to wireframe highlight:", err);
-    }
+    } catch(err){}
   }
 
   subtractiveShapes.forEach(sub => {
@@ -641,7 +631,7 @@ function onPointerDown(e){
     selectedShapeIndex = shapes.length - 1;
     rebuild3DScene();
     saveToLocalStorage();
-    logCommand(`Pridaný nový 3D diel: ${shape.type.toUpperCase()} na [${snapX}, ${snapZ}]`);
+    logCommand(`Pridaný nový 3D diel: ${shape.type.toUpperCase()}`);
   }
 }
 
@@ -654,11 +644,10 @@ function onPointerMove(e){
   const intersects = raycaster.intersectObject(floorPlane);
   if(intersects.length > 0){
     const p = intersects[0].point;
-    infoCoords.textContent = `X: ${p.x.toFixed(2)}, Y: 0.00, Z: ${p.z.toFixed(2)} | Tvar: ${currentShapeType.toUpperCase()}`;
+    infoCoords.textContent = `X: ${p.x.toFixed(2)}, Z: ${p.z.toFixed(2)} | 3D Studio`;
   }
 }
 
-// 📐 2D DRAFTING ENGINE WITH PAN/ZOOM & MANUAL DIMENSIONING (KÓTY)
 function toggleDraftingMode(){
   isDraftingMode = !isDraftingMode;
   const btn = document.getElementById('modeToggleBtn');
@@ -669,9 +658,9 @@ function toggleDraftingMode(){
     btn.textContent = '🧊 Prepnúť na 3D Model';
     btn.style.background = '#3b82f6';
     btn.style.color = '#ffffff';
-    infoCoords.textContent = "Režim: 2D Technický výkres s kótovaním";
+    infoCoords.textContent = "Režim: 2D Technický výkres";
     generateEngineeringBlueprint();
-    logCommand("Prepnuté do 2D výkresového štúdia (ISO Orthographic & Kóty).");
+    logCommand("Prepnuté do 2D výkresu.");
   } else {
     draftingContainer.style.display = 'none';
     container.style.display = 'block';
@@ -679,7 +668,7 @@ function toggleDraftingMode(){
     btn.style.background = 'var(--accent-amber)';
     btn.style.color = '#000000';
     infoCoords.textContent = "Režim: 3D Modelovacie štúdio";
-    logCommand("Návrat do 3D Modelovania.");
+    logCommand("Návrat do 3D.");
   }
 }
 
@@ -745,21 +734,19 @@ function toggleManualDimensionMode(){
   const btn = document.getElementById('addDimensionBtn');
   if(manualDimModeActive){
     btn.classList.replace('ghost', 'active');
-    logCommand("Smart Kótovanie: Kliknite na hranu tvaru (alebo postupne na 2 body)...");
+    logCommand("Smart Kótovanie: Kliknite na hranu tvaru alebo vyberte 2 body...");
   } else {
     btn.classList.replace('active', 'ghost');
     logCommand("Kótovanie vypnuté.");
   }
 }
 
-// 📏 SMART AUTO-DIMENSIONING & SNAP TO EDGES
 function handleDimensioningClick(clientX, clientY){
   const canvas = document.getElementById('blueprintCanvas');
   const rect = canvas.getBoundingClientRect();
   const clickX = (clientX - rect.left) / bpScale;
   const clickY = (clientY - rect.top) / bpScale;
 
-  // 1. Try Smart Snap to an object's edge
   const snappedEdge = detectClickedEdge(clickX, clickY);
   if(snappedEdge){
     const distanceMM = (snappedEdge.lengthUnits * 100).toFixed(1);
@@ -772,15 +759,14 @@ function handleDimensioningClick(clientX, clientY){
     toggleManualDimensionMode();
     generateEngineeringBlueprint();
     saveToLocalStorage();
-    logCommand(`Smart Kóta pridaná na hranu: ${distanceMM} mm`);
+    logCommand(`Smart Kóta pridaná: ${distanceMM} mm`);
     return;
   }
 
-  // 2. Fallback to 2-point manual dimensioning
   if(manualDimStep === 0){
     firstDimPoint = { x: clickX, y: clickY };
     manualDimStep = 1;
-    logCommand("1. bod zvolený. Kliknite na 2. bod (alebo priamo na hranu)...");
+    logCommand("1. bod zvolený. Kliknite na 2. bod...");
   } else if(manualDimStep === 1){
     const dx = clickX - firstDimPoint.x;
     const dy = clickY - firstDimPoint.y;
@@ -794,7 +780,6 @@ function handleDimensioningClick(clientX, clientY){
   }
 }
 
-// Helper to detect if click landed close to any projection shape edge
 function detectClickedEdge(cx, cy){
   const views = [
     { name: 'front', offsetX: 250, offsetY: 300 },
@@ -802,7 +787,7 @@ function detectClickedEdge(cx, cy){
     { name: 'side', offsetX: 1050, offsetY: 300 }
   ];
   const sc = 25;
-  const threshold = 18; // Snap distance tolerance in px
+  const threshold = 18;
 
   for(let s of shapes){
     for(let v of views){
@@ -813,24 +798,21 @@ function detectClickedEdge(cx, cy){
       if(s.type === 'box' || s.type === 'filletBox' || s.type === 'chamferBox'){
         let w = s.w * sc, h = s.h * sc;
         edges = [
-          { x1: px - w/2, y1: py - h/2 - 12, x2: px + w/2, y2: py - h/2 - 12, lengthUnits: s.w }, // Horná
-          { x1: px - w/2, y1: py + h/2 + 12, x2: px + w/2, y2: py + h/2 + 12, lengthUnits: s.w }, // Dolná
-          { x1: px - w/2 - 12, y1: py - h/2, x2: px - w/2 - 12, y2: py + h/2, lengthUnits: s.h }, // Ľavá
-          { x1: px + w/2 + 12, y1: py - h/2, x2: px + w/2 + 12, y2: py + h/2, lengthUnits: s.h }  // Pravá
+          { x1: px - w/2, y1: py - h/2 - 12, x2: px + w/2, y2: py - h/2 - 12, lengthUnits: s.w },
+          { x1: px - w/2, y1: py + h/2 + 12, x2: px + w/2, y2: py + h/2 + 12, lengthUnits: s.w },
+          { x1: px - w/2 - 12, y1: py - h/2, x2: px - w/2 - 12, y2: py + h/2, lengthUnits: s.h },
+          { x1: px + w/2 + 12, y1: py - h/2, x2: px + w/2 + 12, y2: py + h/2, lengthUnits: s.h }
         ];
       } else if(s.type === 'wedge'){
         let w = s.w * sc, h = s.h * sc;
         edges = [
           { x1: px - w/2, y1: py + h/2 + 12, x2: px + w/2, y2: py + h/2 + 12, lengthUnits: s.w },
-          { x1: px + w/2 + 12, y1: py - h/2, x2: px + w/2 + 12, y2: py + h/2, lengthUnits: s.h },
-          { x1: px - w/2 - 10, y1: py + h/2 + 10, x2: px + w/2 + 10, y2: py - h/2 - 10, lengthUnits: Math.sqrt(s.w*s.w + s.h*s.h) } // Šikmá hrana
+          { x1: px + w/2 + 12, y1: py - h/2, x2: px + w/2 + 12, y2: py + h/2, lengthUnits: s.h }
         ];
       } else if(s.type === 'cylinder' || s.type === 'pipe' || s.type === 'cone'){
         let r = s.r * sc;
         if(v.name === 'top'){
-          edges = [
-            { x1: px - r, y1: py - r - 12, x2: px + r, y2: py - r - 12, lengthUnits: s.r * 2 }
-          ];
+          edges = [{ x1: px - r, y1: py - r - 12, x2: px + r, y2: py - r - 12, lengthUnits: s.r * 2 }];
         } else {
           let h = (s.h || 2) * sc;
           edges = [
@@ -857,20 +839,106 @@ function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
   return Math.hypot(px - (x1 + t*(x2 - x1)), py - (y1 + t*(y2 - y1)));
 }
 
-// 📐 PRESNÉ GENERÁTORY TECHNICKÉHO PREMIETANIA PODĽA DRUHU TVARU
+function generateEngineeringBlueprint(){
+  const canvas = document.getElementById('blueprintCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
+
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(25, 550); ctx.lineTo(canvas.width - 25, 550);
+  ctx.moveTo(800, 25); ctx.lineTo(800, canvas.height - 25);
+  ctx.stroke();
+
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 13px Segoe UI, sans-serif';
+  ctx.fillText("NÁRYS (FRONT VIEW)", 45, 50);
+  ctx.fillText("PÔDORYS (TOP VIEW)", 45, 575);
+  ctx.fillText("BOKORYS (SIDE VIEW)", 820, 50);
+
+  shapes.forEach((s) => {
+    renderAccurateProjection(ctx, s, 250, 300, 'front');
+    renderAccurateProjection(ctx, s, 250, 800, 'top');
+    renderAccurateProjection(ctx, s, 1050, 300, 'side');
+  });
+
+  manualDimensions.forEach(dim => drawCadDimensionLine(ctx, dim.x1, dim.y1, dim.x2, dim.y2, dim.text));
+  renderTitleBlock(ctx, canvas.width - 430, canvas.height - 160);
+}
+
+function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
+  ctx.save();
+  let px = offsetX + s.x * 25;
+  let py = offsetY + (viewType==='top' ? s.z : -s.y) * 25;
+  ctx.translate(px, py);
+  ctx.rotate((s.rz || 0) * Math.PI / 180);
+
+  ctx.strokeStyle = s.op === 'subtract' ? '#dc2626' : '#0f172a';
+  ctx.lineWidth = 2;
+  if(s.op === 'subtract') ctx.setLineDash([5, 5]);
+
+  const sc = 25;
+  if(s.type === 'box' || s.type === 'filletBox' || s.type === 'chamferBox'){
+    let w = s.w * sc, h = s.h * sc;
+    ctx.strokeRect(-w/2, -h/2, w, h);
+    ctx.setLineDash([]);
+    drawCadDimensionLine(ctx, -w/2, -h/2 - 12, w/2, -h/2 - 12, `${(s.w*100).toFixed(0)} mm`);
+  } else if(s.type === 'wedge'){
+    let w = s.w * sc, h = s.h * sc;
+    ctx.beginPath();
+    ctx.moveTo(-w/2, h/2); ctx.lineTo(w/2, h/2); ctx.lineTo(w/2, -h/2); ctx.closePath();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    drawCadDimensionLine(ctx, -w/2, h/2 + 12, w/2, h/2 + 12, `${(s.w*100).toFixed(0)} mm`);
+  } else if(s.type === 'cylinder' || s.type === 'cone' || s.type === 'sphere'){
+    let r = s.r * sc;
+    if(viewType === 'top'){
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      let h = (s.h || 2) * sc;
+      ctx.strokeRect(-r, -h/2, r*2, h);
+    }
+    ctx.setLineDash([]);
+    drawCadDimensionLine(ctx, -r, -r - 12, r, -r - 12, `Ø ${(s.r*200).toFixed(0)} mm`);
+  } else if(s.type === 'pipe'){
+    let r = s.r * sc, h = (s.h || 2) * sc;
+    let innerR = Math.max(0.1, s.r - (s.wall || 0.3)) * sc;
+    if(viewType === 'top'){
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      ctx.strokeRect(-r, -h/2, r*2, h);
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(-innerR, -h/2); ctx.lineTo(-innerR, h/2);
+      ctx.moveTo(innerR, -h/2); ctx.lineTo(innerR, h/2);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    drawCadDimensionLine(ctx, -r, -r - 12, r, -r - 12, `Ø ${(s.r*200).toFixed(0)} mm`);
+  }
+  ctx.restore();
+}
+
+function drawCadDimensionLine(ctx, x1, y1, x2, y2, text){
   ctx.save();
   ctx.strokeStyle = '#2563eb';
   ctx.fillStyle = '#2563eb';
   ctx.lineWidth = 1.5;
 
-  // Extension lines
   ctx.beginPath();
   ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
   ctx.stroke();
 
-  // Arrowheads
   const angle = Math.atan2(y2 - y1, x2 - x1);
-  const headLen = 7;
+  const headLen = 6;
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x1 + headLen * Math.cos(angle + Math.PI/6), y1 + headLen * Math.sin(angle + Math.PI/6));
@@ -883,12 +951,11 @@ function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
   ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI/6), y2 - headLen * Math.sin(angle - Math.PI/6));
   ctx.fill();
 
-  // Dimension Text
   const midX = (x1 + x2) / 2;
   const midY = (y1 + y2) / 2;
-  ctx.font = 'bold 11px monospace';
+  ctx.font = 'bold 10px monospace';
   ctx.fillStyle = '#1e3a8a';
-  ctx.fillText(text, midX - 20, midY - 5);
+  ctx.fillText(text, midX - 18, midY - 5);
   ctx.restore();
 }
 
@@ -896,23 +963,23 @@ function renderTitleBlock(ctx, x, y){
   ctx.save();
   ctx.strokeStyle = '#0f172a';
   ctx.lineWidth = 2;
-  ctx.strokeRect(x, y, 425, 145);
+  ctx.strokeRect(x, y, 400, 135);
 
   ctx.beginPath();
-  ctx.moveTo(x, y + 45); ctx.lineTo(x + 425, y + 45);
-  ctx.moveTo(x, y + 95); ctx.lineTo(x + 425, y + 95);
-  ctx.moveTo(x + 180, y + 45); ctx.lineTo(x + 180, y + 145);
+  ctx.moveTo(x, y + 40); ctx.lineTo(x + 400, y + 40);
+  ctx.moveTo(x, y + 85); ctx.lineTo(x + 400, y + 85);
+  ctx.moveTo(x + 160, y + 40); ctx.lineTo(x + 160, y + 135);
   ctx.stroke();
 
   ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 13px Segoe UI, sans-serif';
-  ctx.fillText(blueprintMeta.title, x + 15, y + 28);
+  ctx.font = 'bold 12px Segoe UI, sans-serif';
+  ctx.fillText(blueprintMeta.title, x + 10, y + 25);
 
-  ctx.font = '11px monospace';
-  ctx.fillText(`Materiál: ${blueprintMeta.material}`, x + 15, y + 72);
-  ctx.fillText(`Autor: ${blueprintMeta.author}`, x + 15, y + 122);
-  ctx.fillText(`Číslo výkresu: ${blueprintMeta.docNo}`, x + 195, y + 72);
-  ctx.fillText(`Mierka: ${blueprintMeta.scale} | Dátum: ${blueprintMeta.date}`, x + 195, y + 122);
+  ctx.font = '10px monospace';
+  ctx.fillText(`Materiál: ${blueprintMeta.material}`, x + 10, y + 65);
+  ctx.fillText(`Autor: ${blueprintMeta.author}`, x + 10, y + 112);
+  ctx.fillText(`Výkres: ${blueprintMeta.docNo}`, x + 170, y + 65);
+  ctx.fillText(`Mierka: ${blueprintMeta.scale}`, x + 170, y + 112);
   ctx.restore();
 }
 
@@ -922,7 +989,7 @@ function exportBlueprintImage(){
   link.download = `erikai_vykres_${Date.now()}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
-  logCommand("Výkres úspešne exportovaný ako vysokorozlíšený PNG obrázok!");
+  logCommand("Výkres stiahnutý ako PNG.");
 }
 
 function exportSVG(){
@@ -941,18 +1008,17 @@ function exportSVG(){
 
   svgContent += `</svg>`;
   const blob = new Blob([svgContent], {type: 'image/svg+xml'});
-  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.download = `erikai_cnc_cut_${Date.now()}.svg`;
-  link.href = url;
+  link.href = URL.createObjectURL(blob);
   link.click();
-  logCommand("Export do SVG pre CNC/Laser pálenie úspešne stiahnutý!");
+  logCommand("SVG pre CNC stiahnuté.");
 }
 
 function printBlueprint(){
   const canvas = document.getElementById('blueprintCanvas');
   const win = window.open('', '_blank');
-  win.document.write(`<html><head><title>Tlač Výkresu</title></head><body style="margin:0;display:flex;justify-content:center;align-items:center;"><img src="${canvas.toDataURL()}" style="max-width:100%;height:auto;" onload="window.print();window.close()"/></body></html>`);
+  win.document.write(`<html><body><img src="${canvas.toDataURL()}" style="width:100%" onload="window.print();window.close()"/></body></html>`);
   win.document.close();
 }
 
@@ -961,25 +1027,25 @@ function resetCamera(){ camera.position.set(14, 16, 20); controls.target.set(0, 
 function exportJSON(){
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ shapes, blueprintMeta, manualDimensions }, null, 2));
   const link = document.createElement('a'); 
-  link.download = `erikai_cad_project_${Date.now()}.json`; 
+  link.download = `erikai_project_${Date.now()}.json`; 
   link.href = dataStr; 
   link.click();
-  logCommand("Kompletný 3D & 2D CAD projekt uložený do JSON súboru!");
+  logCommand("Projekt uložený.");
 }
 
 function importJSON(event){
   const file = event.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = function(e){ 
-    try { 
-      const data = JSON.parse(e.target.result); 
+  reader.onload = function(e){
+    try {
+      const data = JSON.parse(e.target.result);
       shapes = data.shapes || [];
       blueprintMeta = data.blueprintMeta || blueprintMeta;
       manualDimensions = data.manualDimensions || [];
       rebuild3DScene(); 
-      logCommand("Projekt úspešne načítaný zo súboru!");
-    } catch(err){ alert("Chyba čítania JSON."); } 
+      logCommand("Projekt načítaný.");
+    } catch(err){ alert("Chyba."); }
   };
   reader.readAsText(file);
 }
@@ -997,110 +1063,65 @@ function updateDimensionsPanel(){
   if(document.activeElement && document.activeElement.tagName === 'INPUT' && dimsPanel.contains(document.activeElement)) return;
   dimsContent.innerHTML = '';
 
-  // Title Block Metadata Form
   const metaCard = document.createElement('div');
   metaCard.className = 'shape-card';
-  metaCard.innerHTML = `<strong style="color:var(--accent-green); font-size:0.85rem;">📝 Rohové razítko (Hlavička výkresu)</strong>
-    <div class="input-row"><label>Názov:</label><input type="text" id="metaTitle" style="width:230px" value="${blueprintMeta.title}"></div>
-    <div class="input-row"><label>Materiál:</label><input type="text" id="metaMat" style="width:230px" value="${blueprintMeta.material}"></div>
-    <div class="input-row"><label>Autor:</label><input type="text" id="metaAuthor" style="width:230px" value="${blueprintMeta.author}"></div>`;
+  metaCard.innerHTML = `<strong style="color:var(--accent-green); font-size:0.8rem;">📝 Rohové razítko</strong>
+    <div class="input-row"><label>Názov:</label><input type="text" id="metaTitle" style="width:200px" value="${blueprintMeta.title}"></div>
+    <div class="input-row"><label>Materiál:</label><input type="text" id="metaMat" style="width:200px" value="${blueprintMeta.material}"></div>
+    <div class="input-row"><label>Autor:</label><input type="text" id="metaAuthor" style="width:200px" value="${blueprintMeta.author}"></div>`;
   metaCard.querySelector('#metaTitle').onchange = (e) => { blueprintMeta.title = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
   metaCard.querySelector('#metaMat').onchange = (e) => { blueprintMeta.material = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
   metaCard.querySelector('#metaAuthor').onchange = (e) => { blueprintMeta.author = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
   dimsContent.appendChild(metaCard);
 
-  if(shapes.length === 0){ 
-    const emptyDiv = document.createElement('div');
-    emptyDiv.textContent = 'Žiadne 3D tvary v zostave.';
-    emptyDiv.style.padding = '10px';
-    emptyDiv.style.color = 'var(--text-muted)';
-    dimsContent.appendChild(emptyDiv);
-    return; 
+  if(shapes.length === 0){
+    const ed = document.createElement('div'); 
+    ed.textContent = 'Žiadne diely.'; 
+    ed.style.padding = '8px'; 
+    ed.style.color = 'var(--text-muted)';
+    dimsContent.appendChild(ed);
+    return;
   }
 
   shapes.forEach((s, i) => {
     const card = document.createElement('div');
     card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
-    card.innerHTML = `<div class="shape-title-row">
-      <strong>#${i+1} ${s.type.toUpperCase()} (${s.op==='add'?'➕ Pridať':'➖ Odobrať'})</strong>
-      <button class="danger" style="padding:2px 6px;" onclick="shapes.splice(${i},1);rebuild3DScene();updateDimensionsPanel();">🗑️</button>
-    </div>`;
+    card.innerHTML = `<div class="shape-title-row"><strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong><button class="danger" style="padding:2px 5px;" onclick="shapes.splice(${i},1);rebuild3DScene();updateDimensionsPanel();">🗑️</button></div>`;
     
-    // Position Controls X, Y, Z (+/-)
     const posRow = document.createElement('div');
     posRow.className = 'input-row';
-    posRow.innerHTML = `<div class="input-group-title">Súradnice Pozície (X, Y, Z):</div>` +
-                       `<label>X:</label><input type="number" step="0.5" value="${s.x}">` +
-                       `<label>Y:</label><input type="number" step="0.5" value="${s.y}">` +
-                       `<label>Z:</label><input type="number" step="0.5" value="${s.z}">`;
+    posRow.innerHTML = `<div class="input-group-title">Súradnice (X, Y, Z):</div><label>X:</label><input type="number" step="0.5" value="${s.x}"><label>Y:</label><input type="number" step="0.5" value="${s.y}"><label>Z:</label><input type="number" step="0.5" value="${s.z}">`;
     const pInps = posRow.querySelectorAll('input');
-    pInps[0].onchange = (e) => { pushState(); s.x = parseFloat(e.target.value)||0; rebuild3DScene(); };
-    pInps[1].onchange = (e) => { pushState(); s.y = parseFloat(e.target.value)||0; rebuild3DScene(); };
-    pInps[2].onchange = (e) => { pushState(); s.z = parseFloat(e.target.value)||0; rebuild3DScene(); };
+    pInps[0].onchange = (e) => { s.x = parseFloat(e.target.value)||0; rebuild3DScene(); };
+    pInps[1].onchange = (e) => { s.y = parseFloat(e.target.value)||0; rebuild3DScene(); };
+    pInps[2].onchange = (e) => { s.z = parseFloat(e.target.value)||0; rebuild3DScene(); };
     card.appendChild(posRow);
 
-    // Rotation Controls RX, RY, RZ
-    const rotRow = document.createElement('div');
-    rotRow.className = 'input-row';
-    rotRow.innerHTML = `<div class="input-group-title">Natočenie Uhlov (°):</div>` +
-                       `<label>RX:</label><input type="number" step="15" value="${s.rx||0}">` +
-                       `<label>RY:</label><input type="number" step="15" value="${s.ry||0}">` +
-                       `<label>RZ:</label><input type="number" step="15" value="${s.rz||0}">`;
-    const rInps = rotRow.querySelectorAll('input');
-    rInps[0].onchange = (e) => { pushState(); s.rx = parseFloat(e.target.value)||0; rebuild3DScene(); };
-    rInps[1].onchange = (e) => { pushState(); s.ry = parseFloat(e.target.value)||0; rebuild3DScene(); };
-    rInps[2].onchange = (e) => { pushState(); s.rz = parseFloat(e.target.value)||0; rebuild3DScene(); };
-    card.appendChild(rotRow);
-
-    // Shape Specific Dimensional Input
     const dimRow = document.createElement('div');
     dimRow.className = 'input-row';
-    dimRow.innerHTML = `<div class="input-group-title">Rozmery Tvaru:</div>`;
-
+    dimRow.innerHTML = `<div class="input-group-title">Rozmery:</div>`;
     if(s.type === 'box' || s.type === 'wedge'){
-      dimRow.innerHTML += `<label>Š:</label><input type="number" value="${s.w}">` +
-                          `<label>V:</label><input type="number" value="${s.h}">` +
-                          `<label>H:</label><input type="number" value="${s.d}">`;
+      dimRow.innerHTML += `<label>Š:</label><input type="number" value="${s.w}"><label>V:</label><input type="number" value="${s.h}"><label>H:</label><input type="number" value="${s.d}">`;
       const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { pushState(); s.w = parseFloat(e.target.value)||1; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { pushState(); s.h = parseFloat(e.target.value)||1; rebuild3DScene(); };
-      dInps[2].onchange = (e) => { pushState(); s.d = parseFloat(e.target.value)||1; rebuild3DScene(); };
-    } else if(s.type === 'filletBox' || s.type === 'chamferBox'){
-      dimRow.innerHTML += `<label>Š:</label><input type="number" value="${s.w}">` +
-                          `<label>V:</label><input type="number" value="${s.h}">` +
-                          `<label>H:</label><input type="number" value="${s.d}">` +
-                          `<label>${s.type==='filletBox'?'Zaob':'Skos'}:</label><input type="number" step="0.1" value="${s.type==='filletBox'?s.fillet:s.chamfer}">`;
-      const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { pushState(); s.w = parseFloat(e.target.value)||1; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { pushState(); s.h = parseFloat(e.target.value)||1; rebuild3DScene(); };
-      dInps[2].onchange = (e) => { pushState(); s.d = parseFloat(e.target.value)||1; rebuild3DScene(); };
-      dInps[3].onchange = (e) => { pushState(); if(s.type==='filletBox') s.fillet = parseFloat(e.target.value)||0.1; else s.chamfer = parseFloat(e.target.value)||0.1; rebuild3DScene(); };
+      dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||1; rebuild3DScene(); };
+      dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||1; rebuild3DScene(); };
+      dInps[2].onchange = (e) => { s.d = parseFloat(e.target.value)||1; rebuild3DScene(); };
     } else if(s.type === 'pipe'){
-      dimRow.innerHTML += `<label>Vonk R:</label><input type="number" value="${s.r}">` +
-                          `<label>Dĺžka:</label><input type="number" value="${s.h}">` +
-                          `<label>Stena:</label><input type="number" step="0.1" value="${s.wall||0.3}">`;
+      dimRow.innerHTML += `<label>R:</label><input type="number" value="${s.r}"><label>Dĺžka:</label><input type="number" value="${s.h}"><label>Stena:</label><input type="number" step="0.1" value="${s.wall||0.3}">`;
       const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { pushState(); s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { pushState(); s.h = parseFloat(e.target.value)||1; rebuild3DScene(); };
-      dInps[2].onchange = (e) => { pushState(); s.wall = parseFloat(e.target.value)||0.1; rebuild3DScene(); };
+      dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); };
+      dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||1; rebuild3DScene(); };
+      dInps[2].onchange = (e) => { s.wall = parseFloat(e.target.value)||0.1; rebuild3DScene(); };
     } else if(s.type === 'cylinder' || s.type === 'cone' || s.type === 'elbow'){
-      dimRow.innerHTML += `<label>Polomer:</label><input type="number" value="${s.r}">` +
-                          `<label>Výška:</label><input type="number" value="${s.h||2}">`;
+      dimRow.innerHTML += `<label>R:</label><input type="number" value="${s.r}"><label>V:</label><input type="number" value="${s.h||2}">`;
       const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { pushState(); s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { pushState(); s.h = parseFloat(e.target.value)||1; rebuild3DScene(); };
+      dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); };
+      dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||1; rebuild3DScene(); };
     } else if(s.type === 'sphere'){
-      dimRow.innerHTML += `<label>Polomer:</label><input type="number" value="${s.r}">`;
+      dimRow.innerHTML += `<label>R:</label><input type="number" value="${s.r}">`;
       const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { pushState(); s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); };
-    } else if(s.type === 'torus'){
-      dimRow.innerHTML += `<label>Polom:</label><input type="number" value="${s.r}">` +
-                          `<label>Trubka:</label><input type="number" step="0.1" value="${s.tube||0.3}">`;
-      const dInps = dimRow.querySelectorAll('input');
-      dInps[0].onchange = (e) => { pushState(); s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { pushState(); s.tube = parseFloat(e.target.value)||0.1; rebuild3DScene(); };
+      dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||0.5; rebuild3DScene(); };
     }
-
     card.appendChild(dimRow);
     dimsContent.appendChild(card);
   });
@@ -1111,31 +1132,16 @@ commandInput.onkeydown = (e) => {
     const val = commandInput.value.trim().toLowerCase();
     logCommand(val);
     commandInput.value = '';
-    
     if(['box', 'filletbox', 'chamferbox', 'cylinder', 'pipe', 'elbow', 'sphere', 'wedge', 'torus', 'cone'].includes(val)){
-      currentShapeType = val;
-      document.getElementById('shapeSelector').value = val;
-      logCommand(`Tvar: ${val.toUpperCase()}`);
-    } else if(val === 'add' || val === '+'){
-      currentCsgOp = 'add';
-      document.getElementById('csgOperationSelector').value = 'add';
-      logCommand("Režim CSG: PRIDAŤ");
-    } else if(val === 'sub' || val === 'subtract' || val === '-'){
-      currentCsgOp = 'subtract';
-      document.getElementById('csgOperationSelector').value = 'subtract';
-      logCommand("Režim CSG: ODOBRAŤ (DIERA)");
-    } else if(val === 'drafting' || val === '2d') toggleDraftingMode();
+      currentShapeType = val; document.getElementById('shapeSelector').value = val;
+    } else if(val === 'add' || val === '+'){ currentCsgOp = 'add'; document.getElementById('csgOperationSelector').value = 'add'; }
+    else if(val === 'sub' || val === '-'){ currentCsgOp = 'subtract'; document.getElementById('csgOperationSelector').value = 'subtract'; }
+    else if(val === 'drafting') toggleDraftingMode();
     else if(val === 'clear') clearAll();
-    else logCommand("Neznámy príkaz.");
   }
 };
 
-function animate(){ 
-  requestAnimationFrame(animate); 
-  controls.update(); 
-  renderer.render(scene, camera); 
-}
-
+function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
 window.onload = init3D;
 </script>
 </body>
