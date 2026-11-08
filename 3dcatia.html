@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro ISO CAD Studio v3.2</title>
+<title>ErikAI Pro ISO CAD Studio v3.3</title>
 <!-- Three.js, OrbitControls a Three-CSG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -273,7 +273,7 @@ select.format-select {
 </div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI ISO CAD pripravený. Geometrické opravy aplikované.</div></div>
+  <div id="commandHistory"><div>ErikAI ISO CAD pripravený. Možnosť skrývania názvov pridaná.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
     <input type="text" id="commandInput" placeholder="Príkaz..." autocomplete="off">
@@ -282,7 +282,7 @@ select.format-select {
 
 <div id="dimensionsPanel">
   <div class="panel-header" id="panelHeader">
-    <h3>Správca Dielov, Pozícií [0,0,0] & Samostatné Skrytie Kót</h3>
+    <h3>Správca Dielov, Pozícií [0,0,0] & Skrytie Názvov/Kót</h3>
     <button class="close-btn" onclick="toggleDimensionsPanel()">✕</button>
   </div>
   <div id="dimsContent">Žiadne diely v skici</div>
@@ -457,7 +457,7 @@ function toggleMode(){
 }
 
 // ----------------------------------------------------
-// 📐 2D VÝKRES S KOREKTNOU ISO GEOMETRIOU A NEZÁVISLÝMI KÓTAMI
+// 📐 2D VÝKRES S MOŽNOSŤOU SKRYTIA NÁZVU A KÓT
 // ----------------------------------------------------
 function draw2DSketch(){
   ctx.fillStyle = '#ffffff';
@@ -524,9 +524,8 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
   let d = (s.d || 100) * 0.6;
   let r = (s.r || 50) * 0.6;
 
-  if(!s.hide) s.hide = { w: false, h: false, d: false, r: false };
+  if(!s.hide) s.hide = { name: false, w: false, h: false, d: false, r: false };
 
-  // 1. Kocka / Kváder / Závitová kocka
   if(s.type === 'box' || s.type === 'threadedBox'){
     let dimY = viewType === 'top' ? h : d;
     ctx.strokeRect(-w/2, -dimY, w, dimY);
@@ -541,7 +540,6 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
       if(!s.hide.d) drawDimensionLine(ctx, w/2 + 20, -dimY, w/2 + 20, 0, `V: ${s.d} mm`, '#3b82f6');
     }
   } 
-  // 2. Valec / Závitový valec / Rúra (správna valcová silueta)
   else if(s.type === 'cylinder' || s.type === 'threadedCylinder' || s.type === 'pipe'){
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
@@ -555,9 +553,7 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
       }
       if(!s.hide.r) drawDimensionLine(ctx, 0, 0, r, 0, `Ø: ${s.r*2} mm`, '#3b82f6');
     } else {
-      // Nárys a bokorys valca ako obdĺžnik s osou súmernosti
       ctx.strokeRect(-r, -d, r * 2, d);
-      // Stredová os
       ctx.save();
       ctx.strokeStyle = '#94a3b8';
       ctx.lineWidth = 1;
@@ -566,7 +562,6 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
       ctx.restore();
 
       if(s.type === 'threadedCylinder' && viewType === 'front'){
-        // Naznačenie závitu v náryse (čiarkované čiary)
         ctx.save();
         ctx.strokeStyle = '#3b82f6';
         ctx.setLineDash([3, 3]);
@@ -583,7 +578,6 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
     }
     if(isSub) drawHatching(ctx, -r, -d, r*2, d);
   } 
-  // 3. Guľa
   else if(s.type === 'sphere'){
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
     ctx.setLineDash([4, 4]);
@@ -591,7 +585,6 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
     ctx.setLineDash([]);
     if(!s.hide.r) drawDimensionLine(ctx, 0, 0, r, 0, `R: ${s.r} mm`, '#3b82f6');
   } 
-  // 4. Kužeľ
   else if(s.type === 'cone'){
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
@@ -604,7 +597,6 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
       }
     }
   } 
-  // 5. Ihlan
   else if(s.type === 'pyramid'){
     if(viewType === 'top'){
       ctx.strokeRect(-w/2, -h/2, w, h);
@@ -616,7 +608,8 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
     }
   }
 
-  if(viewType === 'front'){
+  // Vykreslenie názvu len ak nie je skrytý
+  if(viewType === 'front' && !s.hide.name){
     ctx.fillStyle = isSelected ? '#3b82f6' : '#0f172a';
     ctx.font = 'bold 10px monospace';
     let labelY = s.type.includes('cylinder') ? -d - 12 : -d - 8;
@@ -679,7 +672,7 @@ function renderTitleBlock(ctx, x, y){
   ctx.fillText("Materiál: S235JR / Oceľ", x + 10, y + 48);
   ctx.fillText("Vypracoval: ErikAI CAD", x + 10, y + 90);
   ctx.fillText("Mierka: 1:1", x + 190, y + 90);
-  ctx.fillText("Výkres: DWG-2026-FIXED", x + 190, y + 130);
+  ctx.fillText("Výkres: DWG-2026-FINAL", x + 190, y + 130);
   ctx.restore();
 }
 
@@ -700,7 +693,7 @@ canvas.onclick = (e) => {
     x: relX, y: relY, z: 0,
     rx: 0, ry: 0, rz: 0,
     w: 100, h: 100, d: 100, r: 50, wall: 10,
-    hide: { w: false, h: false, d: false, r: false }
+    hide: { name: false, w: false, h: false, d: false, r: false }
   };
 
   shapes.push(newShape);
@@ -848,7 +841,7 @@ function updateDimensionsPanel(){
     return;
   }
   shapes.forEach((s, i) => {
-    if(!s.hide) s.hide = { w: false, h: false, d: false, r: false };
+    if(!s.hide) s.hide = { name: false, w: false, h: false, d: false, r: false };
     let card = document.createElement('div');
     card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
     
@@ -872,12 +865,13 @@ function updateDimensionsPanel(){
       <div class="input-group-title">Rozmery (mm):</div>
       <div class="input-row">
         <label>Šírka:</label><input type="number" value="${s.w||100}" onchange="shapes[${i}].w=parseFloat(this.value);draw2DSketch();">
-        <label>Hĺbka:</label><input type="number" value="${s.h||100}" onchange="shapes[${i}].h=parseFloat(this.value);draw2DSkety();draw2DSketch();">
+        <label>Hĺbka:</label><input type="number" value="${s.h||100}" onchange="shapes[${i}].h=parseFloat(this.value);draw2DSketch();">
         <label>Výška:</label><input type="number" value="${s.d||100}" onchange="shapes[${i}].d=parseFloat(this.value);draw2DSketch();">
         <label>Polom:</label><input type="number" value="${s.r||50}" onchange="shapes[${i}].r=parseFloat(this.value);draw2DSketch();">
       </div>
-      <div class="input-group-title">Samostatné skrytie kót na výkrese:</div>
+      <div class="input-group-title">Samostatné skrytie názvu a kót na výkrese:</div>
       <div class="dim-toggle-grid">
+        <label><input type="checkbox" ${s.hide.name ? 'checked' : ''} onchange="shapes[${i}].hide.name=this.checked;draw2DSketch();"> Skryť Názov (#ID)</label>
         <label><input type="checkbox" ${s.hide.w ? 'checked' : ''} onchange="shapes[${i}].hide.w=this.checked;draw2DSketch();"> Skryť Šírku</label>
         <label><input type="checkbox" ${s.hide.d ? 'checked' : ''} onchange="shapes[${i}].hide.d=this.checked;draw2DSketch();"> Skryť Výšku</label>
         <label><input type="checkbox" ${s.hide.r ? 'checked' : ''} onchange="shapes[${i}].hide.r=this.checked;draw2DSketch();"> Skryť Priemer/Polomer</label>
