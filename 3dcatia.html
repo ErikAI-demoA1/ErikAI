@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro CAD & 2D Drafting Studio</title>
+<title>ErikAI Pro CAD & 2D Drafting Studio (Z-Up Coordinate System)</title>
 <!-- Three.js, OrbitControls a Three-CSG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -162,7 +162,7 @@ input[type="file"] { display: none; }
   overflow-x: hidden;
   display:none;
   box-shadow: 0 15px 40px rgba(0,0,0,0.8);
-  width: 500px;
+  width: 520px;
   max-width: 95vw;
   z-index: 1000;
 }
@@ -206,7 +206,7 @@ input[type="file"] { display: none; }
 .input-row{ display: flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
 .input-row label{ font-size: 0.73rem; color: var(--text-muted); white-space: nowrap; }
 .input-row input, .input-row select{
-  width: 64px;
+  width: 60px;
   padding: 4px;
   border-radius: 4px;
   border: 1px solid var(--border-color);
@@ -254,7 +254,7 @@ input[type="file"] { display: none; }
       <option value="cylinder">🧪 Valec / Čap</option>
       <option value="threadedRod">🔩 Závitová tyč / Čap (Metrický)</option>
       <option value="pipe">⭕ Rúra (S dierou)</option>
-      <option value="elbow">🔀 Koleno 90°</option>
+      <option value="elbow">🔀 Koleno 90° (Potrubie)</option>
       <option value="sphere">🔮 Guľa</option>
       <option value="wedge">📐 Klin / Šikmá doska</option>
       <option value="torus">🍩 Tórus / O-Krúžok</option>
@@ -313,12 +313,12 @@ input[type="file"] { display: none; }
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">X: 0 mm, Y: 0 mm, Z: 0 mm | Režim: 3D Studio</span>
+  <span id="infoCoords">X: 0 mm, Y: 0 mm, Z: 0 mm | Režim: 3D Studio (Z-výška)</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI Pro CAD Engine. Všetky rozmery v milimetroch (mm) podľa ISO noriem.</div></div>
+  <div id="commandHistory"><div>ErikAI Pro CAD Engine. Os Z je nastavená ako VÝŠKA. Všetky rozmery v mm podľa ISO noriem.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
     <input type="text" id="commandInput" placeholder="Príkaz (box, pipe, elbow, drafting, clear)..." autocomplete="off">
@@ -334,6 +334,9 @@ input[type="file"] { display: none; }
 </div>
 
 <script>
+// Nastavenie zvislej osi Z pre celú aplikáciu
+THREE.Object3D.DefaultUp.set(0, 0, 1);
+
 let scene, camera, renderer, controls;
 let raycaster, mouse, floorPlane;
 let shapes = [], undoStack = [], redoStack = [], meshesMap = new Map();
@@ -395,7 +398,8 @@ function init3D() {
   scene.background = new THREE.Color(0x0b0d13);
 
   camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-  camera.position.set(140, 160, 200);
+  camera.position.set(160, -200, 140);
+  camera.up.set(0, 0, 1);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(container.clientWidth, container.clientHeight);
@@ -409,14 +413,15 @@ function init3D() {
   scene.add(ambientLight);
 
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-  dirLight.position.set(150, 250, 200);
+  dirLight.position.set(150, 200, 250);
   scene.add(dirLight);
 
+  // Mriežka leží v rovinnom základe XY
   const gridHelper = new THREE.GridHelper(300, 30, 0x10b981, 0x2e364f);
+  gridHelper.rotateX(Math.PI / 2);
   scene.add(gridHelper);
 
   const planeGeo = new THREE.PlaneGeometry(1000, 1000);
-  planeGeo.rotateX(-Math.PI / 2);
   floorPlane = new THREE.Mesh(planeGeo, new THREE.MeshBasicMaterial({ visible: false }));
   scene.add(floorPlane);
 
@@ -515,40 +520,42 @@ function createGeometryForShape(s){
   if(s.type === 'box') {
     geo = new THREE.BoxGeometry(scW, scH, scD);
   } else if(s.type === 'filletBox') {
-    const filletR = Math.min(scFillet, scW/2 - 0.5, scD/2 - 0.5);
+    const filletR = Math.min(scFillet, scW/2 - 0.5, scH/2 - 0.5);
     const shape = new THREE.Shape();
-    const w2 = scW/2, d2 = scD/2;
-    shape.moveTo(-w2 + filletR, -d2);
-    shape.lineTo(w2 - filletR, -d2);
-    shape.quadraticCurveTo(w2, -d2, w2, -d2 + filletR);
-    shape.lineTo(w2, d2 - filletR);
-    shape.quadraticCurveTo(w2, d2, w2 - filletR, d2);
-    shape.lineTo(-w2 + filletR, d2);
-    shape.quadraticCurveTo(-w2, d2, -w2, d2 - filletR);
-    shape.lineTo(-w2, -d2 + filletR);
-    shape.quadraticCurveTo(-w2, -d2, -w2 + filletR, -d2);
-    geo = new THREE.ExtrudeGeometry(shape, { depth: scH, bevelEnabled: true, bevelSegments: 4, steps: 1, bevelSize: filletR*0.5, bevelThickness: filletR*0.5 });
+    const w2 = scW/2, h2 = scH/2;
+    shape.moveTo(-w2 + filletR, -h2);
+    shape.lineTo(w2 - filletR, -h2);
+    shape.quadraticCurveTo(w2, -h2, w2, -h2 + filletR);
+    shape.lineTo(w2, h2 - filletR);
+    shape.quadraticCurveTo(w2, h2, w2 - filletR, h2);
+    shape.lineTo(-w2 + filletR, h2);
+    shape.quadraticCurveTo(-w2, h2, -w2, h2 - filletR);
+    shape.lineTo(-w2, -h2 + filletR);
+    shape.quadraticCurveTo(-w2, -h2, -w2 + filletR, -h2);
+    geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: true, bevelSegments: 4, steps: 1, bevelSize: filletR*0.5, bevelThickness: filletR*0.5 });
     geo.center();
   } else if(s.type === 'chamferBox') {
-    const chamf = Math.min(scChamfer, scW/2 - 0.5, scD/2 - 0.5);
+    const chamf = Math.min(scChamfer, scW/2 - 0.5, scH/2 - 0.5);
     const shape = new THREE.Shape();
-    const w2 = scW/2, d2 = scD/2;
-    shape.moveTo(-w2 + chamf, -d2);
-    shape.lineTo(w2 - chamf, -d2);
-    shape.lineTo(w2, -d2 + chamf);
-    shape.lineTo(w2, d2 - chamf);
-    shape.lineTo(w2 - chamf, d2);
-    shape.lineTo(-w2 + chamf, d2);
-    shape.lineTo(-w2, d2 - chamf);
-    shape.lineTo(-w2, -d2 + chamf);
-    geo = new THREE.ExtrudeGeometry(shape, { depth: scH, bevelEnabled: false });
+    const w2 = scW/2, h2 = scH/2;
+    shape.moveTo(-w2 + chamf, -h2);
+    shape.lineTo(w2 - chamf, -h2);
+    shape.lineTo(w2, -h2 + chamf);
+    shape.lineTo(w2, h2 - chamf);
+    shape.lineTo(w2 - chamf, h2);
+    shape.lineTo(-w2 + chamf, h2);
+    shape.lineTo(-w2, h2 - chamf);
+    shape.lineTo(-w2, -h2 + chamf);
+    geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: false });
     geo.center();
   } else if(s.type === 'cylinder' || s.type === 'threadedRod') {
-    geo = new THREE.CylinderGeometry(scR, scR, scH, 32);
+    geo = new THREE.CylinderGeometry(scR, scR, scD, 32);
+    geo.rotateX(Math.PI / 2);
   } else if(s.type === 'sphere') {
     geo = new THREE.SphereGeometry(scR, 32, 32);
   } else if(s.type === 'cone') {
-    geo = new THREE.CylinderGeometry(0, scR, scH, 32);
+    geo = new THREE.CylinderGeometry(0, scR, scD, 32);
+    geo.rotateX(Math.PI / 2);
   } else if(s.type === 'torus') {
     geo = new THREE.TorusGeometry(scR, scTube, 16, 100);
   } else if(s.type === 'pipe') {
@@ -558,14 +565,12 @@ function createGeometryForShape(s){
     const holePath = new THREE.Path();
     holePath.absarc(0, 0, innerR, 0, Math.PI * 2, true);
     shape.holes.push(holePath);
-    geo = new THREE.ExtrudeGeometry(shape, { depth: scH, bevelEnabled: false, curveSegments: 32 });
-    geo.rotateX(Math.PI / 2);
+    geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: false, curveSegments: 32 });
     geo.center();
   } else if(s.type === 'elbow') {
-    // Opravená 3D reprezentácia 90° kolena s presnou kruhovou osou zakrivenia
     const rBend = scR * 2.0;
     const curve = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0, rBend, 0),
+      new THREE.Vector3(0, 0, rBend),
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(rBend, 0, 0)
     );
@@ -574,8 +579,8 @@ function createGeometryForShape(s){
   } else if(s.type === 'wedge') {
     geo = new THREE.BufferGeometry();
     const w = scW/2, h = scH/2, d = scD/2;
-    const vertices = new Float32Array([-w,-h,-d, w,-h,-d, w,-h, d, -w,-h, d, -w, h,-d, w, h,-d]);
-    const indices = [0,2,1, 0,3,2, 0,1,5, 0,5,4, 1,2,5, 2,3,4, 2,4,5, 3,0,4];
+    const vertices = new Float32Array([-w,-h,-d, w,-h,-d, w,h,-d, -w,h,-d, -w,-h,d, w,-h,d]);
+    const indices = [0,1,2, 0,2,3, 0,4,5, 0,5,1, 1,5,2, 3,2,4, 2,5,4];
     geo.setIndex(indices);
     geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
     geo.computeVertexNormals();
@@ -596,8 +601,15 @@ function rebuild3DScene(){
     const geo = createGeometryForShape(s);
     const mat = new THREE.MeshStandardMaterial({ color: s.color || 0x10b981, roughness: 0.3, metalness: 0.1 });
     const mesh = new THREE.Mesh(geo, mat);
+    
+    // Pozícia: Z je Výška
     mesh.position.set((s.x||0)/10, (s.y||0)/10, (s.z||0)/10);
-    mesh.rotation.set((s.rx||0)*Math.PI/180, (s.ry||0)*Math.PI/180, (s.rz||0)*Math.PI/180);
+    mesh.rotation.set(
+      (s.rx || 0) * Math.PI / 180,
+      (s.ry || 0) * Math.PI / 180,
+      (s.rz || 0) * Math.PI / 180,
+      'XYZ'
+    );
     mesh.updateMatrix();
 
     if(s.op === 'subtract') {
@@ -657,12 +669,12 @@ function onPointerDown(e){
   if(intersects.length > 0){
     const p = intersects[0].point;
     const snapX = Math.round(p.x * 20);
-    const snapZ = Math.round(p.z * 20);
+    const snapY = Math.round(p.y * 20);
 
     pushState();
     let shape = {
       type: currentShapeType, op: currentCsgOp,
-      x: snapX, y: currentCsgOp === 'subtract' ? 25 : 50, z: snapZ,
+      x: snapX, y: snapY, z: currentCsgOp === 'subtract' ? 25 : 50, // Z je Výška
       rx: 0, ry: 0, rz: 0,
       w: 100, h: 100, d: 100, r: 50, wall: 10, fillet: 10, chamfer: 10, tube: 15,
       color: currentCsgOp === 'subtract' ? '#ef4444' : '#10b981'
@@ -671,7 +683,7 @@ function onPointerDown(e){
     selectedShapeIndex = shapes.length - 1;
     rebuild3DScene();
     saveToLocalStorage();
-    logCommand(`Pridaný: ${shape.type.toUpperCase()} (${currentCsgOp === 'subtract' ? 'Odoberajúci nástroj' : 'Základný diel'})`);
+    logCommand(`Pridaný: ${shape.type.toUpperCase()} (Z-Výška: ${shape.z} mm)`);
   }
 }
 
@@ -684,7 +696,7 @@ function onPointerMove(e){
   const intersects = raycaster.intersectObject(floorPlane);
   if(intersects.length > 0){
     const p = intersects[0].point;
-    infoCoords.textContent = `X: ${(p.x*10).toFixed(0)} mm, Z: ${(p.z*10).toFixed(0)} mm | 3D Studio`;
+    infoCoords.textContent = `X: ${(p.x*10).toFixed(0)} mm, Y: ${(p.y*10).toFixed(0)} mm | Z (Výška): 0 mm`;
   }
 }
 
@@ -700,14 +712,14 @@ function toggleDraftingMode(){
     btn.style.color = '#ffffff';
     infoCoords.textContent = "Režim: 2D Výkres (ISO mm)";
     generateEngineeringBlueprint();
-    logCommand("Prepnuté do 2D výkresu s automatickým prispôsobením mierky.");
+    logCommand("Prepnuté do 2D výkresu.");
   } else {
     draftingContainer.style.display = 'none';
     container.style.display = 'block';
     btn.textContent = '📐 Prepnúť na 2D Výkres';
     btn.style.background = 'var(--accent-amber)';
     btn.style.color = '#000000';
-    infoCoords.textContent = "Režim: 3D Studio";
+    infoCoords.textContent = "Režim: 3D Studio (Z-výška)";
     logCommand("Návrat do 3D.");
   }
 }
@@ -838,29 +850,25 @@ function detectClickedEdge(cx, cy){
   for(let s of shapes){
     const autoSc = calculateDynamicScale();
     for(let v of views){
+      // Výpočet prispôsobený pre Z ako zvislú os
       let px = v.offsetX + (s.x || 0) * autoSc * 0.1;
-      let py = v.offsetY + (v.name==='top' ? (s.z || 0) : -(s.y || 0)) * autoSc * 0.1;
+      let py = v.offsetY + (v.name==='top' ? -(s.y || 0) : -(s.z || 0)) * autoSc * 0.1;
       
       let edges = [];
-      let w = (s.w || 100) * autoSc * 0.1, h = (s.h || 100) * autoSc * 0.1;
+      let w = (s.w || 100) * autoSc * 0.1, zDim = (s.d || 100) * autoSc * 0.1;
       let r = (s.r || 50) * autoSc * 0.1;
 
       if(s.type === 'threadedRod'){
         edges = [
-          { x1: px - r, y1: py - h/2 - 12, x2: px + r, y2: py - h/2 - 12, mmValue: (s.r || 50) * 2, isThread: true },
-          { x1: px + r + 12, y1: py - h/2, x2: px + r + 12, y2: py + h/2, mmValue: s.h || 100, isThread: false }
-        ];
-      } else if(s.type === 'elbow'){
-        let rBend = r * 2.0;
-        edges = [
-          { x1: px - rBend, y1: py - rBend - 12, x2: px, y2: py - rBend - 12, mmValue: (s.r || 50) * 2 }
+          { x1: px - r, y1: py - zDim/2 - 12, x2: px + r, y2: py - zDim/2 - 12, mmValue: (s.r || 50) * 2, isThread: true },
+          { x1: px + r + 12, y1: py - zDim/2, x2: px + r + 12, y2: py + zDim/2, mmValue: s.d || 100, isThread: false }
         ];
       } else {
         edges = [
-          { x1: px - w/2, y1: py - h/2 - 12, x2: px + w/2, y2: py - h/2 - 12, mmValue: s.w || 100 },
-          { x1: px - w/2, y1: py + h/2 + 12, x2: px + w/2, y2: py + h/2 + 12, mmValue: s.w || 100 },
-          { x1: px - w/2 - 12, y1: py - h/2, x2: px - w/2 - 12, y2: py + h/2, mmValue: s.h || 100 },
-          { x1: px + w/2 + 12, y1: py - h/2, x2: px + w/2 + 12, y2: py + h/2, mmValue: s.h || 100 }
+          { x1: px - w/2, y1: py - zDim/2 - 12, x2: px + w/2, y2: py - zDim/2 - 12, mmValue: s.w || 100 },
+          { x1: px - w/2, y1: py + zDim/2 + 12, x2: px + w/2, y2: py + zDim/2 + 12, mmValue: s.w || 100 },
+          { x1: px - w/2 - 12, y1: py - zDim/2, x2: px - w/2 - 12, y2: py + zDim/2, mmValue: s.d || 100 },
+          { x1: px + w/2 + 12, y1: py - zDim/2, x2: px + w/2 + 12, y2: py + zDim/2, mmValue: s.d || 100 }
         ];
       }
 
@@ -896,31 +904,31 @@ function calculateDynamicScale(){
 
 function getActiveLayoutViews(){
   if(viewLayoutCount === 1){
-    return [{ name: 'front', title: 'NÁRYS (FRONT VIEW)', offsetX: 750, offsetY: 450 }];
+    return [{ name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: 750, offsetY: 450 }];
   } else if(viewLayoutCount === 2){
     return [
-      { name: 'front', title: 'NÁRYS (FRONT VIEW)', offsetX: 750, offsetY: 280 },
-      { name: 'top', title: 'PÔDORYS (TOP VIEW)', offsetX: 750, offsetY: 750 }
+      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: 750, offsetY: 280 },
+      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: 750, offsetY: 750 }
     ];
   } else if(viewLayoutCount === 3){
     return [
-      { name: 'front', title: 'NÁRYS (FRONT VIEW)', offsetX: 280, offsetY: 300 },
-      { name: 'top', title: 'PÔDORYS (TOP VIEW)', offsetX: 280, offsetY: 800 },
-      { name: 'side', title: 'BOKORYS (SIDE VIEW)', offsetX: 1080, offsetY: 300 }
+      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: 280, offsetY: 300 },
+      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: 280, offsetY: 800 },
+      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: 1080, offsetY: 300 }
     ];
   } else if(viewLayoutCount === 4){
     return [
-      { name: 'front', title: 'NÁRYS (FRONT VIEW)', offsetX: 280, offsetY: 300 },
-      { name: 'top', title: 'PÔDORYS (TOP VIEW)', offsetX: 280, offsetY: 800 },
-      { name: 'side', title: 'BOKORYS (SIDE VIEW)', offsetX: 1080, offsetY: 300 },
+      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: 280, offsetY: 300 },
+      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: 280, offsetY: 800 },
+      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: 1080, offsetY: 300 },
       { name: 'rear', title: 'ZADNÝ POHĽAD', offsetX: 1080, offsetY: 800 }
     ];
   } else {
     return [
-      { name: 'front', title: 'NÁRYS (FRONT VIEW)', offsetX: 280, offsetY: 300 },
-      { name: 'top', title: 'PÔDORYS (TOP VIEW)', offsetX: 280, offsetY: 800 },
-      { name: 'side', title: 'BOKORYS (SIDE VIEW)', offsetX: 1080, offsetY: 300 },
-      { name: 'iso', title: '3D IZOMETRIA', offsetX: 1080, offsetY: 800 },
+      { name: 'front', title: 'NÁRYS (X-Z VÝŠKA)', offsetX: 280, offsetY: 300 },
+      { name: 'top', title: 'PÔDORYS (X-Y PLAN)', offsetX: 280, offsetY: 800 },
+      { name: 'side', title: 'BOKORYS (Y-Z SIDE)', offsetX: 1080, offsetY: 300 },
+      { name: 'iso', title: '3D IZOMETRIA (Z-UP)', offsetX: 1080, offsetY: 800 },
       { name: 'section', title: 'REZ A-A (ISO 128)', offsetX: 680, offsetY: 540 }
     ];
   }
@@ -983,8 +991,11 @@ function generateEngineeringBlueprint(){
 function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   ctx.save();
   const autoSc = calculateDynamicScale();
+  
+  // Z os premietnutá ako zvislá poloha vo výkrese
   let px = offsetX + (s.x || 0) * autoSc * 0.1;
-  let py = offsetY + (viewType==='top' ? (s.z || 0) : -(s.y || 0)) * autoSc * 0.1;
+  let py = offsetY + (viewType==='top' ? -(s.y || 0) : -(s.z || 0)) * autoSc * 0.1;
+  
   ctx.translate(px, py);
   ctx.rotate((s.rz || 0) * Math.PI / 180);
 
@@ -1000,46 +1011,49 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
 
   let w = (s.w || 100) * autoSc * 0.1;
   let h = (s.h || 100) * autoSc * 0.1;
-  let d = (s.d || 100) * autoSc * 0.1;
+  let d = (s.d || 100) * autoSc * 0.1; // Hĺbka/Z
   let r = (s.r || 50) * autoSc * 0.1;
   let tubeR = (s.tube || 15) * autoSc * 0.1;
   let filletR = (s.fillet || 10) * autoSc * 0.1;
   let chamferVal = (s.chamfer || 10) * autoSc * 0.1;
 
   if(s.type === 'box'){
-    ctx.strokeRect(-w/2, -h/2, w, h);
-    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -h/2, w, h); }
+    let dimY = viewType === 'top' ? h : d;
+    ctx.strokeRect(-w/2, -dimY/2, w, dimY);
+    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY/2, w, dimY); }
   } 
   else if(s.type === 'filletBox'){
-    let f = Math.min(filletR, w/2 - 1, h/2 - 1);
+    let dimY = viewType === 'top' ? h : d;
+    let f = Math.min(filletR, w/2 - 1, dimY/2 - 1);
     ctx.beginPath();
-    ctx.moveTo(-w/2 + f, -h/2);
-    ctx.lineTo(w/2 - f, -h/2);
-    ctx.arcTo(w/2, -h/2, w/2, -h/2 + f, f);
-    ctx.lineTo(w/2, h/2 - f);
-    ctx.arcTo(w/2, h/2, w/2 - f, h/2, f);
-    ctx.lineTo(-w/2 + f, h/2);
-    ctx.arcTo(-w/2, h/2, -w/2, h/2 - f, f);
-    ctx.lineTo(-w/2, -h/2 + f);
-    ctx.arcTo(-w/2, -h/2, -w/2 + f, -h/2, f);
+    ctx.moveTo(-w/2 + f, -dimY/2);
+    ctx.lineTo(w/2 - f, -dimY/2);
+    ctx.arcTo(w/2, -dimY/2, w/2, -dimY/2 + f, f);
+    ctx.lineTo(w/2, dimY/2 - f);
+    ctx.arcTo(w/2, dimY/2, w/2 - f, dimY/2, f);
+    ctx.lineTo(-w/2 + f, dimY/2);
+    ctx.arcTo(-w/2, dimY/2, -w/2, dimY/2 - f, f);
+    ctx.lineTo(-w/2, -dimY/2 + f);
+    ctx.arcTo(-w/2, -dimY/2, -w/2 + f, -dimY/2, f);
     ctx.closePath();
     ctx.stroke();
-    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -h/2, w, h); }
+    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY/2, w, dimY); }
   }
   else if(s.type === 'chamferBox'){
-    let c = Math.min(chamferVal, w/2 - 1, h/2 - 1);
+    let dimY = viewType === 'top' ? h : d;
+    let c = Math.min(chamferVal, w/2 - 1, dimY/2 - 1);
     ctx.beginPath();
-    ctx.moveTo(-w/2 + c, -h/2);
-    ctx.lineTo(w/2 - c, -h/2);
-    ctx.lineTo(w/2, -h/2 + c);
-    ctx.lineTo(w/2, h/2 - c);
-    ctx.lineTo(w/2 - c, h/2);
-    ctx.lineTo(-w/2 + c, h/2);
-    ctx.lineTo(-w/2, h/2 - c);
-    ctx.lineTo(-w/2, -h/2 + c);
+    ctx.moveTo(-w/2 + c, -dimY/2);
+    ctx.lineTo(w/2 - c, -dimY/2);
+    ctx.lineTo(w/2, -dimY/2 + c);
+    ctx.lineTo(w/2, dimY/2 - c);
+    ctx.lineTo(w/2 - c, dimY/2);
+    ctx.lineTo(-w/2 + c, dimY/2);
+    ctx.lineTo(-w/2, dimY/2 - c);
+    ctx.lineTo(-w/2, -dimY/2 + c);
     ctx.closePath();
     ctx.stroke();
-    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -h/2, w, h); }
+    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY/2, w, dimY); }
   }
   else if(s.type === 'cylinder'){
     if(viewType === 'top'){
@@ -1047,9 +1061,9 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       if(isSub) drawHatching45Circle(ctx, r);
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
-      ctx.strokeRect(-r, -h/2, r*2, h);
-      if(isSub) drawHatching45(ctx, -r, -h/2, r*2, h);
-      drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
+      ctx.strokeRect(-r, -d/2, r*2, d);
+      if(isSub) drawHatching45(ctx, -r, -d/2, r*2, d);
+      drawCenterLine(ctx, 0, -d/2 - 10, 0, d/2 + 10);
     }
   }
   else if(s.type === 'threadedRod'){
@@ -1063,17 +1077,17 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       ctx.restore();
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
-      ctx.strokeRect(-r, -h/2, r*2, h);
+      ctx.strokeRect(-r, -d/2, r*2, d);
       ctx.save();
       ctx.lineWidth = 1.0;
       ctx.strokeStyle = isSub ? '#dc2626' : '#2563eb';
       ctx.beginPath();
-      ctx.moveTo(-threadR, -h/2); ctx.lineTo(-threadR, h/2);
-      ctx.moveTo(threadR, -h/2); ctx.lineTo(threadR, h/2);
+      ctx.moveTo(-threadR, -d/2); ctx.lineTo(-threadR, d/2);
+      ctx.moveTo(threadR, -d/2); ctx.lineTo(threadR, d/2);
       ctx.stroke();
       ctx.restore();
-      if(isSub) drawHatching45(ctx, -r, -h/2, r*2, h);
-      drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
+      if(isSub) drawHatching45(ctx, -r, -d/2, r*2, d);
+      drawCenterLine(ctx, 0, -d/2 - 10, 0, d/2 + 10);
     }
   }
   else if(s.type === 'pipe'){
@@ -1084,14 +1098,14 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       if(isSub) drawHatching45Ring(ctx, innerR, r);
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
-      ctx.strokeRect(-r, -h/2, r*2, h);
+      ctx.strokeRect(-r, -d/2, r*2, d);
       ctx.strokeStyle = isSub ? '#dc2626' : '#0f172a';
-      ctx.strokeRect(-innerR, -h/2, innerR*2, h);
+      ctx.strokeRect(-innerR, -d/2, innerR*2, d);
       if(viewType === 'section' || isSub){
-        drawHatching45(ctx, -r, -h/2, (r - innerR), h);
-        drawHatching45(ctx, innerR, -h/2, (r - innerR), h);
+        drawHatching45(ctx, -r, -d/2, (r - innerR), d);
+        drawHatching45(ctx, innerR, -d/2, (r - innerR), d);
       }
-      drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
+      drawCenterLine(ctx, 0, -d/2 - 10, 0, d/2 + 10);
     }
   }
   else if(s.type === 'elbow'){
@@ -1118,10 +1132,10 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
       ctx.beginPath();
-      ctx.moveTo(-r, h/2); ctx.lineTo(0, -h/2); ctx.lineTo(r, h/2); ctx.closePath();
+      ctx.moveTo(-r, d/2); ctx.lineTo(0, -d/2); ctx.lineTo(r, d/2); ctx.closePath();
       ctx.stroke();
-      if(isSub) drawHatching45(ctx, -r, -h/2, r*2, h);
-      drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
+      if(isSub) drawHatching45(ctx, -r, -d/2, r*2, d);
+      drawCenterLine(ctx, 0, -d/2 - 10, 0, d/2 + 10);
     }
   }
   else if(s.type === 'torus'){
@@ -1139,13 +1153,15 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
     }
   }
   else if(s.type === 'wedge'){
+    let dimY = viewType === 'top' ? h : d;
     ctx.beginPath();
-    ctx.moveTo(-w/2, h/2); ctx.lineTo(w/2, h/2); ctx.lineTo(w/2, -h/2); ctx.closePath();
+    ctx.moveTo(-w/2, dimY/2); ctx.lineTo(w/2, dimY/2); ctx.lineTo(w/2, -dimY/2); ctx.closePath();
     ctx.stroke();
-    if(isSub) drawHatching45(ctx, -w/2, -h/2, w, h);
+    if(isSub) drawHatching45(ctx, -w/2, -dimY/2, w, dimY);
   } else {
-    ctx.strokeRect(-w/2, -h/2, w, h);
-    if(isSub) drawHatching45(ctx, -w/2, -h/2, w, h);
+    let dimY = viewType === 'top' ? h : d;
+    ctx.strokeRect(-w/2, -dimY/2, w, dimY);
+    if(isSub) drawHatching45(ctx, -w/2, -dimY/2, w, dimY);
   }
   ctx.restore();
 }
@@ -1265,7 +1281,7 @@ function renderTitleBlock(ctx, x, y){
   ctx.fillText(`Materiál: ${blueprintMeta.material}`, x + 10, y + 65);
   ctx.fillText(`Autor: ${blueprintMeta.author}`, x + 10, y + 112);
   ctx.fillText(`Výkres: ${blueprintMeta.docNo}`, x + 170, y + 65);
-  ctx.fillText(`Jednotky: mm`, x + 170, y + 112);
+  ctx.fillText(`Jednotky: mm (Z=Zvislá)`, x + 170, y + 112);
   ctx.restore();
 }
 
@@ -1284,9 +1300,9 @@ function exportSVG(){
   <rect x="25" y="25" width="1550" height="1050" fill="none" stroke="#000000" stroke-width="3"/>`;
 
   shapes.forEach(s => {
-    const cx = 280 + (s.x||0)*0.25, cy = 300 - (s.y||0)*0.25;
+    const cx = 280 + (s.x||0)*0.25, cy = 300 - (s.z||0)*0.25;
     if(s.type==='box'||s.type==='pipe'){
-      svgContent += `<rect x="${cx - (s.w||100)*1.25}" y="${cy - (s.h||100)*1.25}" width="${(s.w||100)*2.5}" height="${(s.h||100)*2.5}" fill="none" stroke="#000000" stroke-width="2"/>`;
+      svgContent += `<rect x="${cx - (s.w||100)*1.25}" y="${cy - (s.d||100)*1.25}" width="${(s.w||100)*2.5}" height="${(s.d||100)*2.5}" fill="none" stroke="#000000" stroke-width="2"/>`;
     } else {
       svgContent += `<circle cx="${cx}" cy="${cy}" r="${(s.r||50)*2.5}" fill="none" stroke="#000000" stroke-width="2"/>`;
     }
@@ -1308,7 +1324,7 @@ function printBlueprint(){
   win.document.close();
 }
 
-function resetCamera(){ camera.position.set(140, 160, 200); controls.target.set(0, 0, 0); controls.update(); }
+function resetCamera(){ camera.position.set(160, -200, 140); controls.target.set(0, 0, 0); controls.update(); }
 
 function exportJSON(){
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ shapes, blueprintMeta, manualDimensions, viewLayoutCount }, null, 2));
@@ -1385,15 +1401,17 @@ function updateDimensionsPanel(){
     card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
     card.innerHTML = `<div class="shape-title-row"><strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong><button class="danger" style="padding:2px 5px;" onclick="shapes.splice(${i},1);rebuild3DScene();updateDimensionsPanel();">🗑️ Zmazať diel</button></div>`;
     
+    // Pozícia s vyznačeným Z ako VÝŠKA
     const posRow = document.createElement('div');
     posRow.className = 'input-row';
-    posRow.innerHTML = `<div class="input-group-title">Pozícia X, Y, Z (mm):</div><label>X:</label><input type="number" step="10" value="${s.x||0}"><label>Y:</label><input type="number" step="10" value="${s.y||0}"><label>Z:</label><input type="number" step="10" value="${s.z||0}">`;
+    posRow.innerHTML = `<div class="input-group-title">Pozícia X, Y, Z-Výška (mm):</div><label>X:</label><input type="number" step="5" value="${s.x||0}"><label>Y:</label><input type="number" step="5" value="${s.y||0}"><label style="color:var(--accent-green);font-weight:bold;">Z (Výška):</label><input type="number" step="5" value="${s.z||0}">`;
     const pInps = posRow.querySelectorAll('input');
     pInps[0].onchange = (e) => { s.x = parseFloat(e.target.value)||0; rebuild3DScene(); };
     pInps[1].onchange = (e) => { s.y = parseFloat(e.target.value)||0; rebuild3DScene(); };
     pInps[2].onchange = (e) => { s.z = parseFloat(e.target.value)||0; rebuild3DScene(); };
     card.appendChild(posRow);
 
+    // Rotácia RX, RY, RZ
     const rotRow = document.createElement('div');
     rotRow.className = 'input-row';
     rotRow.innerHTML = `<div class="input-group-title">Rotácia (°):</div><label>RX:</label><input type="number" step="15" value="${s.rx||0}"><label>RY:</label><input type="number" step="15" value="${s.ry||0}"><label>RZ:</label><input type="number" step="15" value="${s.rz||0}">`;
@@ -1403,47 +1421,48 @@ function updateDimensionsPanel(){
     rInps[2].onchange = (e) => { s.rz = parseFloat(e.target.value)||0; rebuild3DScene(); };
     card.appendChild(rotRow);
 
+    // Parametre tvarov
     const dimRow = document.createElement('div');
     dimRow.className = 'input-row';
-    dimRow.innerHTML = `<div class="input-group-title">Rozmery v mm:</div>`;
+    dimRow.innerHTML = `<div class="input-group-title">Parametre / Rozmery (mm):</div>`;
     if(s.type === 'box' || s.type === 'wedge'){
-      dimRow.innerHTML += `<label>Š:</label><input type="number" step="10" value="${s.w||100}"><label>V:</label><input type="number" step="10" value="${s.h||100}"><label>H:</label><input type="number" step="10" value="${s.d||100}">`;
+      dimRow.innerHTML += `<label>Šírka (X):</label><input type="number" step="10" value="${s.w||100}"><label>Hĺbka (Y):</label><input type="number" step="10" value="${s.h||100}"><label>Výška (Z):</label><input type="number" step="10" value="${s.d||100}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[2].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
     } else if(s.type === 'filletBox'){
-      dimRow.innerHTML += `<label>Š:</label><input type="number" step="10" value="${s.w||100}"><label>V:</label><input type="number" step="10" value="${s.h||100}"><label>H:</label><input type="number" step="10" value="${s.d||100}"><label>Zaoblenie:</label><input type="number" step="5" value="${s.fillet||10}">`;
+      dimRow.innerHTML += `<label>Š (X):</label><input type="number" step="10" value="${s.w||100}"><label>H (Y):</label><input type="number" step="10" value="${s.h||100}"><label>V (Z):</label><input type="number" step="10" value="${s.d||100}"><label>R:</label><input type="number" step="5" value="${s.fillet||10}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[2].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[3].onchange = (e) => { s.fillet = parseFloat(e.target.value)||5; rebuild3DScene(); };
     } else if(s.type === 'chamferBox'){
-      dimRow.innerHTML += `<label>Š:</label><input type="number" step="10" value="${s.w||100}"><label>V:</label><input type="number" step="10" value="${s.h||100}"><label>H:</label><input type="number" step="10" value="${s.d||100}"><label>Skosenie:</label><input type="number" step="5" value="${s.chamfer||10}">`;
+      dimRow.innerHTML += `<label>Š (X):</label><input type="number" step="10" value="${s.w||100}"><label>H (Y):</label><input type="number" step="10" value="${s.h||100}"><label>V (Z):</label><input type="number" step="10" value="${s.d||100}"><label>C:</label><input type="number" step="5" value="${s.chamfer||10}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[2].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[3].onchange = (e) => { s.chamfer = parseFloat(e.target.value)||5; rebuild3DScene(); };
     } else if(s.type === 'pipe'){
-      dimRow.innerHTML += `<label>Polomer R:</label><input type="number" step="5" value="${s.r||50}"><label>Dĺžka:</label><input type="number" step="10" value="${s.h||100}"><label>Stena:</label><input type="number" step="2" value="${s.wall||10}">`;
+      dimRow.innerHTML += `<label>R:</label><input type="number" step="5" value="${s.r||50}"><label>Výška (Z):</label><input type="number" step="10" value="${s.d||100}"><label>Stena:</label><input type="number" step="2" value="${s.wall||10}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
+      dInps[1].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[2].onchange = (e) => { s.wall = parseFloat(e.target.value)||5; rebuild3DScene(); };
     } else if(s.type === 'cylinder' || s.type === 'cone' || s.type === 'threadedRod' || s.type === 'elbow'){
-      dimRow.innerHTML += `<label>Polomer R:</label><input type="number" step="5" value="${s.r||50}"><label>VÝŠKA:</label><input type="number" step="10" value="${s.h||100}">`;
+      dimRow.innerHTML += `<label>R:</label><input type="number" step="5" value="${s.r||50}"><label>Výška (Z):</label><input type="number" step="10" value="${s.d||100}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
-      dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
+      dInps[1].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
     } else if(s.type === 'torus'){
-      dimRow.innerHTML += `<label>Polomer R:</label><input type="number" step="5" value="${s.r||50}"><label>Prierez r:</label><input type="number" step="2" value="${s.tube||15}">`;
+      dimRow.innerHTML += `<label>R:</label><input type="number" step="5" value="${s.r||50}"><label>r:</label><input type="number" step="2" value="${s.tube||15}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[1].onchange = (e) => { s.tube = parseFloat(e.target.value)||5; rebuild3DScene(); };
     } else if(s.type === 'sphere'){
-      dimRow.innerHTML += `<label>Polomer R:</label><input type="number" step="5" value="${s.r||50}">`;
+      dimRow.innerHTML += `<label>R:</label><input type="number" step="5" value="${s.r||50}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
     }
