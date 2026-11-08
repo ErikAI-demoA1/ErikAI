@@ -146,7 +146,7 @@ input[type="file"] { display: none; }
   outline: none;
 }
 
-.info{padding:5px 12px;background: var(--panel-bg);font-size:0.8rem;color:var(--text-muted);border-top:1px solid var(--border-color);display:flex;justify-space-between;align-items:center;}
+.info{padding:5px 12px;background: var(--panel-bg);font-size:0.8rem;color:var(--text-muted);border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;}
 
 #dimensionsPanel{
   position:fixed;
@@ -201,7 +201,6 @@ input[type="file"] { display: none; }
   margin-bottom: 6px;
   flex-wrap: wrap;
 }
-.shape-actions{ display: flex; gap: 4px; align-items: center; }
 .input-group-title{ font-size: 0.72rem; color: var(--accent-blue); font-weight: bold; margin-top: 6px; }
 .input-row{ display: flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
 .input-row label{ font-size: 0.73rem; color: var(--text-muted); white-space: nowrap; }
@@ -214,7 +213,6 @@ input[type="file"] { display: none; }
   color: white;
   font-size: 0.8rem;
 }
-.input-row input[type="color"]{ width: 28px; height: 26px; padding: 0; border: none; cursor: pointer; }
 
 #blueprintOverlayControls {
   position: absolute;
@@ -240,8 +238,8 @@ input[type="file"] { display: none; }
       <option value="filletBox">📐 Zaoblený kváder (Fillet)</option>
       <option value="chamferBox">✂️ Skosený kváder (Chamfer)</option>
       <option value="cylinder">🧪 Valec / Čap</option>
-      <option value="pipe">⭕ Rúra (S vnútorným dierovaním)</option>
-      <option value="elbow">🔀 Zahnuté potrubie (Koleno 90°)</option>
+      <option value="pipe">⭕ Rúra (S dierou)</option>
+      <option value="elbow">🔀 Koleno 90°</option>
       <option value="sphere">🔮 Guľa</option>
       <option value="wedge">📐 Klin / Šikmá doska</option>
       <option value="torus">🍩 Tórus / O-Krúžok</option>
@@ -250,20 +248,20 @@ input[type="file"] { display: none; }
 
     <select id="csgOperationSelector" class="format-select" onchange="changeCsgOperation()" style="border-color: var(--accent-blue);">
       <option value="add">➕ Pridať materiál</option>
-      <option value="subtract">➖ Odobrať materiál (Vyrezanie diery)</option>
+      <option value="subtract">➖ Odobrať materiál (Diera)</option>
     </select>
 
     <button id="modeToggleBtn" class="ghost" onclick="toggleDraftingMode()" style="background:var(--accent-amber); color:#000;">📐 Prepnúť na 2D Výkres</button>
     <button id="selectBtn" class="ghost" onclick="setTool('select')">👆 Vybrať</button>
     <button class="ghost" onclick="resetCamera()">🎥 Kamera</button>
-    <button id="editDimsBtn" class="ghost">📋 Dielce & Parametre</button>
+    <button id="editDimsBtn" class="ghost">📋 Parametre & Diely</button>
   </div>
   <div class="panel">
-    <button class="ghost" onclick="exportBlueprintImage()" style="background:var(--accent-blue); color:white;">📷 Stiahnuť PNG</button>
-    <button class="ghost" onclick="exportSVG()" style="background:#8b5cf6; color:white;">✂️ Export SVG (Laser/CNC)</button>
-    <button class="ghost" onclick="printBlueprint()" style="background:var(--accent-green); color:#000;">🖨️ Tlačiť výkres</button>
-    <button class="ghost" onclick="exportJSON()">💾 Uložiť JSON</button>
-    <label for="fileInput" class="file-btn">📂 Otvoriť JSON</label>
+    <button class="ghost" onclick="exportBlueprintImage()" style="background:var(--accent-blue); color:white;">📷 PNG</button>
+    <button class="ghost" onclick="exportSVG()" style="background:#8b5cf6; color:white;">✂️ SVG (CNC)</button>
+    <button class="ghost" onclick="printBlueprint()" style="background:var(--accent-green); color:#000;">🖨️ Tlačiť</button>
+    <button class="ghost" onclick="exportJSON()">💾 Uložiť</button>
+    <label for="fileInput" class="file-btn">📂 Otvoriť</label>
     <input type="file" id="fileInput" accept=".json" onchange="importJSON(event)">
     <button class="ghost" onclick="clearAll()" style="background:var(--accent-red); color:white;">🗑️ Zmazať</button>
   </div>
@@ -274,8 +272,8 @@ input[type="file"] { display: none; }
   <div id="draftingContainer">
     <div id="blueprintOverlayControls">
       <button class="ghost" onclick="resetBlueprintPanZoom()">🔍 Reset</button>
-      <button id="addDimensionBtn" class="ghost" onclick="toggleManualDimensionMode()">📏 Kótovať (Klik na hranu / 2 body)</button>
-      <span style="font-size:0.75rem; color:var(--text-muted);">Posun: ťahanie | Zoom: koliesko / pinch</span>
+      <button id="addDimensionBtn" class="ghost" onclick="toggleManualDimensionMode()">📏 Smart Kóta</button>
+      <span style="font-size:0.75rem; color:var(--text-muted);">Posun: ťahanie | Zoom: koliesko</span>
     </div>
     <canvas id="blueprintCanvas" class="blueprint-canvas" width="1600" height="1100"></canvas>
   </div>
@@ -287,16 +285,16 @@ input[type="file"] { display: none; }
 </div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI Pro CAD Engine pripravený. 3D & 2D Štúdio s podporou kótovania a vyrezávania.</div></div>
+  <div id="commandHistory"><div>ErikAI Pro CAD Engine pripravený. Plne integrované 3D modelovanie a ISO 2D výkresy.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
-    <input type="text" id="commandInput" placeholder="Zadajte príkaz (box, pipe, filletBox, add, sub, drafting, clear)..." autocomplete="off">
+    <input type="text" id="commandInput" placeholder="Príkaz (box, cylinder, wedge, drafting, clear)..." autocomplete="off">
   </div>
 </div>
 
 <div id="dimensionsPanel">
   <div class="panel-header" id="panelHeader">
-    <h3>Správca Parametrov, Geometrie & Rohového Razítka</h3>
+    <h3>Správca Parametrov & Razítka</h3>
     <button class="close-btn" onclick="closeDimensionsPanel()">✕</button>
   </div>
   <div id="dimsContent">Žiadne diely v zostave</div>
@@ -311,8 +309,7 @@ let currentShapeType = 'box', currentCsgOp = 'add', tool = 'create', editMode = 
 
 let bpScale = 1.0, bpPanX = 50, bpPanY = 50, isBpDragging = false, bpStartMouse = {x:0, y:0};
 let manualDimensions = [];
-let manualDimStep = 0, firstDimPoint = null;
-let manualDimModeActive = false;
+let manualDimStep = 0, firstDimPoint = null, manualDimModeActive = false;
 
 let blueprintMeta = {
   title: "ZOSTAVA MECHANICKÉHO DIELU",
@@ -432,22 +429,18 @@ function pushState(){
 }
 
 function clearAll(){
-  pushState(); 
-  shapes = []; 
-  manualDimensions = [];
-  selectedShapeIndex = null;
-  rebuild3DScene(); 
-  saveToLocalStorage();
+  pushState(); shapes = []; manualDimensions = []; selectedShapeIndex = null;
+  rebuild3DScene(); saveToLocalStorage();
   logCommand("Všetko vymazané.");
 }
 
 function saveToLocalStorage(){
-  localStorage.setItem('erikai_cad_full_state', JSON.stringify({ shapes, blueprintMeta, manualDimensions }));
+  localStorage.setItem('erikai_cad_final_state', JSON.stringify({ shapes, blueprintMeta, manualDimensions }));
   infoCount.textContent = `Počet dielov: ${shapes.length}`;
 }
 
 function loadFromLocalStorage(){
-  const saved = localStorage.getItem('erikai_cad_full_state');
+  const saved = localStorage.getItem('erikai_cad_final_state');
   if(saved){
     try { 
       const data = JSON.parse(saved); 
@@ -512,9 +505,7 @@ function createGeometryForShape(s){
     geo.center();
   } else if(s.type === 'elbow') {
     const curve = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, s.r * 2.5, 0),
-      new THREE.Vector3(s.r * 2.5, s.r * 2.5, 0)
+      new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, s.r * 2.5, 0), new THREE.Vector3(s.r * 2.5, s.r * 2.5, 0)
     );
     geo = new THREE.TubeGeometry(curve, 32, s.r, 24, false);
   } else if(s.type === 'wedge') {
@@ -540,18 +531,10 @@ function rebuild3DScene(){
 
   shapes.forEach((s, idx) => {
     const geo = createGeometryForShape(s);
-    const mat = new THREE.MeshStandardMaterial({ 
-      color: s.color || 0x10b981, 
-      roughness: 0.3, 
-      metalness: 0.1 
-    });
+    const mat = new THREE.MeshStandardMaterial({ color: s.color || 0x10b981, roughness: 0.3, metalness: 0.1 });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(s.x, s.y, s.z);
-    mesh.rotation.set(
-      (s.rx || 0) * Math.PI / 180,
-      (s.ry || 0) * Math.PI / 180,
-      (s.rz || 0) * Math.PI / 180
-    );
+    mesh.rotation.set((s.rx||0)*Math.PI/180, (s.ry||0)*Math.PI/180, (s.rz||0)*Math.PI/180);
     mesh.updateMatrix();
 
     if(s.op === 'subtract') {
@@ -602,14 +585,8 @@ function onPointerDown(e){
   raycaster.setFromCamera(mouse, camera);
   if(tool === 'select'){
     const intersects = raycaster.intersectObjects(Array.from(meshesMap.values()));
-    if(intersects.length > 0){ 
-      selectedShapeIndex = 0; 
-      rebuild3DScene(); 
-      logCommand(`Vybraný 3D diel #${selectedShapeIndex + 1}`);
-    } else { 
-      selectedShapeIndex = null; 
-      rebuild3DScene(); 
-    }
+    if(intersects.length > 0){ selectedShapeIndex = 0; rebuild3DScene(); }
+    else { selectedShapeIndex = null; rebuild3DScene(); }
     return;
   }
 
@@ -631,7 +608,7 @@ function onPointerDown(e){
     selectedShapeIndex = shapes.length - 1;
     rebuild3DScene();
     saveToLocalStorage();
-    logCommand(`Pridaný nový 3D diel: ${shape.type.toUpperCase()}`);
+    logCommand(`Pridaný: ${shape.type.toUpperCase()}`);
   }
 }
 
@@ -658,16 +635,16 @@ function toggleDraftingMode(){
     btn.textContent = '🧊 Prepnúť na 3D Model';
     btn.style.background = '#3b82f6';
     btn.style.color = '#ffffff';
-    infoCoords.textContent = "Režim: 2D Technický výkres";
+    infoCoords.textContent = "Režim: 2D Výkres";
     generateEngineeringBlueprint();
-    logCommand("Prepnuté do 2D výkresu.");
+    logCommand("Prepnute do 2D výkresu.");
   } else {
     draftingContainer.style.display = 'none';
     container.style.display = 'block';
     btn.textContent = '📐 Prepnúť na 2D Výkres';
     btn.style.background = 'var(--accent-amber)';
     btn.style.color = '#000000';
-    infoCoords.textContent = "Režim: 3D Modelovacie štúdio";
+    infoCoords.textContent = "Režim: 3D Studio";
     logCommand("Návrat do 3D.");
   }
 }
@@ -734,7 +711,7 @@ function toggleManualDimensionMode(){
   const btn = document.getElementById('addDimensionBtn');
   if(manualDimModeActive){
     btn.classList.replace('ghost', 'active');
-    logCommand("Smart Kótovanie: Kliknite na hranu tvaru alebo vyberte 2 body...");
+    logCommand("Kótovanie: Kliknite na hranu tvaru alebo 2 body...");
   } else {
     btn.classList.replace('active', 'ghost');
     logCommand("Kótovanie vypnuté.");
@@ -750,16 +727,12 @@ function handleDimensioningClick(clientX, clientY){
   const snappedEdge = detectClickedEdge(clickX, clickY);
   if(snappedEdge){
     const distanceMM = (snappedEdge.lengthUnits * 100).toFixed(1);
-    manualDimensions.push({
-      x1: snappedEdge.x1, y1: snappedEdge.y1,
-      x2: snappedEdge.x2, y2: snappedEdge.y2,
-      text: `${distanceMM} mm`
-    });
+    manualDimensions.push({ x1: snappedEdge.x1, y1: snappedEdge.y1, x2: snappedEdge.x2, y2: snappedEdge.y2, text: `${distanceMM} mm` });
     manualDimStep = 0; firstDimPoint = null;
     toggleManualDimensionMode();
     generateEngineeringBlueprint();
     saveToLocalStorage();
-    logCommand(`Smart Kóta pridaná: ${distanceMM} mm`);
+    logCommand(`Smart Kóta: ${distanceMM} mm`);
     return;
   }
 
@@ -776,7 +749,7 @@ function handleDimensioningClick(clientX, clientY){
     toggleManualDimensionMode();
     generateEngineeringBlueprint();
     saveToLocalStorage();
-    logCommand(`Manuálna kóta pridaná: ${distanceMM} mm`);
+    logCommand(`Manuálna kóta: ${distanceMM} mm`);
   }
 }
 
@@ -786,8 +759,7 @@ function detectClickedEdge(cx, cy){
     { name: 'top', offsetX: 250, offsetY: 800 },
     { name: 'side', offsetX: 1050, offsetY: 300 }
   ];
-  const sc = 25;
-  const threshold = 18;
+  const sc = 25, threshold = 18;
 
   for(let s of shapes){
     for(let v of views){
@@ -839,6 +811,7 @@ function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
   return Math.hypot(px - (x1 + t*(x2 - x1)), py - (y1 + t*(y2 - y1)));
 }
 
+// 📐 PRESNÉ GENERÁTORY TECHNICKÉHO PREMIETANIA PRE VŠETKY POHĽADY
 function generateEngineeringBlueprint(){
   const canvas = document.getElementById('blueprintCanvas');
   const ctx = canvas.getContext('2d');
@@ -1088,6 +1061,7 @@ function updateDimensionsPanel(){
     card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
     card.innerHTML = `<div class="shape-title-row"><strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong><button class="danger" style="padding:2px 5px;" onclick="shapes.splice(${i},1);rebuild3DScene();updateDimensionsPanel();">🗑️</button></div>`;
     
+    // Position
     const posRow = document.createElement('div');
     posRow.className = 'input-row';
     posRow.innerHTML = `<div class="input-group-title">Súradnice (X, Y, Z):</div><label>X:</label><input type="number" step="0.5" value="${s.x}"><label>Y:</label><input type="number" step="0.5" value="${s.y}"><label>Z:</label><input type="number" step="0.5" value="${s.z}">`;
@@ -1097,10 +1071,27 @@ function updateDimensionsPanel(){
     pInps[2].onchange = (e) => { s.z = parseFloat(e.target.value)||0; rebuild3DScene(); };
     card.appendChild(posRow);
 
+    // Rotation
+    const rotRow = document.createElement('div');
+    rotRow.className = 'input-row';
+    rotRow.innerHTML = `<div class="input-group-title">Rotácia (°):</div><label>RX:</label><input type="number" step="15" value="${s.rx||0}"><label>RY:</label><input type="number" step="15" value="${s.ry||0}"><label>RZ:</label><input type="number" step="15" value="${s.rz||0}">`;
+    const rInps = rotRow.querySelectorAll('input');
+    rInps[0].onchange = (e) => { s.rx = parseFloat(e.target.value)||0; rebuild3DScene(); };
+    rInps[1].onchange = (e) => { s.ry = parseFloat(e.target.value)||0; rebuild3DScene(); };
+    rInps[2].onchange = (e) => { s.rz = parseFloat(e.target.value)||0; rebuild3DScene(); };
+    card.appendChild(rotRow);
+
+    // Dimensions
     const dimRow = document.createElement('div');
     dimRow.className = 'input-row';
     dimRow.innerHTML = `<div class="input-group-title">Rozmery:</div>`;
     if(s.type === 'box' || s.type === 'wedge'){
+      dimRow.innerHTML += `<label>Š:</label><input type="number" value="${s.w}"><label>V:</label><input type="number" value="${s.h}"><label>H:</label><input type="number" value="${s.d}">`;
+      const dInps = dimRow.querySelectorAll('input');
+      dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||1; rebuild3DScene(); };
+      dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||1; rebuild3DScene(); };
+      dInps[2].onchange = (e) => { s.d = parseFloat(e.target.value)||1; rebuild3DScene(); };
+    } else if(s.type === 'filletBox' || s.type === 'chamferBox'){
       dimRow.innerHTML += `<label>Š:</label><input type="number" value="${s.w}"><label>V:</label><input type="number" value="${s.h}"><label>H:</label><input type="number" value="${s.d}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||1; rebuild3DScene(); };
