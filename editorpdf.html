@@ -47,7 +47,7 @@
             touch-action: none;
         }
         .canvas-element {
-            cursor: move;
+            cursor: default;
             border: 1px dashed rgba(239, 68, 68, 0.7);
             user-select: none;
             padding: 2px 4px;
@@ -57,7 +57,7 @@
             background-color: rgba(239, 68, 68, 0.12);
         }
         .whiteout-box {
-            cursor: move;
+            cursor: default;
             background-color: white;
             border: 1px dashed #94a3b8;
         }
@@ -66,7 +66,7 @@
             box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
         }
         .image-element {
-            cursor: move;
+            cursor: default;
             border: 1px dashed #eab308;
         }
         .image-element img {
@@ -80,7 +80,7 @@
             box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
         }
         .table-element {
-            cursor: move;
+            cursor: default;
             border: 1px dashed #10b981;
             background: white;
         }
@@ -105,7 +105,21 @@
             background-color: rgba(16, 185, 129, 0.2);
         }
 
-        /* Úplné vymazanie čiarkovaných rámov a tieňov pri exporte PDF */
+        /* Režim pohybu objektov */
+        .move-objects-mode .canvas-element,
+        .move-objects-mode .whiteout-box,
+        .move-objects-mode .image-element,
+        .move-objects-mode .table-element {
+            cursor: grab !important;
+        }
+        .move-objects-mode .canvas-element:active,
+        .move-objects-mode .whiteout-box:active,
+        .move-objects-mode .image-element:active,
+        .move-objects-mode .table-element:active {
+            cursor: grabbing !important;
+        }
+
+        /* Úplné vymazanie čiarkovaných rámov pri exporte PDF */
         .exporting-pdf .canvas-element,
         .exporting-pdf .whiteout-box,
         .exporting-pdf .image-element,
@@ -115,7 +129,7 @@
             box-shadow: none !important;
         }
         .exporting-pdf .whiteout-box {
-            background-color: white !important; /* Biele zakrytie ostane biele, len čiara zmizne */
+            background-color: white !important;
         }
 
         .pan-mode .canvas-element,
@@ -123,12 +137,6 @@
         .pan-mode .image-element,
         .pan-mode .table-element {
             pointer-events: none !important;
-        }
-        .move-objects-mode .canvas-element,
-        .move-objects-mode .whiteout-box,
-        .move-objects-mode .image-element,
-        .move-objects-mode .table-element {
-            cursor: grab !important;
         }
     </style>
 </head>
@@ -201,6 +209,17 @@
                     <div id="text-prop-group">
                         <label class="text-xs text-slate-400 mb-1 block">Text:</label>
                         <input type="text" id="prop-text" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
+                        
+                        <label class="text-xs text-slate-400 mt-2 mb-1 block">Font textu:</label>
+                        <select id="prop-font" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white">
+                            <option value="Segoe UI, Tahoma, Geneva, Verdana, sans-serif">Segoe UI (Predvolený)</option>
+                            <option value="Arial, Helvetica, sans-serif">Arial</option>
+                            <option value="Times New Roman, Times, serif">Times New Roman</option>
+                            <option value="Courier New, Courier, monospace">Courier New</option>
+                            <option value="Georgia, serif">Georgia</option>
+                            <option value="Verdana, Geneva, sans-serif">Verdana</option>
+                            <option value="Comic Sans MS, Comic Sans, cursive">Comic Sans MS</option>
+                        </select>
                     </div>
                     <div class="grid grid-cols-2 gap-2" id="font-prop-group">
                         <div>
@@ -293,6 +312,7 @@
             } else if (mode === 'move-objects') {
                 document.getElementById('mode-move-objects-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
                 viewport.classList.add('move-objects-mode');
+                selectElement(null); // Odznačíme element pri prechode na voľný pohyb
             } else if (mode === 'pan') {
                 document.getElementById('mode-pan-btn').className = "px-3 py-1 bg-red-600 text-white rounded font-medium";
                 viewport.classList.add('pan-mode');
@@ -385,6 +405,7 @@
                     baseWidth: parseFloat(el.dataset.baseWidth || (parseFloat(el.style.width) / currentZoom)),
                     baseHeight: parseFloat(el.dataset.baseHeight || (parseFloat(el.style.height) / currentZoom)),
                     fontSize: parseFloat(el.dataset.baseFontSize || parseFloat(el.style.fontSize) / currentZoom),
+                    fontFamily: el.style.fontFamily || '',
                     color: el.style.color
                 });
             });
@@ -408,7 +429,7 @@
                 if (item.type === 'whiteout') {
                     el = createBox('whiteout-box', scaledLeft, scaledTop, scaledWidth, scaledHeight, false);
                 } else if (item.type === 'text') {
-                    el = createText(item.text, scaledLeft, scaledTop, scaledFontSize, item.color, scaledWidth, scaledHeight, false);
+                    el = createText(item.text, scaledLeft, scaledTop, scaledFontSize, item.color, scaledWidth, scaledHeight, item.fontFamily, false);
                 } else if (item.type === 'image') {
                     el = createImage(item.src, scaledLeft, scaledTop, scaledWidth, scaledHeight, false);
                 } else if (item.type === 'table') {
@@ -476,15 +497,17 @@
 
         document.getElementById('add-text-btn').addEventListener('click', () => {
             if (!pdfDoc) return alert('Najprv nahrajte PDF!');
-            createText('Môj text', '100px', '160px', (16 * currentZoom) + 'px', '#000000', '200px', '40px', true);
+            createText('Môj text', '100px', '160px', (16 * currentZoom) + 'px', '#000000', '200px', '40px', '', true);
         });
 
-        function createText(text, left, top, fontSize, color, width, height, shouldSave = true) {
+        function createText(text, left, top, fontSize, color, width, height, fontFamily, shouldSave = true) {
             const el = document.createElement('div');
             el.className = 'canvas-element';
             el.innerText = text; el.dataset.rawText = text;
             el.style.left = left; el.style.top = top;
-            el.style.fontSize = fontSize; el.style.color = color || '#000000';
+            el.style.fontSize = fontSize; 
+            el.style.color = color || '#000000';
+            if (fontFamily) el.style.fontFamily = fontFamily;
             el.style.width = width; el.style.height = height;
 
             el.dataset.baseLeft = parseFloat(left) / currentZoom;
@@ -587,9 +610,16 @@
             let startX = 0, startY = 0, initLeft = 0, initTop = 0;
 
             const onStart = (clientX, clientY, e) => {
+                // Pohyb povolený v režime 'move-objects' alebo 'edit' (ak klikneme)
                 if (currentMode === 'pan' || e.target.tagName === 'TD' || e.target.tagName === 'TH') return;
+                
+                // Ak sme v režime 'edit', kliknutím objekt vyberieme do inspectora. 
+                // V režime 'move-objects' ho môžeme rovnako chytiť a posunúť.
+                if (currentMode === 'edit') {
+                    selectElement(el);
+                }
+
                 e.stopPropagation();
-                selectElement(el);
                 startX = clientX;
                 startY = clientY;
                 initLeft = parseFloat(el.style.left);
@@ -645,6 +675,15 @@
                     document.getElementById('prop-text').value = el.dataset.rawText || el.innerText;
                     document.getElementById('prop-size').value = Math.round(parseFloat(el.dataset.baseFontSize || parseFloat(el.style.fontSize) / currentZoom));
                     document.getElementById('prop-color').value = rgbToHex(window.getComputedStyle(el).color);
+                    
+                    const currentFont = window.getComputedStyle(el).fontFamily;
+                    const fontSelect = document.getElementById('prop-font');
+                    for(let opt of fontSelect.options) {
+                        if(currentFont.includes(opt.value.split(',')[0].trim())) {
+                            fontSelect.value = opt.value;
+                            break;
+                        }
+                    }
                 } else {
                     textGroup.style.display = 'none';
                     fontGroup.style.display = 'none';
@@ -660,6 +699,12 @@
                 activeElement.innerText = e.target.value;
                 activeElement.dataset.rawText = e.target.value;
                 updateLayersList();
+                saveAnnotations();
+            }
+        });
+        document.getElementById('prop-font').addEventListener('change', (e) => {
+            if (activeElement && activeElement.classList.contains('canvas-element')) {
+                activeElement.style.fontFamily = e.target.value;
                 saveAnnotations();
             }
         });
@@ -740,7 +785,6 @@
             const oldZoom = currentZoom;
             currentZoom = 1.0;
 
-            // Aktivujeme triedu, ktorá okamžite skryje všetky čiarkované ohraničenia na plátne
             wrapper.classList.add('exporting-pdf');
 
             const { jsPDF } = window.jspdf;
@@ -789,7 +833,6 @@
                 });
             }
 
-            // Vypneme mód exportu, vrátime všetko do pôvodného stavu
             wrapper.classList.remove('exporting-pdf');
             finalPdf.save('ErikAI_OS_Master_Dokument_1to1.pdf');
             
