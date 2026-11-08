@@ -349,6 +349,9 @@ let currentDimType = 'smart';
 let hoveredEdge = null, pendingDimension = null;
 let viewLayoutCount = 3;
 
+// Premenná pre interaktívny posun kót na výkrese
+let selectedDimIndex = null, isDimDragging = false, dimDragOffset = {x:0, y:0};
+
 let blueprintMeta = {
   title: "MECH. ZOSTAVA - VÝKRES DIELCOV",
   material: "Oceľ 11 523 / S235JR",
@@ -516,7 +519,7 @@ function createGeometryForShape(s){
 
   if(s.type === 'box') {
     geo = new THREE.BoxGeometry(scW, scH, scD);
-    geo.translate(0, 0, scD / 2); // Zabezpečí, že spodok boxu je na Z=0
+    geo.translate(0, 0, scD / 2);
   } else if(s.type === 'filletBox') {
     const filletR = Math.min(scFillet, scW/2 - 0.5, scH/2 - 0.5);
     const shape = new THREE.Shape();
@@ -573,7 +576,6 @@ function createGeometryForShape(s){
     geo.center();
     geo.translate(0, 0, scD / 2);
   } else if(s.type === 'elbow') {
-    // Opravené 90° koleno: štartuje vodorovne a stúpa čisto nahor do výšky Z
     const rBend = scR * 2.0;
     const curve = new THREE.CubicBezierCurve3(
       new THREE.Vector3(0, 0, 0),
@@ -605,7 +607,6 @@ function rebuild3DScene(){
   let subtractiveShapes = [];
 
   shapes.forEach((s, idx) => {
-    // Zabezpečenie, že Z nemôže byť záporné
     if(s.z < 0) s.z = 0;
 
     const geo = createGeometryForShape(s);
@@ -683,7 +684,7 @@ function onPointerDown(e){
     pushState();
     let shape = {
       type: currentShapeType, op: currentCsgOp,
-      x: snapX, y: snapY, z: 0, // Striktne od zeme (Z=0)
+      x: snapX, y: snapY, z: 0,
       rx: 0, ry: 0, rz: 0,
       w: 100, h: 100, d: 100, r: 50, wall: 10, fillet: 10, chamfer: 10, tube: 15,
       color: currentCsgOp === 'subtract' ? '#ef4444' : '#10b981'
@@ -739,6 +740,25 @@ function setupBlueprintInteraction(){
   draftingDiv.addEventListener('mousedown', (e) => {
     if(e.target.closest('#blueprintOverlayControls')) return;
     if(manualDimModeActive){ handleDimensioningClick(e.clientX, e.clientY); return; }
+    
+    // Kontrola pre interaktívny posun už existujúcich kót
+    const canvas = document.getElementById('blueprintCanvas');
+    const rect = canvas.getBoundingClientRect();
+    const clickX = (e.clientX - rect.left) / bpScale;
+    const clickY = (e.clientY - rect.top) / bpScale;
+
+    for(let i = 0; i < manualDimensions.length; i++){
+      let dim = manualDimensions[i];
+      let midX = (dim.x1 + dim.x2) / 2;
+      let midY = (dim.y1 + dim.y2) / 2;
+      if(Math.hypot(clickX - midX, clickY - midY) < 30){
+        selectedDimIndex = i;
+        isDimDragging = true;
+        dimDragOffset = { x: clickX - midX, y: clickY - midY };
+        return;
+      }
+    }
+
     isBpDragging = true;
     bpStartMouse = { x: e.clientX - bpPanX, y: e.clientY - bpPanY };
   });
@@ -753,7 +773,21 @@ function setupBlueprintInteraction(){
   });
 
   window.addEventListener('mousemove', (e) => {
-    if(isBpDragging){
+    if(isDimDragging && selectedDimIndex !== null){
+      const canvas = document.getElementById('blueprintCanvas');
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) / bpScale;
+      const clickY = (e.clientY - rect.top) / bpScale;
+      
+      let dim = manualDimensions[selectedDimIndex];
+      let dx = clickX - (dim.x1 + dim.x2)/2 - dimDragOffset.x;
+      let dy = clickY - (dim.y1 + dim.y2)/2 - dimDragOffset.y;
+      
+      // Posun kótovacej čiary so zachovaním predlžovacích čiar (dynamické skracovanie/predlžovanie)
+      dim.x1 += dx; dim.y1 += dy;
+      dim.x2 += dx; dim.y2 += dy;
+      generateEngineeringBlueprint();
+    } else if(isBpDragging){
       bpPanX = e.clientX - bpStartMouse.x;
       bpPanY = e.clientY - bpStartMouse.y;
       applyCanvasTransform();
@@ -775,8 +809,8 @@ function setupBlueprintInteraction(){
     }
   });
 
-  window.addEventListener('mouseup', () => { isBpDragging = false; });
-  window.addEventListener('touchend', () => { isBpDragging = false; });
+  window.addEventListener('mouseup', () => { isBpDragging = false; isDimDragging = false; selectedDimIndex = null; });
+  window.addEventListener('touchend', () => { isBpDragging = false; isDimDragging = false; selectedDimIndex = null; });
 
   draftingDiv.addEventListener('wheel', (e) => {
     e.preventDefault();
@@ -868,15 +902,15 @@ function detectClickedEdge(cx, cy){
 
       if(s.type === 'threadedRod'){
         edges = [
-          { x1: px - r, y1: py - zDim/2 - 12, x2: px + r, y2: py - zDim/2 - 12, mmValue: (s.r || 50) * 2, isThread: true },
-          { x1: px + r + 12, y1: py - zDim/2, x2: px + r + 12, y2: py + zDim/2, mmValue: s.d || 100, isThread: false }
+          { x1: px - r, y1: py - zDim - 12, x2: px + r, y2: py - zDim - 12, mmValue: (s.r || 50) * 2, isThread: true },
+          { x1: px + r + 12, y1: py - zDim, x2: px + r + 12, y2: py, mmValue: s.d || 100, isThread: false }
         ];
       } else {
         edges = [
-          { x1: px - w/2, y1: py - zDim/2 - 12, x2: px + w/2, y2: py - zDim/2 - 12, mmValue: s.w || 100 },
-          { x1: px - w/2, y1: py + zDim/2 + 12, x2: px + w/2, y2: py + zDim/2 + 12, mmValue: s.w || 100 },
-          { x1: px - w/2 - 12, y1: py - zDim/2, x2: px - w/2 - 12, y2: py + zDim/2, mmValue: s.d || 100 },
-          { x1: px + w/2 + 12, y1: py - zDim/2, x2: px + w/2 + 12, y2: py + zDim/2, mmValue: s.d || 100 }
+          { x1: px - w/2, y1: py - zDim - 12, x2: px + w/2, y2: py - zDim - 12, mmValue: s.w || 100 },
+          { x1: px - w/2, y1: py + 12, x2: px + w/2, y2: py + 12, mmValue: s.w || 100 },
+          { x1: px - w/2 - 12, y1: py - zDim, x2: px - w/2 - 12, y2: py, mmValue: s.d || 100 },
+          { x1: px + w/2 + 12, y1: py - zDim, x2: px + w/2 + 12, y2: py, mmValue: s.d || 100 }
         ];
       }
 
@@ -1004,6 +1038,7 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   let py = offsetY + (viewType==='top' ? -(s.y || 0) : -(s.z || 0)) * autoSc * 0.1;
   
   ctx.translate(px, py);
+  // Zohľadnenie reálnej rotácie objektu okolo osi Z na výkrese
   ctx.rotate((s.rz || 0) * Math.PI / 180);
 
   const isSub = s.op === 'subtract';
@@ -1031,7 +1066,6 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   } 
   else if(s.type === 'filletBox'){
     let dimY = viewType === 'top' ? h : d;
-    let f = Math.min(filletR, w/2 - 1, dimY/2 - 1);
     ctx.strokeRect(-w/2, -dimY, w, dimY);
     if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
   }
@@ -1142,7 +1176,7 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   } else {
     let dimY = viewType === 'top' ? h : d;
     ctx.strokeRect(-w/2, -dimY, w, dimY);
-    if(isSub) drawHatching45(ctx, -w/2, -dimY, w, dimY);
+    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
   }
   ctx.restore();
 }
@@ -1382,7 +1416,6 @@ function updateDimensionsPanel(){
     card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
     card.innerHTML = `<div class="shape-title-row"><strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong><button class="danger" style="padding:2px 5px;" onclick="shapes.splice(${i},1);rebuild3DScene();updateDimensionsPanel();">🗑️ Zmazať diel</button></div>`;
     
-    // Použitie inputmode="numeric" pre plnohodnotnú mobilnú klávesnicu s +/-
     const posRow = document.createElement('div');
     posRow.className = 'input-row';
     posRow.innerHTML = `<div class="input-group-title">Pozícia X, Y, Z-Výška (mm, min Z=0):</div><label>X:</label><input type="text" inputmode="numeric" value="${s.x||0}"><label>Y:</label><input type="text" inputmode="numeric" value="${s.y||0}"><label style="color:var(--accent-green);font-weight:bold;">Z (Výška):</label><input type="text" inputmode="numeric" value="${s.z||0}">`;
