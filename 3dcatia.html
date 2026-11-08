@@ -315,7 +315,7 @@ input[type="file"] { display: none; }
       <button class="ghost" onclick="resetBlueprintPanZoom()">🔍 Reset</button>
       <span style="font-size:0.75rem; color:var(--text-muted);">Všetky rozmery v mm (1:1)</span>
     </div>
-    <canvas id="blueprintCanvas" class="blueprint-canvas" width="1600" height="1100"></canvas>
+    <canvas id="blueprintCanvas" class="blueprint-canvas" width="1654" height="1169"></canvas>
   </div>
 </div>
 
@@ -364,7 +364,15 @@ let blueprintMeta = {
   material: "Oceľ 11 523 / S235JR",
   author: "ErikAI CAD Studio",
   docNo: "DWG-2026-001",
-  date: "2026-11-08"
+  date: "2026-11-08",
+  checkedBy: "Ing. Novák",
+  techBy: "J. Kováč",
+  approvedBy: "Mgr. Horák",
+  weight: "2.45 kg",
+  blankSize: "120 x 120 x 100",
+  sortingNo: "S-01",
+  scale: "1:1",
+  method: "ISO E"
 };
 
 const container = document.getElementById('canvasContainer');
@@ -908,7 +916,7 @@ function confirmCurrentPendingDimension(){
 
 function detectClickedEdge(cx, cy){
   const views = getActiveLayoutViews();
-  const threshold = 25;
+  const threshold = 30;
 
   for(let s of shapes){
     const autoSc = calculateDynamicScale();
@@ -920,19 +928,12 @@ function detectClickedEdge(cx, cy){
       let w = (s.w || 100) * autoSc * 0.1, zDim = (s.d || 100) * autoSc * 0.1;
       let r = (s.r || 50) * autoSc * 0.1;
 
-      if(s.type === 'threadedRod'){
-        edges = [
-          { x1: px - r, y1: py - zDim - 12, x2: px + r, y2: py - zDim - 12, mmValue: (s.r || 50) * 2, isThread: true },
-          { x1: px + r + 12, y1: py - zDim, x2: px + r + 12, y2: py, mmValue: s.d || 100, isThread: false }
-        ];
-      } else {
-        edges = [
-          { x1: px - w/2, y1: py - zDim - 12, x2: px + w/2, y2: py - zDim - 12, mmValue: s.w || 100 },
-          { x1: px - w/2, y1: py + 12, x2: px + w/2, y2: py + 12, mmValue: s.w || 100 },
-          { x1: px - w/2 - 12, y1: py - zDim, x2: px - w/2 - 12, y2: py, mmValue: s.d || 100 },
-          { x1: px + w/2 + 12, y1: py - zDim, x2: px + w/2 + 12, y2: py, mmValue: s.d || 100 }
-        ];
-      }
+      edges = [
+        { x1: px - w/2, y1: py - zDim - 15, x2: px + w/2, y2: py - zDim - 15, mmValue: s.w || 100 },
+        { x1: px - w/2, y1: py + 15, x2: px + w/2, y2: py + 15, mmValue: s.w || 100 },
+        { x1: px - w/2 - 15, y1: py - zDim, x2: px - w/2 - 15, y2: py, mmValue: s.d || 100 },
+        { x1: px + w/2 + 15, y1: py - zDim, x2: px + w/2 + 15, y2: py, mmValue: s.d || 100 }
+      ];
 
       for(let edge of edges){
         let dist = pointToSegmentDistance(cx, cy, edge.x1, edge.y1, edge.x2, edge.y2);
@@ -958,10 +959,10 @@ function calculateDynamicScale(){
     let dim = Math.max(s.w || 100, s.h || 100, s.d || 100, (s.r || 50) * 2);
     if(dim > maxDim) maxDim = dim;
   });
-  if(maxDim > 500) return 0.6;
-  if(maxDim > 300) return 1.2;
-  if(maxDim > 150) return 2.0;
-  return 2.8;
+  if(maxDim > 500) return 0.5;
+  if(maxDim > 300) return 1.0;
+  if(maxDim > 150) return 1.8;
+  return 2.5;
 }
 
 function getActiveLayoutViews(){
@@ -1042,10 +1043,10 @@ function generateEngineeringBlueprint(){
   }
 
   manualDimensions.forEach(dim => drawCadDimensionLine(ctx, dim.x1, dim.y1, dim.x2, dim.y2, dim.text, '#2563eb'));
-  renderTitleBlock(ctx, canvas.width - 430, canvas.height - 160);
+  renderTitleBlock(ctx, canvas.width - 520, canvas.height - 210);
 }
 
-// 100% ČISTÉ A BEZPEČNÉ VYKRESLENIE 3D TVAROV DO 2D BEZ INTERNÝCH ŠPIRÁL
+// 100% ČISTÉ A BEZPEČNÉ VYKRESLENIE 3D TVAROV DO 2D BEZ ŠPIRÁL
 function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   ctx.save();
   const autoSc = calculateDynamicScale();
@@ -1060,7 +1061,7 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   let d = (s.d || 100) * autoSc * 0.1;
   let r = (s.r || 50) * autoSc * 0.1;
 
-  if(s.type === 'box' || s.type === 'wedge'){
+  if(s.type === 'box' || s.type === 'wedge' || s.type === 'filletBox' || s.type === 'chamferBox'){
     let dimY = viewType === 'top' ? h : d;
     ctx.strokeRect(-w/2, -dimY, w, dimY);
     if(viewType === 'section' || isSub) drawHatching45(ctx, -w/2, -dimY, w, dimY);
@@ -1079,6 +1080,7 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI * 2); ctx.stroke();
     } else {
+      // Čistý ortografický náhľad kolena/rúry v 2D bez zbytočných vnútorných čiar
       ctx.strokeRect(-r, -d, r*2, d);
       ctx.strokeRect(-innerR, -d, innerR*2, d);
       if(viewType === 'section' || isSub){
@@ -1153,23 +1155,38 @@ function renderTitleBlock(ctx, x, y){
   ctx.save();
   ctx.strokeStyle = '#0f172a';
   ctx.lineWidth = 2;
-  ctx.strokeRect(x, y, 400, 135);
+  ctx.strokeRect(x, y, 500, 185);
 
+  // Mriežka razítka
   ctx.beginPath();
-  ctx.moveTo(x, y + 40); ctx.lineTo(x + 400, y + 40);
-  ctx.moveTo(x, y + 85); ctx.lineTo(x + 400, y + 85);
-  ctx.moveTo(x + 160, y + 40); ctx.lineTo(x + 160, y + 135);
+  ctx.moveTo(x, y + 35); ctx.lineTo(x + 500, y + 35);
+  ctx.moveTo(x, y + 70); ctx.lineTo(x + 500, y + 70);
+  ctx.moveTo(x, y + 105); ctx.lineTo(x + 500, y + 105);
+  ctx.moveTo(x, y + 145); ctx.lineTo(x + 500, y + 145);
+
+  ctx.moveTo(x + 200, y + 35); ctx.lineTo(x + 200, y + 185);
+  ctx.moveTo(x + 350, y + 70); ctx.lineTo(x + 350, y + 185);
   ctx.stroke();
 
   ctx.fillStyle = '#0f172a';
   ctx.font = 'bold 12px Segoe UI, sans-serif';
-  ctx.fillText(blueprintMeta.title, x + 10, y + 25);
+  ctx.fillText(blueprintMeta.title, x + 10, y + 22);
 
   ctx.font = '10px monospace';
-  ctx.fillText(`Materiál: ${blueprintMeta.material}`, x + 10, y + 65);
-  ctx.fillText(`Autor: ${blueprintMeta.author}`, x + 10, y + 112);
-  ctx.fillText(`Formát: ${paperFormat} (1:1)`, x + 170, y + 65);
-  ctx.fillText(`Jednotky: mm`, x + 170, y + 112);
+  ctx.fillText(`Materiál: ${blueprintMeta.material}`, x + 10, y + 52);
+  ctx.fillText(`Polotovar: ${blueprintMeta.blankSize}`, x + 210, y + 52);
+
+  ctx.fillText(`Vypracoval: ${blueprintMeta.techBy}`, x + 10, y + 88);
+  ctx.fillText(`Kontroloval: ${blueprintMeta.checkedBy}`, x + 210, y + 88);
+  ctx.fillText(`Schválil: ${blueprintMeta.approvedBy}`, x + 360, y + 88);
+
+  ctx.fillText(`Hmotnosť: ${blueprintMeta.weight}`, x + 10, y + 125);
+  ctx.fillText(`Mierka: ${blueprintMeta.scale}`, x + 210, y + 125);
+  ctx.fillText(`Metóda: ${blueprintMeta.method}`, x + 360, y + 125);
+
+  ctx.fillText(`Číslo výkresu: ${blueprintMeta.docNo}`, x + 10, y + 165);
+  ctx.fillText(`Triediace č.: ${blueprintMeta.sortingNo}`, x + 210, y + 165);
+  ctx.fillText(`Formát: ${paperFormat}`, x + 360, y + 165);
   ctx.restore();
 }
 
@@ -1250,11 +1267,24 @@ function updateDimensionsPanel(){
 
   const metaCard = document.createElement('div');
   metaCard.className = 'shape-card';
-  metaCard.innerHTML = `<strong style="color:var(--accent-green); font-size:0.8rem;">📝 Rohové razítko & Meta</strong>
-    <div class="input-row"><label>Názov:</label><input type="text" id="metaTitle" style="width:200px" value="${blueprintMeta.title}"></div>
-    <div class="input-row"><label>Materiál:</label><input type="text" id="metaMat" style="width:200px" value="${blueprintMeta.material}"></div>`;
+  metaCard.innerHTML = `<strong style="color:var(--accent-green); font-size:0.8rem;">📝 Rohové razítko & ISO Atribúty</strong>
+    <div class="input-row"><label>Názov:</label><input type="text" id="metaTitle" style="width:180px" value="${blueprintMeta.title}"></div>
+    <div class="input-row"><label>Materiál:</label><input type="text" id="metaMat" style="width:180px" value="${blueprintMeta.material}"></div>
+    <div class="input-row"><label>Polotovar:</label><input type="text" id="metaBlank" style="width:180px" value="${blueprintMeta.blankSize}"></div>
+    <div class="input-row"><label>Č. Výkresu:</label><input type="text" id="metaDoc" style="width:180px" value="${blueprintMeta.docNo}"></div>
+    <div class="input-row"><label>Vypracoval:</label><input type="text" id="metaTech" style="width:180px" value="${blueprintMeta.techBy}"></div>
+    <div class="input-row"><label>Kontroloval:</label><input type="text" id="metaChecked" style="width:180px" value="${blueprintMeta.checkedBy}"></div>
+    <div class="input-row"><label>Schválil:</label><input type="text" id="metaApproved" style="width:180px" value="${blueprintMeta.approvedBy}"></div>
+    <div class="input-row"><label>Hmotnosť:</label><input type="text" id="metaWeight" style="width:180px" value="${blueprintMeta.weight}"></div>`;
+
   metaCard.querySelector('#metaTitle').onchange = (e) => { blueprintMeta.title = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
   metaCard.querySelector('#metaMat').onchange = (e) => { blueprintMeta.material = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
+  metaCard.querySelector('#metaBlank').onchange = (e) => { blueprintMeta.blankSize = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
+  metaCard.querySelector('#metaDoc').onchange = (e) => { blueprintMeta.docNo = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
+  metaCard.querySelector('#metaTech').onchange = (e) => { blueprintMeta.techBy = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
+  metaCard.querySelector('#metaChecked').onchange = (e) => { blueprintMeta.checkedBy = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
+  metaCard.querySelector('#metaApproved').onchange = (e) => { blueprintMeta.approvedBy = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
+  metaCard.querySelector('#metaWeight').onchange = (e) => { blueprintMeta.weight = e.target.value; if(isDraftingMode) generateEngineeringBlueprint(); };
   dimsContent.appendChild(metaCard);
 
   if(manualDimensions.length > 0){
