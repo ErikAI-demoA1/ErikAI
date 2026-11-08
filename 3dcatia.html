@@ -1036,7 +1036,6 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   
   ctx.translate(px, py);
   
-  // Aplikovanie plnej 3D rotácie (RX, RY, RZ) na projekciu pre presnú zhodu s 3D modelom
   ctx.rotate((s.rz || 0) * Math.PI / 180);
   if(viewType === 'front') ctx.rotate((s.rx || 0) * Math.PI / 180);
   if(viewType === 'side') ctx.rotate((s.ry || 0) * Math.PI / 180);
@@ -1151,20 +1150,19 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
     }
   }
   else if(s.type === 'elbow'){
+    // Presné vykreslenie 90° kolena potrubia v 2D projekcii
     let rBend = r * 2.0;
-    if(viewType === 'top'){
-      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-      drawCenterCross(ctx, 0, 0, r + 10);
-    } else {
-      ctx.beginPath();
-      ctx.arc(0, 0, rBend, 0, Math.PI / 2, false);
-      ctx.stroke();
-      if(viewType === 'section' || isSub){
-        drawHatching45(ctx, 0, -rBend, rBend, rBend);
-      }
-      drawCenterLine(ctx, 0, 0, rBend + 10, 0);
-      drawCenterLine(ctx, 0, 0, 0, rBend + 10);
+    ctx.beginPath();
+    ctx.arc(0, 0, rBend, 0, Math.PI / 2, false);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(2, rBend - r), 0, Math.PI / 2, false);
+    ctx.stroke();
+    if(viewType === 'section' || isSub){
+      drawHatching45(ctx, 0, -rBend, rBend, rBend);
     }
+    drawCenterLine(ctx, 0, 0, rBend + 10, 0);
+    drawCenterLine(ctx, 0, 0, 0, rBend + 10);
   }
   else if(s.type === 'cone'){
     if(viewType === 'top'){
