@@ -300,6 +300,7 @@ input[type="file"] { display: none; }
         <option value="vert">↕️ Vertikálna</option>
         <option value="radius">⭕ Polomer (R)</option>
         <option value="diameter">⌀ Priemer (Ø)</option>
+        <option value="thread">🔩 Závit (M)</option>
       </select>
 
       <button id="addDimensionBtn" class="ghost" onclick="toggleManualDimensionMode()">📏 Kótovať</button>
@@ -320,7 +321,7 @@ input[type="file"] { display: none; }
   <div id="commandHistory"><div>ErikAI Pro CAD Engine. Všetky rozmery v milimetroch (mm) podľa ISO noriem.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
-    <input type="text" id="commandInput" placeholder="Príkaz (box, pipe, drafting, clear)..." autocomplete="off">
+    <input type="text" id="commandInput" placeholder="Príkaz (box, pipe, elbow, drafting, clear)..." autocomplete="off">
   </div>
 </div>
 
@@ -562,9 +563,11 @@ function createGeometryForShape(s){
     geo.center();
   } else if(s.type === 'elbow') {
     const curve = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, scR * 2.5, 0), new THREE.Vector3(scR * 2.5, scR * 2.5, 0)
+      new THREE.Vector3(-scR * 1.5, -scR * 1.5, 0),
+      new THREE.Vector3(-scR * 1.5, scR * 1.5, 0),
+      new THREE.Vector3(scR * 1.5, scR * 1.5, 0)
     );
-    geo = new THREE.TubeGeometry(curve, 32, scR, 24, false);
+    geo = new THREE.TubeGeometry(curve, 32, scR * 0.5, 24, false);
   } else if(s.type === 'wedge') {
     geo = new THREE.BufferGeometry();
     const w = scW/2, h = scH/2, d = scD/2;
@@ -776,7 +779,7 @@ function toggleManualDimensionMode(){
   const confirmBtn = document.getElementById('confirmDimBtn');
   if(manualDimModeActive){
     btn.classList.replace('ghost', 'active');
-    logCommand("Kótovanie: Kliknite na zvýraznenú hranu alebo 2 body...");
+    logCommand("Kótovanie: Kliknite na zvýraznenú hranu alebo prvok...");
   } else {
     btn.classList.replace('active', 'ghost');
     confirmBtn.style.display = 'none';
@@ -797,6 +800,8 @@ function handleDimensioningClick(clientX, clientY){
     let formattedText = `${snappedEdge.mmValue.toFixed(0)} mm`;
     if(currentDimType === 'radius') formattedText = `R ${(snappedEdge.mmValue/2).toFixed(0)}`;
     else if(currentDimType === 'diameter') formattedText = `⌀ ${snappedEdge.mmValue.toFixed(0)}`;
+    else if(currentDimType === 'thread') formattedText = `M${(snappedEdge.mmValue).toFixed(0)}`;
+    else if(snappedEdge.isThread) formattedText = `M${(snappedEdge.mmValue).toFixed(0)}`;
 
     pendingDimension = {
       x1: snappedEdge.x1, y1: snappedEdge.y1,
@@ -835,12 +840,27 @@ function detectClickedEdge(cx, cy){
       
       let edges = [];
       let w = (s.w || 100) * autoSc * 0.1, h = (s.h || 100) * autoSc * 0.1;
-      edges = [
-        { x1: px - w/2, y1: py - h/2 - 12, x2: px + w/2, y2: py - h/2 - 12, mmValue: s.w || 100 },
-        { x1: px - w/2, y1: py + h/2 + 12, x2: px + w/2, y2: py + h/2 + 12, mmValue: s.w || 100 },
-        { x1: px - w/2 - 12, y1: py - h/2, x2: px - w/2 - 12, y2: py + h/2, mmValue: s.h || 100 },
-        { x1: px + w/2 + 12, y1: py - h/2, x2: px + w/2 + 12, y2: py + h/2, mmValue: s.h || 100 }
-      ];
+      let r = (s.r || 50) * autoSc * 0.1;
+
+      if(s.type === 'threadedRod'){
+        edges = [
+          { x1: px - r, y1: py - h/2 - 12, x2: px + r, y2: py - h/2 - 12, mmValue: (s.r || 50) * 2, isThread: true },
+          { x1: px + r + 12, y1: py - h/2, x2: px + r + 12, y2: py + h/2, mmValue: s.h || 100, isThread: false }
+        ];
+      } else if(s.type === 'elbow'){
+        let bendR = r * 1.5;
+        edges = [
+          { x1: px - bendR, y1: py, x2: px + bendR, y2: py, mmValue: (s.r || 50) * 2 },
+          { x1: px, y1: py - bendR, x2: px, y2: py + bendR, mmValue: (s.r || 50) * 2 }
+        ];
+      } else {
+        edges = [
+          { x1: px - w/2, y1: py - h/2 - 12, x2: px + w/2, y2: py - h/2 - 12, mmValue: s.w || 100 },
+          { x1: px - w/2, y1: py + h/2 + 12, x2: px + w/2, y2: py + h/2 + 12, mmValue: s.w || 100 },
+          { x1: px - w/2 - 12, y1: py - h/2, x2: px - w/2 - 12, y2: py + h/2, mmValue: s.h || 100 },
+          { x1: px + w/2 + 12, y1: py - h/2, x2: px + w/2 + 12, y2: py + h/2, mmValue: s.h || 100 }
+        ];
+      }
 
       for(let edge of edges){
         let dist = pointToSegmentDistance(cx, cy, edge.x1, edge.y1, edge.x2, edge.y2);
@@ -958,7 +978,7 @@ function generateEngineeringBlueprint(){
   renderTitleBlock(ctx, canvas.width - 430, canvas.height - 160);
 }
 
-// Opravená projekcia podporujúca VŠETKY tvary a CSG odobraté telesá (subtract)
+// Kompletne vylepšené a presné 2D vykresľovanie pre VŠETKY tvary podľa noriem ISO / SolidWorks
 function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   ctx.save();
   const autoSc = calculateDynamicScale();
@@ -981,13 +1001,46 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   let h = (s.h || 100) * autoSc * 0.1;
   let d = (s.d || 100) * autoSc * 0.1;
   let r = (s.r || 50) * autoSc * 0.1;
+  let tubeR = (s.tube || 15) * autoSc * 0.1;
+  let filletR = (s.fillet || 10) * autoSc * 0.1;
+  let chamferVal = (s.chamfer || 10) * autoSc * 0.1;
 
-  if(['box', 'filletBox', 'chamferBox'].includes(s.type)){
+  if(s.type === 'box'){
     ctx.strokeRect(-w/2, -h/2, w, h);
-    if(viewType === 'section' || isSub){
-      drawHatching45(ctx, -w/2, -h/2, w, h);
-    }
-  } else if(['cylinder', 'cone', 'sphere', 'threadedRod'].includes(s.type)){
+    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -h/2, w, h); }
+  } 
+  else if(s.type === 'filletBox'){
+    let f = Math.min(filletR, w/2 - 1, h/2 - 1);
+    ctx.beginPath();
+    ctx.moveTo(-w/2 + f, -h/2);
+    ctx.lineTo(w/2 - f, -h/2);
+    ctx.arcTo(w/2, -h/2, w/2, -h/2 + f, f);
+    ctx.lineTo(w/2, h/2 - f);
+    ctx.arcTo(w/2, h/2, w/2 - f, h/2, f);
+    ctx.lineTo(-w/2 + f, h/2);
+    ctx.arcTo(-w/2, h/2, -w/2, h/2 - f, f);
+    ctx.lineTo(-w/2, -h/2 + f);
+    ctx.arcTo(-w/2, -h/2, -w/2 + f, -h/2, f);
+    ctx.closePath();
+    ctx.stroke();
+    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -h/2, w, h); }
+  }
+  else if(s.type === 'chamferBox'){
+    let c = Math.min(chamferVal, w/2 - 1, h/2 - 1);
+    ctx.beginPath();
+    ctx.moveTo(-w/2 + c, -h/2);
+    ctx.lineTo(w/2 - c, -h/2);
+    ctx.lineTo(w/2, -h/2 + c);
+    ctx.lineTo(w/2, h/2 - c);
+    ctx.lineTo(w/2 - c, h/2);
+    ctx.lineTo(-w/2 + c, h/2);
+    ctx.lineTo(-w/2, h/2 - c);
+    ctx.lineTo(-w/2, -h/2 + c);
+    ctx.closePath();
+    ctx.stroke();
+    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -h/2, w, h); }
+  }
+  else if(s.type === 'cylinder'){
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
       if(isSub) drawHatching45Circle(ctx, r);
@@ -997,7 +1050,38 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       if(isSub) drawHatching45(ctx, -r, -h/2, r*2, h);
       drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
     }
-  } else if(s.type === 'pipe'){
+  }
+  else if(s.type === 'threadedRod'){
+    let threadR = r * 0.85; // Tenká čiara d1 = 0.85*d pre závit
+    if(viewType === 'top'){
+      // Hrubý obvodový kruh
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+      // Tenká čiara závitu (3/4 kruh podla ISO)
+      ctx.save();
+      ctx.lineWidth = 1.0;
+      ctx.strokeStyle = isSub ? '#dc2626' : '#2563eb';
+      ctx.beginPath();
+      ctx.arc(0, 0, threadR, 0, Math.PI * 1.5);
+      ctx.stroke();
+      ctx.restore();
+      drawCenterCross(ctx, 0, 0, r + 10);
+    } else {
+      // Hrubá vonkajšia kontúra tyče
+      ctx.strokeRect(-r, -h/2, r*2, h);
+      // Tenké čiary jadra závitu po bokoch
+      ctx.save();
+      ctx.lineWidth = 1.0;
+      ctx.strokeStyle = isSub ? '#dc2626' : '#2563eb';
+      ctx.beginPath();
+      ctx.moveTo(-threadR, -h/2); ctx.lineTo(-threadR, h/2);
+      ctx.moveTo(threadR, -h/2); ctx.lineTo(threadR, h/2);
+      ctx.stroke();
+      ctx.restore();
+      if(isSub) drawHatching45(ctx, -r, -h/2, r*2, h);
+      drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
+    }
+  }
+  else if(s.type === 'pipe'){
     let innerR = Math.max(2, (s.r - (s.wall || 10))) * autoSc * 0.1;
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
@@ -1008,22 +1092,75 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       ctx.strokeRect(-r, -h/2, r*2, h);
       ctx.strokeStyle = isSub ? '#dc2626' : '#0f172a';
       ctx.strokeRect(-innerR, -h/2, innerR*2, h);
-      drawHatching45(ctx, -r, -h/2, r*2, h);
+      if(viewType === 'section' || isSub){
+        drawHatching45(ctx, -r, -h/2, (r - innerR), h);
+        drawHatching45(ctx, innerR, -h/2, (r - innerR), h);
+      }
       drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
     }
-  } else if(s.type === 'wedge'){
+  }
+  else if(s.type === 'elbow'){
+    // ISO strojarne zobrazenie 90° kolena
+    let R_bend = r * 1.5;
+    let pipeR = (s.wall ? (s.r - s.wall) : s.r*0.5) * autoSc * 0.1;
+    if(viewType === 'top'){
+      ctx.beginPath(); ctx.arc(0, 0, R_bend + pipeR, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, R_bend - pipeR, 0, Math.PI * 2); ctx.stroke();
+      drawCenterCross(ctx, 0, 0, R_bend + pipeR + 10);
+    } else {
+      // Štvrťkruhové zahnutie v Náryse / Bokoryse
+      ctx.beginPath();
+      ctx.arc(-R_bend, R_bend, R_bend + pipeR, -Math.PI/2, 0);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(-R_bend, R_bend, R_bend - pipeR, -Math.PI/2, 0);
+      ctx.stroke();
+      // Koncové príruby / zakončenia kolena
+      ctx.strokeRect(-R_bend - pipeR - 2, 0, (pipeR*2 + 4), 6);
+      ctx.strokeRect(0, R_bend - pipeR - 2, 6, (pipeR*2 + 4));
+      // Os zakrivenia kolena
+      drawCenterLine(ctx, -R_bend, 0, 10, 0);
+      if(isSub) drawHatching45(ctx, -R_bend, 0, R_bend*2, R_bend*2);
+    }
+  }
+  else if(s.type === 'cone'){
+    if(viewType === 'top'){
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+      drawCenterCross(ctx, 0, 0, r + 10);
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(-r, h/2);
+      ctx.lineTo(0, -h/2);
+      ctx.lineTo(r, h/2);
+      ctx.closePath();
+      ctx.stroke();
+      if(isSub) drawHatching45(ctx, -r, -h/2, r*2, h);
+      drawCenterLine(ctx, 0, -h/2 - 10, 0, h/2 + 10);
+    }
+  }
+  else if(s.type === 'torus'){
+    if(viewType === 'top'){
+      ctx.beginPath(); ctx.arc(0, 0, r + tubeR, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, Math.max(2, r - tubeR), 0, Math.PI * 2); ctx.stroke();
+      drawCenterCross(ctx, 0, 0, r + tubeR + 10);
+    } else {
+      // Dva kruhové prierezy po bokoch
+      ctx.beginPath(); ctx.arc(-r, 0, tubeR, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(r, 0, tubeR, 0, Math.PI * 2); ctx.stroke();
+      drawCenterLine(ctx, -r - tubeR - 10, 0, r + tubeR + 10, 0);
+      drawCenterCross(ctx, -r, 0, tubeR + 5);
+      drawCenterCross(ctx, r, 0, tubeR + 5);
+      if(isSub){
+        drawHatching45Circle(ctx, tubeR);
+      }
+    }
+  }
+  else if(s.type === 'wedge'){
     ctx.beginPath();
     ctx.moveTo(-w/2, h/2); ctx.lineTo(w/2, h/2); ctx.lineTo(w/2, -h/2); ctx.closePath();
     ctx.stroke();
     if(isSub) drawHatching45(ctx, -w/2, -h/2, w, h);
-  } else if(s.type === 'torus'){
-    if(viewType === 'top'){
-      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-    } else {
-      ctx.strokeRect(-r, -r/2, r*2, r);
-    }
   } else {
-    // Všeobecný fallback pre akýkoľvek iný tvar
     ctx.strokeRect(-w/2, -h/2, w, h);
     if(isSub) drawHatching45(ctx, -w/2, -h/2, w, h);
   }
@@ -1317,6 +1454,11 @@ function updateDimensionsPanel(){
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
+    } else if(s.type === 'torus'){
+      dimRow.innerHTML += `<label>Polomer R:</label><input type="number" step="5" value="${s.r||50}"><label>Prierez r:</label><input type="number" step="2" value="${s.tube||15}">`;
+      const dInps = dimRow.querySelectorAll('input');
+      dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
+      dInps[1].onchange = (e) => { s.tube = parseFloat(e.target.value)||5; rebuild3DScene(); };
     } else if(s.type === 'sphere'){
       dimRow.innerHTML += `<label>Polomer R:</label><input type="number" step="5" value="${s.r||50}">`;
       const dInps = dimRow.querySelectorAll('input');
