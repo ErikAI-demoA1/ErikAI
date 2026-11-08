@@ -206,13 +206,13 @@ input[type="file"] { display: none; }
 .input-row{ display: flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
 .input-row label{ font-size: 0.73rem; color: var(--text-muted); white-space: nowrap; }
 .input-row input, .input-row select{
-  width: 60px;
-  padding: 4px;
+  width: 65px;
+  padding: 5px;
   border-radius: 4px;
   border: 1px solid var(--border-color);
   background: #090b10;
   color: white;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
 #blueprintOverlayControls {
@@ -313,12 +313,12 @@ input[type="file"] { display: none; }
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">X: 0 mm, Y: 0 mm, Z: 0 mm | Režim: 3D Studio (Z-výška)</span>
+  <span id="infoCoords">X: 0 mm, Y: 0 mm, Z: 0 mm | Režim: 3D Studio (Z-výška od 0)</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI Pro CAD Engine. Z-Up systém aktívny. Všetky rozmery v mm podľa ISO noriem.</div></div>
+  <div id="commandHistory"><div>ErikAI Pro CAD Engine. Z-Up systém (Z>=0). Všetky rozmery v mm.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
     <input type="text" id="commandInput" placeholder="Príkaz (box, pipe, elbow, drafting, clear)..." autocomplete="off">
@@ -516,6 +516,7 @@ function createGeometryForShape(s){
 
   if(s.type === 'box') {
     geo = new THREE.BoxGeometry(scW, scH, scD);
+    geo.translate(0, 0, scD / 2); // Zabezpečí, že spodok boxu je na Z=0
   } else if(s.type === 'filletBox') {
     const filletR = Math.min(scFillet, scW/2 - 0.5, scH/2 - 0.5);
     const shape = new THREE.Shape();
@@ -531,6 +532,7 @@ function createGeometryForShape(s){
     shape.quadraticCurveTo(-w2, -h2, -w2 + filletR, -h2);
     geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: true, bevelSegments: 4, steps: 1, bevelSize: filletR*0.5, bevelThickness: filletR*0.5 });
     geo.center();
+    geo.translate(0, 0, scD / 2);
   } else if(s.type === 'chamferBox') {
     const chamf = Math.min(scChamfer, scW/2 - 0.5, scH/2 - 0.5);
     const shape = new THREE.Shape();
@@ -545,16 +547,21 @@ function createGeometryForShape(s){
     shape.lineTo(-w2, -h2 + chamf);
     geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: false });
     geo.center();
+    geo.translate(0, 0, scD / 2);
   } else if(s.type === 'cylinder' || s.type === 'threadedRod') {
     geo = new THREE.CylinderGeometry(scR, scR, scD, 32);
     geo.rotateX(Math.PI / 2);
+    geo.translate(0, 0, scD / 2);
   } else if(s.type === 'sphere') {
     geo = new THREE.SphereGeometry(scR, 32, 32);
+    geo.translate(0, 0, scR);
   } else if(s.type === 'cone') {
     geo = new THREE.CylinderGeometry(0, scR, scD, 32);
     geo.rotateX(Math.PI / 2);
+    geo.translate(0, 0, scD / 2);
   } else if(s.type === 'torus') {
     geo = new THREE.TorusGeometry(scR, scTube, 16, 100);
+    geo.translate(0, 0, scTube);
   } else if(s.type === 'pipe') {
     const shape = new THREE.Shape();
     shape.absarc(0, 0, scR, 0, Math.PI * 2, false);
@@ -564,25 +571,28 @@ function createGeometryForShape(s){
     shape.holes.push(holePath);
     geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: false, curveSegments: 32 });
     geo.center();
+    geo.translate(0, 0, scD / 2);
   } else if(s.type === 'elbow') {
-    // Opravené 90° koleno správne orientované v Z-up systéme (vychádza z roviny XY smerom hore do Z)
+    // Opravené 90° koleno: štartuje vodorovne a stúpa čisto nahor do výšky Z
     const rBend = scR * 2.0;
-    const curve = new THREE.QuadraticBezierCurve3(
+    const curve = new THREE.CubicBezierCurve3(
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 0, rBend),
-      new THREE.Vector3(rBend, 0, rBend)
+      new THREE.Vector3(rBend, 0, 0),
+      new THREE.Vector3(rBend, 0, rBend),
+      new THREE.Vector3(rBend, 0, rBend + scR)
     );
     geo = new THREE.TubeGeometry(curve, 36, scR, 24, false);
   } else if(s.type === 'wedge') {
     geo = new THREE.BufferGeometry();
-    const w = scW/2, h = scH/2, d = scD/2;
-    const vertices = new Float32Array([-w,-h,-d, w,-h,-d, w,h,-d, -w,h,-d, -w,-h,d, w,-h,d]);
+    const w = scW/2, h = scH/2, d = scD;
+    const vertices = new Float32Array([-w,-h,0, w,-h,0, w,h,0, -w,h,0, -w,-h,d, w,-h,d]);
     const indices = [0,1,2, 0,2,3, 0,4,5, 0,5,1, 1,5,2, 3,2,4, 2,5,4];
     geo.setIndex(indices);
     geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
     geo.computeVertexNormals();
   } else {
     geo = new THREE.BoxGeometry(10, 10, 10);
+    geo.translate(0, 0, 5);
   }
   return geo;
 }
@@ -595,6 +605,9 @@ function rebuild3DScene(){
   let subtractiveShapes = [];
 
   shapes.forEach((s, idx) => {
+    // Zabezpečenie, že Z nemôže byť záporné
+    if(s.z < 0) s.z = 0;
+
     const geo = createGeometryForShape(s);
     const mat = new THREE.MeshStandardMaterial({ color: s.color || 0x10b981, roughness: 0.3, metalness: 0.1 });
     const mesh = new THREE.Mesh(geo, mat);
@@ -670,7 +683,7 @@ function onPointerDown(e){
     pushState();
     let shape = {
       type: currentShapeType, op: currentCsgOp,
-      x: snapX, y: snapY, z: currentCsgOp === 'subtract' ? 25 : 50,
+      x: snapX, y: snapY, z: 0, // Striktne od zeme (Z=0)
       rx: 0, ry: 0, rz: 0,
       w: 100, h: 100, d: 100, r: 50, wall: 10, fillet: 10, chamfer: 10, tube: 15,
       color: currentCsgOp === 'subtract' ? '#ef4444' : '#10b981'
@@ -679,7 +692,7 @@ function onPointerDown(e){
     selectedShapeIndex = shapes.length - 1;
     rebuild3DScene();
     saveToLocalStorage();
-    logCommand(`Pridaný: ${shape.type.toUpperCase()} (Z-Výška: ${shape.z} mm)`);
+    logCommand(`Pridaný: ${shape.type.toUpperCase()} na Z = 0 mm`);
   }
 }
 
@@ -715,7 +728,7 @@ function toggleDraftingMode(){
     btn.textContent = '📐 Prepnúť na 2D Výkres';
     btn.style.background = 'var(--accent-amber)';
     btn.style.color = '#000000';
-    infoCoords.textContent = "Režim: 3D Studio (Z-výška)";
+    infoCoords.textContent = "Režim: 3D Studio (Z-výška od 0)";
     logCommand("Návrat do 3D.");
   }
 }
@@ -1013,41 +1026,19 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
 
   if(s.type === 'box'){
     let dimY = viewType === 'top' ? h : d;
-    ctx.strokeRect(-w/2, -dimY/2, w, dimY);
-    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY/2, w, dimY); }
+    ctx.strokeRect(-w/2, -dimY, w, dimY);
+    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
   } 
   else if(s.type === 'filletBox'){
     let dimY = viewType === 'top' ? h : d;
     let f = Math.min(filletR, w/2 - 1, dimY/2 - 1);
-    ctx.beginPath();
-    ctx.moveTo(-w/2 + f, -dimY/2);
-    ctx.lineTo(w/2 - f, -dimY/2);
-    ctx.arcTo(w/2, -dimY/2, w/2, -dimY/2 + f, f);
-    ctx.lineTo(w/2, dimY/2 - f);
-    ctx.arcTo(w/2, dimY/2, w/2 - f, dimY/2, f);
-    ctx.lineTo(-w/2 + f, dimY/2);
-    ctx.arcTo(-w/2, dimY/2, -w/2, dimY/2 - f, f);
-    ctx.lineTo(-w/2, -dimY/2 + f);
-    ctx.arcTo(-w/2, -dimY/2, -w/2 + f, -dimY/2, f);
-    ctx.closePath();
-    ctx.stroke();
-    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY/2, w, dimY); }
+    ctx.strokeRect(-w/2, -dimY, w, dimY);
+    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
   }
   else if(s.type === 'chamferBox'){
     let dimY = viewType === 'top' ? h : d;
-    let c = Math.min(chamferVal, w/2 - 1, dimY/2 - 1);
-    ctx.beginPath();
-    ctx.moveTo(-w/2 + c, -dimY/2);
-    ctx.lineTo(w/2 - c, -dimY/2);
-    ctx.lineTo(w/2, -dimY/2 + c);
-    ctx.lineTo(w/2, dimY/2 - c);
-    ctx.lineTo(w/2 - c, dimY/2);
-    ctx.lineTo(-w/2 + c, dimY/2);
-    ctx.lineTo(-w/2, dimY/2 - c);
-    ctx.lineTo(-w/2, -dimY/2 + c);
-    ctx.closePath();
-    ctx.stroke();
-    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY/2, w, dimY); }
+    ctx.strokeRect(-w/2, -dimY, w, dimY);
+    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
   }
   else if(s.type === 'cylinder'){
     if(viewType === 'top'){
@@ -1055,9 +1046,9 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       if(isSub) drawHatching45Circle(ctx, r);
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
-      ctx.strokeRect(-r, -d/2, r*2, d);
-      if(isSub) drawHatching45(ctx, -r, -d/2, r*2, d);
-      drawCenterLine(ctx, 0, -d/2 - 10, 0, d/2 + 10);
+      ctx.strokeRect(-r, -d, r*2, d);
+      if(isSub) drawHatching45(ctx, -r, -d, r*2, d);
+      drawCenterLine(ctx, 0, -d - 10, 0, 10);
     }
   }
   else if(s.type === 'threadedRod'){
@@ -1071,17 +1062,17 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       ctx.restore();
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
-      ctx.strokeRect(-r, -d/2, r*2, d);
+      ctx.strokeRect(-r, -d, r*2, d);
       ctx.save();
       ctx.lineWidth = 1.0;
       ctx.strokeStyle = isSub ? '#dc2626' : '#2563eb';
       ctx.beginPath();
-      ctx.moveTo(-threadR, -d/2); ctx.lineTo(-threadR, d/2);
-      ctx.moveTo(threadR, -d/2); ctx.lineTo(threadR, d/2);
+      ctx.moveTo(-threadR, -d); ctx.lineTo(-threadR, 0);
+      ctx.moveTo(threadR, -d); ctx.lineTo(threadR, 0);
       ctx.stroke();
       ctx.restore();
-      if(isSub) drawHatching45(ctx, -r, -d/2, r*2, d);
-      drawCenterLine(ctx, 0, -d/2 - 10, 0, d/2 + 10);
+      if(isSub) drawHatching45(ctx, -r, -d, r*2, d);
+      drawCenterLine(ctx, 0, -d - 10, 0, 10);
     }
   }
   else if(s.type === 'pipe'){
@@ -1092,14 +1083,14 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       if(isSub) drawHatching45Ring(ctx, innerR, r);
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
-      ctx.strokeRect(-r, -d/2, r*2, d);
+      ctx.strokeRect(-r, -d, r*2, d);
       ctx.strokeStyle = isSub ? '#dc2626' : '#0f172a';
-      ctx.strokeRect(-innerR, -d/2, innerR*2, d);
+      ctx.strokeRect(-innerR, -d, innerR*2, d);
       if(viewType === 'section' || isSub){
-        drawHatching45(ctx, -r, -d/2, (r - innerR), d);
-        drawHatching45(ctx, innerR, -d/2, (r - innerR), d);
+        drawHatching45(ctx, -r, -d, (r - innerR), d);
+        drawHatching45(ctx, innerR, -d, (r - innerR), d);
       }
-      drawCenterLine(ctx, 0, -d/2 - 10, 0, d/2 + 10);
+      drawCenterLine(ctx, 0, -d - 10, 0, 10);
     }
   }
   else if(s.type === 'elbow'){
@@ -1109,15 +1100,13 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
       ctx.beginPath();
-      ctx.arc(0, 0, rBend + r, 0, Math.PI / 2, false);
-      ctx.arc(0, 0, Math.max(2, rBend - r), Math.PI / 2, 0, true);
-      ctx.closePath();
+      ctx.arc(0, 0, rBend, 0, Math.PI / 2, false);
       ctx.stroke();
       if(viewType === 'section' || isSub){
-        drawHatching45(ctx, -rBend - r, 0, (rBend + r)*2, (rBend + r)*2);
+        drawHatching45(ctx, 0, -rBend, rBend, rBend);
       }
-      drawCenterLine(ctx, 0, 0, rBend + r + 10, 0);
-      drawCenterLine(ctx, 0, 0, 0, rBend + r + 10);
+      drawCenterLine(ctx, 0, 0, rBend + 10, 0);
+      drawCenterLine(ctx, 0, 0, 0, rBend + 10);
     }
   }
   else if(s.type === 'cone'){
@@ -1126,10 +1115,10 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       drawCenterCross(ctx, 0, 0, r + 10);
     } else {
       ctx.beginPath();
-      ctx.moveTo(-r, d/2); ctx.lineTo(0, -d/2); ctx.lineTo(r, d/2); ctx.closePath();
+      ctx.moveTo(-r, 0); ctx.lineTo(0, -d); ctx.lineTo(r, 0); ctx.closePath();
       ctx.stroke();
-      if(isSub) drawHatching45(ctx, -r, -d/2, r*2, d);
-      drawCenterLine(ctx, 0, -d/2 - 10, 0, d/2 + 10);
+      if(isSub) drawHatching45(ctx, -r, -d, r*2, d);
+      drawCenterLine(ctx, 0, -d - 10, 0, 10);
     }
   }
   else if(s.type === 'torus'){
@@ -1138,24 +1127,22 @@ function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
       ctx.beginPath(); ctx.arc(0, 0, Math.max(2, r - tubeR), 0, Math.PI * 2); ctx.stroke();
       drawCenterCross(ctx, 0, 0, r + tubeR + 10);
     } else {
-      ctx.beginPath(); ctx.arc(-r, 0, tubeR, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(r, 0, tubeR, 0, Math.PI * 2); ctx.stroke();
-      drawCenterLine(ctx, -r - tubeR - 10, 0, r + tubeR + 10, 0);
-      drawCenterCross(ctx, -r, 0, tubeR + 5);
-      drawCenterCross(ctx, r, 0, tubeR + 5);
+      ctx.beginPath(); ctx.arc(0, -tubeR, tubeR, 0, Math.PI * 2); ctx.stroke();
+      drawCenterLine(ctx, -r - 10, -tubeR, r + 10, -tubeR);
+      drawCenterCross(ctx, 0, -tubeR, tubeR + 5);
       if(isSub) drawHatching45Circle(ctx, tubeR);
     }
   }
   else if(s.type === 'wedge'){
     let dimY = viewType === 'top' ? h : d;
     ctx.beginPath();
-    ctx.moveTo(-w/2, dimY/2); ctx.lineTo(w/2, dimY/2); ctx.lineTo(w/2, -dimY/2); ctx.closePath();
+    ctx.moveTo(-w/2, 0); ctx.lineTo(w/2, 0); ctx.lineTo(w/2, -dimY); ctx.closePath();
     ctx.stroke();
-    if(isSub) drawHatching45(ctx, -w/2, -dimY/2, w, dimY);
+    if(isSub) drawHatching45(ctx, -w/2, -dimY, w, dimY);
   } else {
     let dimY = viewType === 'top' ? h : d;
-    ctx.strokeRect(-w/2, -dimY/2, w, dimY);
-    if(isSub) drawHatching45(ctx, -w/2, -dimY/2, w, dimY);
+    ctx.strokeRect(-w/2, -dimY, w, dimY);
+    if(isSub) drawHatching45(ctx, -w/2, -dimY, w, dimY);
   }
   ctx.restore();
 }
@@ -1275,7 +1262,7 @@ function renderTitleBlock(ctx, x, y){
   ctx.fillText(`Materiál: ${blueprintMeta.material}`, x + 10, y + 65);
   ctx.fillText(`Autor: ${blueprintMeta.author}`, x + 10, y + 112);
   ctx.fillText(`Výkres: ${blueprintMeta.docNo}`, x + 170, y + 65);
-  ctx.fillText(`Jednotky: mm (Z=Zvislá)`, x + 170, y + 112);
+  ctx.fillText(`Jednotky: mm (Z od 0)`, x + 170, y + 112);
   ctx.restore();
 }
 
@@ -1395,18 +1382,19 @@ function updateDimensionsPanel(){
     card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
     card.innerHTML = `<div class="shape-title-row"><strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong><button class="danger" style="padding:2px 5px;" onclick="shapes.splice(${i},1);rebuild3DScene();updateDimensionsPanel();">🗑️ Zmazať diel</button></div>`;
     
+    // Použitie inputmode="numeric" pre plnohodnotnú mobilnú klávesnicu s +/-
     const posRow = document.createElement('div');
     posRow.className = 'input-row';
-    posRow.innerHTML = `<div class="input-group-title">Pozícia X, Y, Z-Výška (mm):</div><label>X:</label><input type="number" step="5" value="${s.x||0}"><label>Y:</label><input type="number" step="5" value="${s.y||0}"><label style="color:var(--accent-green);font-weight:bold;">Z (Výška):</label><input type="number" step="5" value="${s.z||0}">`;
+    posRow.innerHTML = `<div class="input-group-title">Pozícia X, Y, Z-Výška (mm, min Z=0):</div><label>X:</label><input type="text" inputmode="numeric" value="${s.x||0}"><label>Y:</label><input type="text" inputmode="numeric" value="${s.y||0}"><label style="color:var(--accent-green);font-weight:bold;">Z (Výška):</label><input type="text" inputmode="numeric" value="${s.z||0}">`;
     const pInps = posRow.querySelectorAll('input');
     pInps[0].onchange = (e) => { s.x = parseFloat(e.target.value)||0; rebuild3DScene(); };
     pInps[1].onchange = (e) => { s.y = parseFloat(e.target.value)||0; rebuild3DScene(); };
-    pInps[2].onchange = (e) => { s.z = parseFloat(e.target.value)||0; rebuild3DScene(); };
+    pInps[2].onchange = (e) => { let val = parseFloat(e.target.value)||0; s.z = val < 0 ? 0 : val; rebuild3DScene(); };
     card.appendChild(posRow);
 
     const rotRow = document.createElement('div');
     rotRow.className = 'input-row';
-    rotRow.innerHTML = `<div class="input-group-title">Rotácia (°):</div><label>RX:</label><input type="number" step="15" value="${s.rx||0}"><label>RY:</label><input type="number" step="15" value="${s.ry||0}"><label>RZ:</label><input type="number" step="15" value="${s.rz||0}">`;
+    rotRow.innerHTML = `<div class="input-group-title">Rotácia (°):</div><label>RX:</label><input type="text" inputmode="numeric" value="${s.rx||0}"><label>RY:</label><input type="text" inputmode="numeric" value="${s.ry||0}"><label>RZ:</label><input type="text" inputmode="numeric" value="${s.rz||0}">`;
     const rInps = rotRow.querySelectorAll('input');
     rInps[0].onchange = (e) => { s.rx = parseFloat(e.target.value)||0; rebuild3DScene(); };
     rInps[1].onchange = (e) => { s.ry = parseFloat(e.target.value)||0; rebuild3DScene(); };
@@ -1417,43 +1405,43 @@ function updateDimensionsPanel(){
     dimRow.className = 'input-row';
     dimRow.innerHTML = `<div class="input-group-title">Parametre / Rozmery (mm):</div>`;
     if(s.type === 'box' || s.type === 'wedge'){
-      dimRow.innerHTML += `<label>Šírka (X):</label><input type="number" step="10" value="${s.w||100}"><label>Hĺbka (Y):</label><input type="number" step="10" value="${s.h||100}"><label>Výška (Z):</label><input type="number" step="10" value="${s.d||100}">`;
+      dimRow.innerHTML += `<label>Šírka (X):</label><input type="text" inputmode="numeric" value="${s.w||100}"><label>Hĺbka (Y):</label><input type="text" inputmode="numeric" value="${s.h||100}"><label>Výška (Z):</label><input type="text" inputmode="numeric" value="${s.d||100}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[2].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
     } else if(s.type === 'filletBox'){
-      dimRow.innerHTML += `<label>Š (X):</label><input type="number" step="10" value="${s.w||100}"><label>H (Y):</label><input type="number" step="10" value="${s.h||100}"><label>V (Z):</label><input type="number" step="10" value="${s.d||100}"><label>R:</label><input type="number" step="5" value="${s.fillet||10}">`;
+      dimRow.innerHTML += `<label>Š (X):</label><input type="text" inputmode="numeric" value="${s.w||100}"><label>H (Y):</label><input type="text" inputmode="numeric" value="${s.h||100}"><label>V (Z):</label><input type="text" inputmode="numeric" value="${s.d||100}"><label>R:</label><input type="text" inputmode="numeric" value="${s.fillet||10}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[2].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[3].onchange = (e) => { s.fillet = parseFloat(e.target.value)||5; rebuild3DScene(); };
     } else if(s.type === 'chamferBox'){
-      dimRow.innerHTML += `<label>Š (X):</label><input type="number" step="10" value="${s.w||100}"><label>H (Y):</label><input type="number" step="10" value="${s.h||100}"><label>V (Z):</label><input type="number" step="10" value="${s.d||100}"><label>C:</label><input type="number" step="5" value="${s.chamfer||10}">`;
+      dimRow.innerHTML += `<label>Š (X):</label><input type="text" inputmode="numeric" value="${s.w||100}"><label>H (Y):</label><input type="text" inputmode="numeric" value="${s.h||100}"><label>V (Z):</label><input type="text" inputmode="numeric" value="${s.d||100}"><label>C:</label><input type="text" inputmode="numeric" value="${s.chamfer||10}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.w = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[1].onchange = (e) => { s.h = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[2].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[3].onchange = (e) => { s.chamfer = parseFloat(e.target.value)||5; rebuild3DScene(); };
     } else if(s.type === 'pipe'){
-      dimRow.innerHTML += `<label>R:</label><input type="number" step="5" value="${s.r||50}"><label>Výška (Z):</label><input type="number" step="10" value="${s.d||100}"><label>Stena:</label><input type="number" step="2" value="${s.wall||10}">`;
+      dimRow.innerHTML += `<label>R:</label><input type="text" inputmode="numeric" value="${s.r||50}"><label>Výška (Z):</label><input type="text" inputmode="numeric" value="${s.d||100}"><label>Stena:</label><input type="text" inputmode="numeric" value="${s.wall||10}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[1].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[2].onchange = (e) => { s.wall = parseFloat(e.target.value)||5; rebuild3DScene(); };
     } else if(s.type === 'cylinder' || s.type === 'cone' || s.type === 'threadedRod' || s.type === 'elbow'){
-      dimRow.innerHTML += `<label>R:</label><input type="number" step="5" value="${s.r||50}"><label>Výška (Z):</label><input type="number" step="10" value="${s.d||100}">`;
+      dimRow.innerHTML += `<label>R:</label><input type="text" inputmode="numeric" value="${s.r||50}"><label>Výška (Z):</label><input type="text" inputmode="numeric" value="${s.d||100}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[1].onchange = (e) => { s.d = parseFloat(e.target.value)||10; rebuild3DScene(); };
     } else if(s.type === 'torus'){
-      dimRow.innerHTML += `<label>R:</label><input type="number" step="5" value="${s.r||50}"><label>r:</label><input type="number" step="2" value="${s.tube||15}">`;
+      dimRow.innerHTML += `<label>R:</label><input type="text" inputmode="numeric" value="${s.r||50}"><label>r:</label><input type="text" inputmode="numeric" value="${s.tube||15}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
       dInps[1].onchange = (e) => { s.tube = parseFloat(e.target.value)||5; rebuild3DScene(); };
     } else if(s.type === 'sphere'){
-      dimRow.innerHTML += `<label>R:</label><input type="number" step="5" value="${s.r||50}">`;
+      dimRow.innerHTML += `<label>R:</label><input type="text" inputmode="numeric" value="${s.r||50}">`;
       const dInps = dimRow.querySelectorAll('input');
       dInps[0].onchange = (e) => { s.r = parseFloat(e.target.value)||10; rebuild3DScene(); };
     }
