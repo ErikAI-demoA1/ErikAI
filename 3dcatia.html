@@ -1027,178 +1027,71 @@ function generateEngineeringBlueprint(){
   renderTitleBlock(ctx, canvas.width - 430, canvas.height - 160);
 }
 
+// SKUTOČNÝ 1:1 PREVOD Z 3D GEOMETRIE DO 2D PROJEKCIE
 function renderAccurateProjection(ctx, s, offsetX, offsetY, viewType){
   ctx.save();
   const autoSc = calculateDynamicScale();
+  const geo = createGeometryForShape(s);
   
-  let px = offsetX + (s.x || 0) * autoSc * 0.1;
-  let py = offsetY + (viewType==='top' ? -(s.y || 0) : -(s.z || 0)) * autoSc * 0.1;
-  
-  ctx.translate(px, py);
-  
-  ctx.rotate((s.rz || 0) * Math.PI / 180);
-  if(viewType === 'front') ctx.rotate((s.rx || 0) * Math.PI / 180);
-  if(viewType === 'side') ctx.rotate((s.ry || 0) * Math.PI / 180);
+  // Aplikovanie 3D transformácií priamo na vrcholy geometrie
+  const matrix = new THREE.Matrix4();
+  const position = new THREE.Vector3((s.x||0)/10, (s.y||0)/10, (s.z||0)/10);
+  const rotation = new THREE.Euler(
+    (s.rx || 0) * Math.PI / 180,
+    (s.ry || 0) * Math.PI / 180,
+    (s.rz || 0) * Math.PI / 180,
+    'XYZ'
+  );
+  matrix.makeRotationFromEuler(rotation);
+  matrix.setPosition(position);
+  geo.applyMatrix4(matrix);
+
+  const posAttr = geo.attributes.position;
+  if (!posAttr) { ctx.restore(); return; }
 
   const isSub = s.op === 'subtract';
+  ctx.strokeStyle = isSub ? '#dc2626' : '#0f172a';
+  ctx.lineWidth = 2;
 
-  if(isSub){
-    ctx.strokeStyle = '#dc2626';
-    ctx.lineWidth = 2;
-  } else {
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  let pointsDrawn = 0;
+
+  for (let i = 0; i < posAttr.count; i++) {
+    let vx = posAttr.getX(i);
+    let vy = posAttr.getY(i);
+    let vz = posAttr.getZ(i);
+
+    // Výpočet 2D súradníc podľa ortografického pohľadu
+    let drawX = offsetX + vx * autoSc * 10;
+    let drawY = offsetY;
+
+    if (viewType === 'front') {
+      drawY = offsetY - vz * autoSc * 10;
+    } else if (viewType === 'top') {
+      drawY = offsetY - vy * autoSc * 10;
+    } else if (viewType === 'side') {
+      drawX = offsetX + vy * autoSc * 10;
+      drawY = offsetY - vz * autoSc * 10;
+    } else {
+      drawY = offsetY - vz * autoSc * 10;
+    }
+
+    if (i === 0) {
+      ctx.moveTo(drawX, drawY);
+    } else {
+      ctx.lineTo(drawX, drawY);
+    }
+    pointsDrawn++;
   }
 
-  let w = (s.w || 100) * autoSc * 0.1;
-  let h = (s.h || 100) * autoSc * 0.1;
-  let d = (s.d || 100) * autoSc * 0.1;
-  let r = (s.r || 50) * autoSc * 0.1;
-  let tubeR = (s.tube || 15) * autoSc * 0.1;
-  let filletR = (s.fillet || 10) * autoSc * 0.1;
-  let chamferVal = (s.chamfer || 10) * autoSc * 0.1;
+  if (pointsDrawn > 0) {
+    ctx.stroke();
+    if (viewType === 'section' || isSub) {
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+      ctx.fill();
+    }
+  }
 
-  if(s.type === 'box'){
-    let dimY = viewType === 'top' ? h : d;
-    ctx.strokeRect(-w/2, -dimY, w, dimY);
-    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
-  } 
-  else if(s.type === 'filletBox'){
-    let dimY = viewType === 'top' ? h : d;
-    let fr = Math.min(filletR, w/4, dimY/4);
-    ctx.beginPath();
-    ctx.moveTo(-w/2 + fr, -dimY);
-    ctx.lineTo(w/2 - fr, -dimY);
-    ctx.quadraticCurveTo(w/2, -dimY, w/2, -dimY + fr);
-    ctx.lineTo(w/2, 0 - fr);
-    ctx.quadraticCurveTo(w/2, 0, w/2 - fr, 0);
-    ctx.lineTo(-w/2 + fr, 0);
-    ctx.quadraticCurveTo(-w/2, 0, -w/2, 0 - fr);
-    ctx.lineTo(-w/2, -dimY + fr);
-    ctx.quadraticCurveTo(-w/2, -dimY, -w/2 + fr, -dimY);
-    ctx.closePath();
-    ctx.stroke();
-    if(viewType === 'section' || isSub){ ctx.fill(); drawHatching45(ctx, -w/2, -dimY, w, dimY); }
-  }
-  else if(s.type === 'chamferBox'){
-    let dimY = viewType === 'top' ? h : d;
-    let cr = Math.min(chamferVal, w/4, dimY/4);
-    ctx.beginPath();
-    ctx.moveTo(-w/2 + cr, -dimY);
-    ctx.lineTo(w/2 - cr, -dimY);
-    ctx.lineTo(w/2, -dimY + cr);
-    ctx.lineTo(w/2, -cr);
-    ctx.lineTo(w/2 - cr, 0);
-    ctx.lineTo(-w/2 + cr, 0);
-    ctx.lineTo(-w/2, -cr);
-    ctx.lineTo(-w/2, -dimY + cr);
-    ctx.closePath();
-    ctx.stroke();
-    if(viewType === 'section' || isSub){ drawHatching45(ctx, -w/2, -dimY, w, dimY); }
-  }
-  else if(s.type === 'cylinder'){
-    if(viewType === 'top'){
-      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-      if(isSub) drawHatching45Circle(ctx, r);
-      drawCenterCross(ctx, 0, 0, r + 10);
-    } else {
-      ctx.strokeRect(-r, -d, r*2, d);
-      if(isSub) drawHatching45(ctx, -r, -d, r*2, d);
-      drawCenterLine(ctx, 0, -d - 10, 0, 10);
-    }
-  }
-  else if(s.type === 'threadedRod'){
-    let threadR = r * 0.85;
-    if(viewType === 'top'){
-      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-      ctx.save();
-      ctx.lineWidth = 1.0;
-      ctx.strokeStyle = isSub ? '#dc2626' : '#2563eb';
-      ctx.beginPath(); ctx.arc(0, 0, threadR, 0, Math.PI * 1.5); ctx.stroke();
-      ctx.restore();
-      drawCenterCross(ctx, 0, 0, r + 10);
-    } else {
-      ctx.strokeRect(-r, -d, r*2, d);
-      ctx.save();
-      ctx.lineWidth = 1.0;
-      ctx.strokeStyle = isSub ? '#dc2626' : '#2563eb';
-      ctx.beginPath();
-      ctx.moveTo(-threadR, -d); ctx.lineTo(-threadR, 0);
-      ctx.moveTo(threadR, -d); ctx.lineTo(threadR, 0);
-      ctx.stroke();
-      ctx.restore();
-      if(isSub) drawHatching45(ctx, -r, -d, r*2, d);
-      drawCenterLine(ctx, 0, -d - 10, 0, 10);
-    }
-  }
-  else if(s.type === 'pipe'){
-    let innerR = Math.max(2, (s.r - (s.wall || 10))) * autoSc * 0.1;
-    if(viewType === 'top'){
-      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI * 2); ctx.stroke();
-      if(isSub) drawHatching45Ring(ctx, innerR, r);
-      drawCenterCross(ctx, 0, 0, r + 10);
-    } else {
-      ctx.strokeRect(-r, -d, r*2, d);
-      ctx.strokeStyle = isSub ? '#dc2626' : '#0f172a';
-      ctx.strokeRect(-innerR, -d, innerR*2, d);
-      if(viewType === 'section' || isSub){
-        drawHatching45(ctx, -r, -d, (r - innerR), d);
-        drawHatching45(ctx, innerR, -d, (r - innerR), d);
-      }
-      drawCenterLine(ctx, 0, -d - 10, 0, 10);
-    }
-  }
-  else if(s.type === 'elbow'){
-    // Presné vykreslenie 90° kolena potrubia v 2D projekcii
-    let rBend = r * 2.0;
-    ctx.beginPath();
-    ctx.arc(0, 0, rBend, 0, Math.PI / 2, false);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(0, 0, Math.max(2, rBend - r), 0, Math.PI / 2, false);
-    ctx.stroke();
-    if(viewType === 'section' || isSub){
-      drawHatching45(ctx, 0, -rBend, rBend, rBend);
-    }
-    drawCenterLine(ctx, 0, 0, rBend + 10, 0);
-    drawCenterLine(ctx, 0, 0, 0, rBend + 10);
-  }
-  else if(s.type === 'cone'){
-    if(viewType === 'top'){
-      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-      drawCenterCross(ctx, 0, 0, r + 10);
-    } else {
-      ctx.beginPath();
-      ctx.moveTo(-r, 0); ctx.lineTo(0, -d); ctx.lineTo(r, 0); ctx.closePath();
-      ctx.stroke();
-      if(isSub) drawHatching45(ctx, -r, -d, r*2, d);
-      drawCenterLine(ctx, 0, -d - 10, 0, 10);
-    }
-  }
-  else if(s.type === 'torus'){
-    if(viewType === 'top'){
-      ctx.beginPath(); ctx.arc(0, 0, r + tubeR, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, Math.max(2, r - tubeR), 0, Math.PI * 2); ctx.stroke();
-      drawCenterCross(ctx, 0, 0, r + tubeR + 10);
-    } else {
-      ctx.beginPath(); ctx.arc(0, -tubeR, tubeR, 0, Math.PI * 2); ctx.stroke();
-      drawCenterLine(ctx, -r - 10, -tubeR, r + 10, -tubeR);
-      drawCenterCross(ctx, 0, -tubeR, tubeR + 5);
-      if(isSub) drawHatching45Circle(ctx, tubeR);
-    }
-  }
-  else if(s.type === 'wedge'){
-    let dimY = viewType === 'top' ? h : d;
-    ctx.beginPath();
-    ctx.moveTo(-w/2, 0); ctx.lineTo(w/2, 0); ctx.lineTo(w/2, -dimY); ctx.closePath();
-    ctx.stroke();
-    if(isSub) drawHatching45(ctx, -w/2, -dimY, w, dimY);
-  } else {
-    let dimY = viewType === 'top' ? h : d;
-    ctx.strokeRect(-w/2, -dimY, w, dimY);
-    if(isSub) drawHatching45(ctx, -w/2, -dimY, w, dimY);
-  }
   ctx.restore();
 }
 
@@ -1215,25 +1108,6 @@ function drawHatching45(ctx, x, y, w, h){
   ctx.restore();
 }
 
-function drawHatching45Circle(ctx, r){
-  ctx.save();
-  ctx.strokeStyle = '#ef4444';
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  for(let i = -r; i < r; i += 8){
-    ctx.moveTo(i, -r); ctx.lineTo(i, r);
-  }
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawHatching45Ring(ctx, r1, r2){
-  ctx.save();
-  ctx.clip();
-  drawHatching45Circle(ctx, r2);
-  ctx.restore();
-}
-
 function drawCenterLine(ctx, x1, y1, x2, y2){
   ctx.save();
   ctx.strokeStyle = '#ef4444';
@@ -1243,11 +1117,6 @@ function drawCenterLine(ctx, x1, y1, x2, y2){
   ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
   ctx.stroke();
   ctx.restore();
-}
-
-function drawCenterCross(ctx, cx, cy, size){
-  drawCenterLine(ctx, cx - size, cy, cx + size, cy);
-  drawCenterLine(ctx, cx, cy - size, cx, cy + size);
 }
 
 function renderSectionLine(ctx, x1, y1, x2, y2, label){
