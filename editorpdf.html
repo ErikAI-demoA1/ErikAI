@@ -45,11 +45,14 @@
             position: absolute;
             box-sizing: border-box;
             touch-action: none;
-            cursor: move !important;
+            cursor: grab;
+            user-select: none;
+        }
+        .canvas-element:active, .whiteout-box:active, .image-element:active, .table-element:active {
+            cursor: grabbing;
         }
         .canvas-element {
             border: 1px dashed rgba(239, 68, 68, 0.7);
-            user-select: none;
             padding: 2px 4px;
         }
         .canvas-element.selected {
@@ -97,6 +100,7 @@
             text-align: left;
             font-size: 13px;
             outline: none;
+            cursor: text;
         }
         .table-element td:focus, .table-element th:focus {
             background-color: rgba(16, 185, 129, 0.2);
@@ -592,43 +596,51 @@
             return el;
         }
 
+        // Dokonalý, stabilný mechanizmus ťahania objektov
         function makeInteractive(el) {
-            let startX = 0, startY = 0, initLeft = 0, initTop = 0;
+            let isDragging = false;
+            let startX, startY, initLeft, initTop;
 
-            const onStart = (clientX, clientY, e) => {
-                if (currentMode === 'pan' || e.target.tagName === 'TD' || e.target.tagName === 'TH') return;
+            el.addEventListener('pointerdown', (e) => {
+                if (currentMode === 'pan' || e.target.tagName === 'TD' || e.target.tagName === 'TH' || e.target.isContentEditable) return;
                 
+                isDragging = true;
+                el.setPointerCapture(e.pointerId);
                 selectElement(el);
-                e.stopPropagation();
                 
-                startX = clientX;
-                startY = clientY;
-                initLeft = parseFloat(el.style.left);
-                initTop = parseFloat(el.style.top);
+                startX = e.clientX;
+                startY = e.clientY;
+                initLeft = parseFloat(el.style.left) || 0;
+                initTop = parseFloat(el.style.top) || 0;
+                
+                e.stopPropagation();
+            });
 
-                const onMove = (moveX, moveY) => {
-                    const newLeft = initLeft + (moveX - startX);
-                    const newTop = initTop + (moveY - startY);
-                    el.style.left = newLeft + 'px';
-                    el.style.top = newTop + 'px';
-                    el.dataset.baseLeft = newLeft / currentZoom;
-                    el.dataset.baseTop = newTop / currentZoom;
-                };
+            el.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                const newLeft = initLeft + dx;
+                const newTop = initTop + dy;
+                
+                el.style.left = newLeft + 'px';
+                el.style.top = newTop + 'px';
+                
+                el.dataset.baseLeft = newLeft / currentZoom;
+                el.dataset.baseTop = newTop / currentZoom;
+            });
 
-                const onEnd = () => {
-                    window.removeEventListener('mousemove', mouseMoveHandler);
-                    window.removeEventListener('mouseup', mouseUpHandler);
-                    saveAnnotations();
-                };
-
-                const mouseMoveHandler = (e) => onMove(e.clientX, e.clientY);
-                const mouseUpHandler = () => onEnd();
-
-                window.addEventListener('mousemove', mouseMoveHandler);
-                window.addEventListener('mouseup', mouseUpHandler);
+            const stopDrag = (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                try { el.releasePointerCapture(e.pointerId); } catch(err) {}
+                saveAnnotations();
             };
 
-            el.onmousedown = (e) => onStart(e.clientX, e.clientY, e);
+            el.addEventListener('pointerup', stopDrag);
+            el.addEventListener('pointercancel', stopDrag);
         }
 
         wrapper.addEventListener('click', () => { if (currentMode === 'edit') selectElement(null); });
