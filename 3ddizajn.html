@@ -3,10 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 3D CATIA Studio v8.5</title>
+<title>ErikAI Pro 3D CATIA Studio v8.6</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three-csg-ts@3.1.16/lib/bundle.js"></script>
 
 <style>
 :root{
@@ -170,8 +169,9 @@ select.format-select {
   <div class="panel">
     <select id="shapeSelector" class="format-select">
       <option value="box">🧊 Kocka / Kváder</option>
+      <option value="boxHole">🕳️ Kocka s kruhovým otvorom</option>
       <option value="cylinder">🧪 Kruh / Valec</option>
-      <option value="pipe">⭕ Rúra s otvorom</option>
+      <option value="pipe">⭕ Rúra / Valec s dierou</option>
       <option value="elbow90">↩️ Koleno 90°</option>
       <option value="triangle">📐 Trojuholník</option>
       <option value="trapezoid">⏢ Lichobežník</option>
@@ -193,11 +193,6 @@ select.format-select {
       <option value="keyway">🔑 Drážka pre pero</option>
     </select>
 
-    <select id="csgOperationSelector" class="format-select" style="border-color: var(--accent-blue);">
-      <option value="add">➕ Pridať teleso</option>
-      <option value="subtract">➖ Odobrať materiál</option>
-    </select>
-
     <button onclick="addNewShape()" style="background:var(--accent-green);">➕ Vytvoriť Tvar</button>
   </div>
 
@@ -213,14 +208,14 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">3D CATIA Z-Up Studio v8.5 | Z >= 0 | Otáčanie: Ľavé tlačidlo myši | Posun: Pravé tlačidlo</span>
+  <span id="infoCoords">3D CATIA Z-Up Studio v8.6 | Z >= 0 | Otáčanie: Ľavé tlačidlo myši | Posun: Pravé tlačidlo</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
 <!-- Panel Správcu 3D Dielov -->
 <div id="dimensionsPanel">
   <div class="panel-header">
-    <h3>CATIA Editor Tvarov & Rotácií</h3>
+    <h3>CATIA Editor Tvarov & Otvorov</h3>
     <button class="close-btn" onclick="togglePanel()">✕</button>
   </div>
   <div id="dimsContent">Zatiaľ žiadne telesá v scéne. Vytvorte nové teleso.</div>
@@ -230,8 +225,7 @@ select.format-select {
 THREE.Object3D.DefaultUp.set(0, 0, 1);
 
 let shapes = [
-  { type: 'box', op: 'add', x: 0, y: 0, z: 0, w: 120, h: 120, d: 40, r: 50, wall: 10, rx: 0, ry: 0, rz: 0, color: '#10b981' },
-  { type: 'cylinder', op: 'subtract', x: 0, y: 0, z: 0, w: 100, h: 100, d: 50, r: 30, wall: 10, rx: 0, ry: 0, rz: 0, color: '#ef4444' }
+  { type: 'boxHole', x: 0, y: 0, z: 0, w: 120, h: 120, d: 40, r: 30, rx: 0, ry: 0, rz: 0, color: '#3b82f6' }
 ];
 
 let selectedShapeIndex = 0;
@@ -249,14 +243,13 @@ function togglePanel(){
 
 function addNewShape(){
   const type = document.getElementById('shapeSelector').value;
-  const op = document.getElementById('csgOperationSelector').value;
   
   shapes.push({
-    type: type, op: op,
+    type: type,
     x: 0, y: 0, z: 0,
-    w: 100, h: 100, d: 60, r: 40, wall: 10,
+    w: 100, h: 100, d: 60, r: 25,
     rx: 0, ry: 0, rz: 0,
-    color: op === 'subtract' ? '#ef4444' : '#10b981'
+    color: '#10b981'
   });
 
   selectedShapeIndex = shapes.length - 1;
@@ -271,7 +264,7 @@ function clearAll(){
   updatePanel();
 }
 
-function buildCustom2DShape(type, scW, scH, scR, scWall){
+function buildCustom2DShape(type, scW, scH, scR){
   const shape = new THREE.Shape();
   if(type === 'triangle'){
     shape.moveTo(-scW/2, -scH/2); shape.lineTo(scW/2, -scH/2); shape.lineTo(0, scH/2); shape.closePath();
@@ -349,12 +342,19 @@ function createGeometryForShape(s){
   const scW = (s.w || 100) / 10;
   const scH = (s.h || 100) / 10;
   const scD = (s.d || 60) / 10;
-  const scR = (s.r || 40) / 10;
-  const scWall = (s.wall || 10) / 10;
+  const scR = (s.r || 25) / 10;
 
   if(s.type === 'box') {
     geo = new THREE.BoxGeometry(scW, scH, scD);
     geo.translate(0, 0, scD / 2);
+  } else if(s.type === 'boxHole') {
+    const shape = new THREE.Shape();
+    shape.moveTo(-scW/2, -scH/2); shape.lineTo(scW/2, -scH/2); shape.lineTo(scW/2, scH/2); shape.lineTo(-scW/2, scH/2); shape.closePath();
+    const holePath = new THREE.Path();
+    holePath.absarc(0, 0, scR, 0, Math.PI * 2, true);
+    shape.holes.push(holePath);
+    geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: false, curveSegments: 32 });
+    geo.center(); geo.translate(0, 0, scD / 2);
   } else if(s.type === 'cylinder') {
     geo = new THREE.CylinderGeometry(scR, scR, scD, 32);
     geo.rotateX(Math.PI / 2);
@@ -362,7 +362,7 @@ function createGeometryForShape(s){
   } else if(s.type === 'pipe') {
     const shape = new THREE.Shape();
     shape.absarc(0, 0, scR, 0, Math.PI * 2, false);
-    const innerR = Math.max(0.5, scR - scWall);
+    const innerR = Math.max(0.5, scR * 0.6);
     const holePath = new THREE.Path();
     holePath.absarc(0, 0, innerR, 0, Math.PI * 2, true);
     shape.holes.push(holePath);
@@ -378,7 +378,7 @@ function createGeometryForShape(s){
     );
     geo = new THREE.ExtrudeGeometry(pipeShape, { steps: 20, extrudePath: curve, bevelEnabled: false });
   } else {
-    const shape2D = buildCustom2DShape(s.type, scW, scH, scR, scWall);
+    const shape2D = buildCustom2DShape(s.type, scW, scH, scR);
     geo = new THREE.ExtrudeGeometry(shape2D, { depth: scD, bevelEnabled: false, curveSegments: 32 });
     geo.center(); geo.translate(0, 0, scD / 2);
   }
@@ -419,16 +419,13 @@ function updateScene3D(){
   scene.traverse(child => { if(child.isMesh) removeObjects.push(child); });
   removeObjects.forEach(m => scene.remove(m));
 
-  let baseMeshes = [];
-  let subtractiveMeshes = [];
-
   shapes.forEach((s, idx) => {
     const geo = createGeometryForShape(s);
     const isSelected = idx === selectedShapeIndex;
-    const meshColor = s.color || (s.op === 'subtract' ? '#ef4444' : '#10b981');
+    const meshColor = s.color || '#10b981';
     const mat = new THREE.MeshStandardMaterial({ 
       color: isSelected ? '#3b82f6' : meshColor, 
-      roughness: 0.3, metalness: 0.2, transparent: s.op === 'subtract', opacity: s.op === 'subtract' ? 0.6 : 1.0 
+      roughness: 0.3, metalness: 0.2 
     });
     const mesh = new THREE.Mesh(geo, mat);
     
@@ -442,41 +439,8 @@ function updateScene3D(){
       THREE.MathUtils.degToRad(s.ry || 0),
       THREE.MathUtils.degToRad(s.rz || 0)
     );
-    mesh.updateMatrix();
-
-    if(s.op === 'subtract') {
-      subtractiveMeshes.push(mesh);
-      scene.add(mesh); // V editori ukážeme červené rezné teleso
-    } else {
-      baseMeshes.push(mesh);
-    }
+    scene.add(mesh);
   });
-
-  if(baseMeshes.length > 0) {
-    let primaryMesh = baseMeshes[0];
-    scene.add(primaryMesh);
-
-    // Ak máme CSG knižnicu a odoberacie telesá, aplikujeme prioritné odčítanie
-    if(subtractiveMeshes.length > 0 && typeof CSG !== 'undefined'){
-      try {
-        let csgBase = CSG.fromMesh(primaryMesh);
-        subtractiveMeshes.forEach(sub => {
-          sub.updateMatrix();
-          const csgSub = CSG.fromMesh(sub);
-          csgBase = csgBase.subtract(csgSub);
-        });
-        scene.remove(primaryMesh);
-        const resultingMesh = CSG.toMesh(csgBase, primaryMesh.matrix);
-        resultingMesh.material = primaryMesh.material;
-        scene.add(resultingMesh);
-      } catch(err){
-        console.error("CSG Chyba:", err);
-        baseMeshes.slice(1).forEach(m => scene.add(m));
-      }
-    } else {
-      baseMeshes.slice(1).forEach(m => scene.add(m));
-    }
-  }
 
   infoCount.textContent = `Počet dielov: ${shapes.length}`;
 }
@@ -517,7 +481,7 @@ function updatePanel(){
     
     card.innerHTML = `
       <div class="shape-title-row">
-        <strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong>
+        <strong>#${i+1} ${s.type.toUpperCase()}</strong>
         <button class="danger" style="padding:2px 6px;" onclick="event.stopPropagation(); shapes.splice(${i},1); selectedShapeIndex=0; updateScene3D(); updatePanel();">🗑️ Zmazať</button>
       </div>
       <div class="input-group-title">Súradnice [Z >= 0] & Farba (mm):</div>
@@ -533,12 +497,12 @@ function updatePanel(){
         <label>Rot Y:</label><input type="number" value="${s.ry||0}" oninput="updateShapeParam(${i}, 'ry', this.value)">
         <label>Rot Z:</label><input type="number" value="${s.rz||0}" oninput="updateShapeParam(${i}, 'rz', this.value)">
       </div>
-      <div class="input-group-title">Rozmery (mm):</div>
+      <div class="input-group-title">Rozmery & Otvor (mm):</div>
       <div class="input-row">
         <label>Šírka:</label><input type="number" value="${s.w||100}" oninput="updateShapeParam(${i}, 'w', this.value)">
         <label>Hĺbka:</label><input type="number" value="${s.h||100}" oninput="updateShapeParam(${i}, 'h', this.value)">
         <label>Výška:</label><input type="number" value="${s.d||60}" oninput="updateShapeParam(${i}, 'd', this.value)">
-        <label>Polomer:</label><input type="number" value="${s.r||40}" oninput="updateShapeParam(${i}, 'r', this.value)">
+        <label>Diera/R:</label><input type="number" value="${s.r||25}" oninput="updateShapeParam(${i}, 'r', this.value)">
       </div>
     `;
     dimsContent.appendChild(card);
@@ -553,14 +517,13 @@ function export3DHTML(){
 <title>ErikAI CATIA 3D Model</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>
-<script src="https://cdn.jsdelivr.net/npm/three-csg-ts@3.1.16/lib/bundle.js"><\/script>
 <style>
   body { margin: 0; overflow: hidden; background: #0b0d13; font-family: sans-serif; color: white; }
   #info { position: absolute; top: 10px; left: 10px; padding: 8px 12px; background: rgba(30,34,45,0.8); border-radius: 6px; }
 </style>
 </head>
 <body>
-<div id="info"><h3>ErikAI CATIA 3D Model</h3><p>Interaktívny 3D model (S plným vyrezaním CSG)</p></div>
+<div id="info"><h3>ErikAI CATIA 3D Model</h3><p>Interaktívny 3D model s priamymi otvormi</p></div>
 <script>
   THREE.Object3D.DefaultUp.set(0, 0, 1);
   const scene = new THREE.Scene();
@@ -584,13 +547,10 @@ function export3DHTML(){
   ${createGeometryForShape.toString()}
 
   const shapesData = ${JSON.stringify(shapes)};
-  let baseMeshes = [];
-  let subtractiveMeshes = [];
-
   shapesData.forEach((s) => {
     const geo = createGeometryForShape(s);
     const mat = new THREE.MeshStandardMaterial({ 
-      color: s.color || (s.op === 'subtract' ? '#ef4444' : '#10b981'), 
+      color: s.color || '#10b981', 
       roughness: 0.3, metalness: 0.2 
     });
     const mesh = new THREE.Mesh(geo, mat);
@@ -600,37 +560,8 @@ function export3DHTML(){
       THREE.MathUtils.degToRad(s.ry || 0),
       THREE.MathUtils.degToRad(s.rz || 0)
     );
-    mesh.updateMatrix();
-
-    if(s.op === 'subtract') {
-      subtractiveMeshes.push(mesh);
-    } else {
-      baseMeshes.push(mesh);
-    }
+    scene.add(mesh);
   });
-
-  if(baseMeshes.length > 0){
-    let primaryMesh = baseMeshes[0];
-    if(subtractiveMeshes.length > 0 && typeof CSG !== 'undefined'){
-      try {
-        let csgBase = CSG.fromMesh(primaryMesh);
-        subtractiveMeshes.forEach(sub => {
-          sub.updateMatrix();
-          const csgSub = CSG.fromMesh(sub);
-          csgBase = csgBase.subtract(csgSub);
-        });
-        const resultingMesh = CSG.toMesh(csgBase, primaryMesh.matrix);
-        resultingMesh.material = primaryMesh.material;
-        scene.add(resultingMesh);
-      } catch(err){
-        console.error("CSG Error v exporte:", err);
-        scene.add(primaryMesh);
-      }
-    } else {
-      scene.add(primaryMesh);
-    }
-    baseMeshes.slice(1).forEach(m => scene.add(m));
-  }
 
   function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
   animate();
