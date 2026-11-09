@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v2.9 - Respawn Fix Final</title>
+<title>ErikAI Voxel Craft 3D v2.9 - Respawn Ultimate Fix</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -44,20 +44,20 @@ body, html {
 
 #deathScreen {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(239, 68, 68, 0.92); display: none;
+  background: rgba(220, 38, 38, 0.95); display: none;
   flex-direction: column; justify-content: center; align-items: center;
-  z-index: 1000; color: white; text-align: center; padding: 20px;
-  backdrop-filter: blur(8px);
+  z-index: 99999; color: white; text-align: center; padding: 20px;
+  backdrop-filter: blur(10px);
   pointer-events: auto;
 }
 #deathScreen h1 { font-size: 2.5rem; margin: 0 0 10px 0; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-#deathScreen p { font-size: 1.1rem; margin-bottom: 20px; }
+#deathScreen p { font-size: 1.1rem; margin-bottom: 25px; }
 #deathScreen button {
-  padding: 14px 28px; background: white; color: #ef4444; border: none;
-  border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4); pointer-events: auto;
-  z-index: 1001;
+  padding: 16px 32px; background: white; color: #ef4444; border: none;
+  border-radius: 10px; font-size: 1.25rem; font-weight: bold; cursor: pointer;
+  box-shadow: 0 6px 25px rgba(0,0,0,0.5); pointer-events: auto;
 }
+#deathScreen button:active { transform: scale(0.95); background: #f3f4f6; }
 
 /* UI PRVKY: JOYSTICK A SKOK */
 #joystickZone {
@@ -99,7 +99,7 @@ button.action-btn {
   <div class="stat-row"><span>Uložené bloky:</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>FPS:</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">⚠️ Respawn a dotyky opravené!</div>
+  <div class="warning-text">⚠️ Respawn bug vyriešený.</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Nový Svet</button>
 </div>
 
@@ -174,7 +174,7 @@ let isGrounded = false;
 let playerAngle = 0, cameraPitch = 0.45;
 let walkAnimationTime = 0;
 
-let enemyPos = { x: 20, y: 20, z: 10 };
+let enemyPos = { x: 25, y: 25, z: 10 };
 let enemyVelocityZ = 0;
 let enemyGrounded = false;
 let enemyWalkAnim = 0;
@@ -212,9 +212,9 @@ function init() {
   playerPos.z = getTerrainHeight(0,0) + 3;
   playerVelocityZ = 0;
 
-  enemyPos.x = 20;
-  enemyPos.y = 20;
-  enemyPos.z = getTerrainHeight(20, 20) + 3;
+  enemyPos.x = 25;
+  enemyPos.y = 25;
+  enemyPos.z = getTerrainHeight(25, 25) + 3;
   enemyVelocityZ = 0;
 
   updateChunks();
@@ -224,17 +224,15 @@ function init() {
   setupTouchLook();
   setupKeyboardControls();
 
-  // Spojenie respawn tlačidla cez viacero eventov pre istotu
+  // Spojenie respawn tlačidla cez click a touchend s okamžitým ukončením bublania eventu
   const respawnBtn = document.getElementById('respawnBtn');
-  respawnBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    respawnPlayer();
-  });
-  respawnBtn.addEventListener('touchend', (e) => {
-    e.stopPropagation();
+  const triggerRespawn = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     respawnPlayer();
-  });
+  };
+  respawnBtn.addEventListener('click', triggerRespawn);
+  respawnBtn.addEventListener('touchend', triggerRespawn);
 
   window.addEventListener('resize', onWindowResize);
   document.getElementById('seedVal').textContent = currentSeed;
@@ -527,7 +525,7 @@ function respawnPlayer() {
   isDead = false;
   document.getElementById('deathScreen').style.display = 'none';
   
-  // Reset všetkých vstupov a joysticku
+  // Vynulovanie ovládania
   keyboardKeys = { forward: false, backward: false, left: false, right: false };
   joystickMove = { x: 0, y: 0 };
   joystickTouchId = null;
@@ -541,10 +539,10 @@ function respawnPlayer() {
   playerVelocityZ = 0;
   isGrounded = true;
   
-  // Pozícia nepriateľa ďalej, aby ťa hneď nezabil
-  enemyPos.x = 20;
-  enemyPos.y = 20;
-  enemyPos.z = getTerrainHeight(20, 20) + 3.0;
+  // Bezpečný respawn nepriateľa (25 blokov ďaleko, aby hneď nezabil)
+  enemyPos.x = 25;
+  enemyPos.y = 25;
+  enemyPos.z = getTerrainHeight(25, 25) + 3.0;
   enemyVelocityZ = 0;
   enemyGrounded = true;
   
@@ -703,7 +701,6 @@ function updatePlayerMovement() {
     isMoving = true;
   }
 
-  // FYZIKA KOPCOV: Prevýšenie max 1 blok alebo skok vo vzduchu
   const currentGround = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y));
   const targetGround = getTerrainHeight(Math.round(nextX), Math.round(nextY));
 
@@ -716,7 +713,6 @@ function updatePlayerMovement() {
     }
   }
 
-  // Gravitácia a kolízia hráča
   playerVelocityZ -= 0.02;
   playerPos.z += playerVelocityZ;
 
@@ -776,7 +772,6 @@ function updatePlayerMovement() {
     updateCharacterAnimation(enemy, false, true);
   }
 
-  // Gravitácia nepriateľa
   enemyVelocityZ -= 0.02;
   enemyPos.z += enemyVelocityZ;
   const enemyFootZ = Math.floor(enemyPos.z);
@@ -796,7 +791,6 @@ function updatePlayerMovement() {
   enemy.position.set(enemyPos.x, enemyPos.y, enemyPos.z);
   enemy.rotation.z = Math.atan2(dy, dx) - Math.PI/2;
 
-  // Sledowanie kamerou
   const camDist = 8;
   camera.position.x = playerPos.x + Math.sin(playerAngle) * (camDist * Math.cos(cameraPitch));
   camera.position.y = playerPos.y - Math.cos(playerAngle) * (camDist * Math.cos(cameraPitch));
