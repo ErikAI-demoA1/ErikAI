@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 3D CATIA Studio v8.6</title>
+<title>ErikAI Pro 3D CATIA Studio v8.7</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
@@ -97,12 +97,12 @@ select.format-select {
   border:1px solid var(--border-color);
   padding:12px;
   border-radius:10px;
-  max-height:82vh;
+  max-height:85vh;
   overflow-y: auto;
   overflow-x: hidden;
   display:block;
   box-shadow: 0 15px 40px rgba(0,0,0,0.8);
-  width: 380px;
+  width: 400px;
   max-width: 95vw;
   z-index: 1000;
 }
@@ -147,17 +147,17 @@ select.format-select {
 .input-row{ display: flex; gap: 6px; align-items: center; margin-top: 2px; flex-wrap: wrap; }
 .input-row label{ font-size: 0.73rem; color: var(--text-muted); white-space: nowrap; width: 55px; }
 .input-row input, .input-row select{
-  width: 65px;
+  width: 62px;
   padding: 4px;
   border-radius: 4px;
   border: 1px solid var(--border-color);
   background: #090b10;
   color: white;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 .input-row input[type="color"]{
-  width: 35px;
-  height: 28px;
+  width: 32px;
+  height: 26px;
   padding: 0;
   cursor: pointer;
 }
@@ -169,31 +169,27 @@ select.format-select {
   <div class="panel">
     <select id="shapeSelector" class="format-select">
       <option value="box">🧊 Kocka / Kváder</option>
-      <option value="boxHole">🕳️ Kocka s kruhovým otvorom</option>
+      <option value="boxHole">🕳️ Kocka s nastaviteľnou dierou</option>
       <option value="cylinder">🧪 Kruh / Valec</option>
-      <option value="pipe">⭕ Rúra / Valec s dierou</option>
+      <option value="pipe">⭕ Valec / Rúra s dutinou</option>
+      <option value="ovalHole">⬭ Ovál s dierou</option>
+      <option value="triangleHole">📐 Trojuholník s dierou</option>
+      <option value="polygonHole">⬢ Mnohoúholník (5 až 8) s dierou</option>
       <option value="elbow90">↩️ Koleno 90°</option>
-      <option value="triangle">📐 Trojuholník</option>
-      <option value="trapezoid">⏢ Lichobežník</option>
-      <option value="oval">⬭ Ovál</option>
-      <option value="parallelogram">▰ Rovnoběžník</option>
-      <option value="rhombus">🔷 Kosoštvorec</option>
-      <option value="semicircle">🌗 Polkruh</option>
-      <option value="kite">🪁 Šarkan</option>
-      <option value="pie">🥧 Koláč (výsek)</option>
-      <option value="pentagon">⬟ 5-uholník</option>
-      <option value="hexagon">⬢ 6-uholník</option>
-      <option value="heptagon">⬣ 7-uholník</option>
-      <option value="octagon">🛑 8-uholník</option>
       <option value="heart">❤️ Srdce</option>
       <option value="star">⭐ Hviezda</option>
-      <option value="crescent">🌙 Kosačik</option>
       <option value="cross">➕ Kríž</option>
-      <option value="arrow">⬆️ Šípka</option>
       <option value="keyway">🔑 Drážka pre pero</option>
     </select>
 
-    <button onclick="addNewShape()" style="background:var(--accent-green);">➕ Vytvoriť Tvar</button>
+    <select id="holeTypeSelector" class="format-select" style="border-color: var(--accent-amber);">
+      <option value="circle">Tvar diery: Kruh</option>
+      <option value="square">Tvar diery: Štvorec</option>
+      <option value="triangle">Tvar diery: Trojuholník</option>
+      <option value="hexagon">Tvar diery: 6-uholník</option>
+    </select>
+
+    <button onclick="addNewShape()" style="background:var(--accent-green);">➕ Pridať Tvar</button>
   </div>
 
   <div class="panel">
@@ -208,14 +204,14 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">3D CATIA Z-Up Studio v8.6 | Z >= 0 | Otáčanie: Ľavé tlačidlo myši | Posun: Pravé tlačidlo</span>
+  <span id="infoCoords">3D CATIA Z-Up Studio v8.7 | Z >= 0 | Otáčanie: Ľavé tlačidlo myši | Posun: Pravé tlačidlo</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
 <!-- Panel Správcu 3D Dielov -->
 <div id="dimensionsPanel">
   <div class="panel-header">
-    <h3>CATIA Editor Tvarov & Otvorov</h3>
+    <h3>CATIA Editor Tvarov, Pozícií & Dier</h3>
     <button class="close-btn" onclick="togglePanel()">✕</button>
   </div>
   <div id="dimsContent">Zatiaľ žiadne telesá v scéne. Vytvorte nové teleso.</div>
@@ -225,7 +221,7 @@ select.format-select {
 THREE.Object3D.DefaultUp.set(0, 0, 1);
 
 let shapes = [
-  { type: 'boxHole', x: 0, y: 0, z: 0, w: 120, h: 120, d: 40, r: 30, rx: 0, ry: 0, rz: 0, color: '#3b82f6' }
+  { type: 'boxHole', holeShape: 'circle', x: 0, y: 0, z: 0, w: 120, h: 120, d: 40, r: 25, hx: 0, hy: 0, hd: 40, polySides: 6, rx: 0, ry: 0, rz: 0, color: '#3b82f6' }
 ];
 
 let selectedShapeIndex = 0;
@@ -243,11 +239,15 @@ function togglePanel(){
 
 function addNewShape(){
   const type = document.getElementById('shapeSelector').value;
+  const holeType = document.getElementById('holeTypeSelector').value;
   
   shapes.push({
     type: type,
+    holeShape: holeType,
     x: 0, y: 0, z: 0,
     w: 100, h: 100, d: 60, r: 25,
+    hx: 0, hy: 0, hd: 60,
+    polySides: 6,
     rx: 0, ry: 0, rz: 0,
     color: '#10b981'
   });
@@ -264,76 +264,80 @@ function clearAll(){
   updatePanel();
 }
 
-function buildCustom2DShape(type, scW, scH, scR){
+function createHolePath(holeShape, r, hx, hy, polySides){
+  const holePath = new THREE.Path();
+  const scHx = hx / 10;
+  const scHy = hy / 10;
+  const scR = r / 10;
+
+  if(holeShape === 'circle'){
+    holePath.absarc(scHx, scHy, scR, 0, Math.PI * 2, true);
+  } else if(holeShape === 'square'){
+    holePath.moveTo(scHx - scR, scHy - scR);
+    holePath.lineTo(scHx + scR, scHy - scR);
+    holePath.lineTo(scHx + scR, scHy + scR);
+    holePath.lineTo(scHx - scR, scHy + scR);
+    holePath.closePath();
+  } else if(holeShape === 'triangle'){
+    holePath.moveTo(scHx, scHy + scR);
+    holePath.lineTo(scHx + scR, scHy - scR);
+    holePath.lineTo(scHx - scR, scHy - scR);
+    holePath.closePath();
+  } else if(holeShape === 'hexagon'){
+    for(let i=0; i<6; i++){
+      const a = (i / 6) * Math.PI * 2;
+      const px = scHx + Math.cos(a) * scR;
+      const py = scHy + Math.sin(a) * scR;
+      if(i===0) holePath.moveTo(px, py); else holePath.lineTo(px, py);
+    }
+    holePath.closePath();
+  }
+  return holePath;
+}
+
+function buildProfileWithHole(outerType, scW, scH, scR, holeShape, hx, hy, holeR, polySides){
   const shape = new THREE.Shape();
-  if(type === 'triangle'){
-    shape.moveTo(-scW/2, -scH/2); shape.lineTo(scW/2, -scH/2); shape.lineTo(0, scH/2); shape.closePath();
-  } else if(type === 'trapezoid'){
-    shape.moveTo(-scW/2, -scH/2); shape.lineTo(scW/2, -scH/2); shape.lineTo(scW/4, scH/2); shape.lineTo(-scW/4, scH/2); shape.closePath();
-  } else if(type === 'oval'){
+
+  if(outerType === 'box' || outerType === 'boxHole'){
+    shape.moveTo(-scW/2, -scH/2);
+    shape.lineTo(scW/2, -scH/2);
+    shape.lineTo(scW/2, scH/2);
+    shape.lineTo(-scW/2, scH/2);
+    shape.closePath();
+  } else if(outerType === 'cylinder' || outerType === 'pipe'){
+    shape.absarc(0, 0, scR, 0, Math.PI * 2, false);
+  } else if(outerType === 'ovalHole'){
     shape.absellipse(0, 0, scW/2, scH/2, 0, Math.PI * 2, false, 0);
-  } else if(type === 'parallelogram'){
-    shape.moveTo(-scW/2, -scH/2); shape.lineTo(scW/4, -scH/2); shape.lineTo(scW/2, scH/2); shape.lineTo(-scW/4, scH/2); shape.closePath();
-  } else if(type === 'rhombus'){
-    shape.moveTo(0, -scH/2); shape.lineTo(scW/2, 0); shape.lineTo(0, scH/2); shape.lineTo(-scW/2, 0); shape.closePath();
-  } else if(type === 'semicircle'){
-    shape.absarc(0, 0, scR, 0, Math.PI, false); shape.closePath();
-  } else if(type === 'kite'){
-    shape.moveTo(0, -scH/2); shape.lineTo(scW/2, 0); shape.lineTo(0, scH/2); shape.lineTo(-scW/2, 0); shape.closePath();
-  } else if(type === 'pie'){
-    shape.moveTo(0,0); shape.absarc(0, 0, scR, 0, Math.PI * 0.75, false); shape.closePath();
-  } else if(type === 'pentagon' || type === 'hexagon' || type === 'heptagon' || type === 'octagon'){
-    const sides = type==='pentagon'?5:(type==='hexagon'?6:(type==='heptagon'?7:8));
+  } else if(outerType === 'triangleHole'){
+    shape.moveTo(-scW/2, -scH/2);
+    shape.lineTo(scW/2, -scH/2);
+    shape.lineTo(0, scH/2);
+    shape.closePath();
+  } else if(outerType === 'polygonHole'){
+    const sides = Math.max(3, Math.min(12, polySides || 6));
     for(let i=0; i<sides; i++){
       const a = (i / sides) * Math.PI * 2;
-      const x = Math.cos(a) * scR, y = Math.sin(a) * scR;
-      if(i===0) shape.moveTo(x,y); else shape.lineTo(x,y);
+      const px = Math.cos(a) * (scW/2);
+      const py = Math.sin(a) * (scH/2);
+      if(i===0) shape.moveTo(px, py); else shape.lineTo(px, py);
     }
     shape.closePath();
-  } else if(type === 'heart'){
-    const x = 0, y = 0;
-    shape.moveTo(x + scR*0.25, y + scR*0.25);
-    shape.bezierCurveTo(x + scR*0.25, y + scR*0.25, x, y, x, y - scR*0.25);
-    shape.bezierCurveTo(x, y - scR*0.6, x - scR*0.6, y - scR*0.6, x - scR*0.6, y - scR*0.6);
-    shape.bezierCurveTo(x - scR, y - scR*0.6, x - scR, y, x - scR, y);
-    shape.bezierCurveTo(x - scR, y + scR*0.4, x - scR*0.4, y + scR*0.8, x, y + scR);
-    shape.bezierCurveTo(x + scR*0.4, y + scR*0.8, x + scR, y + scR*0.4, x + scR, y);
-    shape.bezierCurveTo(x + scR, y, x + scR, y - scR*0.6, x + scR*0.6, y - scR*0.6);
-    shape.bezierCurveTo(x + scR*0.4, y - scR*0.6, x, y - scR*0.6, x, y - scR*0.25);
+  } else {
+    shape.moveTo(-scW/2, -scH/2);
+    shape.lineTo(scW/2, -scH/2);
+    shape.lineTo(scW/2, scH/2);
+    shape.lineTo(-scW/2, scH/2);
     shape.closePath();
-  } else if(type === 'star'){
-    const points = 5;
-    for(let i=0; i<points*2; i++){
-      const r = i%2===0 ? scR : scR*0.4;
-      const a = (i / (points*2)) * Math.PI * 2 - Math.PI/2;
-      const x = Math.cos(a) * r, y = Math.sin(a) * r;
-      if(i===0) shape.moveTo(x,y); else shape.lineTo(x,y);
-    }
-    shape.closePath();
-  } else if(type === 'crescent'){
-    shape.absarc(0, 0, scR, 0, Math.PI * 2, false);
-    const holePath = new THREE.Path();
-    holePath.absarc(scR*0.4, 0, scR*0.8, 0, Math.PI * 2, true);
-    shape.holes.push(holePath);
-  } else if(type === 'cross'){
-    const w = scW/2, t = scW/6;
-    shape.moveTo(-t, -w); shape.lineTo(t, -w); shape.lineTo(t, -t);
-    shape.lineTo(w, -t); shape.lineTo(w, t); shape.lineTo(t, t);
-    shape.lineTo(t, w); shape.lineTo(-t, w); shape.lineTo(-t, t);
-    shape.lineTo(-w, t); shape.lineTo(-w, -t); shape.lineTo(-t, -t);
-    shape.closePath();
-  } else if(type === 'arrow'){
-    shape.moveTo(-scW/4, -scH/2); shape.lineTo(scW/4, -scH/2); shape.lineTo(scW/4, 0);
-    shape.lineTo(scW/2, 0); shape.lineTo(0, scH/2); shape.lineTo(-scW/2, 0);
-    shape.lineTo(-scW/4, 0); shape.closePath();
-  } else if(type === 'keyway'){
-    shape.absarc(-scW/4, 0, scH/2, Math.PI/2, Math.PI*1.5, false);
-    shape.absarc(scW/4, 0, scH/2, -Math.PI/2, Math.PI/2, false);
-    shape.closePath();
-    const keyHole = new THREE.Path();
-    keyHole.absarc(0, 0, scH/4, 0, Math.PI*2, true);
-    shape.holes.push(keyHole);
   }
+
+  if(outerType !== 'box' && outerType !== 'cylinder' && outerType !== 'elbow90'){
+    const hPath = createHolePath(holeShape, holeR, hx, hy, polySides);
+    shape.holes.push(hPath);
+  } else if(outerType === 'boxHole' || outerType === 'pipe'){
+    const hPath = createHolePath(holeShape, holeR, hx, hy, polySides);
+    shape.holes.push(hPath);
+  }
+
   return shape;
 }
 
@@ -342,33 +346,12 @@ function createGeometryForShape(s){
   const scW = (s.w || 100) / 10;
   const scH = (s.h || 100) / 10;
   const scD = (s.d || 60) / 10;
-  const scR = (s.r || 25) / 10;
+  const scR = (s.r || 30) / 10;
+  const holeR = (s.holeR || 15);
+  const hx = s.hx || 0;
+  const hy = s.hy || 0;
 
-  if(s.type === 'box') {
-    geo = new THREE.BoxGeometry(scW, scH, scD);
-    geo.translate(0, 0, scD / 2);
-  } else if(s.type === 'boxHole') {
-    const shape = new THREE.Shape();
-    shape.moveTo(-scW/2, -scH/2); shape.lineTo(scW/2, -scH/2); shape.lineTo(scW/2, scH/2); shape.lineTo(-scW/2, scH/2); shape.closePath();
-    const holePath = new THREE.Path();
-    holePath.absarc(0, 0, scR, 0, Math.PI * 2, true);
-    shape.holes.push(holePath);
-    geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: false, curveSegments: 32 });
-    geo.center(); geo.translate(0, 0, scD / 2);
-  } else if(s.type === 'cylinder') {
-    geo = new THREE.CylinderGeometry(scR, scR, scD, 32);
-    geo.rotateX(Math.PI / 2);
-    geo.translate(0, 0, scD / 2);
-  } else if(s.type === 'pipe') {
-    const shape = new THREE.Shape();
-    shape.absarc(0, 0, scR, 0, Math.PI * 2, false);
-    const innerR = Math.max(0.5, scR * 0.6);
-    const holePath = new THREE.Path();
-    holePath.absarc(0, 0, innerR, 0, Math.PI * 2, true);
-    shape.holes.push(holePath);
-    geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: false, curveSegments: 32 });
-    geo.center(); geo.translate(0, 0, scD / 2);
-  } else if(s.type === 'elbow90') {
+  if(s.type === 'elbow90') {
     const pipeShape = new THREE.Shape();
     pipeShape.absarc(0, 0, scR, 0, Math.PI * 2, false);
     const curve = new THREE.QuadraticBezierCurve3(
@@ -378,9 +361,10 @@ function createGeometryForShape(s){
     );
     geo = new THREE.ExtrudeGeometry(pipeShape, { steps: 20, extrudePath: curve, bevelEnabled: false });
   } else {
-    const shape2D = buildCustom2DShape(s.type, scW, scH, scR);
-    geo = new THREE.ExtrudeGeometry(shape2D, { depth: scD, bevelEnabled: false, curveSegments: 32 });
-    geo.center(); geo.translate(0, 0, scD / 2);
+    const profileShape = buildProfileWithHole(s.type, scW, scH, scR, s.holeShape, hx, hy, holeR, s.polySides);
+    geo = new THREE.ExtrudeGeometry(profileShape, { depth: scD, bevelEnabled: false, curveSegments: 32 });
+    geo.center();
+    geo.translate(0, 0, scD / 2);
   }
   return geo;
 }
@@ -447,7 +431,7 @@ function updateScene3D(){
 
 function updateShapeParam(index, field, value){
   if(!shapes[index]) return;
-  if(field === 'color'){
+  if(field === 'color' || field === 'holeShape'){
     shapes[index][field] = value;
   } else {
     shapes[index][field] = parseFloat(value) || 0;
@@ -497,12 +481,25 @@ function updatePanel(){
         <label>Rot Y:</label><input type="number" value="${s.ry||0}" oninput="updateShapeParam(${i}, 'ry', this.value)">
         <label>Rot Z:</label><input type="number" value="${s.rz||0}" oninput="updateShapeParam(${i}, 'rz', this.value)">
       </div>
-      <div class="input-group-title">Rozmery & Otvor (mm):</div>
+      <div class="input-group-title">Rozmery telesa (mm):</div>
       <div class="input-row">
         <label>Šírka:</label><input type="number" value="${s.w||100}" oninput="updateShapeParam(${i}, 'w', this.value)">
         <label>Hĺbka:</label><input type="number" value="${s.h||100}" oninput="updateShapeParam(${i}, 'h', this.value)">
         <label>Výška:</label><input type="number" value="${s.d||60}" oninput="updateShapeParam(${i}, 'd', this.value)">
-        <label>Diera/R:</label><input type="number" value="${s.r||25}" oninput="updateShapeParam(${i}, 'r', this.value)">
+        <label>Polom/R:</label><input type="number" value="${s.r||30}" oninput="updateShapeParam(${i}, 'r', this.value)">
+      </div>
+      <div class="input-group-title">Pozícia a veľkosť diery / dutiny (mm):</div>
+      <div class="input-row">
+        <label>Diera X:</label><input type="number" value="${s.hx||0}" oninput="updateShapeParam(${i}, 'hx', this.value)">
+        <label>Diera Y:</label><input type="number" value="${s.hy||0}" oninput="updateShapeParam(${i}, 'hy', this.value)">
+        <label>Veľk.D:</label><input type="number" value="${s.holeR||15}" oninput="updateShapeParam(${i}, 'holeR', this.value)">
+        <label>Typ D:</label>
+        <select onchange="updateShapeParam(${i}, 'holeShape', this.value)" style="width:62px; background:#090b10; color:white; border:1px solid var(--border-color); border-radius:4px; font-size:0.75rem;">
+          <option value="circle" ${s.holeShape==='circle'?'selected':''}>Kruh</option>
+          <option value="square" ${s.holeShape==='square'?'selected':''}>Štvorec</option>
+          <option value="triangle" ${s.holeShape==='triangle'?'selected':''}>Troj.</option>
+          <option value="hexagon" ${s.holeShape==='hexagon'?'selected':''}>6-uhol.</option>
+        </select>
       </div>
     `;
     dimsContent.appendChild(card);
@@ -523,7 +520,7 @@ function export3DHTML(){
 </style>
 </head>
 <body>
-<div id="info"><h3>ErikAI CATIA 3D Model</h3><p>Interaktívny 3D model s priamymi otvormi</p></div>
+<div id="info"><h3>ErikAI CATIA 3D Model</h3><p>Interaktívny 3D model s dierami a dutinami</p></div>
 <script>
   THREE.Object3D.DefaultUp.set(0, 0, 1);
   const scene = new THREE.Scene();
@@ -543,7 +540,8 @@ function export3DHTML(){
   grid.rotateX(Math.PI / 2);
   scene.add(grid);
 
-  ${buildCustom2DShape.toString()}
+  ${createHolePath.toString()}
+  ${buildProfileWithHole.toString()}
   ${createGeometryForShape.toString()}
 
   const shapesData = ${JSON.stringify(shapes)};
