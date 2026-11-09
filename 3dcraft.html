@@ -48,7 +48,7 @@ body, html {
 #deathScreen button {
   padding: 12px 24px; background: white; color: #ef4444; border: none;
   border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: auto;
 }
 
 /* UI PRVKY: JOYSTICK A SKOK */
@@ -98,7 +98,7 @@ button.action-btn {
 <div id="deathScreen">
   <h1>💀 CHYTIL ŤA NEPRIATEĽ!</h1>
   <p>Zomrel si v boji o prežitie.</p>
-  <button onclick="respawnPlayer()">🔄 Oživiť a utekať znova</button>
+  <button id="respawnBtn">🔄 Oživiť a utekať znova</button>
 </div>
 
 <!-- OVLÁDACIE PRVKY -->
@@ -166,7 +166,7 @@ let isGrounded = false;
 let playerAngle = 0, cameraPitch = 0.45;
 let walkAnimationTime = 0;
 
-let enemyPos = { x: 10, y: 10, z: 10 };
+let enemyPos = { x: 12, y: 12, z: 10 };
 let enemyVelocityZ = 0;
 let enemyGrounded = false;
 let enemyWalkAnim = 0;
@@ -214,6 +214,8 @@ function init() {
   setupJumpBtn();
   setupTouchLook();
   setupKeyboardControls();
+
+  document.getElementById('respawnBtn').addEventListener('click', respawnPlayer);
 
   window.addEventListener('resize', onWindowResize);
   document.getElementById('seedVal').textContent = currentSeed;
@@ -506,15 +508,23 @@ function respawnPlayer() {
   isDead = false;
   document.getElementById('deathScreen').style.display = 'none';
   
+  // Vynulovanie stlačených kláves a joysticku
+  keyboardKeys = { forward: false, backward: false, left: false, right: false };
+  joystickMove = { x: 0, y: 0 };
+  const knob = document.getElementById('joystickKnob');
+  if (knob) knob.style.transform = `translate(0px, 0px)`;
+
+  // Resreset pozície hráča
   playerPos.x = 0;
   playerPos.y = 0;
   playerPos.z = getTerrainHeight(0, 0) + 3.0;
   playerVelocityZ = 0;
   isGrounded = true;
   
-  enemyPos.x = 12;
-  enemyPos.y = 12;
-  enemyPos.z = getTerrainHeight(12, 12) + 3.0;
+  // Respawn nepriateľa ďalej od hráča
+  enemyPos.x = 18;
+  enemyPos.y = 18;
+  enemyPos.z = getTerrainHeight(18, 18) + 3.0;
   enemyVelocityZ = 0;
   enemyGrounded = true;
   
@@ -592,12 +602,14 @@ function setupJumpBtn() {
 function setupTouchLook() {
   let touchStartX = 0, touchStartY = 0;
   window.addEventListener('touchstart', (e) => {
+    if (isDead) return;
     if (e.target.id !== 'jumpBtn' && e.target.id !== 'joystickZone' && e.target.id !== 'joystickKnob' && e.target.tagName !== 'BUTTON') {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
     }
   });
   window.addEventListener('touchmove', (e) => {
+    if (isDead) return;
     if (e.target.id !== 'jumpBtn' && e.target.id !== 'joystickZone' && e.target.id !== 'joystickKnob' && e.target.tagName !== 'BUTTON') {
       const deltaX = e.touches[0].clientX - touchStartX;
       const deltaY = e.touches[0].clientY - touchStartY;
@@ -611,6 +623,7 @@ function setupTouchLook() {
 
 function setupKeyboardControls() {
   window.addEventListener('keydown', (e) => {
+    if (isDead) return;
     if (e.key === 'w' || e.key === 'ArrowUp') keyboardKeys.forward = true;
     if (e.key === 's' || e.key === 'ArrowDown') keyboardKeys.backward = true;
     if (e.key === 'a' || e.key === 'ArrowLeft') keyboardKeys.left = true;
