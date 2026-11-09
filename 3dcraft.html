@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v1.4 - Z-Axis Height System</title>
+<title>ErikAI Voxel Craft 3D v1.5 - Safe Spawn & Extended View</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -72,7 +72,7 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>🌲 ErikAI Voxel Engine v1.4 (Z-Up)</h3>
+  <h3>🌲 ErikAI Voxel Engine v1.5</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Uložené bloky:</span> <span id="totalBlocks" class="stat-val">0</span></div>
@@ -84,8 +84,8 @@ button.action-btn {
 
 <div id="deathScreen">
   <h1>💀 ZOMREL SI!</h1>
-  <p>Prepadol si sa pod výšku Z < -5.</p>
-  <button onclick="respawnPlayer()">🔄 Oživiť / Reštartovať</button>
+  <p>Prepadol si sa do priepasti pod svet (Z < -5).</p>
+  <button onclick="respawnPlayer()">🔄 Oživiť na bezpečnom mieste</button>
 </div>
 
 <div id="controls">
@@ -100,7 +100,6 @@ button.action-btn {
 </div>
 
 <script>
-// --- Z-UP ORTOCENTRICKÉ NASTAVENIE TRI.JS ---
 THREE.Object3D.DefaultUp.set(0, 0, 1);
 
 const SimplexNoise = function(seed) {
@@ -137,7 +136,7 @@ let noise = SimplexNoise(currentSeed);
 let scene, camera, renderer, player;
 let activeBlocks = new Map();
 let savedWorldData = {};
-let RENDER_DISTANCE = 11;
+let RENDER_DISTANCE = 22; // Masívne zväčšený dohľad pre 8GB RAM zariadenia
 let isDead = false;
 
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -152,7 +151,6 @@ const materials = {
   bedrock: new THREE.MeshStandardMaterial({ color: 0x212121, roughness: 0.9 })
 };
 
-// Z je VÝŠKA, X a Y sú rovinatý pohyb
 let playerPos = { x: 0, y: 0, z: 10 };
 let playerAngle = 0, cameraPitch = 0.45;
 let keys = { forward: false, backward: false, left: false, right: false };
@@ -160,7 +158,7 @@ let keys = { forward: false, backward: false, left: false, right: false };
 function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x7ec8e3);
-  scene.fog = new THREE.FogExp2(0x7ec8e3, 0.03);
+  scene.fog = new THREE.FogExp2(0x7ec8e3, 0.02);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -169,7 +167,7 @@ function init() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   document.body.appendChild(renderer.domElement);
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
   dirLight.position.set(60, 40, 120);
   scene.add(dirLight);
@@ -177,6 +175,8 @@ function init() {
   createPlayer();
   loadWorldFromStorage();
 
+  // GARANTOVANÝ BEZPEČNÝ SPAWN NA (0,0) S PODLAHOU
+  ensureSpawnPlatform(0, 0);
   playerPos.x = 0;
   playerPos.y = 0;
   playerPos.z = getTerrainHeight(0, 0) + 2;
@@ -192,7 +192,6 @@ function init() {
 
 function createPlayer() {
   player = new THREE.Group();
-  // V Z-Up rozhraní je Z výška
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 1.2), new THREE.MeshStandardMaterial({ color: 0x1e88e5 }));
   body.position.z = 0.6;
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0xffcc80 }));
@@ -201,10 +200,24 @@ function createPlayer() {
   scene.add(player);
 }
 
-// Z Výška terénu vypočítaná z X a Y
 function getTerrainHeight(x, y) {
   let z = noise.noise2D(x * 0.03, y * 0.03) * 10 + noise.noise2D(x * 0.08, y * 0.08) * 3;
   return Math.floor(z);
+}
+
+// Zabezpečí, že v okolí spawnu (0,0) bude vždy pevná zem a žiadne diery
+function ensureSpawnPlatform(pX, pY) {
+  for (let x = -2; x <= 2; x++) {
+    for (let y = -2; y <= 2; y++) {
+      const h = getTerrainHeight(x, y);
+      for (let z = h; z >= -5; z--) {
+        const key = `${x},${y},${z}`;
+        if (!savedWorldData[key]) {
+          savedWorldData[key] = 1;
+        }
+      }
+    }
+  }
 }
 
 function getBiomeMaterial(x, y, z, maxZ) {
@@ -312,8 +325,6 @@ function updateHUDStats() {
   document.getElementById('ramCount').textContent = activeBlocks.size;
   document.getElementById('totalBlocks').textContent = Object.keys(savedWorldData).length;
   document.getElementById('storageSize').textContent = formatBytes(new Blob([JSON.stringify(savedWorldData)]).size);
-  
-  // Z je VÝŠKA
   document.getElementById('coordVal').textContent = `${Math.floor(playerPos.x)}, ${Math.floor(playerPos.y)}, ${Math.floor(playerPos.z)}`;
 }
 
@@ -348,6 +359,7 @@ function resetWorld() {
   noise = SimplexNoise(currentSeed);
   document.getElementById('seedVal').textContent = currentSeed;
   
+  ensureSpawnPlatform(0, 0);
   respawnPlayer();
 }
 
@@ -412,7 +424,6 @@ function updatePlayerMovement() {
   const speed = 0.16;
   let moveX = 0, moveY = 0;
 
-  // Pohyb v rovine X a Y
   if (keys.forward) { moveX -= Math.sin(playerAngle) * speed; moveY += Math.cos(playerAngle) * speed; }
   if (keys.backward) { moveX += Math.sin(playerAngle) * speed; moveY -= Math.cos(playerAngle) * speed; }
   if (keys.left) { moveX -= Math.cos(playerAngle) * speed; moveY -= Math.sin(playerAngle) * speed; }
@@ -420,14 +431,12 @@ function updatePlayerMovement() {
 
   playerPos.x += moveX; playerPos.y += moveY;
 
-  // VÝŠKA Z JE KONTROLOVANÁ PODĽA TERÉNU
   const currentTerrainZ = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y));
   const targetZ = currentTerrainZ + 1;
 
   playerPos.z += (targetZ - playerPos.z) * 0.25;
   if (playerPos.z < targetZ) playerPos.z = targetZ;
 
-  // Kontrola smrti (Z < -5)
   if (playerPos.z < -5) {
     isDead = true;
     document.getElementById('deathScreen').style.display = 'flex';
