@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v1.1 - Biomes & Trees</title>
+<title>ErikAI Voxel Craft 3D v1.2 - Fixed World & Solid Ground</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -56,7 +56,7 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>🌲 ErikAI Voxel Biomes 3D v1.1</h3>
+  <h3>🌲 ErikAI Voxel Biomes 3D v1.2</h3>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Uložené bloky:</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Veľkosť dát:</span> <span id="storageSize" class="stat-val">0 B</span></div>
@@ -113,7 +113,7 @@ let noise = SimplexNoise(currentSeed);
 let scene, camera, renderer, player;
 let activeBlocks = new Map();
 let savedWorldData = {};
-let RENDER_DISTANCE = 13;
+let RENDER_DISTANCE = 11; // Bezpečný okruh pre plynulosť
 
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 const materials = {
@@ -123,17 +123,18 @@ const materials = {
   sand: new THREE.MeshStandardMaterial({ color: 0xfbc02d, roughness: 0.9 }),
   snow: new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.5 }),
   wood: new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.8 }),
-  leaves: new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.6 })
+  leaves: new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.6 }),
+  bedrock: new THREE.MeshStandardMaterial({ color: 0x212121, roughness: 0.9 })
 };
 
-let playerPos = { x: 0, y: 15, z: 0 };
-let playerAngle = 0, cameraPitch = 0.3;
+let playerPos = { x: 0, y: 10, z: 0 };
+let playerAngle = 0, cameraPitch = 0.35;
 let keys = { forward: false, backward: false, left: false, right: false };
 
 function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x7ec8e3);
-  scene.fog = new THREE.FogExp2(0x7ec8e3, 0.025);
+  scene.fog = new THREE.FogExp2(0x7ec8e3, 0.03);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -149,6 +150,10 @@ function init() {
 
   createPlayer();
   loadWorldFromStorage();
+
+  // Nastaviť správnu úvodnú výšku nad terénom
+  playerPos.y = getTerrainHeight(0, 0) + 2;
+
   setupControls();
   setupTouchLook();
 
@@ -169,13 +174,14 @@ function createPlayer() {
 }
 
 function getTerrainHeight(x, z) {
-  let h = noise.noise2D(x * 0.03, z * 0.03) * 12 + noise.noise2D(x * 0.08, z * 0.08) * 4;
+  let h = noise.noise2D(x * 0.03, z * 0.03) * 10 + noise.noise2D(x * 0.08, z * 0.08) * 3;
   return Math.floor(h);
 }
 
 function getBiomeMaterial(x, z, y, maxHeight) {
   const temperature = noise.noise2D(x * 0.01 + 50, z * 0.01 + 50);
-  if (y > 10) return materials.snow;
+  if (y <= -10) return materials.bedrock;
+  if (y > 8) return materials.snow;
   if (temperature < -0.3) return y === maxHeight ? materials.snow : materials.stone;
   if (temperature > 0.45) return materials.sand;
   if (y === maxHeight) return materials.grass;
@@ -186,9 +192,9 @@ function getBiomeMaterial(x, z, y, maxHeight) {
 function isTreePosition(x, z) {
   const h = getTerrainHeight(x, z);
   const temp = noise.noise2D(x * 0.01 + 50, z * 0.01 + 50);
-  if (h <= 10 && temp >= -0.3 && temp <= 0.45) {
+  if (h <= 8 && temp >= -0.3 && temp <= 0.45) {
     const treeNoise = noise.noise2D(x * 0.5, z * 0.5);
-    return treeNoise > 0.72;
+    return treeNoise > 0.76;
   }
   return false;
 }
@@ -205,7 +211,9 @@ function updateChunks() {
       if (dist > RENDER_DISTANCE) continue;
 
       const height = getTerrainHeight(x, z);
-      const minDepth = Math.max(-5, height - 4);
+      
+      // PEVNÉ PODLOŽIE: Vypĺňame až po Y = -10 (Žiadne prázdno pod nohami)
+      const minDepth = Math.max(-10, height - 6);
 
       for (let y = height; y >= minDepth; y--) {
         const key = `${x},${y},${z}`;
@@ -225,7 +233,7 @@ function updateChunks() {
         }
       }
 
-      // Generovanie stromov
+      // Kaskádový strom
       if (isTreePosition(x, z)) {
         const trunkH = 3;
         for (let ty = 1; ty <= trunkH; ty++) {
@@ -238,7 +246,6 @@ function updateChunks() {
             activeBlocks.set(treeKey, mesh);
           }
         }
-        // Koruna stromu
         for (let lx = -1; lx <= 1; lx++) {
           for (let lz = -1; lz <= 1; lz++) {
             for (let ly = trunkH + 1; ly <= trunkH + 2; ly++) {
@@ -257,7 +264,7 @@ function updateChunks() {
     }
   }
 
-  // CULLING (Vyčistenie RAM)
+  // ODSTRÁNENIE NEPOTREBNÝCH BLOKOV Z RAM
   for (let [key, mesh] of activeBlocks.entries()) {
     if (!neededKeys.has(key)) {
       scene.remove(mesh);
@@ -314,7 +321,7 @@ function resetWorld() {
   noise = SimplexNoise(currentSeed);
   document.getElementById('seedVal').textContent = currentSeed;
   
-  playerPos = { x: 0, y: getTerrainHeight(0,0) + 4, z: 0 };
+  playerPos = { x: 0, y: getTerrainHeight(0,0) + 2, z: 0 };
   updateChunks();
 }
 
@@ -374,13 +381,19 @@ function updatePlayerMovement() {
   if (keys.right) { moveX += Math.cos(playerAngle) * speed; moveZ -= Math.sin(playerAngle) * speed; }
 
   playerPos.x += moveX; playerPos.z += moveZ;
-  const targetY = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.z)) + 1;
-  playerPos.y += (targetY - playerPos.y) * 0.25;
+
+  // PRÍSNA KONTROLA TERÉNU: Postava sa neprepadne pod zem
+  const currentTerrainH = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.z));
+  const targetY = currentTerrainH + 1;
+
+  // Smooth stúpanie a klesanie po kopcoch
+  playerPos.y += (targetY - playerPos.y) * 0.3;
+  if (playerPos.y < targetY) playerPos.y = targetY; // Záchranná poistka proti propadnutiu
 
   player.position.set(playerPos.x, playerPos.y, playerPos.z);
   player.rotation.y = playerAngle;
 
-  const camDist = 8;
+  const camDist = 7;
   camera.position.x = playerPos.x + Math.sin(playerAngle) * (camDist * Math.cos(cameraPitch));
   camera.position.z = playerPos.z + Math.cos(playerAngle) * (camDist * Math.cos(cameraPitch));
   camera.position.y = playerPos.y + camDist * Math.sin(cameraPitch);
