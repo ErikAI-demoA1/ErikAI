@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v1.6 - Ultra 1.5GB RAM Edition</title>
+<title>ErikAI Voxel Craft 3D v1.7 - Anti-Fall Safety Edition</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -73,7 +73,7 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v1.6 (Ultra 1.5GB)</h3>
+  <h3>⚡ ErikAI Voxel Engine v1.7 (Anti-Fall)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.4 GB</span></div>
@@ -138,7 +138,7 @@ let noise = SimplexNoise(currentSeed);
 let scene, camera, renderer, player;
 let activeBlocks = new Map();
 let savedWorldData = {};
-let RENDER_DISTANCE = 35; // ULTRA NASTAVENIE PRE UTILIZÁCIU ~1.5 GB RAM
+let RENDER_DISTANCE = 35; 
 let isDead = false;
 
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -160,7 +160,7 @@ let keys = { forward: false, backward: false, left: false, right: false };
 function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x7ec8e3);
-  scene.fog = new THREE.FogExp2(0x7ec8e3, 0.012); // Veľmi jemná hmla pre veľký dohľad
+  scene.fog = new THREE.FogExp2(0x7ec8e3, 0.012);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -177,10 +177,14 @@ function init() {
   createPlayer();
   loadWorldFromStorage();
 
-  ensureSpawnPlatform(0, 0);
+  // Okamžitá bezpečná platforma na štarte
+  ensureSafePlatformAt(0, 0);
   playerPos.x = 0;
   playerPos.y = 0;
   playerPos.z = getTerrainHeight(0, 0) + 2;
+
+  // Predvykreslenie chunks hneď pri štarte, aby hráč nikdy nepadol do prázdna
+  updateChunks();
 
   setupControls();
   setupTouchLook();
@@ -206,15 +210,16 @@ function getTerrainHeight(x, y) {
   return Math.floor(z);
 }
 
-function ensureSpawnPlatform(pX, pY) {
-  for (let x = -3; x <= 3; x++) {
-    for (let y = -3; y <= 3; y++) {
+// GARANCIA: Vždy vygeneruje plnú podlahu pod danými súradnicami, aby sa hráč nikdy neprepadol
+function ensureSafePlatformAt(pX, pY) {
+  const iX = Math.round(pX);
+  const iY = Math.round(pY);
+  for (let x = iX - 4; x <= iX + 4; x++) {
+    for (let y = iY - 4; y <= iY + 4; y++) {
       const h = getTerrainHeight(x, y);
-      for (let z = h; z >= -6; z--) {
+      for (let z = h; z >= -10; z--) {
         const key = `${x},${y},${z}`;
-        if (!savedWorldData[key]) {
-          savedWorldData[key] = 1;
-        }
+        savedWorldData[key] = 1;
       }
     }
   }
@@ -325,7 +330,6 @@ function updateHUDStats() {
   const activeCount = activeBlocks.size;
   document.getElementById('ramCount').textContent = activeCount;
   
-  // Dynamický odhad využitia RAM vrátane WebGL réžie prehliadača
   const estRamMB = Math.round(350 + (activeCount * 0.085));
   document.getElementById('estRam').textContent = `~${(estRamMB / 1024).toFixed(2)} GB`;
 
@@ -365,7 +369,7 @@ function resetWorld() {
   noise = SimplexNoise(currentSeed);
   document.getElementById('seedVal').textContent = currentSeed;
   
-  ensureSpawnPlatform(0, 0);
+  ensureSafePlatformAt(0, 0);
   respawnPlayer();
 }
 
@@ -374,6 +378,7 @@ function respawnPlayer() {
   document.getElementById('deathScreen').style.display = 'none';
   playerPos.x = 0;
   playerPos.y = 0;
+  ensureSafePlatformAt(0, 0);
   playerPos.z = getTerrainHeight(0, 0) + 2;
   updateChunks();
 }
@@ -436,6 +441,9 @@ function updatePlayerMovement() {
   if (keys.right) { moveX += Math.cos(playerAngle) * speed; moveY += Math.sin(playerAngle) * speed; }
 
   playerPos.x += moveX; playerPos.y += moveY;
+
+  // DYNAMICKÁ POISTKA: Kdekoľvek sa hráč pohne, okamžite pod ním vynútime plnú zem
+  ensureSafePlatformAt(playerPos.x, playerPos.y);
 
   const currentTerrainZ = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y));
   const targetZ = currentTerrainZ + 1;
