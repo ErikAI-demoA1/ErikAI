@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 3D CATIA Studio v8.2</title>
+<title>ErikAI Pro 3D CATIA Studio v8.3</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three-csg-ts@3.1.16/lib/bundle.js"></script>
@@ -156,6 +156,12 @@ select.format-select {
   color: white;
   font-size: 0.82rem;
 }
+.input-row input[type="color"]{
+  width: 35px;
+  height: 28px;
+  padding: 0;
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -207,7 +213,7 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">3D CATIA Z-Up Studio v8.2 | Z >= 0 | Otáčanie: Ľavé tlačidlo myši | Posun: Pravé tlačidlo</span>
+  <span id="infoCoords">3D CATIA Z-Up Studio v8.3 | Z >= 0 | Otáčanie: Ľavé tlačidlo myši | Posun: Pravé tlačidlo</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
@@ -224,8 +230,8 @@ select.format-select {
 THREE.Object3D.DefaultUp.set(0, 0, 1);
 
 let shapes = [
-  { type: 'box', op: 'add', x: 0, y: 0, z: 0, w: 120, h: 120, d: 40, r: 50, wall: 10, rx: 0, ry: 0, rz: 0 },
-  { type: 'cylinder', op: 'subtract', x: 0, y: 0, z: 0, w: 100, h: 100, d: 50, r: 30, wall: 10, rx: 0, ry: 0, rz: 0 }
+  { type: 'box', op: 'add', x: 0, y: 0, z: 0, w: 120, h: 120, d: 40, r: 50, wall: 10, rx: 0, ry: 0, rz: 0, color: '#10b981' },
+  { type: 'cylinder', op: 'subtract', x: 0, y: 0, z: 0, w: 100, h: 100, d: 50, r: 30, wall: 10, rx: 0, ry: 0, rz: 0, color: '#ef4444' }
 ];
 
 let selectedShapeIndex = 0;
@@ -249,7 +255,8 @@ function addNewShape(){
     type: type, op: op,
     x: 0, y: 0, z: 0,
     w: 100, h: 100, d: 60, r: 40, wall: 10,
-    rx: 0, ry: 0, rz: 0
+    rx: 0, ry: 0, rz: 0,
+    color: op === 'subtract' ? '#ef4444' : '#10b981'
   });
 
   selectedShapeIndex = shapes.length - 1;
@@ -397,13 +404,11 @@ function createGeometryForShape(s){
   } else if(s.type === 'elbow90') {
     const pipeShape = new THREE.Shape();
     pipeShape.absarc(0, 0, scR, 0, Math.PI * 2, false);
-    const path = new THREE.CurvePath();
     const curve = new THREE.QuadraticBezierCurve3(
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 0, scD),
       new THREE.Vector3(scD, 0, scD)
     );
-    path.add(curve);
     geo = new THREE.ExtrudeGeometry(pipeShape, { steps: 20, extrudePath: curve, bevelEnabled: false });
   } else {
     const shape2D = buildCustom2DShape(s.type, scW, scH, scR, scWall);
@@ -456,9 +461,10 @@ function updateScene3D(){
   shapes.forEach((s, idx) => {
     const geo = createGeometryForShape(s);
     const isSelected = idx === selectedShapeIndex;
+    const meshColor = s.color || (s.op === 'subtract' ? '#ef4444' : '#10b981');
     const mat = new THREE.MeshStandardMaterial({ 
-      color: s.op === 'subtract' ? '#ef4444' : (isSelected ? '#3b82f6' : '#10b981'), 
-      roughness: 0.3, metalness: 0.2, transparent: true, opacity: s.op === 'subtract' ? 0.6 : 1.0 
+      color: isSelected ? '#3b82f6' : meshColor, 
+      roughness: 0.3, metalness: 0.2, transparent: s.op === 'subtract', opacity: s.op === 'subtract' ? 0.6 : 1.0 
     });
     const mesh = new THREE.Mesh(geo, mat);
     
@@ -476,6 +482,7 @@ function updateScene3D(){
 
     if(s.op === 'subtract') {
       subtractiveShapes.push({ mesh, index: idx });
+      scene.add(mesh); // V editori ukazujeme červené rezné teleso
     } else {
       if(!baseMesh){
         baseMesh = mesh;
@@ -495,7 +502,7 @@ function updateScene3D(){
       });
       scene.remove(baseMesh);
       const resultingMesh = CSG.toMesh(csgBase, baseMesh.matrix);
-      resultingMesh.material = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.2, metalness: 0.3 });
+      resultingMesh.material = new THREE.MeshStandardMaterial({ color: baseMesh.material.color, roughness: 0.2, metalness: 0.3 });
       scene.add(resultingMesh);
     } catch(err){}
   }
@@ -505,8 +512,12 @@ function updateScene3D(){
 
 function updateShapeParam(index, field, value){
   if(!shapes[index]) return;
-  shapes[index][field] = parseFloat(value) || 0;
-  if(field === 'z') shapes[index].z = Math.max(0, shapes[index].z);
+  if(field === 'color'){
+    shapes[index][field] = value;
+  } else {
+    shapes[index][field] = parseFloat(value) || 0;
+    if(field === 'z') shapes[index].z = Math.max(0, shapes[index].z);
+  }
   updateScene3D();
 }
 
@@ -538,11 +549,12 @@ function updatePanel(){
         <strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong>
         <button class="danger" style="padding:2px 6px;" onclick="event.stopPropagation(); shapes.splice(${i},1); selectedShapeIndex=0; updateScene3D(); updatePanel();">🗑️ Zmazať</button>
       </div>
-      <div class="input-group-title">Súradnice [Z >= 0] (mm):</div>
+      <div class="input-group-title">Súradnice [Z >= 0] & Farba (mm):</div>
       <div class="input-row">
         <label>X:</label><input type="number" value="${s.x||0}" oninput="updateShapeParam(${i}, 'x', this.value)">
         <label>Y:</label><input type="number" value="${s.y||0}" oninput="updateShapeParam(${i}, 'y', this.value)">
         <label>Z:</label><input type="number" min="0" value="${Math.max(0, s.z||0)}" oninput="updateShapeParam(${i}, 'z', this.value)">
+        <label>Farba:</label><input type="color" value="${s.color||'#10b981'}" oninput="updateShapeParam(${i}, 'color', this.value)">
       </div>
       <div class="input-group-title">Rotácie (stupne):</div>
       <div class="input-row">
@@ -570,13 +582,14 @@ function export3DHTML(){
 <title>ErikAI CATIA 3D Model</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/three-csg-ts@3.1.16/lib/bundle.js"><\/script>
 <style>
   body { margin: 0; overflow: hidden; background: #0b0d13; font-family: sans-serif; color: white; }
   #info { position: absolute; top: 10px; left: 10px; padding: 8px 12px; background: rgba(30,34,45,0.8); border-radius: 6px; }
 </style>
 </head>
 <body>
-<div id="info"><h3>ErikAI CATIA 3D Model</h3><p>Interaktívny 3D model (Z-Up)</p></div>
+<div id="info"><h3>ErikAI CATIA 3D Model</h3><p>Interaktívny 3D model (Plný export s vyrezaním CSG)</p></div>
 <script>
   THREE.Object3D.DefaultUp.set(0, 0, 1);
   const scene = new THREE.Scene();
@@ -596,15 +609,19 @@ function export3DHTML(){
   grid.rotateX(Math.PI / 2);
   scene.add(grid);
 
+  ${buildCustom2DShape.toString()}
+  ${createGeometryForShape.toString()}
+
   const shapesData = ${JSON.stringify(shapes)};
-  shapesData.forEach(s => {
-    let geo;
-    const scW = s.w / 10, scH = s.h / 10, scD = s.d / 10, scR = s.r / 10;
-    if(s.type === 'box') { geo = new THREE.BoxGeometry(scW, scH, scD); geo.translate(0, 0, scD / 2); }
-    else if(s.type === 'cylinder') { geo = new THREE.CylinderGeometry(scR, scR, scD, 32); geo.rotateX(Math.PI/2); geo.translate(0, 0, scD / 2); }
-    else { geo = new THREE.BoxGeometry(scW, scH, scD); geo.translate(0, 0, scD / 2); }
-    
-    const mat = new THREE.MeshStandardMaterial({ color: s.op === 'subtract' ? 0xef4444 : 0x3b82f6, roughness: 0.2, metalness: 0.3 });
+  let baseMesh = null;
+  let subtractiveMeshes = [];
+
+  shapesData.forEach((s, idx) => {
+    const geo = createGeometryForShape(s);
+    const mat = new THREE.MeshStandardMaterial({ 
+      color: s.color || (s.op === 'subtract' ? '#ef4444' : '#10b981'), 
+      roughness: 0.3, metalness: 0.2 
+    });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set((s.x||0)/10, (s.y||0)/10, Math.max(0, (s.z||0))/10);
     mesh.rotation.set(
@@ -612,8 +629,33 @@ function export3DHTML(){
       THREE.MathUtils.degToRad(s.ry || 0),
       THREE.MathUtils.degToRad(s.rz || 0)
     );
-    scene.add(mesh);
+    mesh.updateMatrix();
+
+    if(s.op === 'subtract') {
+      subtractiveMeshes.push(mesh);
+    } else {
+      if(!baseMesh){
+        baseMesh = mesh;
+        scene.add(baseMesh);
+      } else {
+        scene.add(mesh);
+      }
+    }
   });
+
+  if(baseMesh && subtractiveMeshes.length > 0 && typeof CSG !== 'undefined'){
+    try {
+      let csgBase = CSG.fromMesh(baseMesh);
+      subtractiveMeshes.forEach(sub => {
+        const csgSub = CSG.fromMesh(sub);
+        csgBase = csgBase.subtract(csgSub);
+      });
+      scene.remove(baseMesh);
+      const resultingMesh = CSG.toMesh(csgBase, baseMesh.matrix);
+      resultingMesh.material = baseMesh.material;
+      scene.add(resultingMesh);
+    } catch(err){}
+  }
 
   function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
   animate();
