@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v2.4 - Survival & City Edition</title>
+<title>ErikAI Voxel Craft 3D v2.5 - True Collision & Smart Survival</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -84,20 +84,20 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v2.4 (Survival)</h3>
+  <h3>⚡ ErikAI Voxel Engine v2.5 (Collision)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.2 GB</span></div>
   <div class="stat-row"><span>Uložené bloky:</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>FPS:</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">⚠️ POZOR: Utekaj pred nepriateľom! Ak ťa chytí, zomrieš!</div>
+  <div class="warning-text">⚠️ Skutočná kolízia: Stromy a budovy ťa zastavia!</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Nový Svet</button>
 </div>
 
 <div id="deathScreen">
   <h1>💀 CHYTIL ŤA NEPRIATEĽ!</h1>
-  <p>Zomrelš v boji o prežitie.</p>
+  <p>Zomrel si v tesnom súboji.</p>
   <button onclick="respawnPlayer()">🔄 Oživiť a utekať znova</button>
 </div>
 
@@ -141,6 +141,7 @@ let noise = SimplexNoise(currentSeed);
 
 let scene, camera, renderer, player, enemy;
 let activeBlocks = new Map();
+let solidBlocks = new Set(); // Množina pevných blokov pre presnú kolíziu
 let savedWorldData = {};
 let RENDER_DISTANCE = 26; 
 let isDead = false;
@@ -154,8 +155,9 @@ const materials = {
   snow: new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.5 }),
   wood: new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.8 }),
   leaves: new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.6 }),
-  brick: new THREE.MeshStandardMaterial({ color: 0xb71c1c, roughness: 0.7 }), // Tehla pre budovy
+  brick: new THREE.MeshStandardMaterial({ color: 0xb71c1c, roughness: 0.7 }),
   glass: new THREE.MeshStandardMaterial({ color: 0x81d4fa, roughness: 0.2, transparent: true, opacity: 0.7 }),
+  lamp: new THREE.MeshStandardMaterial({ color: 0xffeb3b, roughness: 0.3 }),
   bedrock: new THREE.MeshStandardMaterial({ color: 0x212121, roughness: 0.9 })
 };
 
@@ -165,9 +167,9 @@ let isGrounded = false;
 let playerAngle = 0, cameraPitch = 0.45;
 let walkAnimationTime = 0;
 
-// Pozícia a stav nepriateľa (zloducha)
 let enemyPos = { x: 12, y: 12, z: 10 };
 let enemyVelocityZ = 0;
+let enemyGrounded = false;
 
 let joystickMove = { x: 0, y: 0 };
 let keyboardKeys = { forward: false, backward: false, left: false, right: false };
@@ -189,8 +191,8 @@ function init() {
   dirLight.position.set(100, 80, 150);
   scene.add(dirLight);
 
-  player = createDetailedCharacter(0x1e88e5, 0x1565c0); // Modrý hráč
-  enemy = createDetailedCharacter(0xd32f2f, 0xb71c1c);  // Červený nepriateľ
+  player = createDetailedCharacter(0x1e88e5, 0x1565c0);
+  enemy = createDetailedCharacter(0xd32f2f, 0xb71c1c);
   scene.add(player);
   scene.add(enemy);
 
@@ -218,10 +220,8 @@ function init() {
   animate();
 }
 
-// VYSOKO DETAILNÁ POSTAVIČKA S UŠAMI, OČAMI, TOPÁNKAMI A ANIMOVATEĽNÝMI KONČATINAMI
 function createDetailedCharacter(shirtColor, pantsColor) {
   const group = new THREE.Group();
-
   const matShirt = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.6 });
   const matPants = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.7 });
   const matSkin = new THREE.MeshStandardMaterial({ color: 0xffcc80, roughness: 0.8 });
@@ -229,17 +229,14 @@ function createDetailedCharacter(shirtColor, pantsColor) {
   const matEyes = new THREE.MeshStandardMaterial({ color: 0x000000 });
   const matShoes = new THREE.MeshStandardMaterial({ color: 0x212121 });
 
-  // Trup (oblečenie)
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.28, 0.6), matShirt);
   torso.position.z = 0.55;
   group.add(torso);
 
-  // Hlava
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.42), matSkin);
   head.position.z = 1.1;
   group.add(head);
 
-  // Oči
   const eye1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.08), matEyes);
   eye1.position.set(0.22, 0.1, 1.15);
   group.add(eye1);
@@ -247,7 +244,6 @@ function createDetailedCharacter(shirtColor, pantsColor) {
   eye2.position.set(0.22, -0.1, 1.15);
   group.add(eye2);
 
-  // Uši
   const ear1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.12), matSkin);
   ear1.position.set(0, 0.24, 1.1);
   group.add(ear1);
@@ -255,12 +251,10 @@ function createDetailedCharacter(shirtColor, pantsColor) {
   ear2.position.set(0, -0.24, 1.1);
   group.add(ear2);
 
-  // Vlasy
   const hair = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.44, 0.18), matHair);
   hair.position.set(0, 0, 1.32);
   group.add(hair);
 
-  // Končatiny (uložené do premenných pre animáciu chôdze)
   group.userData = {
     rightLeg: createLegPart(matPants, matShoes, 0.11, 0.15),
     leftLeg: createLegPart(matPants, matShoes, -0.11, 0.15),
@@ -279,15 +273,12 @@ function createDetailedCharacter(shirtColor, pantsColor) {
 function createLegPart(matPants, matShoes, yOffset, zPos) {
   const legGroup = new THREE.Group();
   legGroup.position.set(0, yOffset, zPos);
-  
   const pants = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.35), matPants);
   pants.position.z = -0.15;
   legGroup.add(pants);
-
   const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.19, 0.12), matShoes);
   shoe.position.set(0.02, 0, -0.35);
   legGroup.add(shoe);
-
   return legGroup;
 }
 
@@ -302,15 +293,44 @@ function getTerrainHeight(x, y) {
   return Math.floor(baseNoise) + 2;
 }
 
-// PROCEDURÁLNE BUDOVY / PANELÁKY A DOMČEKY
 function getBuildingType(x, y) {
-  // Každých 14 blokov vygenerujeme mriežku pre domy/budovy
   if (Math.abs(x) > 6 && Math.abs(y) > 6 && (x % 14 === 0) && (y % 14 === 0)) {
     let seedVal = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
     let type = Math.floor((seedVal - Math.floor(seedVal)) * 3);
-    return type + 1; // 1: Domček, 2: Vysoký panelák, 3: Obchod
+    return type + 1;
   }
   return 0;
+}
+
+function isSolidBlock(x, y, z) {
+  const groundZ = getTerrainHeight(x, y);
+  if (z <= groundZ) return true; // Podzemie a terén je pevný
+
+  // Kontrola budov
+  const bType = getBuildingType(Math.round(x / 14) * 14, Math.round(y / 14) * 14);
+  if (bType > 0) {
+    const bX = Math.round(x / 14) * 14;
+    const bY = Math.round(y / 14) * 14;
+    const bHeight = bType === 2 ? 8 : 4;
+    const bGround = getTerrainHeight(bX, bY);
+    if (z > bGround && z <= bGround + bHeight) {
+      if (Math.abs(x - bX) <= 1 && Math.abs(y - bY) <= 1) {
+        if (x === bX + 1 || x === bX - 1 || y === bY + 1 || y === bY - 1 || z === bGround + bHeight) {
+          return true; // Stenové bloky budov
+        }
+      }
+    }
+  }
+
+  // Kontrola stromov
+  const tX = Math.round(x);
+  const tY = Math.round(y);
+  if (isTreePosition(tX, tY)) {
+    const tGround = getTerrainHeight(tX, tY);
+    if (z > tGround && z <= tGround + 5) return true;
+  }
+
+  return solidBlocks.has(`${Math.round(x)},${Math.round(y)},${Math.round(z)}`);
 }
 
 function getBiomeMaterial(x, y, z, maxZ) {
@@ -338,6 +358,7 @@ function updateChunks() {
   const pX = Math.floor(playerPos.x);
   const pY = Math.floor(playerPos.y);
   let neededKeys = new Set();
+  solidBlocks.clear();
   let addedCount = 0;
 
   for (let x = pX - RENDER_DISTANCE; x <= pX + RENDER_DISTANCE; x++) {
@@ -351,6 +372,7 @@ function updateChunks() {
       for (let z = maxZ; z >= minZ; z--) {
         const key = `${x},${y},${z}`;
         neededKeys.add(key);
+        solidBlocks.add(key);
 
         if (!activeBlocks.has(key)) {
           const mat = getBiomeMaterial(x, y, z, maxZ);
@@ -366,18 +388,18 @@ function updateChunks() {
         }
       }
 
-      // Generovanie budov a domov na teréne
+      // Generovanie budov
       const bType = getBuildingType(x, y);
       if (bType > 0) {
-        const bHeight = bType === 2 ? 8 : 4; // Panelák je vyšší
+        const bHeight = bType === 2 ? 8 : 4;
         const groundZ = getTerrainHeight(x, y);
         for (let bz = 1; bz <= bHeight; bz++) {
           for (let bx = -1; bx <= 1; bx++) {
             for (let by = -1; by <= 1; by++) {
-              // Duté budovy s oknami zo skla
               if (bx === -1 || bx === 1 || by === -1 || by === 1 || bz === bHeight) {
                 const bKey = `${x+bx},${y+by},${groundZ+bz}`;
                 neededKeys.add(bKey);
+                solidBlocks.add(bKey);
                 if (!activeBlocks.has(bKey)) {
                   let matToUse = materials.brick;
                   if (bz > 1 && bz < bHeight && (bx === 0 || by === 0)) matToUse = materials.glass;
@@ -392,11 +414,13 @@ function updateChunks() {
         }
       }
 
+      // Generovanie stromov s kolíziou
       if (isTreePosition(x, y)) {
         const trunkH = 3;
         for (let tz = 1; tz <= trunkH; tz++) {
           const treeKey = `${x},${y},${maxZ + tz}`;
           neededKeys.add(treeKey);
+          solidBlocks.add(treeKey);
           if (!activeBlocks.has(treeKey)) {
             const mesh = new THREE.Mesh(boxGeo, materials.wood);
             mesh.position.set(x, y, maxZ + tz);
@@ -409,6 +433,7 @@ function updateChunks() {
             for (let lz = trunkH + 1; lz <= trunkH + 2; lz++) {
               const leafKey = `${x+lx},${y+ly},${maxZ+lz}`;
               neededKeys.add(leafKey);
+              solidBlocks.add(leafKey);
               if (!activeBlocks.has(leafKey)) {
                 const mesh = new THREE.Mesh(boxGeo, materials.leaves);
                 mesh.position.set(x+lx, y+ly, maxZ+lz);
@@ -437,7 +462,6 @@ function updateChunks() {
 function updateHUDStats() {
   const activeCount = activeBlocks.size;
   document.getElementById('ramCount').textContent = activeCount;
-  
   const estRamMB = Math.round(300 + (activeCount * 0.075));
   document.getElementById('estRam').textContent = `~${(estRamMB / 1024).toFixed(2)} GB`;
   document.getElementById('totalBlocks').textContent = Object.keys(savedWorldData).length;
@@ -496,7 +520,7 @@ function respawnPlayer() {
   updateChunks();
 }
 
-// JOYSTICK A OVLÁDANIE
+// OVLÁDANIE A JOYSTICK
 function setupJoystick() {
   const zone = document.getElementById('joystickZone');
   const knob = document.getElementById('joystickKnob');
@@ -523,12 +547,10 @@ function setupJoystick() {
           let dy = touch.clientY - startY;
           const maxDist = 35;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          
           if (dist > maxDist) {
             dx = (dx / dist) * maxDist;
             dy = (dy / dist) * maxDist;
           }
-
           knob.style.transform = `translate(${dx}px, ${dy}px)`;
           joystickMove.x = dx / maxDist;
           joystickMove.y = -dy / maxDist;
@@ -549,7 +571,6 @@ function setupJoystick() {
       }
     }
   };
-
   window.addEventListener('touchend', resetKnob);
   window.addEventListener('touchcancel', resetKnob);
 }
@@ -559,7 +580,7 @@ function setupJumpBtn() {
   const triggerJump = (e) => {
     e.preventDefault();
     if (isGrounded && !isDead) {
-      playerVelocityZ = 0.34;
+      playerVelocityZ = 0.35;
       isGrounded = false;
     }
   };
@@ -593,7 +614,7 @@ function setupKeyboardControls() {
     if (e.key === 's' || e.key === 'ArrowDown') keyboardKeys.backward = true;
     if (e.key === 'a' || e.key === 'ArrowLeft') keyboardKeys.left = true;
     if (e.key === 'd' || e.key === 'ArrowRight') keyboardKeys.right = true;
-    if (e.key === ' ' && isGrounded) { playerVelocityZ = 0.34; isGrounded = false; }
+    if (e.key === ' ' && isGrounded) { playerVelocityZ = 0.35; isGrounded = false; }
   });
   window.addEventListener('keyup', (e) => {
     if (e.key === 'w' || e.key === 'ArrowUp') keyboardKeys.forward = false;
@@ -643,24 +664,29 @@ function updatePlayerMovement() {
     isMoving = true;
   }
 
-  // FYZIKA KOPCOV: Kontrola výškového rozdielu (cez strmé svahy sa nedá prejsť bez skoku)
-  const currentGround = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y));
-  const targetGround = getTerrainHeight(Math.round(nextX), Math.round(nextY));
-
-  if (targetGround - currentGround <= 1 || !isGrounded) {
+  // Presná kolízia s objektmi (stromy, budovy) v X a Y smere
+  if (!isSolidBlock(nextX, playerPos.y, playerPos.z) && !isSolidBlock(nextX, playerPos.y, playerPos.z + 0.5)) {
     playerPos.x = nextX;
+  }
+  if (!isSolidBlock(playerPos.x, nextY, playerPos.z) && !isSolidBlock(playerPos.x, nextY, playerPos.z + 0.5)) {
     playerPos.y = nextY;
   }
 
-  const groundZ = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y)) + 1;
-  
+  // Gravitácia a vertikálna kolízia
   playerVelocityZ -= 0.02;
   playerPos.z += playerVelocityZ;
 
-  if (playerPos.z <= groundZ) {
-    playerPos.z = groundZ;
-    playerVelocityZ = 0;
-    isGrounded = true;
+  if (isSolidBlock(playerPos.x, playerPos.y, playerPos.z)) {
+    if (playerVelocityZ < 0) {
+      // Dopad na zem
+      playerPos.z = Math.floor(playerPos.z) + 1.0;
+      playerVelocityZ = 0;
+      isGrounded = true;
+    } else {
+      // Narazenie hlavou do stropu
+      playerPos.z -= playerVelocityZ;
+      playerVelocityZ = 0;
+    }
   } else {
     isGrounded = false;
   }
@@ -674,34 +700,44 @@ function updatePlayerMovement() {
   player.rotation.z = playerAngle;
   updateCharacterAnimation(player, isMoving);
 
-  // POHYB A UMELÁ INTELIGENCIA NEPRIATEĽA (PRENASLEDOVANIE HRÁČA)
+  // Pohyb nepriateľa s ohľadom na kolízie
   const dx = playerPos.x - enemyPos.x;
   const dy = playerPos.y - enemyPos.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  if (dist > 0.8) {
-    const enemySpeed = 0.09; // Nepriateľ beží za hráčom
-    enemyPos.x += (dx / dist) * enemySpeed;
-    enemyPos.y += (dy / dist) * enemySpeed;
-    updateCharacterAnimation(enemy, true);
-  } else {
-    // Ak nepriateľ dobehne hráča -> SMRŤ
+  // PRESNÁ SMRŤ: Ak je nepriateľ v tesnom fyzickom kontakte na rovnakej výške
+  if (dist < 0.7 && Math.abs(playerPos.z - enemyPos.z) < 1.2) {
     isDead = true;
     document.getElementById('deathScreen').style.display = 'flex';
+  } else if (dist > 0.6) {
+    const enemySpeed = 0.085;
+    let eNextX = enemyPos.x + (dx / dist) * enemySpeed;
+    let eNextY = enemyPos.y + (dy / dist) * enemySpeed;
+
+    if (!isSolidBlock(eNextX, enemyPos.y, enemyPos.z)) enemyPos.x = eNextX;
+    if (!isSolidBlock(enemyPos.x, eNextY, enemyPos.z)) enemyPos.y = eNextY;
+    updateCharacterAnimation(enemy, true);
   }
 
-  const enemyGroundZ = getTerrainHeight(Math.round(enemyPos.x), Math.round(enemyPos.y)) + 1;
   enemyVelocityZ -= 0.02;
   enemyPos.z += enemyVelocityZ;
-  if (enemyPos.z <= enemyGroundZ) {
-    enemyPos.z = enemyGroundZ;
-    enemyVelocityZ = 0;
+  if (isSolidBlock(enemyPos.x, enemyPos.y, enemyPos.z)) {
+    if (enemyVelocityZ < 0) {
+      enemyPos.z = Math.floor(enemyPos.z) + 1.0;
+      enemyVelocityZ = 0;
+      enemyGrounded = true;
+    } else {
+      enemyPos.z -= enemyVelocityZ;
+      enemyVelocityZ = 0;
+    }
+  } else {
+    enemyGrounded = false;
   }
 
   enemy.position.set(enemyPos.x, enemyPos.y, enemyPos.z);
   enemy.rotation.z = Math.atan2(dy, dx) - Math.PI/2;
 
-  // Kamera sleduje hráča
+  // Sledovanie kamerou
   const camDist = 8;
   camera.position.x = playerPos.x + Math.sin(playerAngle) * (camDist * Math.cos(cameraPitch));
   camera.position.y = playerPos.y - Math.cos(playerAngle) * (camDist * Math.cos(cameraPitch));
