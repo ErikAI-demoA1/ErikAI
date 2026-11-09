@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v2.7 - Perfect Slope & Collision</title>
+<title>ErikAI Voxel Craft 3D v2.8 - Perfect Enemy Physics</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -84,14 +84,14 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v2.7 (Slope Physics)</h3>
+  <h3>⚡ ErikAI Voxel Engine v2.8</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.2 GB</span></div>
   <div class="stat-row"><span>Uložené bloky:</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>FPS:</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">⚠️ Strmé hory vyžadujú skok! Utekaj pred nepriateľom!</div>
+  <div class="warning-text">⚠️ Pozor na červeného nepriateľa! Má rovnakú fyziku ako ty!</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Nový Svet</button>
 </div>
 
@@ -166,9 +166,10 @@ let isGrounded = false;
 let playerAngle = 0, cameraPitch = 0.45;
 let walkAnimationTime = 0;
 
-let enemyPos = { x: 12, y: 12, z: 10 };
+let enemyPos = { x: 10, y: 10, z: 10 };
 let enemyVelocityZ = 0;
 let enemyGrounded = false;
+let enemyWalkAnim = 0;
 
 let joystickMove = { x: 0, y: 0 };
 let keyboardKeys = { forward: false, backward: false, left: false, right: false };
@@ -190,8 +191,8 @@ function init() {
   dirLight.position.set(100, 80, 150);
   scene.add(dirLight);
 
-  player = createDetailedCharacter(0x1e88e5, 0x1565c0);
-  enemy = createDetailedCharacter(0xd32f2f, 0xb71c1c);
+  player = createDetailedCharacter(0x1e88e5, 0x1565c0); // Modrý hráč
+  enemy = createDetailedCharacter(0xd32f2f, 0xb71c1c);  // Červený nepriateľ
   scene.add(player);
   scene.add(enemy);
 
@@ -205,6 +206,7 @@ function init() {
   enemyPos.x = 10;
   enemyPos.y = 10;
   enemyPos.z = getTerrainHeight(10, 10) + 2;
+  enemyVelocityZ = 0;
 
   updateChunks();
 
@@ -511,6 +513,7 @@ function respawnPlayer() {
   enemyPos.x = 12;
   enemyPos.y = 12;
   enemyPos.z = getTerrainHeight(12, 12) + 2.5;
+  enemyVelocityZ = 0;
   
   updateChunks();
 }
@@ -619,10 +622,10 @@ function setupKeyboardControls() {
   });
 }
 
-function updateCharacterAnimation(charGroup, isMoving) {
+function updateCharacterAnimation(charGroup, isMoving, isEnemy = false) {
+  let animTime = isEnemy ? (enemyWalkAnim += 0.15) : (walkAnimationTime += 0.15);
   if (isMoving) {
-    walkAnimationTime += 0.15;
-    const swing = Math.sin(walkAnimationTime) * 0.5;
+    const swing = Math.sin(animTime) * 0.5;
     charGroup.userData.rightLeg.rotation.y = swing;
     charGroup.userData.leftLeg.rotation.y = -swing;
     charGroup.userData.rightArm.rotation.y = -swing;
@@ -659,13 +662,11 @@ function updatePlayerMovement() {
     isMoving = true;
   }
 
-  // FYZIKA KOPCOV: Kontrola výškového rozdielu (strmé svahy vyžadujú skok)
+  // FYZIKA KOPCOV: Prevýšenie max 1 blok alebo skok vo vzduchu
   const currentGround = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y));
   const targetGround = getTerrainHeight(Math.round(nextX), Math.round(nextY));
 
-  // Povolíme pohyb len ak je terén rovnaký, klesá, alebo je prevýšenie maximálne 1 blok (prípadne ak je hráč vo vzduchu)
   if ((targetGround - currentGround <= 1) || !isGrounded) {
-    // Kontrola kolízie so stenami budov a stromami v X a Y smere
     if (!isSolidBlock(nextX, playerPos.y, Math.floor(playerPos.z)) && !isSolidBlock(nextX, playerPos.y, Math.floor(playerPos.z) + 1)) {
       playerPos.x = nextX;
     }
@@ -674,7 +675,7 @@ function updatePlayerMovement() {
     }
   }
 
-  // Gravitácia a vertikálna kolízia
+  // Gravitácia a kolízia hráča
   playerVelocityZ -= 0.02;
   playerPos.z += playerVelocityZ;
 
@@ -699,31 +700,45 @@ function updatePlayerMovement() {
 
   player.position.set(playerPos.x, playerPos.y, playerPos.z);
   player.rotation.z = playerAngle;
-  updateCharacterAnimation(player, isMoving);
+  updateCharacterAnimation(player, isMoving, false);
 
-  // Pohyb nepriateľa s rešpektovaním prekážok a výšok
+  // POHYB NEPRIATEĽA (S IDENTICKOU FYZIKOU A SKÁKANÍM NA KOPCE)
   const dx = playerPos.x - enemyPos.x;
   const dy = playerPos.y - enemyPos.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
+  // Kolízia / SMRŤ: Ak je nepriateľ tesne pri hráčovi na rovnakej výške
   if (dist < 0.7 && Math.abs(playerPos.z - enemyPos.z) < 1.2) {
     isDead = true;
     document.getElementById('deathScreen').style.display = 'flex';
   } else if (dist > 0.6) {
-    const enemySpeed = 0.085;
+    const enemySpeed = 0.088;
     let eNextX = enemyPos.x + (dx / dist) * enemySpeed;
     let eNextY = enemyPos.y + (dy / dist) * enemySpeed;
 
     const eCurrentGround = getTerrainHeight(Math.round(enemyPos.x), Math.round(enemyPos.y));
     const eTargetGround = getTerrainHeight(Math.round(eNextX), Math.round(eNextY));
 
+    // Nepriateľ sa vie vyškriabať na kopec ak je prevýšenie 1 blok, alebo ak skáče vo vzduchu
     if ((eTargetGround - eCurrentGround <= 1) || !enemyGrounded) {
-      if (!isSolidBlock(eNextX, enemyPos.y, Math.floor(enemyPos.z))) enemyPos.x = eNextX;
-      if (!isSolidBlock(enemyPos.x, eNextY, Math.floor(enemyPos.z))) enemyPos.y = eNextY;
+      if (!isSolidBlock(eNextX, enemyPos.y, Math.floor(enemyPos.z)) && !isSolidBlock(eNextX, enemyPos.y, Math.floor(enemyPos.z) + 1)) {
+        enemyPos.x = eNextX;
+      }
+      if (!isSolidBlock(enemyPos.x, eNextY, Math.floor(enemyPos.z)) && !isSolidBlock(enemyPos.x, eNextY, Math.floor(enemyPos.z) + 1)) {
+        enemyPos.y = eNextY;
+      }
+    } else if (enemyGrounded && eTargetGround - eCurrentGround > 1) {
+      // Ak narazí na strmý svah, automaticky skočí, aby hráča dohnal!
+      enemyVelocityZ = 0.36;
+      enemyGrounded = false;
     }
-    updateCharacterAnimation(enemy, true);
+
+    updateCharacterAnimation(enemy, true, true);
+  } else {
+    updateCharacterAnimation(enemy, false, true);
   }
 
+  // Gravitácia nepriateľa
   enemyVelocityZ -= 0.02;
   enemyPos.z += enemyVelocityZ;
   const enemyFootZ = Math.floor(enemyPos.z);
@@ -743,7 +758,7 @@ function updatePlayerMovement() {
   enemy.position.set(enemyPos.x, enemyPos.y, enemyPos.z);
   enemy.rotation.z = Math.atan2(dy, dx) - Math.PI/2;
 
-  // Sledowanie kamerou
+  // Sledovanie kamerou
   const camDist = 8;
   camera.position.x = playerPos.x + Math.sin(playerAngle) * (camDist * Math.cos(cameraPitch));
   camera.position.y = playerPos.y - Math.cos(playerAngle) * (camDist * Math.cos(cameraPitch));
