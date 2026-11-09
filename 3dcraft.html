@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v2.9 - Respawn Ultimate Fix</title>
+<title>ErikAI Voxel Craft 3D v3.0 - Safe Respawn</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -92,14 +92,14 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v2.9</h3>
+  <h3>⚡ ErikAI Voxel Engine v3.0</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.2 GB</span></div>
   <div class="stat-row"><span>Uložené bloky:</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>FPS:</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">⚠️ Respawn bug vyriešený.</div>
+  <div class="warning-text">🛡️ Bezpečný Respawn aktívny.</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Nový Svet</button>
 </div>
 
@@ -153,6 +153,7 @@ let solidBlocks = new Set();
 let savedWorldData = {};
 let RENDER_DISTANCE = 26; 
 let isDead = false;
+let respawnProtection = 0; // Ochranný časovač po oživení
 
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 const materials = {
@@ -224,7 +225,6 @@ function init() {
   setupTouchLook();
   setupKeyboardControls();
 
-  // Spojenie respawn tlačidla cez click a touchend s okamžitým ukončením bublania eventu
   const respawnBtn = document.getElementById('respawnBtn');
   const triggerRespawn = (e) => {
     e.preventDefault();
@@ -525,6 +525,9 @@ function respawnPlayer() {
   isDead = false;
   document.getElementById('deathScreen').style.display = 'none';
   
+  // Aktivácia ochrannej imunity na 2 sekundy (nepriateľ ťa nezabije)
+  respawnProtection = Date.now() + 2000;
+  
   // Vynulovanie ovládania
   keyboardKeys = { forward: false, backward: false, left: false, right: false };
   joystickMove = { x: 0, y: 0 };
@@ -532,14 +535,14 @@ function respawnPlayer() {
   const knob = document.getElementById('joystickKnob');
   if (knob) knob.style.transform = `translate(0px, 0px)`;
 
-  // Pozícia hráča
+  // Pozícia hráča presne na bezpečný terén
   playerPos.x = 0;
   playerPos.y = 0;
   playerPos.z = getTerrainHeight(0, 0) + 3.0;
   playerVelocityZ = 0;
   isGrounded = true;
   
-  // Bezpečný respawn nepriateľa (25 blokov ďaleko, aby hneď nezabil)
+  // Bezpečný respawn nepriateľa s ohľadom na skutočný terén
   enemyPos.x = 25;
   enemyPos.y = 25;
   enemyPos.z = getTerrainHeight(25, 25) + 3.0;
@@ -744,7 +747,8 @@ function updatePlayerMovement() {
   const dy = playerPos.y - enemyPos.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  if (dist < 0.7 && Math.abs(playerPos.z - enemyPos.z) < 1.2) {
+  // Kontrola smrti (ignoruje sa, ak prebieha 2-sekundová ochranná imunita po respawne)
+  if (Date.now() > respawnProtection && dist < 0.7 && Math.abs(playerPos.z - enemyPos.z) < 1.2) {
     isDead = true;
     document.getElementById('deathScreen').style.display = 'flex';
   } else if (dist > 0.6) {
