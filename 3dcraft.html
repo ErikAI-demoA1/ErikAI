@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v1.8 - Spawn Protection Edition</title>
+<title>ErikAI Voxel Craft 3D v1.9 - Pre-built Base Edition</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -73,7 +73,7 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v1.8 (Safe)</h3>
+  <h3>⚡ ErikAI Voxel Engine v1.9 (Pre-built Base)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.4 GB</span></div>
@@ -86,8 +86,8 @@ button.action-btn {
 
 <div id="deathScreen">
   <h1>💀 ZOMREL SI!</h1>
-  <p>Prepadol si sa do priepasti pod svet (Z < -5).</p>
-  <button onclick="respawnPlayer()">🔄 Oživiť na bezpečnom mieste</button>
+  <p>Prepadol si sa pod úroveň -15.</p>
+  <button onclick="respawnPlayer()">🔄 Oživiť na bezpečnej plošine</button>
 </div>
 
 <div id="controls">
@@ -140,7 +140,6 @@ let activeBlocks = new Map();
 let savedWorldData = {};
 let RENDER_DISTANCE = 35; 
 let isDead = false;
-let spawnProtectionTimer = 120; // 2 sekundy imunity pri štarte (pri 60 FPS)
 
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 const materials = {
@@ -154,7 +153,7 @@ const materials = {
   bedrock: new THREE.MeshStandardMaterial({ color: 0x212121, roughness: 0.9 })
 };
 
-let playerPos = { x: 0, y: 0, z: 10 };
+let playerPos = { x: 0, y: 0, z: 12 };
 let playerAngle = 0, cameraPitch = 0.45;
 let keys = { forward: false, backward: false, left: false, right: false };
 
@@ -178,13 +177,15 @@ function init() {
   createPlayer();
   loadWorldFromStorage();
 
-  // Nastavenie bezpečnej pozície a okamžité vygenerovanie plochy pod hráčom
+  // 1. NATVRDO VYBUDOVANÁ PRE-BUILT ZÁKLADŇA POD SPAWNOM
+  buildPrebuiltBase();
+
+  // 2. Nastavenie pozície hráča bezpečne na pripravenú plochu
   playerPos.x = 0;
   playerPos.y = 0;
-  ensureSafePlatformAt(0, 0);
-  playerPos.z = getTerrainHeight(0, 0) + 3; // Bezpečná výška nad zemou
+  playerPos.z = Math.max(getTerrainHeight(0, 0), 5) + 2;
 
-  // Okamžité vygenerovanie chunkov pred prvým snímaním
+  // 3. Prvé kompletné vygenerovanie chunkov pred štartom smyčky
   updateChunks();
 
   setupControls();
@@ -211,13 +212,12 @@ function getTerrainHeight(x, y) {
   return Math.floor(z);
 }
 
-function ensureSafePlatformAt(pX, pY) {
-  const iX = Math.round(pX);
-  const iY = Math.round(pY);
-  for (let x = iX - 5; x <= iX + 5; x++) {
-    for (let y = iY - 5; y <= iY + 5; y++) {
-      const h = getTerrainHeight(x, y);
-      for (let z = h; z >= -12; z--) {
+// NATVRDO VYTVORÍ BETÓNOVÉ PODLOŽIE POD BODOV 0,0 
+function buildPrebuiltBase() {
+  for (let x = -6; x <= 6; x++) {
+    for (let y = -6; y <= 6; y++) {
+      const h = Math.max(getTerrainHeight(x, y), 4);
+      for (let z = h; z >= -10; z--) {
         const key = `${x},${y},${z}`;
         savedWorldData[key] = 1;
       }
@@ -374,12 +374,11 @@ function resetWorld() {
 
 function respawnPlayer() {
   isDead = false;
-  spawnProtectionTimer = 120; // Obnovenie 2-sekundovej imunity pri oživení
   document.getElementById('deathScreen').style.display = 'none';
+  buildPrebuiltBase();
   playerPos.x = 0;
   playerPos.y = 0;
-  ensureSafePlatformAt(0, 0);
-  playerPos.z = getTerrainHeight(0, 0) + 3;
+  playerPos.z = Math.max(getTerrainHeight(0, 0), 5) + 2;
   updateChunks();
 }
 
@@ -442,22 +441,17 @@ function updatePlayerMovement() {
 
   playerPos.x += moveX; playerPos.y += moveY;
 
-  ensureSafePlatformAt(playerPos.x, playerPos.y);
-
   const currentTerrainZ = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y));
   const targetZ = currentTerrainZ + 1;
 
+  // HLADKÝ POHYB PO TERÉNE
   playerPos.z += (targetZ - playerPos.z) * 0.25;
   if (playerPos.z < targetZ) playerPos.z = targetZ;
 
-  // Odpočet imunity pri štarte, aby hráč nezomrel hneď po načítaní
-  if (spawnProtectionTimer > 0) {
-    spawnProtectionTimer--;
-  } else {
-    if (playerPos.z < -5) {
-      isDead = true;
-      document.getElementById('deathScreen').style.display = 'flex';
-    }
+  // ABSOLÚTNA POISTKA SMRTI: Len ak padne hlboko pod svet (Z < -15)
+  if (playerPos.z < -15) {
+    isDead = true;
+    document.getElementById('deathScreen').style.display = 'flex';
   }
 
   player.position.set(playerPos.x, playerPos.y, playerPos.z);
