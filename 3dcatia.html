@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro ISO CAD Studio v5.1</title>
+<title>ErikAI Pro ISO CAD Studio v6.0</title>
 <!-- Three.js, OrbitControls a Three-CSG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -229,46 +229,11 @@ select.format-select {
 <header>
   <div class="panel">
     <select id="shapeSelector" class="format-select" onchange="changeActiveShape()">
-      <optgroup label="🧊 Kocky / Kvádre">
-        <option value="box">Kocka / Kváder (stojatý)</option>
-        <option value="threadedBox">Kocka so závitovou dierou (stojatá)</option>
-      </optgroup>
-      <optgroup label="🧪 Valce / Čapy">
-        <option value="cylinder">Valec (stojatý)</option>
-        <option value="cylinder_right">Valec – Smer VPRAVO</option>
-        <option value="cylinder_left">Valec – Smer VĽAVO</option>
-        <option value="cylinder_forward">Valec – Smer DOPREDU</option>
-        <option value="cylinder_backward">Valec – Smer DOZADU</option>
-        <option value="threadedCylinder">Valec so závitom (stojatý)</option>
-        <option value="threadedCylinder_right">Valec so závitom – Smer VPRAVO</option>
-        <option value="threadedCylinder_left">Valec so závitom – Smer VĽAVO</option>
-        <option value="threadedCylinder_forward">Valec so závitom – Smer DOPREDU</option>
-        <option value="threadedCylinder_backward">Valec so závitom – Smer DOZADU</option>
-      </optgroup>
-      <optgroup label="⭕ Rúry">
-        <option value="pipe">Rúra s otvorom (stojatá)</option>
-        <option value="pipe_right">Rúra – Smer VPRAVO</option>
-        <option value="pipe_left">Rúra – Smer VĽAVO</option>
-        <option value="pipe_forward">Rúra – Smer DOPREDU</option>
-        <option value="pipe_backward">Rúra – Smer DOZADU</option>
-      </optgroup>
-      <optgroup label="🔮 Guľa">
-        <option value="sphere">Guľa (na zemi)</option>
-      </optgroup>
-      <optgroup label="🔺 Kužeľ">
-        <option value="cone">Kužeľ (stojatý)</option>
-        <option value="cone_right">Kužeľ – Smer VPRAVO</option>
-        <option value="cone_left">Kužeľ – Smer VĽAVO</option>
-        <option value="cone_forward">Kužeľ – Smer DOPREDU</option>
-        <option value="cone_backward">Kužeľ – Smer DOZADU</option>
-      </optgroup>
-      <optgroup label="📐 Ihlan">
-        <option value="pyramid">Ihlan (stojatý)</option>
-        <option value="pyramid_right">Ihlan – Smer VPRAVO</option>
-        <option value="pyramid_left">Ihlan – Smer VĽAVO</option>
-        <option value="pyramid_forward">Ihlan – Smer DOPREDU</option>
-        <option value="pyramid_backward">Ihlan – Smer DOZADU</option>
-      </optgroup>
+      <option value="box">🧊 Kocka / Kváder (stojatý)</option>
+      <option value="cylinder">🧪 Kruh / Valec (stojatý)</option>
+      <option value="sphere">🔮 Guľa (na zemi)</option>
+      <option value="pipe">⭕ Rúra s otvorom (stojatá)</option>
+      <option value="pyramid">📐 Ihlan (stojatý)</option>
     </select>
 
     <select id="csgOperationSelector" class="format-select" onchange="changeCsgOperation()" style="border-color: var(--accent-blue);">
@@ -300,12 +265,12 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">Súradnicový stred: [X: Stred, Y: Stred, Z: Spodok (Z >= 0)] | Samostatné orientované tvary</span>
+  <span id="infoCoords">Súradnicový stred: [X: Stred, Y: Stred, Z: Spodok (Z >= 0)] | Overené stojaté tvary</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI ISO CAD Studio v5.1 – Stojaté tvary a samostatné orientácie (vpravo/vľavo/dopredu/dozadu), Z >= 0.</div></div>
+  <div id="commandHistory"><div>ErikAI ISO CAD Studio v6.0 – Overené čisté stojaté tvary, žiadny diel pod zemou.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
     <input type="text" id="commandInput" placeholder="Príkaz..." autocomplete="off">
@@ -570,9 +535,7 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
   if(!s.hide) s.hide = { name: false, frontW: false, frontD: false, topW: false, topH: false, sideH: false, sideD: false, radius: false };
   let offsetStep = (index - 1) * 22;
 
-  let baseType = s.type.replace(/(_forward|_backward|_right|_left)/g, '');
-
-  if(baseType === 'box' || baseType === 'threadedBox'){
+  if(s.type === 'box'){
     if(viewType === 'front'){
       ctx.strokeRect(-scaleW/2, -scaleD, scaleW, scaleD);
       if(isSub) drawHatching(ctx, -scaleW/2, -scaleD, scaleW, scaleD);
@@ -580,10 +543,6 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
       if(!s.hide.frontD) drawDimensionLine(ctx, scaleW/2 + 28 + offsetStep, -scaleD, scaleW/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
     } else if(viewType === 'top'){
       ctx.strokeRect(-scaleW/2, -scaleH/2, scaleW, scaleH);
-      if(baseType === 'threadedBox'){
-        ctx.beginPath(); ctx.arc(0, 0, scaleR*0.5, 0, Math.PI*2); ctx.stroke();
-        drawThreadHatch(ctx, 0, 0, scaleR*0.5);
-      }
       if(isSub) drawHatching(ctx, -scaleW/2, -scaleH/2, scaleW, scaleH);
       if(!s.hide.topW) drawDimensionLine(ctx, -scaleW/2, -scaleH/2 - 28 - offsetStep, scaleW/2, -scaleH/2 - 28 - offsetStep, `Š: ${s.w} mm`);
       if(!s.hide.topH) drawDimensionLine(ctx, scaleW/2 + 28 + offsetStep, -scaleH/2, scaleW/2 + 28 + offsetStep, scaleH/2, `H: ${s.h} mm`);
@@ -594,40 +553,52 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
       if(!s.hide.sideD) drawDimensionLine(ctx, scaleH/2 + 28 + offsetStep, -scaleD, scaleH/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
     }
   } 
-  else if(baseType === 'cylinder' || baseType === 'threadedCylinder' || baseType === 'pipe'){
+  else if(s.type === 'cylinder' || s.type === 'pipe'){
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, scaleR, 0, Math.PI * 2); ctx.stroke();
-      if(baseType === 'pipe'){
+      if(s.type === 'pipe'){
         let innerR = Math.max(2, scaleR - (s.wall||10)*0.5);
         ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI * 2); ctx.stroke();
       }
-      if(baseType === 'threadedCylinder'){
-        ctx.beginPath(); ctx.arc(0, 0, scaleR*0.7, 0, Math.PI * 2); ctx.stroke();
-        drawThreadHatch(ctx, 0, 0, scaleR*0.7);
-      }
       if(!s.hide.radius) drawDimensionLine(ctx, 0, 0, scaleR + offsetStep*0.5, 0, `Ø: ${s.r*2} mm`);
     } else {
-      let isHorizontal = s.type.includes('right') || s.type.includes('left') || s.type.includes('forward') || s.type.includes('backward');
-      let drawW = isHorizontal ? scaleD : scaleR * 2;
-      let drawH = isHorizontal ? scaleR * 2 : scaleD;
+      ctx.strokeRect(-scaleR, -scaleD, scaleR * 2, scaleD);
+      ctx.save();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 2]);
+      ctx.beginPath(); ctx.moveTo(0, -scaleD - 10); ctx.lineTo(0, 10); ctx.stroke();
+      ctx.restore();
 
-      ctx.strokeRect(-drawW/2, -drawH, drawW, drawH);
-      if(isSub) drawHatching(ctx, -drawW/2, -drawH, drawW, drawH);
+      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
+      if(viewType === 'side' && !s.hide.sideD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
+      if(!s.hide.radius) drawDimensionLine(ctx, -scaleR, -scaleD - 28 - offsetStep, scaleR, -scaleD - 28 - offsetStep, `Ø: ${s.r*2} mm`);
 
-      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, drawW/2 + 28 + offsetStep, -drawH, drawW/2 + 28 + offsetStep, 0, `D: ${s.d} mm`);
-      if(!s.hide.radius) drawDimensionLine(ctx, -drawW/2, -drawH - 28 - offsetStep, drawW/2, -drawH - 28 - offsetStep, `Ø: ${s.r*2} mm`);
+      if(isSub) drawHatching(ctx, -scaleR, -scaleD, scaleR*2, scaleD);
     }
   } 
-  else if(baseType === 'sphere'){
+  else if(s.type === 'sphere'){
     ctx.beginPath(); ctx.arc(0, -scaleR, scaleR, 0, Math.PI * 2); ctx.stroke();
+    ctx.save();
+    ctx.strokeStyle = '#94a3b8';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(0, -scaleR*2 - 10); ctx.lineTo(0, 10); ctx.stroke();
+    ctx.restore();
     if(!s.hide.radius) drawDimensionLine(ctx, 0, -scaleR, scaleR + offsetStep*0.5, -scaleR, `R: ${s.r} mm`);
   } 
-  else if(baseType === 'cone' || baseType === 'pyramid'){
-    ctx.beginPath();
-    ctx.moveTo(-scaleR, 0); ctx.lineTo(0, -scaleD); ctx.lineTo(scaleR, 0); ctx.closePath();
-    ctx.stroke();
-    if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
-    if(!s.hide.radius) drawDimensionLine(ctx, -scaleR, -scaleD - 28 - offsetStep, scaleR, -scaleD - 28 - offsetStep, `Š: ${s.r*2} mm`);
+  else if(s.type === 'pyramid'){
+    if(viewType === 'top'){
+      ctx.strokeRect(-scaleW/2, -scaleH/2, scaleW, scaleH);
+      ctx.beginPath(); ctx.moveTo(-scaleW/2, -scaleH/2); ctx.lineTo(scaleW/2, scaleH/2); ctx.moveTo(scaleW/2, -scaleH/2); ctx.lineTo(-scaleW/2, scaleH/2); ctx.stroke();
+      if(!s.hide.topW) drawDimensionLine(ctx, -scaleW/2, -scaleH/2 - 28 - offsetStep, scaleW/2, -scaleH/2 - 28 - offsetStep, `Š: ${s.w} mm`);
+    } else {
+      ctx.beginPath();
+      let baseDim = viewType === 'front' ? scaleW : scaleH;
+      ctx.moveTo(-baseDim/2, 0); ctx.lineTo(0, -scaleD); ctx.lineTo(baseDim/2, 0); ctx.closePath();
+      ctx.stroke();
+      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(baseDim/2 + 28 + offsetStep, -scaleD, baseDim/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
+      if(viewType === 'side' && !s.hide.sideD) drawDimensionLine(baseDim/2 + 28 + offsetStep, -scaleD, baseDim/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
+    }
   }
 
   if(viewType === 'front' && !s.hide.name){
@@ -663,14 +634,6 @@ function drawDimensionLine(ctx, x1, y1, x2, y2, text){
   ctx.restore();
 }
 
-function drawThreadHatch(ctx, cx, cy, r){
-  ctx.save();
-  ctx.strokeStyle = '#3b82f6';
-  ctx.lineWidth = 0.8;
-  ctx.beginPath(); ctx.arc(cx, cy, r * 0.85, 0, Math.PI * 1.5); ctx.stroke();
-  ctx.restore();
-}
-
 function drawHatching(ctx, x, y, w, h){
   ctx.save();
   ctx.strokeStyle = '#dc2626';
@@ -700,7 +663,7 @@ function renderTitleBlock(ctx, x, y){
   ctx.fillText("Materiál: S235JR / Oceľ", x + 10, y + 48);
   ctx.fillText("Vypracoval: ErikAI CAD", x + 10, y + 90);
   ctx.fillText("Mierka: 1:1", x + 190, y + 90);
-  ctx.fillText("Výkres: DWG-2026-v5.1", x + 190, y + 130);
+  ctx.fillText("Výkres: DWG-2026-v6.0", x + 190, y + 130);
   ctx.restore();
 }
 
@@ -726,7 +689,7 @@ canvas.onclick = (e) => {
   shapes.push(newShape);
   selectedShapeIndex = shapes.length - 1;
   draw2DSketch();
-  logCommand(`Pridaný orientovaný diel na súradnice [X:${relX}, Y:${relY}, Z:0]`);
+  logCommand(`Pridaný stojatý diel na súradnice [X:${relX}, Y:${relY}, Z:0]`);
 };
 
 function clearAll(){
@@ -736,7 +699,7 @@ function clearAll(){
 }
 
 // ----------------------------------------------------
-// 🚀 3D GENERÁTOR (THREE.JS + CSG) – BEZPEČNÁ ZONA Z >= 0
+// 🚀 3D GENERÁTOR (THREE.JS + CSG) – STOJATÉ TVARY Z >= 0
 // ----------------------------------------------------
 function createGeometryForShape(s){
   let geo;
@@ -746,36 +709,19 @@ function createGeometryForShape(s){
   const scR = (s.r || 50) / 10;
   const scWall = (s.wall || 10) / 10;
 
-  let baseType = s.type.replace(/(_forward|_backward|_right|_left)/g, '');
-
-  if(baseType === 'box' || baseType === 'threadedBox') {
+  if(s.type === 'box') {
     geo = new THREE.BoxGeometry(scW, scH, scD);
     geo.translate(0, 0, scD / 2);
-  } else if(baseType === 'cylinder' || baseType === 'threadedCylinder') {
+  } else if(s.type === 'cylinder') {
     geo = new THREE.CylinderGeometry(scR, scR, scD, 32);
-    if(s.type.includes('right')) { geo.rotateY(Math.PI / 2); geo.translate(scD / 2, 0, scR); }
-    else if(s.type.includes('left')) { geo.rotateY(-Math.PI / 2); geo.translate(-scD / 2, 0, scR); }
-    else if(s.type.includes('forward')) { geo.rotateX(Math.PI / 2); geo.translate(0, scD / 2, scR); }
-    else if(s.type.includes('backward')) { geo.rotateX(-Math.PI / 2); geo.translate(0, -scD / 2, scR); }
-    else { geo.rotateX(Math.PI / 2); geo.translate(0, 0, scD / 2); }
-  } else if(baseType === 'sphere') {
+    geo.translate(0, 0, scD / 2);
+  } else if(s.type === 'sphere') {
     geo = new THREE.SphereGeometry(scR, 32, 32);
     geo.translate(0, 0, scR);
-  } else if(baseType === 'cone') {
-    geo = new THREE.CylinderGeometry(0, scR, scD, 32);
-    if(s.type.includes('right')) { geo.rotateY(Math.PI / 2); geo.translate(scD / 2, 0, 0); }
-    else if(s.type.includes('left')) { geo.rotateY(-Math.PI / 2); geo.translate(-scD / 2, 0, 0); }
-    else if(s.type.includes('forward')) { geo.rotateX(Math.PI / 2); geo.translate(0, scD / 2, 0); }
-    else if(s.type.includes('backward')) { geo.rotateX(-Math.PI / 2); geo.translate(0, -scD / 2, 0); }
-    else { geo.rotateX(Math.PI / 2); geo.translate(0, 0, scD / 2); }
-  } else if(baseType === 'pyramid') {
+  } else if(s.type === 'pyramid') {
     geo = new THREE.ConeGeometry(scR, scD, 4);
-    if(s.type.includes('right')) { geo.rotateY(Math.PI / 2); geo.translate(scD / 2, 0, 0); }
-    else if(s.type.includes('left')) { geo.rotateY(-Math.PI / 2); geo.translate(-scD / 2, 0, 0); }
-    else if(s.type.includes('forward')) { geo.rotateX(Math.PI / 2); geo.translate(0, scD / 2, 0); }
-    else if(s.type.includes('backward')) { geo.rotateX(-Math.PI / 2); geo.translate(0, -scD / 2, 0); }
-    else { geo.rotateX(Math.PI / 2); geo.translate(0, 0, scD / 2); }
-  } else if(baseType === 'pipe') {
+    geo.translate(0, 0, scD / 2);
+  } else if(s.type === 'pipe') {
     const shape = new THREE.Shape();
     shape.absarc(0, 0, scR, 0, Math.PI * 2, false);
     const innerR = Math.max(0.5, scR - scWall);
@@ -783,12 +729,7 @@ function createGeometryForShape(s){
     holePath.absarc(0, 0, innerR, 0, Math.PI * 2, true);
     shape.holes.push(holePath);
     geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: false, curveSegments: 32 });
-    geo.center();
-    if(s.type.includes('right')) { geo.rotateY(Math.PI / 2); geo.translate(scD / 2, 0, scR); }
-    else if(s.type.includes('left')) { geo.rotateY(-Math.PI / 2); geo.translate(-scD / 2, 0, scR); }
-    else if(s.type.includes('forward')) { geo.rotateX(Math.PI / 2); geo.translate(0, scD / 2, scR); }
-    else if(s.type.includes('backward')) { geo.rotateX(-Math.PI / 2); geo.translate(0, -scD / 2, scR); }
-    else { geo.translate(0, 0, scD / 2); }
+    geo.center(); geo.translate(0, 0, scD / 2);
   } else {
     geo = new THREE.BoxGeometry(10, 10, 10);
     geo.translate(0, 0, 5);
