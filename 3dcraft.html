@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v2.9 - Respawn Fix</title>
+<title>ErikAI Voxel Craft 3D v2.9 - Respawn Fix Final</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -16,10 +16,11 @@
   --accent-amber: #f59e0b;
   --text: #ffffff;
 }
-* { box-sizing: border-box; user-select: none; touch-action: none; }
+* { box-sizing: border-box; user-select: none; }
 body, html {
   margin: 0; padding: 0; width: 100%; height: 100%;
   overflow: hidden; background: var(--bg); font-family: 'Segoe UI', sans-serif;
+  touch-action: none;
 }
 
 #hud {
@@ -28,6 +29,7 @@ body, html {
   padding: 12px 16px; border-radius: 10px; color: var(--text);
   font-size: 0.82rem; width: 340px; max-width: 90vw; z-index: 10;
   backdrop-filter: blur(8px); box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  pointer-events: none;
 }
 #hud h3 { margin: 0 0 6px 0; color: var(--accent); font-size: 0.95rem; }
 .stat-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
@@ -36,19 +38,25 @@ body, html {
 .ram-ultra { font-weight: bold; color: #ec4899; }
 .warning-text { color: var(--accent-red); font-weight: bold; margin-top: 4px; font-size: 0.78rem; text-align: center; }
 
+#hud button {
+  pointer-events: auto;
+}
+
 #deathScreen {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(239, 68, 68, 0.88); display: none;
+  background: rgba(239, 68, 68, 0.92); display: none;
   flex-direction: column; justify-content: center; align-items: center;
-  z-index: 100; color: white; text-align: center; padding: 20px;
-  backdrop-filter: blur(5px);
+  z-index: 1000; color: white; text-align: center; padding: 20px;
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
 }
 #deathScreen h1 { font-size: 2.5rem; margin: 0 0 10px 0; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 #deathScreen p { font-size: 1.1rem; margin-bottom: 20px; }
 #deathScreen button {
-  padding: 12px 24px; background: white; color: #ef4444; border: none;
-  border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: auto;
+  padding: 14px 28px; background: white; color: #ef4444; border: none;
+  border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4); pointer-events: auto;
+  z-index: 1001;
 }
 
 /* UI PRVKY: JOYSTICK A SKOK */
@@ -91,7 +99,7 @@ button.action-btn {
   <div class="stat-row"><span>Uložené bloky:</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>FPS:</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">⚠️ Pozor na nepriateľa! Respawn opravený.</div>
+  <div class="warning-text">⚠️ Respawn a dotyky opravené!</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Nový Svet</button>
 </div>
 
@@ -166,12 +174,13 @@ let isGrounded = false;
 let playerAngle = 0, cameraPitch = 0.45;
 let walkAnimationTime = 0;
 
-let enemyPos = { x: 12, y: 12, z: 10 };
+let enemyPos = { x: 20, y: 20, z: 10 };
 let enemyVelocityZ = 0;
 let enemyGrounded = false;
 let enemyWalkAnim = 0;
 
 let joystickMove = { x: 0, y: 0 };
+let joystickTouchId = null;
 let keyboardKeys = { forward: false, backward: false, left: false, right: false };
 
 function init() {
@@ -203,9 +212,9 @@ function init() {
   playerPos.z = getTerrainHeight(0,0) + 3;
   playerVelocityZ = 0;
 
-  enemyPos.x = 12;
-  enemyPos.y = 12;
-  enemyPos.z = getTerrainHeight(12, 12) + 3;
+  enemyPos.x = 20;
+  enemyPos.y = 20;
+  enemyPos.z = getTerrainHeight(20, 20) + 3;
   enemyVelocityZ = 0;
 
   updateChunks();
@@ -215,7 +224,17 @@ function init() {
   setupTouchLook();
   setupKeyboardControls();
 
-  document.getElementById('respawnBtn').addEventListener('click', respawnPlayer);
+  // Spojenie respawn tlačidla cez viacero eventov pre istotu
+  const respawnBtn = document.getElementById('respawnBtn');
+  respawnBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    respawnPlayer();
+  });
+  respawnBtn.addEventListener('touchend', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    respawnPlayer();
+  });
 
   window.addEventListener('resize', onWindowResize);
   document.getElementById('seedVal').textContent = currentSeed;
@@ -508,23 +527,24 @@ function respawnPlayer() {
   isDead = false;
   document.getElementById('deathScreen').style.display = 'none';
   
-  // Vynulovanie stlačených kláves a joysticku
+  // Reset všetkých vstupov a joysticku
   keyboardKeys = { forward: false, backward: false, left: false, right: false };
   joystickMove = { x: 0, y: 0 };
+  joystickTouchId = null;
   const knob = document.getElementById('joystickKnob');
   if (knob) knob.style.transform = `translate(0px, 0px)`;
 
-  // Resreset pozície hráča
+  // Pozícia hráča
   playerPos.x = 0;
   playerPos.y = 0;
   playerPos.z = getTerrainHeight(0, 0) + 3.0;
   playerVelocityZ = 0;
   isGrounded = true;
   
-  // Respawn nepriateľa ďalej od hráča
-  enemyPos.x = 18;
-  enemyPos.y = 18;
-  enemyPos.z = getTerrainHeight(18, 18) + 3.0;
+  // Pozícia nepriateľa ďalej, aby ťa hneď nezabil
+  enemyPos.x = 20;
+  enemyPos.y = 20;
+  enemyPos.z = getTerrainHeight(20, 20) + 3.0;
   enemyVelocityZ = 0;
   enemyGrounded = true;
   
@@ -535,25 +555,24 @@ function respawnPlayer() {
 function setupJoystick() {
   const zone = document.getElementById('joystickZone');
   const knob = document.getElementById('joystickKnob');
-  let touchId = null;
-  let startX = 0, startY = 0;
 
   zone.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (touchId === null) {
+    if (joystickTouchId === null && e.changedTouches.length > 0) {
       const touch = e.changedTouches[0];
-      touchId = touch.identifier;
-      const rect = zone.getBoundingClientRect();
-      startX = rect.left + rect.width / 2;
-      startY = rect.top + rect.height / 2;
+      joystickTouchId = touch.identifier;
     }
-  });
+  }, { passive: false });
 
   window.addEventListener('touchmove', (e) => {
-    if (touchId !== null) {
+    if (joystickTouchId !== null) {
       for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === touchId) {
+        if (e.changedTouches[i].identifier === joystickTouchId) {
           const touch = e.changedTouches[i];
+          const rect = zone.getBoundingClientRect();
+          const startX = rect.left + rect.width / 2;
+          const startY = rect.top + rect.height / 2;
+          
           let dx = touch.clientX - startX;
           let dy = touch.clientY - startY;
           const maxDist = 35;
@@ -568,13 +587,13 @@ function setupJoystick() {
         }
       }
     }
-  });
+  }, { passive: false });
 
   const resetKnob = (e) => {
-    if (touchId !== null) {
+    if (joystickTouchId !== null) {
       for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === touchId) {
-          touchId = null;
+        if (e.changedTouches[i].identifier === joystickTouchId) {
+          joystickTouchId = null;
           knob.style.transform = `translate(0px, 0px)`;
           joystickMove.x = 0;
           joystickMove.y = 0;
@@ -603,20 +622,26 @@ function setupTouchLook() {
   let touchStartX = 0, touchStartY = 0;
   window.addEventListener('touchstart', (e) => {
     if (isDead) return;
-    if (e.target.id !== 'jumpBtn' && e.target.id !== 'joystickZone' && e.target.id !== 'joystickKnob' && e.target.tagName !== 'BUTTON') {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
+    const t = e.target;
+    if (t.id !== 'jumpBtn' && t.id !== 'joystickZone' && t.id !== 'joystickKnob' && t.tagName !== 'BUTTON') {
+      if (e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
     }
   });
   window.addEventListener('touchmove', (e) => {
     if (isDead) return;
-    if (e.target.id !== 'jumpBtn' && e.target.id !== 'joystickZone' && e.target.id !== 'joystickKnob' && e.target.tagName !== 'BUTTON') {
-      const deltaX = e.touches[0].clientX - touchStartX;
-      const deltaY = e.touches[0].clientY - touchStartY;
-      playerAngle -= deltaX * 0.005;
-      cameraPitch = Math.max(0.1, Math.min(1.2, cameraPitch + deltaY * 0.005));
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
+    const t = e.target;
+    if (t.id !== 'jumpBtn' && t.id !== 'joystickZone' && t.id !== 'joystickKnob' && t.tagName !== 'BUTTON') {
+      if (e.touches.length > 0) {
+        const deltaX = e.touches[0].clientX - touchStartX;
+        const deltaY = e.touches[0].clientY - touchStartY;
+        playerAngle -= deltaX * 0.005;
+        cameraPitch = Math.max(0.1, Math.min(1.2, cameraPitch + deltaY * 0.005));
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
     }
   });
 }
@@ -718,12 +743,11 @@ function updatePlayerMovement() {
   player.rotation.z = playerAngle;
   updateCharacterAnimation(player, isMoving, false);
 
-  // POHYB NEPRIATEĽA (S IDENTICKOU FYZIKOU A SKÁKANÍM NA KOPCE)
+  // POHYB NEPRIATEĽA
   const dx = playerPos.x - enemyPos.x;
   const dy = playerPos.y - enemyPos.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  // Kolízia / SMRŤ: Ak je nepriateľ tesne pri hráčovi na rovnakej výške
   if (dist < 0.7 && Math.abs(playerPos.z - enemyPos.z) < 1.2) {
     isDead = true;
     document.getElementById('deathScreen').style.display = 'flex';
@@ -772,7 +796,7 @@ function updatePlayerMovement() {
   enemy.position.set(enemyPos.x, enemyPos.y, enemyPos.z);
   enemy.rotation.z = Math.atan2(dy, dx) - Math.PI/2;
 
-  // Sledovanie kamerou
+  // Sledowanie kamerou
   const camDist = 8;
   camera.position.x = playerPos.x + Math.sin(playerAngle) * (camDist * Math.cos(cameraPitch));
   camera.position.y = playerPos.y - Math.cos(playerAngle) * (camDist * Math.cos(cameraPitch));
