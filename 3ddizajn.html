@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 3D CATIA Studio v8.4</title>
+<title>ErikAI Pro 3D CATIA Studio v8.5</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three-csg-ts@3.1.16/lib/bundle.js"></script>
@@ -213,7 +213,7 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">3D CATIA Z-Up Studio v8.4 | Z >= 0 | Otáčanie: Ľavé tlačidlo myši | Posun: Pravé tlačidlo</span>
+  <span id="infoCoords">3D CATIA Z-Up Studio v8.5 | Z >= 0 | Otáčanie: Ľavé tlačidlo myši | Posun: Pravé tlačidlo</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
@@ -419,8 +419,8 @@ function updateScene3D(){
   scene.traverse(child => { if(child.isMesh) removeObjects.push(child); });
   removeObjects.forEach(m => scene.remove(m));
 
-  let baseMesh = null;
-  let subtractiveShapes = [];
+  let baseMeshes = [];
+  let subtractiveMeshes = [];
 
   shapes.forEach((s, idx) => {
     const geo = createGeometryForShape(s);
@@ -445,30 +445,37 @@ function updateScene3D(){
     mesh.updateMatrix();
 
     if(s.op === 'subtract') {
-      subtractiveShapes.push({ mesh, index: idx });
-      scene.add(mesh);
+      subtractiveMeshes.push(mesh);
+      scene.add(mesh); // V editori ukážeme červené rezné teleso
     } else {
-      if(!baseMesh){
-        baseMesh = mesh;
-        scene.add(baseMesh);
-      } else {
-        scene.add(mesh);
-      }
+      baseMeshes.push(mesh);
     }
   });
 
-  if(baseMesh && subtractiveShapes.length > 0 && typeof CSG !== 'undefined'){
-    try {
-      let csgBase = CSG.fromMesh(baseMesh);
-      subtractiveShapes.forEach(sub => {
-        const csgSub = CSG.fromMesh(sub.mesh);
-        csgBase = csgBase.subtract(csgSub);
-      });
-      scene.remove(baseMesh);
-      const resultingMesh = CSG.toMesh(csgBase, baseMesh.matrix);
-      resultingMesh.material = new THREE.MeshStandardMaterial({ color: baseMesh.material.color, roughness: 0.2, metalness: 0.3 });
-      scene.add(resultingMesh);
-    } catch(err){}
+  if(baseMeshes.length > 0) {
+    let primaryMesh = baseMeshes[0];
+    scene.add(primaryMesh);
+
+    // Ak máme CSG knižnicu a odoberacie telesá, aplikujeme prioritné odčítanie
+    if(subtractiveMeshes.length > 0 && typeof CSG !== 'undefined'){
+      try {
+        let csgBase = CSG.fromMesh(primaryMesh);
+        subtractiveMeshes.forEach(sub => {
+          sub.updateMatrix();
+          const csgSub = CSG.fromMesh(sub);
+          csgBase = csgBase.subtract(csgSub);
+        });
+        scene.remove(primaryMesh);
+        const resultingMesh = CSG.toMesh(csgBase, primaryMesh.matrix);
+        resultingMesh.material = primaryMesh.material;
+        scene.add(resultingMesh);
+      } catch(err){
+        console.error("CSG Chyba:", err);
+        baseMeshes.slice(1).forEach(m => scene.add(m));
+      }
+    } else {
+      baseMeshes.slice(1).forEach(m => scene.add(m));
+    }
   }
 
   infoCount.textContent = `Počet dielov: ${shapes.length}`;
@@ -577,7 +584,7 @@ function export3DHTML(){
   ${createGeometryForShape.toString()}
 
   const shapesData = ${JSON.stringify(shapes)};
-  let baseMesh = null;
+  let baseMeshes = [];
   let subtractiveMeshes = [];
 
   shapesData.forEach((s) => {
@@ -598,30 +605,31 @@ function export3DHTML(){
     if(s.op === 'subtract') {
       subtractiveMeshes.push(mesh);
     } else {
-      if(!baseMesh){
-        baseMesh = mesh;
-        scene.add(baseMesh);
-      } else {
-        scene.add(mesh);
-      }
+      baseMeshes.push(mesh);
     }
   });
 
-  if(baseMesh && subtractiveMeshes.length > 0 && typeof CSG !== 'undefined'){
-    try {
-      let csgBase = CSG.fromMesh(baseMesh);
-      subtractiveMeshes.forEach(sub => {
-        sub.updateMatrix();
-        const csgSub = CSG.fromMesh(sub);
-        csgBase = csgBase.subtract(csgSub);
-      });
-      scene.remove(baseMesh);
-      const resultingMesh = CSG.toMesh(csgBase, baseMesh.matrix);
-      resultingMesh.material = baseMesh.material;
-      scene.add(resultingMesh);
-    } catch(err){
-      console.error("CSG Error v exporte:", err);
+  if(baseMeshes.length > 0){
+    let primaryMesh = baseMeshes[0];
+    if(subtractiveMeshes.length > 0 && typeof CSG !== 'undefined'){
+      try {
+        let csgBase = CSG.fromMesh(primaryMesh);
+        subtractiveMeshes.forEach(sub => {
+          sub.updateMatrix();
+          const csgSub = CSG.fromMesh(sub);
+          csgBase = csgBase.subtract(csgSub);
+        });
+        const resultingMesh = CSG.toMesh(csgBase, primaryMesh.matrix);
+        resultingMesh.material = primaryMesh.material;
+        scene.add(resultingMesh);
+      } catch(err){
+        console.error("CSG Error v exporte:", err);
+        scene.add(primaryMesh);
+      }
+    } else {
+      scene.add(primaryMesh);
     }
+    baseMeshes.slice(1).forEach(m => scene.add(m));
   }
 
   function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
