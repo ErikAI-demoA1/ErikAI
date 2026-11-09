@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 3D CATIA Studio v8.3</title>
+<title>ErikAI Pro 3D CATIA Studio v8.4</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three-csg-ts@3.1.16/lib/bundle.js"></script>
@@ -213,7 +213,7 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">3D CATIA Z-Up Studio v8.3 | Z >= 0 | Otáčanie: Ľavé tlačidlo myši | Posun: Pravé tlačidlo</span>
+  <span id="infoCoords">3D CATIA Z-Up Studio v8.4 | Z >= 0 | Otáčanie: Ľavé tlačidlo myši | Posun: Pravé tlačidlo</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
@@ -271,56 +271,29 @@ function clearAll(){
   updatePanel();
 }
 
-// ----------------------------------------------------
-// 📐 GENERÁTOR 2D PROFILOV NA EXTRÚZIU
-// ----------------------------------------------------
 function buildCustom2DShape(type, scW, scH, scR, scWall){
   const shape = new THREE.Shape();
-  
   if(type === 'triangle'){
-    shape.moveTo(-scW/2, -scH/2);
-    shape.lineTo(scW/2, -scH/2);
-    shape.lineTo(0, scH/2);
-    shape.closePath();
+    shape.moveTo(-scW/2, -scH/2); shape.lineTo(scW/2, -scH/2); shape.lineTo(0, scH/2); shape.closePath();
   } else if(type === 'trapezoid'){
-    shape.moveTo(-scW/2, -scH/2);
-    shape.lineTo(scW/2, -scH/2);
-    shape.lineTo(scW/4, scH/2);
-    shape.lineTo(-scW/4, scH/2);
-    shape.closePath();
+    shape.moveTo(-scW/2, -scH/2); shape.lineTo(scW/2, -scH/2); shape.lineTo(scW/4, scH/2); shape.lineTo(-scW/4, scH/2); shape.closePath();
   } else if(type === 'oval'){
     shape.absellipse(0, 0, scW/2, scH/2, 0, Math.PI * 2, false, 0);
   } else if(type === 'parallelogram'){
-    shape.moveTo(-scW/2, -scH/2);
-    shape.lineTo(scW/4, -scH/2);
-    shape.lineTo(scW/2, scH/2);
-    shape.lineTo(-scW/4, scH/2);
-    shape.closePath();
+    shape.moveTo(-scW/2, -scH/2); shape.lineTo(scW/4, -scH/2); shape.lineTo(scW/2, scH/2); shape.lineTo(-scW/4, scH/2); shape.closePath();
   } else if(type === 'rhombus'){
-    shape.moveTo(0, -scH/2);
-    shape.lineTo(scW/2, 0);
-    shape.lineTo(0, scH/2);
-    shape.lineTo(-scW/2, 0);
-    shape.closePath();
+    shape.moveTo(0, -scH/2); shape.lineTo(scW/2, 0); shape.lineTo(0, scH/2); shape.lineTo(-scW/2, 0); shape.closePath();
   } else if(type === 'semicircle'){
-    shape.absarc(0, 0, scR, 0, Math.PI, false);
-    shape.closePath();
+    shape.absarc(0, 0, scR, 0, Math.PI, false); shape.closePath();
   } else if(type === 'kite'){
-    shape.moveTo(0, -scH/2);
-    shape.lineTo(scW/2, 0);
-    shape.lineTo(0, scH/2);
-    shape.lineTo(-scW/2, 0);
-    shape.closePath();
+    shape.moveTo(0, -scH/2); shape.lineTo(scW/2, 0); shape.lineTo(0, scH/2); shape.lineTo(-scW/2, 0); shape.closePath();
   } else if(type === 'pie'){
-    shape.moveTo(0,0);
-    shape.absarc(0, 0, scR, 0, Math.PI * 0.75, false);
-    shape.closePath();
+    shape.moveTo(0,0); shape.absarc(0, 0, scR, 0, Math.PI * 0.75, false); shape.closePath();
   } else if(type === 'pentagon' || type === 'hexagon' || type === 'heptagon' || type === 'octagon'){
     const sides = type==='pentagon'?5:(type==='hexagon'?6:(type==='heptagon'?7:8));
     for(let i=0; i<sides; i++){
       const a = (i / sides) * Math.PI * 2;
-      const x = Math.cos(a) * scR;
-      const y = Math.sin(a) * scR;
+      const x = Math.cos(a) * scR, y = Math.sin(a) * scR;
       if(i===0) shape.moveTo(x,y); else shape.lineTo(x,y);
     }
     shape.closePath();
@@ -340,8 +313,7 @@ function buildCustom2DShape(type, scW, scH, scR, scWall){
     for(let i=0; i<points*2; i++){
       const r = i%2===0 ? scR : scR*0.4;
       const a = (i / (points*2)) * Math.PI * 2 - Math.PI/2;
-      const x = Math.cos(a) * r;
-      const y = Math.sin(a) * r;
+      const x = Math.cos(a) * r, y = Math.sin(a) * r;
       if(i===0) shape.moveTo(x,y); else shape.lineTo(x,y);
     }
     shape.closePath();
@@ -358,14 +330,9 @@ function buildCustom2DShape(type, scW, scH, scR, scWall){
     shape.lineTo(-w, t); shape.lineTo(-w, -t); shape.lineTo(-t, -t);
     shape.closePath();
   } else if(type === 'arrow'){
-    shape.moveTo(-scW/4, -scH/2);
-    shape.lineTo(scW/4, -scH/2);
-    shape.lineTo(scW/4, 0);
-    shape.lineTo(scW/2, 0);
-    shape.lineTo(0, scH/2);
-    shape.lineTo(-scW/2, 0);
-    shape.lineTo(-scW/4, 0);
-    shape.closePath();
+    shape.moveTo(-scW/4, -scH/2); shape.lineTo(scW/4, -scH/2); shape.lineTo(scW/4, 0);
+    shape.lineTo(scW/2, 0); shape.lineTo(0, scH/2); shape.lineTo(-scW/2, 0);
+    shape.lineTo(-scW/4, 0); shape.closePath();
   } else if(type === 'keyway'){
     shape.absarc(-scW/4, 0, scH/2, Math.PI/2, Math.PI*1.5, false);
     shape.absarc(scW/4, 0, scH/2, -Math.PI/2, Math.PI/2, false);
@@ -418,9 +385,6 @@ function createGeometryForShape(s){
   return geo;
 }
 
-// ----------------------------------------------------
-// 🚀 3D SCÉNA & CATIA MODELÁR
-// ----------------------------------------------------
 function init3D(){
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0b0d13);
@@ -482,7 +446,7 @@ function updateScene3D(){
 
     if(s.op === 'subtract') {
       subtractiveShapes.push({ mesh, index: idx });
-      scene.add(mesh); // V editori ukazujeme červené rezné teleso
+      scene.add(mesh);
     } else {
       if(!baseMesh){
         baseMesh = mesh;
@@ -589,7 +553,7 @@ function export3DHTML(){
 </style>
 </head>
 <body>
-<div id="info"><h3>ErikAI CATIA 3D Model</h3><p>Interaktívny 3D model (Plný export s vyrezaním CSG)</p></div>
+<div id="info"><h3>ErikAI CATIA 3D Model</h3><p>Interaktívny 3D model (S plným vyrezaním CSG)</p></div>
 <script>
   THREE.Object3D.DefaultUp.set(0, 0, 1);
   const scene = new THREE.Scene();
@@ -616,7 +580,7 @@ function export3DHTML(){
   let baseMesh = null;
   let subtractiveMeshes = [];
 
-  shapesData.forEach((s, idx) => {
+  shapesData.forEach((s) => {
     const geo = createGeometryForShape(s);
     const mat = new THREE.MeshStandardMaterial({ 
       color: s.color || (s.op === 'subtract' ? '#ef4444' : '#10b981'), 
@@ -647,6 +611,7 @@ function export3DHTML(){
     try {
       let csgBase = CSG.fromMesh(baseMesh);
       subtractiveMeshes.forEach(sub => {
+        sub.updateMatrix();
         const csgSub = CSG.fromMesh(sub);
         csgBase = csgBase.subtract(csgSub);
       });
@@ -654,7 +619,9 @@ function export3DHTML(){
       const resultingMesh = CSG.toMesh(csgBase, baseMesh.matrix);
       resultingMesh.material = baseMesh.material;
       scene.add(resultingMesh);
-    } catch(err){}
+    } catch(err){
+      console.error("CSG Error v exporte:", err);
+    }
   }
 
   function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
