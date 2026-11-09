@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro ISO CAD Studio v4.2</title>
+<title>ErikAI Pro ISO CAD Studio v5.0</title>
 <!-- Three.js, OrbitControls a Three-CSG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -229,14 +229,42 @@ select.format-select {
 <header>
   <div class="panel">
     <select id="shapeSelector" class="format-select" onchange="changeActiveShape()">
-      <option value="box">🧊 Kocka / Kváder</option>
-      <option value="cylinder">🧪 Valec / Čap</option>
-      <option value="threadedCylinder">🔩 Valec so závitom</option>
-      <option value="threadedBox">🧱 Kocka so závitovou dierou</option>
-      <option value="pipe">⭕ Rúra s otvorom</option>
-      <option value="sphere">🔮 Guľa</option>
-      <option value="cone">🔺 Kužeľ</option>
-      <option value="pyramid">📐 Ihlan</option>
+      <optgroup label="🧊 Kocky / Kvádre">
+        <option value="box">Kocka / Kváder</option>
+        <option value="threadedBox">Kocka so závitovou dierou</option>
+      </optgroup>
+      <optgroup label="🧪 Valce / Čapy">
+        <option value="cylinder">Valec (stojatý)</option>
+        <option value="cylinder_forward">Valec – Smer DOPREDU</option>
+        <option value="cylinder_backward">Valec – Smer DOZADU</option>
+        <option value="cylinder_right">Valec – Smer VPRAVO</option>
+        <option value="cylinder_left">Valec – Smer VĽAVO</option>
+        <option value="threadedCylinder">Valec so závitom</option>
+      </optgroup>
+      <optgroup label="⭕ Rúry">
+        <option value="pipe">Rúra s otvorom (stojatá)</option>
+        <option value="pipe_right">Rúra – Smer VPRAVO</option>
+        <option value="pipe_left">Rúra – Smer VĽAVO</option>
+        <option value="pipe_forward">Rúra – Smer DOPREDU</option>
+        <option value="pipe_backward">Rúra – Smer DOZADU</option>
+      </optgroup>
+      <optgroup label="🔮 Guľa">
+        <option value="sphere">Guľa (na zemi)</option>
+      </optgroup>
+      <optgroup label="🔺 Kužeľ">
+        <option value="cone">Kužeľ (stojatý)</option>
+        <option value="cone_forward">Kužeľ – Smer DOPREDU</option>
+        <option value="cone_backward">Kužeľ – Smer DOZADU</option>
+        <option value="cone_right">Kužeľ – Smer VPRAVO</option>
+        <option value="cone_left">Kužeľ – Smer VĽAVO</option>
+      </optgroup>
+      <optgroup label="📐 Ihlan">
+        <option value="pyramid">Ihlan (stojatý)</option>
+        <option value="pyramid_forward">Ihlan – Smer DOPREDU</option>
+        <option value="pyramid_backward">Ihlan – Smer DOZADU</option>
+        <option value="pyramid_right">Ihlan – Smer VPRAVO</option>
+        <option value="pyramid_left">Ihlan – Smer VĽAVO</option>
+      </optgroup>
     </select>
 
     <select id="csgOperationSelector" class="format-select" onchange="changeCsgOperation()" style="border-color: var(--accent-blue);">
@@ -268,12 +296,12 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">Súradnicový stred: [X: Stred, Y: Stred, Z: Spodok] | Optimalizované rozostupy pohľadov</span>
+  <span id="infoCoords">Súradnicový stred: [X: Stred, Y: Stred, Z: Spodok (Z >= 0)] | Preddefinované orientácie</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI ISO CAD Studio v4.2 – Opravené prekrývanie textov a vylepšené odsadenie kót.</div></div>
+  <div id="commandHistory"><div>ErikAI ISO CAD Studio v5.0 – Preddefinované orientované tvary, žiadny diel pod zemou.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
     <input type="text" id="commandInput" placeholder="Príkaz..." autocomplete="off">
@@ -282,7 +310,7 @@ select.format-select {
 
 <div id="dimensionsPanel">
   <div class="panel-header" id="panelHeader">
-    <h3>Správca Dielov, Pozícií, Rotácií & Detailného Skrývania Kót</h3>
+    <h3>Správca Dielov, Pozícií & Skrývania Kót</h3>
     <button class="close-btn" onclick="toggleDimensionsPanel()">✕</button>
   </div>
   <div id="dimsContent">Žiadne diely v skici</div>
@@ -352,13 +380,13 @@ function toggleToolMode(){
     interactionMode = 'add';
     btn.textContent = '✏️ Režim: Kreslenie / Pridávanie';
     btn.style.background = '#10b981';
-    infoCoords.textContent = "Režim: Kliknutím umiestnite tvar voči stredu [0,0,0]";
+    infoCoords.textContent = "Režim: Kliknutím umiestnite tvar na zem (Z >= 0)";
     logCommand("Prepnuté do režimu pridávania tvarov.");
   } else {
     interactionMode = 'pan';
     btn.textContent = '✋ Režim: Posun plátna';
     btn.style.background = '#3b82f6';
-    infoCoords.textContent = "Režim: Posun plátna | Optimalizované rozostupy pohľadov";
+    infoCoords.textContent = "Režim: Posun plátna | Bezpečná úroveň Z >= 0";
     logCommand("Prepnuté do režimu posunu plátna.");
   }
 }
@@ -442,9 +470,9 @@ function toggleMode(){
     btn.textContent = '✏️ Upraviť 2D Výkres';
     btn.style.background = '#10b981';
     btn.style.color = '#000';
-    infoCoords.textContent = "3D Z-Up Studio [0,0,0] (Synchronizované s rotáciami)";
+    infoCoords.textContent = "3D Z-Up Studio [Z >= 0 Ziadny diel pod zemou]";
     init3DFromSketch();
-    logCommand("🚀 2D výkres prenesený do 3D vrátane rotácií!");
+    logCommand("🚀 2D výkres prenesený do 3D!");
   } else {
     container3D.style.display = 'none';
     container.style.display = 'block';
@@ -457,7 +485,7 @@ function toggleMode(){
 }
 
 // ----------------------------------------------------
-// 📐 2D VÝKRES S UPRAVENÝMI ROZOSTUPMI A ODSADENÍM KÓT
+// 📐 2D VÝKRES S KÓTOVANÍM A OCHRANOU Z >= 0
 // ----------------------------------------------------
 function draw2DSketch(){
   ctx.fillStyle = '#ffffff';
@@ -468,7 +496,6 @@ function draw2DSketch(){
   ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
 
   const w = canvas.width, h = canvas.height;
-  // Zväčšené rozostupy medzi pohľadmi, aby sa neprekrývali
   const originX = w * 0.30;
   const originY = h * 0.38;
 
@@ -516,7 +543,8 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
 
   let posX = (s.x || 0) * 0.5;
   let posY = (s.y || 0) * 0.5;
-  let posZ = (s.z || 0) * 0.5;
+  // Zabezpečenie, že Z je vždy minimálne 0 (žiadny diel pod zemou)
+  let posZ = Math.max(0, (s.z || 0)) * 0.5;
 
   let scaleW = (s.w || 100) * 0.5;
   let scaleH = (s.h || 100) * 0.5;
@@ -536,22 +564,12 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
   }
 
   ctx.translate(projX, projY);
-
-  if (viewType === 'front') {
-    ctx.rotate(((s.rz || 0) + (s.ry || 0)) * Math.PI / 180);
-  } else if (viewType === 'top') {
-    ctx.rotate((s.rz || 0) * Math.PI / 180);
-  } else if (viewType === 'side') {
-    ctx.rotate(((s.rz || 0) + (s.rx || 0)) * Math.PI / 180);
-  }
-
   if(!s.hide) s.hide = { name: false, frontW: false, frontD: false, topW: false, topH: false, sideH: false, sideD: false, radius: false };
-
-  // Dynamický posun kót podľa indexu dielu, aby sa kóty viacerých dielov neprekrývali
   let offsetStep = (index - 1) * 22;
 
-  // 1. Kocka / Kváder / Závitová kocka
-  if(s.type === 'box' || s.type === 'threadedBox'){
+  let baseType = s.type.replace(/(_forward|_backward|_right|_left)/g, '');
+
+  if(baseType === 'box' || baseType === 'threadedBox'){
     if(viewType === 'front'){
       ctx.strokeRect(-scaleW/2, -scaleD, scaleW, scaleD);
       if(isSub) drawHatching(ctx, -scaleW/2, -scaleD, scaleW, scaleD);
@@ -559,7 +577,7 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
       if(!s.hide.frontD) drawDimensionLine(ctx, scaleW/2 + 28 + offsetStep, -scaleD, scaleW/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
     } else if(viewType === 'top'){
       ctx.strokeRect(-scaleW/2, -scaleH/2, scaleW, scaleH);
-      if(s.type === 'threadedBox'){
+      if(baseType === 'threadedBox'){
         ctx.beginPath(); ctx.arc(0, 0, scaleR*0.5, 0, Math.PI*2); ctx.stroke();
         drawThreadHatch(ctx, 0, 0, scaleR*0.5);
       }
@@ -573,83 +591,40 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
       if(!s.hide.sideD) drawDimensionLine(ctx, scaleH/2 + 28 + offsetStep, -scaleD, scaleH/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
     }
   } 
-  // 2. Valec / Závitový valec / Rúra
-  else if(s.type === 'cylinder' || s.type === 'threadedCylinder' || s.type === 'pipe'){
+  else if(baseType === 'cylinder' || baseType === 'threadedCylinder' || baseType === 'pipe'){
     if(viewType === 'top'){
       ctx.beginPath(); ctx.arc(0, 0, scaleR, 0, Math.PI * 2); ctx.stroke();
-      if(s.type === 'pipe'){
+      if(baseType === 'pipe'){
         let innerR = Math.max(2, scaleR - (s.wall||10)*0.5);
         ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI * 2); ctx.stroke();
       }
-      if(s.type === 'threadedCylinder'){
+      if(baseType === 'threadedCylinder'){
         ctx.beginPath(); ctx.arc(0, 0, scaleR*0.7, 0, Math.PI * 2); ctx.stroke();
         drawThreadHatch(ctx, 0, 0, scaleR*0.7);
       }
       if(!s.hide.radius) drawDimensionLine(ctx, 0, 0, scaleR + offsetStep*0.5, 0, `Ø: ${s.r*2} mm`);
     } else {
-      ctx.strokeRect(-scaleR, -scaleD, scaleR * 2, scaleD);
-      ctx.save();
-      ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 2]);
-      ctx.beginPath(); ctx.moveTo(0, -scaleD - 10); ctx.lineTo(0, 10); ctx.stroke();
-      ctx.restore();
+      let isHorizontal = s.type.includes('right') || s.type.includes('left') || s.type.includes('forward') || s.type.includes('backward');
+      let drawW = isHorizontal ? scaleD : scaleR * 2;
+      let drawH = isHorizontal ? scaleR * 2 : scaleD;
 
-      if(s.type === 'threadedCylinder'){
-        ctx.save();
-        ctx.strokeStyle = '#3b82f6';
-        ctx.setLineDash([3, 3]);
-        ctx.beginPath();
-        ctx.moveTo(-scaleR*0.7, -scaleD); ctx.lineTo(-scaleR*0.7, 0);
-        ctx.moveTo(scaleR*0.7, -scaleD); ctx.lineTo(scaleR*0.7, 0);
-        ctx.stroke();
-        ctx.restore();
-      }
+      ctx.strokeRect(-drawW/2, -drawH, drawW, drawH);
+      if(isSub) drawHatching(ctx, -drawW/2, -drawH, drawW, drawH);
 
-      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
-      if(viewType === 'side' && !s.hide.sideD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
-      if(!s.hide.radius) drawDimensionLine(ctx, -scaleR, -scaleD - 28 - offsetStep, scaleR, -scaleD - 28 - offsetStep, `Ø: ${s.r*2} mm`);
-
-      if(isSub) drawHatching(ctx, -scaleR, -scaleD, scaleR*2, scaleD);
+      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, drawW/2 + 28 + offsetStep, -drawH, drawW/2 + 28 + offsetStep, 0, `D: ${s.d} mm`);
+      if(!s.hide.radius) drawDimensionLine(ctx, -drawW/2, -drawH - 28 - offsetStep, drawW/2, -drawH - 28 - offsetStep, `Ø: ${s.r*2} mm`);
     }
   } 
-  // 3. Guľa
-  else if(s.type === 'sphere'){
+  else if(baseType === 'sphere'){
     ctx.beginPath(); ctx.arc(0, -scaleR, scaleR, 0, Math.PI * 2); ctx.stroke();
-    ctx.save();
-    ctx.strokeStyle = '#94a3b8';
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath(); ctx.moveTo(0, -scaleR*2 - 10); ctx.lineTo(0, 10); ctx.stroke();
-    ctx.restore();
     if(!s.hide.radius) drawDimensionLine(ctx, 0, -scaleR, scaleR + offsetStep*0.5, -scaleR, `R: ${s.r} mm`);
   } 
-  // 4. Kužeľ
-  else if(s.type === 'cone'){
-    if(viewType === 'top'){
-      ctx.beginPath(); ctx.arc(0, 0, scaleR, 0, Math.PI * 2); ctx.stroke();
-      if(!s.hide.radius) drawDimensionLine(ctx, 0, 0, scaleR + offsetStep*0.5, 0, `Ø: ${s.r*2} mm`);
-    } else {
-      ctx.beginPath();
-      ctx.moveTo(-scaleR, 0); ctx.lineTo(0, -scaleD); ctx.lineTo(scaleR, 0); ctx.closePath();
-      ctx.stroke();
-      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
-      if(viewType === 'side' && !s.hide.sideD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
-    }
-  } 
-  // 5. Ihlan
-  else if(s.type === 'pyramid'){
-    if(viewType === 'top'){
-      ctx.strokeRect(-scaleW/2, -scaleH/2, scaleW, scaleH);
-      ctx.beginPath(); ctx.moveTo(-scaleW/2, -scaleH/2); ctx.lineTo(scaleW/2, scaleH/2); ctx.moveTo(scaleW/2, -scaleH/2); ctx.lineTo(-scaleW/2, scaleH/2); ctx.stroke();
-      if(!s.hide.topW) drawDimensionLine(ctx, -scaleW/2, -scaleH/2 - 28 - offsetStep, scaleW/2, -scaleH/2 - 28 - offsetStep, `Š: ${s.w} mm`);
-    } else {
-      ctx.beginPath();
-      let baseDim = viewType === 'front' ? scaleW : scaleH;
-      ctx.moveTo(-baseDim/2, 0); ctx.lineTo(0, -scaleD); ctx.lineTo(baseDim/2, 0); ctx.closePath();
-      ctx.stroke();
-      if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(baseDim/2 + 28 + offsetStep, -scaleD, baseDim/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
-      if(viewType === 'side' && !s.hide.sideD) drawDimensionLine(baseDim/2 + 28 + offsetStep, -scaleD, baseDim/2 + 28 + offsetStep, 0, `V: ${s.d} mm`);
-    }
+  else if(baseType === 'cone' || baseType === 'pyramid'){
+    ctx.beginPath();
+    ctx.moveTo(-scaleR, 0); ctx.lineTo(0, -scaleD); ctx.lineTo(scaleR, 0); ctx.closePath();
+    ctx.stroke();
+    if(viewType === 'front' && !s.hide.frontD) drawDimensionLine(ctx, scaleR + 28 + offsetStep, -scaleD, scaleR + 28 + offsetStep, 0, `V: ${s.d} mm`);
+    if(!s.hide.radius) drawDimensionLine(ctx, -scaleR, -scaleD - 28 - offsetStep, scaleR, -scaleD - 28 - offsetStep, `Š: ${s.r*2} mm`);
   }
 
   if(viewType === 'front' && !s.hide.name){
@@ -666,7 +641,6 @@ function drawDimensionLine(ctx, x1, y1, x2, y2, text){
   ctx.strokeStyle = '#3b82f6';
   ctx.fillStyle = '#3b82f6';
   ctx.lineWidth = 1;
-
   ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
 
   ctx.save();
@@ -690,9 +664,7 @@ function drawThreadHatch(ctx, cx, cy, r){
   ctx.save();
   ctx.strokeStyle = '#3b82f6';
   ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r * 0.85, 0, Math.PI * 1.5);
-  ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.85, 0, Math.PI * 1.5); ctx.stroke();
   ctx.restore();
 }
 
@@ -701,9 +673,7 @@ function drawHatching(ctx, x, y, w, h){
   ctx.strokeStyle = '#dc2626';
   ctx.lineWidth = 0.8;
   ctx.beginPath();
-  for(let i = -h; i < w; i += 10){
-    ctx.moveTo(x + i, y); ctx.lineTo(x + i + h, y + h);
-  }
+  for(let i = -h; i < w; i += 10){ ctx.moveTo(x + i, y); ctx.lineTo(x + i + h, y + h); }
   ctx.stroke();
   ctx.restore();
 }
@@ -722,12 +692,12 @@ function renderTitleBlock(ctx, x, y){
 
   ctx.fillStyle = '#0f172a';
   ctx.font = 'bold 11px Segoe UI, sans-serif';
-  ctx.fillText("ERIKAI PRO STROJÁRSKA ZOSTAVA ISO [0,0,0]", x + 10, y + 20);
+  ctx.fillText("ERIKAI PRO STROJÁRSKA ZOSTAVA ISO [Z >= 0]", x + 10, y + 20);
   ctx.font = '10px monospace';
   ctx.fillText("Materiál: S235JR / Oceľ", x + 10, y + 48);
   ctx.fillText("Vypracoval: ErikAI CAD", x + 10, y + 90);
   ctx.fillText("Mierka: 1:1", x + 190, y + 90);
-  ctx.fillText("Výkres: DWG-2026-v4.2", x + 190, y + 130);
+  ctx.fillText("Výkres: DWG-2026-v5.0", x + 190, y + 130);
   ctx.restore();
 }
 
@@ -746,7 +716,6 @@ canvas.onclick = (e) => {
   let newShape = {
     type: currentShapeType, op: currentCsgOp,
     x: relX, y: relY, z: 0,
-    rx: 0, ry: 0, rz: 0,
     w: 100, h: 100, d: 100, r: 50, wall: 10,
     hide: { name: false, frontW: false, frontD: false, topW: false, topH: false, sideH: false, sideD: false, radius: false }
   };
@@ -754,7 +723,7 @@ canvas.onclick = (e) => {
   shapes.push(newShape);
   selectedShapeIndex = shapes.length - 1;
   draw2DSketch();
-  logCommand(`Pridaný diel na súradnice [X:${relX}, Y:${relY}, Z:0]`);
+  logCommand(`Pridaný orientovaný diel na súradnice [X:${relX}, Y:${relY}, Z:0]`);
 };
 
 function clearAll(){
@@ -764,7 +733,7 @@ function clearAll(){
 }
 
 // ----------------------------------------------------
-// 🚀 3D GENERÁTOR (THREE.JS + CSG) – ROTÁCIE SYNCHRONIZOVANÉ
+// 🚀 3D GENERÁTOR (THREE.JS + CSG) – BEZPEČNÁ ZONA Z >= 0
 // ----------------------------------------------------
 function createGeometryForShape(s){
   let geo;
@@ -774,22 +743,36 @@ function createGeometryForShape(s){
   const scR = (s.r || 50) / 10;
   const scWall = (s.wall || 10) / 10;
 
-  if(s.type === 'box' || s.type === 'threadedBox') {
+  let baseType = s.type.replace(/(_forward|_backward|_right|_left)/g, '');
+
+  if(baseType === 'box' || baseType === 'threadedBox') {
     geo = new THREE.BoxGeometry(scW, scH, scD);
     geo.translate(0, 0, scD / 2);
-  } else if(s.type === 'cylinder' || s.type === 'threadedCylinder') {
+  } else if(baseType === 'cylinder' || baseType === 'threadedCylinder') {
     geo = new THREE.CylinderGeometry(scR, scR, scD, 32);
-    geo.rotateX(Math.PI / 2); geo.translate(0, 0, scD / 2);
-  } else if(s.type === 'sphere') {
+    if(s.type.includes('right')) { geo.rotateY(Math.PI / 2); geo.translate(scD / 2, 0, scR); }
+    else if(s.type.includes('left')) { geo.rotateY(-Math.PI / 2); geo.translate(-scD / 2, 0, scR); }
+    else if(s.type.includes('forward')) { geo.rotateX(Math.PI / 2); geo.translate(0, scD / 2, scR); }
+    else if(s.type.includes('backward')) { geo.rotateX(-Math.PI / 2); geo.translate(0, -scD / 2, scR); }
+    else { geo.rotateX(Math.PI / 2); geo.translate(0, 0, scD / 2); }
+  } else if(baseType === 'sphere') {
     geo = new THREE.SphereGeometry(scR, 32, 32);
     geo.translate(0, 0, scR);
-  } else if(s.type === 'cone') {
+  } else if(baseType === 'cone') {
     geo = new THREE.CylinderGeometry(0, scR, scD, 32);
-    geo.rotateX(Math.PI / 2); geo.translate(0, 0, scD / 2);
-  } else if(s.type === 'pyramid') {
+    if(s.type.includes('right')) { geo.rotateY(Math.PI / 2); geo.translate(scD / 2, 0, 0); }
+    else if(s.type.includes('left')) { geo.rotateY(-Math.PI / 2); geo.translate(-scD / 2, 0, 0); }
+    else if(s.type.includes('forward')) { geo.rotateX(Math.PI / 2); geo.translate(0, scD / 2, 0); }
+    else if(s.type.includes('backward')) { geo.rotateX(-Math.PI / 2); geo.translate(0, -scD / 2, 0); }
+    else { geo.rotateX(Math.PI / 2); geo.translate(0, 0, scD / 2); }
+  } else if(baseType === 'pyramid') {
     geo = new THREE.ConeGeometry(scR, scD, 4);
-    geo.rotateX(Math.PI / 2); geo.translate(0, 0, scD / 2);
-  } else if(s.type === 'pipe') {
+    if(s.type.includes('right')) { geo.rotateY(Math.PI / 2); geo.translate(scD / 2, 0, 0); }
+    else if(s.type.includes('left')) { geo.rotateY(-Math.PI / 2); geo.translate(-scD / 2, 0, 0); }
+    else if(s.type.includes('forward')) { geo.rotateX(Math.PI / 2); geo.translate(0, scD / 2, 0); }
+    else if(s.type.includes('backward')) { geo.rotateX(-Math.PI / 2); geo.translate(0, -scD / 2, 0); }
+    else { geo.rotateX(Math.PI / 2); geo.translate(0, 0, scD / 2); }
+  } else if(baseType === 'pipe') {
     const shape = new THREE.Shape();
     shape.absarc(0, 0, scR, 0, Math.PI * 2, false);
     const innerR = Math.max(0.5, scR - scWall);
@@ -797,7 +780,12 @@ function createGeometryForShape(s){
     holePath.absarc(0, 0, innerR, 0, Math.PI * 2, true);
     shape.holes.push(holePath);
     geo = new THREE.ExtrudeGeometry(shape, { depth: scD, bevelEnabled: false, curveSegments: 32 });
-    geo.center(); geo.translate(0, 0, scD / 2);
+    geo.center();
+    if(s.type.includes('right')) { geo.rotateY(Math.PI / 2); geo.translate(scD / 2, 0, scR); }
+    else if(s.type.includes('left')) { geo.rotateY(-Math.PI / 2); geo.translate(-scD / 2, 0, scR); }
+    else if(s.type.includes('forward')) { geo.rotateX(Math.PI / 2); geo.translate(0, scD / 2, scR); }
+    else if(s.type.includes('backward')) { geo.rotateX(-Math.PI / 2); geo.translate(0, -scD / 2, scR); }
+    else { geo.translate(0, 0, scD / 2); }
   } else {
     geo = new THREE.BoxGeometry(10, 10, 10);
     geo.translate(0, 0, 5);
@@ -841,10 +829,10 @@ function init3DFromSketch(){
     
     let worldX = (s.x || 0) / 10;
     let worldY = (s.y || 0) / 10;
-    let worldZ = (s.z || 0) / 10;
+    // Vynútenie Z >= 0 v 3D
+    let worldZ = Math.max(0, (s.z || 0)) / 10;
 
     mesh.position.set(worldX, worldY, worldZ);
-    mesh.rotation.set((s.rx||0)*Math.PI/180, (s.ry||0)*Math.PI/180, (s.rz||0)*Math.PI/180, 'XYZ');
     mesh.updateMatrix();
 
     if(s.op === 'subtract') {
@@ -905,17 +893,11 @@ function updateDimensionsPanel(){
         <strong>#${i+1} ${s.type.toUpperCase()} (${s.op})</strong>
         <button class="danger" style="padding:2px 6px;" onclick="shapes.splice(${i},1);draw2DSketch();updateDimensionsPanel();">🗑️ Zmazať</button>
       </div>
-      <div class="input-group-title">Súradnice [0,0,0] (mm):</div>
+      <div class="input-group-title">Súradnice [Z >= 0] (mm):</div>
       <div class="input-row">
         <label>X:</label><input type="number" value="${s.x||0}" onchange="shapes[${i}].x=parseFloat(this.value);draw2DSketch();">
         <label>Y:</label><input type="number" value="${s.y||0}" onchange="shapes[${i}].y=parseFloat(this.value);draw2DSketch();">
-        <label>Z (Spodok):</label><input type="number" value="${s.z||0}" onchange="shapes[${i}].z=parseFloat(this.value);draw2DSketch();">
-      </div>
-      <div class="input-group-title">Rotácia (°):</div>
-      <div class="input-row">
-        <label>RX:</label><input type="number" value="${s.rx||0}" onchange="shapes[${i}].rx=parseFloat(this.value);draw2DSketch();">
-        <label>RY:</label><input type="number" value="${s.ry||0}" onchange="shapes[${i}].ry=parseFloat(this.value);draw2DSketch();">
-        <label>RZ:</label><input type="number" value="${s.rz||0}" onchange="shapes[${i}].rz=parseFloat(this.value);draw2DSketch();">
+        <label>Z (Zem):</label><input type="number" min="0" value="${Math.max(0, s.z||0)}" onchange="shapes[${i}].z=Math.max(0, parseFloat(this.value));draw2DSketch();">
       </div>
       <div class="input-group-title">Rozmery (mm):</div>
       <div class="input-row">
