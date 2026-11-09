@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v2.8 - Perfect Enemy Physics</title>
+<title>ErikAI Voxel Craft 3D v2.9 - Respawn Fix</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -84,14 +84,14 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v2.8</h3>
+  <h3>⚡ ErikAI Voxel Engine v2.9</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.2 GB</span></div>
   <div class="stat-row"><span>Uložené bloky:</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>FPS:</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">⚠️ Pozor na červeného nepriateľa! Má rovnakú fyziku ako ty!</div>
+  <div class="warning-text">⚠️ Pozor na nepriateľa! Respawn opravený.</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Nový Svet</button>
 </div>
 
@@ -191,8 +191,8 @@ function init() {
   dirLight.position.set(100, 80, 150);
   scene.add(dirLight);
 
-  player = createDetailedCharacter(0x1e88e5, 0x1565c0); // Modrý hráč
-  enemy = createDetailedCharacter(0xd32f2f, 0xb71c1c);  // Červený nepriateľ
+  player = createDetailedCharacter(0x1e88e5, 0x1565c0);
+  enemy = createDetailedCharacter(0xd32f2f, 0xb71c1c);
   scene.add(player);
   scene.add(enemy);
 
@@ -200,12 +200,12 @@ function init() {
 
   playerPos.x = 0;
   playerPos.y = 0;
-  playerPos.z = getTerrainHeight(0,0) + 2;
+  playerPos.z = getTerrainHeight(0,0) + 3;
   playerVelocityZ = 0;
 
-  enemyPos.x = 10;
-  enemyPos.y = 10;
-  enemyPos.z = getTerrainHeight(10, 10) + 2;
+  enemyPos.x = 12;
+  enemyPos.y = 12;
+  enemyPos.z = getTerrainHeight(12, 12) + 3;
   enemyVelocityZ = 0;
 
   updateChunks();
@@ -505,15 +505,18 @@ function resetWorld() {
 function respawnPlayer() {
   isDead = false;
   document.getElementById('deathScreen').style.display = 'none';
+  
   playerPos.x = 0;
   playerPos.y = 0;
-  playerPos.z = getTerrainHeight(0, 0) + 2.5;
+  playerPos.z = getTerrainHeight(0, 0) + 3.0;
   playerVelocityZ = 0;
+  isGrounded = true;
   
   enemyPos.x = 12;
   enemyPos.y = 12;
-  enemyPos.z = getTerrainHeight(12, 12) + 2.5;
+  enemyPos.z = getTerrainHeight(12, 12) + 3.0;
   enemyVelocityZ = 0;
+  enemyGrounded = true;
   
   updateChunks();
 }
@@ -719,7 +722,6 @@ function updatePlayerMovement() {
     const eCurrentGround = getTerrainHeight(Math.round(enemyPos.x), Math.round(enemyPos.y));
     const eTargetGround = getTerrainHeight(Math.round(eNextX), Math.round(eNextY));
 
-    // Nepriateľ sa vie vyškriabať na kopec ak je prevýšenie 1 blok, alebo ak skáče vo vzduchu
     if ((eTargetGround - eCurrentGround <= 1) || !enemyGrounded) {
       if (!isSolidBlock(eNextX, enemyPos.y, Math.floor(enemyPos.z)) && !isSolidBlock(eNextX, enemyPos.y, Math.floor(enemyPos.z) + 1)) {
         enemyPos.x = eNextX;
@@ -728,7 +730,6 @@ function updatePlayerMovement() {
         enemyPos.y = eNextY;
       }
     } else if (enemyGrounded && eTargetGround - eCurrentGround > 1) {
-      // Ak narazí na strmý svah, automaticky skočí, aby hráča dohnal!
       enemyVelocityZ = 0.36;
       enemyGrounded = false;
     }
