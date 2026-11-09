@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v1.9 - Pre-built Base Edition</title>
+<title>ErikAI Voxel Craft 3D v2.0 - Real Gravity & High Spawn</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -73,7 +73,7 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v1.9 (Pre-built Base)</h3>
+  <h3>⚡ ErikAI Voxel Engine v2.0 (Gravity)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.4 GB</span></div>
@@ -86,8 +86,8 @@ button.action-btn {
 
 <div id="deathScreen">
   <h1>💀 ZOMREL SI!</h1>
-  <p>Prepadol si sa pod úroveň -15.</p>
-  <button onclick="respawnPlayer()">🔄 Oživiť na bezpečnej plošine</button>
+  <p>Prepadol si sa hlboko pod svet.</p>
+  <button onclick="respawnPlayer()">🔄 Oživiť v oblakoch</button>
 </div>
 
 <div id="controls">
@@ -153,7 +153,9 @@ const materials = {
   bedrock: new THREE.MeshStandardMaterial({ color: 0x212121, roughness: 0.9 })
 };
 
-let playerPos = { x: 0, y: 0, z: 12 };
+// Začiatok vysoko v oblakoch, odkiaľ bude postava prirodzene padadť na zem
+let playerPos = { x: 0, y: 0, z: 22 };
+let playerVelocityZ = 0; // Rýchlosť pádu (gravitácia)
 let playerAngle = 0, cameraPitch = 0.45;
 let keys = { forward: false, backward: false, left: false, right: false };
 
@@ -177,15 +179,13 @@ function init() {
   createPlayer();
   loadWorldFromStorage();
 
-  // 1. NATVRDO VYBUDOVANÁ PRE-BUILT ZÁKLADŇA POD SPAWNOM
   buildPrebuiltBase();
 
-  // 2. Nastavenie pozície hráča bezpečne na pripravenú plochu
   playerPos.x = 0;
   playerPos.y = 0;
-  playerPos.z = Math.max(getTerrainHeight(0, 0), 5) + 2;
+  playerPos.z = 22; // Vysoký spawn v oblakoch
+  playerVelocityZ = 0;
 
-  // 3. Prvé kompletné vygenerovanie chunkov pred štartom smyčky
   updateChunks();
 
   setupControls();
@@ -212,10 +212,9 @@ function getTerrainHeight(x, y) {
   return Math.floor(z);
 }
 
-// NATVRDO VYTVORÍ BETÓNOVÉ PODLOŽIE POD BODOV 0,0 
 function buildPrebuiltBase() {
-  for (let x = -6; x <= 6; x++) {
-    for (let y = -6; y <= 6; y++) {
+  for (let x = -8; x <= 8; x++) {
+    for (let y = -8; y <= 8; y++) {
       const h = Math.max(getTerrainHeight(x, y), 4);
       for (let z = h; z >= -10; z--) {
         const key = `${x},${y},${z}`;
@@ -378,7 +377,8 @@ function respawnPlayer() {
   buildPrebuiltBase();
   playerPos.x = 0;
   playerPos.y = 0;
-  playerPos.z = Math.max(getTerrainHeight(0, 0), 5) + 2;
+  playerPos.z = 22; // Oživenie vysoko v oblakoch
+  playerVelocityZ = 0;
   updateChunks();
 }
 
@@ -441,14 +441,22 @@ function updatePlayerMovement() {
 
   playerPos.x += moveX; playerPos.y += moveY;
 
-  const currentTerrainZ = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y));
-  const targetZ = currentTerrainZ + 1;
+  // REÁLNA GRAVITÁCIA A PÁD NA ZEM
+  const groundZ = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y)) + 1;
+  
+  if (playerPos.z > groundZ) {
+    playerVelocityZ -= 0.025; // Zrýchlenie pádu (gravitácia)
+    playerPos.z += playerVelocityZ;
+    if (playerPos.z < groundZ) {
+      playerPos.z = groundZ; // Pristátie na zemi
+      playerVelocityZ = 0;
+    }
+  } else {
+    playerPos.z = groundZ;
+    playerVelocityZ = 0;
+  }
 
-  // HLADKÝ POHYB PO TERÉNE
-  playerPos.z += (targetZ - playerPos.z) * 0.25;
-  if (playerPos.z < targetZ) playerPos.z = targetZ;
-
-  // ABSOLÚTNA POISTKA SMRTI: Len ak padne hlboko pod svet (Z < -15)
+  // Kontrola smrti (pád pod svet)
   if (playerPos.z < -15) {
     isDead = true;
     document.getElementById('deathScreen').style.display = 'flex';
