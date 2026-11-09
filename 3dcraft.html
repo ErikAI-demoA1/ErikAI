@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v2.5 - True Collision & Smart Survival</title>
+<title>ErikAI Voxel Craft 3D v2.6 - Anti-Stuck & Smart Survival</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -84,20 +84,20 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v2.5 (Collision)</h3>
+  <h3>⚡ ErikAI Voxel Engine v2.6 (Anti-Stuck)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.2 GB</span></div>
   <div class="stat-row"><span>Uložené bloky:</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>FPS:</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">⚠️ Skutočná kolízia: Stromy a budovy ťa zastavia!</div>
+  <div class="warning-text">⚠️ Utekaj! Nepriateľ ťa prenasleduje a nezasekne sa!</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Nový Svet</button>
 </div>
 
 <div id="deathScreen">
   <h1>💀 CHYTIL ŤA NEPRIATEĽ!</h1>
-  <p>Zomrel si v tesnom súboji.</p>
+  <p>Zomrel si v boji o prežitie.</p>
   <button onclick="respawnPlayer()">🔄 Oživiť a utekať znova</button>
 </div>
 
@@ -141,7 +141,7 @@ let noise = SimplexNoise(currentSeed);
 
 let scene, camera, renderer, player, enemy;
 let activeBlocks = new Map();
-let solidBlocks = new Set(); // Množina pevných blokov pre presnú kolíziu
+let solidBlocks = new Set();
 let savedWorldData = {};
 let RENDER_DISTANCE = 26; 
 let isDead = false;
@@ -157,7 +157,6 @@ const materials = {
   leaves: new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.6 }),
   brick: new THREE.MeshStandardMaterial({ color: 0xb71c1c, roughness: 0.7 }),
   glass: new THREE.MeshStandardMaterial({ color: 0x81d4fa, roughness: 0.2, transparent: true, opacity: 0.7 }),
-  lamp: new THREE.MeshStandardMaterial({ color: 0xffeb3b, roughness: 0.3 }),
   bedrock: new THREE.MeshStandardMaterial({ color: 0x212121, roughness: 0.9 })
 };
 
@@ -304,25 +303,23 @@ function getBuildingType(x, y) {
 
 function isSolidBlock(x, y, z) {
   const groundZ = getTerrainHeight(x, y);
-  if (z <= groundZ) return true; // Podzemie a terén je pevný
+  if (z <= groundZ) return true;
 
-  // Kontrola budov
-  const bType = getBuildingType(Math.round(x / 14) * 14, Math.round(y / 14) * 14);
+  const bX = Math.round(x / 14) * 14;
+  const bY = Math.round(y / 14) * 14;
+  const bType = getBuildingType(bX, bY);
   if (bType > 0) {
-    const bX = Math.round(x / 14) * 14;
-    const bY = Math.round(y / 14) * 14;
     const bHeight = bType === 2 ? 8 : 4;
     const bGround = getTerrainHeight(bX, bY);
     if (z > bGround && z <= bGround + bHeight) {
       if (Math.abs(x - bX) <= 1 && Math.abs(y - bY) <= 1) {
-        if (x === bX + 1 || x === bX - 1 || y === bY + 1 || y === bY - 1 || z === bGround + bHeight) {
-          return true; // Stenové bloky budov
+        if (Math.abs(x - bX) === 1 || Math.abs(y - bY) === 1 || z === bGround + bHeight) {
+          return true;
         }
       }
     }
   }
 
-  // Kontrola stromov
   const tX = Math.round(x);
   const tY = Math.round(y);
   if (isTreePosition(tX, tY)) {
@@ -388,7 +385,6 @@ function updateChunks() {
         }
       }
 
-      // Generovanie budov
       const bType = getBuildingType(x, y);
       if (bType > 0) {
         const bHeight = bType === 2 ? 8 : 4;
@@ -414,7 +410,6 @@ function updateChunks() {
         }
       }
 
-      // Generovanie stromov s kolíziou
       if (isTreePosition(x, y)) {
         const trunkH = 3;
         for (let tz = 1; tz <= trunkH; tz++) {
@@ -510,12 +505,12 @@ function respawnPlayer() {
   document.getElementById('deathScreen').style.display = 'none';
   playerPos.x = 0;
   playerPos.y = 0;
-  playerPos.z = getTerrainHeight(0, 0) + 2;
+  playerPos.z = getTerrainHeight(0, 0) + 3;
   playerVelocityZ = 0;
   
   enemyPos.x = 12;
   enemyPos.y = 12;
-  enemyPos.z = getTerrainHeight(12, 12) + 2;
+  enemyPos.z = getTerrainHeight(12, 12) + 3;
   
   updateChunks();
 }
@@ -580,7 +575,7 @@ function setupJumpBtn() {
   const triggerJump = (e) => {
     e.preventDefault();
     if (isGrounded && !isDead) {
-      playerVelocityZ = 0.35;
+      playerVelocityZ = 0.36;
       isGrounded = false;
     }
   };
@@ -614,7 +609,7 @@ function setupKeyboardControls() {
     if (e.key === 's' || e.key === 'ArrowDown') keyboardKeys.backward = true;
     if (e.key === 'a' || e.key === 'ArrowLeft') keyboardKeys.left = true;
     if (e.key === 'd' || e.key === 'ArrowRight') keyboardKeys.right = true;
-    if (e.key === ' ' && isGrounded) { playerVelocityZ = 0.35; isGrounded = false; }
+    if (e.key === ' ' && isGrounded) { playerVelocityZ = 0.36; isGrounded = false; }
   });
   window.addEventListener('keyup', (e) => {
     if (e.key === 'w' || e.key === 'ArrowUp') keyboardKeys.forward = false;
@@ -637,6 +632,17 @@ function updateCharacterAnimation(charGroup, isMoving) {
     charGroup.userData.leftLeg.rotation.y = 0;
     charGroup.userData.rightArm.rotation.y = 0;
     charGroup.userData.leftArm.rotation.y = 0;
+  }
+}
+
+function resolveAntiStuck(pos) {
+  // Anti-stuck ochrana: ak je pozícia postavy vnútri pevného bloku, automaticky ju vytlačí nahor
+  let checkZ = Math.floor(pos.z);
+  let attempts = 0;
+  while (isSolidBlock(pos.x, pos.y, checkZ) && attempts < 10) {
+    pos.z += 1.0;
+    checkZ = Math.floor(pos.z);
+    attempts++;
   }
 }
 
@@ -664,11 +670,11 @@ function updatePlayerMovement() {
     isMoving = true;
   }
 
-  // Presná kolízia s objektmi (stromy, budovy) v X a Y smere
-  if (!isSolidBlock(nextX, playerPos.y, playerPos.z) && !isSolidBlock(nextX, playerPos.y, playerPos.z + 0.5)) {
+  // Kolízia v X a Y smere s kontrolou výšky
+  if (!isSolidBlock(nextX, playerPos.y, playerPos.z) && !isSolidBlock(nextX, playerPos.y, playerPos.z + 0.6)) {
     playerPos.x = nextX;
   }
-  if (!isSolidBlock(playerPos.x, nextY, playerPos.z) && !isSolidBlock(playerPos.x, nextY, playerPos.z + 0.5)) {
+  if (!isSolidBlock(playerPos.x, nextY, playerPos.z) && !isSolidBlock(playerPos.x, nextY, playerPos.z + 0.6)) {
     playerPos.y = nextY;
   }
 
@@ -678,18 +684,19 @@ function updatePlayerMovement() {
 
   if (isSolidBlock(playerPos.x, playerPos.y, playerPos.z)) {
     if (playerVelocityZ < 0) {
-      // Dopad na zem
       playerPos.z = Math.floor(playerPos.z) + 1.0;
       playerVelocityZ = 0;
       isGrounded = true;
     } else {
-      // Narazenie hlavou do stropu
       playerPos.z -= playerVelocityZ;
       playerVelocityZ = 0;
     }
   } else {
     isGrounded = false;
   }
+
+  // Aplikovanie anti-stuck ochrany pre istotu
+  resolveAntiStuck(playerPos);
 
   if (playerPos.z < -15) {
     isDead = true;
@@ -700,12 +707,12 @@ function updatePlayerMovement() {
   player.rotation.z = playerAngle;
   updateCharacterAnimation(player, isMoving);
 
-  // Pohyb nepriateľa s ohľadom na kolízie
+  // Pohyb nepriateľa a presná kolízia s prekážkami
   const dx = playerPos.x - enemyPos.x;
   const dy = playerPos.y - enemyPos.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  // PRESNÁ SMRŤ: Ak je nepriateľ v tesnom fyzickom kontakte na rovnakej výške
+  // Kontrola smrti (dotyk s nepriateľom na rovnakej výške)
   if (dist < 0.7 && Math.abs(playerPos.z - enemyPos.z) < 1.2) {
     isDead = true;
     document.getElementById('deathScreen').style.display = 'flex';
@@ -733,6 +740,8 @@ function updatePlayerMovement() {
   } else {
     enemyGrounded = false;
   }
+
+  resolveAntiStuck(enemyPos);
 
   enemy.position.set(enemyPos.x, enemyPos.y, enemyPos.z);
   enemy.rotation.z = Math.atan2(dy, dx) - Math.PI/2;
