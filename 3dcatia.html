@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro ISO CAD Studio v5.0</title>
+<title>ErikAI Pro ISO CAD Studio v5.1</title>
 <!-- Three.js, OrbitControls a Three-CSG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -230,16 +230,20 @@ select.format-select {
   <div class="panel">
     <select id="shapeSelector" class="format-select" onchange="changeActiveShape()">
       <optgroup label="🧊 Kocky / Kvádre">
-        <option value="box">Kocka / Kváder</option>
-        <option value="threadedBox">Kocka so závitovou dierou</option>
+        <option value="box">Kocka / Kváder (stojatý)</option>
+        <option value="threadedBox">Kocka so závitovou dierou (stojatá)</option>
       </optgroup>
       <optgroup label="🧪 Valce / Čapy">
         <option value="cylinder">Valec (stojatý)</option>
-        <option value="cylinder_forward">Valec – Smer DOPREDU</option>
-        <option value="cylinder_backward">Valec – Smer DOZADU</option>
         <option value="cylinder_right">Valec – Smer VPRAVO</option>
         <option value="cylinder_left">Valec – Smer VĽAVO</option>
-        <option value="threadedCylinder">Valec so závitom</option>
+        <option value="cylinder_forward">Valec – Smer DOPREDU</option>
+        <option value="cylinder_backward">Valec – Smer DOZADU</option>
+        <option value="threadedCylinder">Valec so závitom (stojatý)</option>
+        <option value="threadedCylinder_right">Valec so závitom – Smer VPRAVO</option>
+        <option value="threadedCylinder_left">Valec so závitom – Smer VĽAVO</option>
+        <option value="threadedCylinder_forward">Valec so závitom – Smer DOPREDU</option>
+        <option value="threadedCylinder_backward">Valec so závitom – Smer DOZADU</option>
       </optgroup>
       <optgroup label="⭕ Rúry">
         <option value="pipe">Rúra s otvorom (stojatá)</option>
@@ -253,17 +257,17 @@ select.format-select {
       </optgroup>
       <optgroup label="🔺 Kužeľ">
         <option value="cone">Kužeľ (stojatý)</option>
-        <option value="cone_forward">Kužeľ – Smer DOPREDU</option>
-        <option value="cone_backward">Kužeľ – Smer DOZADU</option>
         <option value="cone_right">Kužeľ – Smer VPRAVO</option>
         <option value="cone_left">Kužeľ – Smer VĽAVO</option>
+        <option value="cone_forward">Kužeľ – Smer DOPREDU</option>
+        <option value="cone_backward">Kužeľ – Smer DOZADU</option>
       </optgroup>
       <optgroup label="📐 Ihlan">
         <option value="pyramid">Ihlan (stojatý)</option>
-        <option value="pyramid_forward">Ihlan – Smer DOPREDU</option>
-        <option value="pyramid_backward">Ihlan – Smer DOZADU</option>
         <option value="pyramid_right">Ihlan – Smer VPRAVO</option>
         <option value="pyramid_left">Ihlan – Smer VĽAVO</option>
+        <option value="pyramid_forward">Ihlan – Smer DOPREDU</option>
+        <option value="pyramid_backward">Ihlan – Smer DOZADU</option>
       </optgroup>
     </select>
 
@@ -296,12 +300,12 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">Súradnicový stred: [X: Stred, Y: Stred, Z: Spodok (Z >= 0)] | Preddefinované orientácie</span>
+  <span id="infoCoords">Súradnicový stred: [X: Stred, Y: Stred, Z: Spodok (Z >= 0)] | Samostatné orientované tvary</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
 <div id="commandLineContainer">
-  <div id="commandHistory"><div>ErikAI ISO CAD Studio v5.0 – Preddefinované orientované tvary, žiadny diel pod zemou.</div></div>
+  <div id="commandHistory"><div>ErikAI ISO CAD Studio v5.1 – Stojaté tvary a samostatné orientácie (vpravo/vľavo/dopredu/dozadu), Z >= 0.</div></div>
   <div id="commandInputRow">
     <span id="commandPrompt">&gt;</span>
     <input type="text" id="commandInput" placeholder="Príkaz..." autocomplete="off">
@@ -470,7 +474,7 @@ function toggleMode(){
     btn.textContent = '✏️ Upraviť 2D Výkres';
     btn.style.background = '#10b981';
     btn.style.color = '#000';
-    infoCoords.textContent = "3D Z-Up Studio [Z >= 0 Ziadny diel pod zemou]";
+    infoCoords.textContent = "3D Z-Up Studio [Z >= 0 Žiadny diel pod zemou]";
     init3DFromSketch();
     logCommand("🚀 2D výkres prenesený do 3D!");
   } else {
@@ -543,7 +547,6 @@ function render2DProjection(ctx, s, offsetX, offsetY, viewType, index, isSelecte
 
   let posX = (s.x || 0) * 0.5;
   let posY = (s.y || 0) * 0.5;
-  // Zabezpečenie, že Z je vždy minimálne 0 (žiadny diel pod zemou)
   let posZ = Math.max(0, (s.z || 0)) * 0.5;
 
   let scaleW = (s.w || 100) * 0.5;
@@ -697,7 +700,7 @@ function renderTitleBlock(ctx, x, y){
   ctx.fillText("Materiál: S235JR / Oceľ", x + 10, y + 48);
   ctx.fillText("Vypracoval: ErikAI CAD", x + 10, y + 90);
   ctx.fillText("Mierka: 1:1", x + 190, y + 90);
-  ctx.fillText("Výkres: DWG-2026-v5.0", x + 190, y + 130);
+  ctx.fillText("Výkres: DWG-2026-v5.1", x + 190, y + 130);
   ctx.restore();
 }
 
@@ -829,7 +832,6 @@ function init3DFromSketch(){
     
     let worldX = (s.x || 0) / 10;
     let worldY = (s.y || 0) / 10;
-    // Vynútenie Z >= 0 v 3D
     let worldZ = Math.max(0, (s.z || 0)) / 10;
 
     mesh.position.set(worldX, worldY, worldZ);
