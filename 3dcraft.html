@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>ErikAI Voxel Craft 3D v1.0</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+:root {
+  --bg: #0b0d13;
+  --panel: rgba(30, 34, 45, 0.85);
+  --accent: #10b981;
+  --accent-red: #ef4444;
+  --text: #ffffff;
+}
+* { box-sizing: border-box; user-select: none; }
+body, html {
+  margin: 0; padding: 0; width: 100%; height: 100%;
+  overflow: hidden; background: var(--bg); font-family: 'Segoe UI', sans-serif;
+}
+#gameCanvas { width: 100%; height: 100%; display: block; }
+
+/* HUD & Stats Panel */
+#hud {
+  position: absolute; top: 10px; left: 10px;
+  background: var(--panel); border: 1px solid #2e364f;
+  padding: 12px; border-radius: 8px; color: var(--text);
+  font-size: 0.85rem; max-width: 320px; z-index: 10;
+  backdrop-filter: blur(5px);
+}
+#hud h3 { margin: 0 0 8px 0; color: var(--accent); font-size: 1rem; }
+.stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.stat-val { font-weight: bold; color: #3b82f6; }
+
+/* Controls Overlay for Mobile */
+#controls {
+  position: absolute; bottom: 20px; left: 20px; right: 20px;
+  display: flex; justify-content: space-between; align-items: center;
+  pointer-events: none; z-index: 10;
+}
+.dpad, .action-btns { pointer-events: auto; display: flex; gap: 8px; }
+.btn {
+  width: 50px; height: 50px; background: rgba(255,255,255,0.2);
+  border: 2px solid white; border-radius: 50%; color: white;
+  font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+  touch-action: manipulation; cursor: pointer;
+}
+.btn:active { background: var(--accent); }
+button.action-btn {
+  padding: 8px 12px; background: var(--accent-red); color: white;
+  border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
+  pointer-events: auto; margin-top: 8px; width: 100%;
+}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <h3>🌍 ErikAI Voxel Engine 3D</h3>
+  <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
+  <div class="stat-row"><span>Vygenerované celkovo:</span> <span id="totalBlocks" class="stat-val">0</span></div>
+  <div class="stat-row"><span>Zatiahnuté úložisko:</span> <span id="storageSize" class="stat-val">0 B</span></div>
+  <div class="stat-row"><span>FPS:</span> <span id="fpsVal" class="stat-val">60</span></div>
+  <button class="action-btn" onclick="resetWorld()">🗑️ Vymazať svet & Nové hory</button>
+</div>
+
+<div id="controls">
+  <div class="dpad">
+    <div class="btn" id="btnForward">⬆️</div>
+    <div class="btn" id="btnBackward">⬇️</div>
+    <div class="btn" id="btnLeft">⬅️</div>
+    <div class="btn" id="btnRight">➡️</div>
+  </div>
+</div>
+
+<script>
+// --- Jednoduchý Simplex/Perlin Noise pre Hory ---
+const SimplexNoise = function() {
+  const F3 = 1.0/3.0, G3 = 1.0/6.0;
+  const p = new Uint8Array(256);
+  for (let i=0; i<256; i++) p[i] = Math.floor(Math.random()*256);
+  const perm = new Uint8Array(512), permMod12 = new Uint8Array(512);
+  for (let i=0; i<512; i++) {
+    perm[i] = p[i & 255];
+    permMod12[i] = (perm[i] % 12);
+  }
+  return {
+    noise2D: function(xin, yin) {
+      let n0, n1, n2;
+      let s = (xin+yin)*0.5*(Math.sqrt(3.0)-1.0);
+      let i = Math.floor(xin+s), j = Math.floor(yin+s);
+      let t = (i+j)*(3.0-Math.sqrt(3.0))/6.0;
+      let X0 = i-t, Y0 = j-t;
+      let x0 = xin-X0, y0 = yin-Y0;
+      let i1, j1;
+      if(x0>y0) {i1=1; j1=0;} else {i1=0; j1=1;}
+      let x1 = x0 - i1 + (3.0-Math.sqrt(3.0))/6.0, y1 = y0 - j1 + (3.0-Math.sqrt(3.0))/6.0;
+      let x2 = x0 - 1.0 + 2.0*(3.0-Math.sqrt(3.0))/6.0, y2 = y0 - 1.0 + 2.0*(3.0-Math.sqrt(3.0))/6.0;
+      let ii = i & 255, jj = j & 255;
+      let t0 = 0.5 - x0*x0-y0*y0; if(t0>0) n0 = Math.pow(t0, 4) * (perm[ii+perm[jj]]%2 === 0 ? 1 : -1); else n0 = 0.0;
+      let t1 = 0.5 - x1*x1-y1*y1; if(t1>0) n1 = Math.pow(t1, 4) * (perm[ii+i1+perm[jj+j1]]%2 === 0 ? 1 : -1); else n1 = 0.0;
+      let t2 = 0.5 - x2*x2-y2*y2; if(t2>0) n2 = Math.pow(t2, 4) * (perm[ii+1+perm[jj+1]]%2 === 0 ? 1 : -1); else n2 = 0.0;
+      return 70.0 * (n0 + n1 + n2);
+    }
+  };
+};
+
+let noise = SimplexNoise();
+let worldSeed = Math.random();
+
+// --- ZÁKLADNÉ PREMENNÉ ---
+let scene, camera, renderer;
+let player, playerMesh;
+let activeBlocks = new Map(); // Bloky aktuálne v 3D RAM
+let savedWorldData = {}; // Trvalá pamäť
+let RENDER_DISTANCE = 14; // Polomer vykresľovania okolo hráča
+
+// Materiály pre bloky (Minecraft štýl)
+const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+const matGrass = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.8 });
+const matDirt = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.9 });
+const matStone = new THREE.MeshStandardMaterial({ color: 0x757575, roughness: 0.6 });
+
+// Hráčska pozícia a pohyb
+let playerPos = { x: 0, y: 10, z: 0 };
+let playerAngle = 0;
+let keys = { forward: false, backward: false, left: false, right: false };
+
+function init() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x87ceeb); // Obloha
+  scene.fog = new THREE.FogExp2(0x87ceeb, 0.03);
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  document.body.appendChild(renderer.domElement);
+
+  // Svetlá
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(50, 100, 50);
+  scene.add(dirLight);
+
+  // Vytvorenie postavy (Hráča)
+  createPlayer();
+
+  // Nacítanie uloženého sveta z pamäte
+  loadWorldFromStorage();
+
+  // Setup ovládania
+  setupControls();
+
+  window.addEventListener('resize', onWindowResize);
+
+  animate();
+}
+
+function createPlayer() {
+  player = new THREE.Group();
+  
+  // Telo Steve-a
+  const bodyGeo = new THREE.BoxGeometry(0.6, 1.2, 0.4);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x00bcd4 });
+  const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+  bodyMesh.position.y = 0.6;
+
+  // Hlava
+  const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+  const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc80 });
+  const headMesh = new THREE.Mesh(headGeo, headMat);
+  headMesh.position.y = 1.45;
+
+  player.add(bodyMesh);
+  player.add(headMesh);
+  scene.add(player);
+}
+
+function getTerrainHeight(x, z) {
+  let h = noise.noise2D(x * 0.05, z * 0.05) * 8 + noise.noise2D(x * 0.1, z * 0.1) * 3;
+  return Math.floor(h);
+}
+
+function updateChunks() {
+  const pX = Math.floor(playerPos.x);
+  const pZ = Math.floor(playerPos.z);
+  
+  let neededKeys = new Set();
+  let addedCount = 0;
+
+  // Vykresľujeme len v okruhu RENDER_DISTANCE
+  for (let x = pX - RENDER_DISTANCE; x <= pX + RENDER_DISTANCE; x++) {
+    for (let z = pZ - RENDER_DISTANCE; z <= pZ + RENDER_DISTANCE; z++) {
+      const dist = Math.sqrt((x - pX)**2 + (z - pZ)**2);
+      if (dist > RENDER_DISTANCE) continue;
+
+      const height = getTerrainHeight(x, z);
+
+      for (let y = height; y >= height - 2; y--) {
+        const key = `${x},${y},${z}`;
+        neededKeys.add(key);
+
+        if (!activeBlocks.has(key)) {
+          let mat = y === height ? matGrass : (y > height - 2 ? matDirt : matStone);
+          const mesh = new THREE.Mesh(boxGeo, mat);
+          mesh.position.set(x, y, z);
+          scene.add(mesh);
+          activeBlocks.set(key, mesh);
+
+          // Uloženie do pamäte (ak ešte nie je)
+          if (!savedWorldData[key]) {
+            savedWorldData[key] = { t: y === height ? 1 : 2 };
+            addedCount++;
+          }
+        }
+      }
+    }
+  }
+
+  // --- ODĽAHČENIE RAM (FRUSTUM / DISTANCE CULLING) ---
+  // Odstránime bloky, ktoré sú za chrbtom alebo príliš ďaleko
+  for (let [key, mesh] of activeBlocks.entries()) {
+    if (!neededKeys.has(key)) {
+      scene.remove(mesh);
+      mesh.geometry.dispose();
+      activeBlocks.delete(key);
+    }
+  }
+
+  if (addedCount > 0) {
+    saveWorldToStorage();
+  }
+
+  updateHUDStats();
+}
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function updateHUDStats() {
+  document.getElementById('ramCount').textContent = activeBlocks.size;
+  const totalCount = Object.keys(savedWorldData).length;
+  document.getElementById('totalBlocks').textContent = totalCount;
+
+  const jsonStr = JSON.stringify(savedWorldData);
+  const bytes = new Blob([jsonStr]).size;
+  document.getElementById('storageSize').textContent = formatBytes(bytes);
+}
+
+function saveWorldToStorage() {
+  try {
+    localStorage.setItem('erikai_voxel_world', JSON.stringify(savedWorldData));
+  } catch(e) {}
+}
+
+function loadWorldFromStorage() {
+  const data = localStorage.getItem('erikai_voxel_world');
+  if (data) {
+    try { savedWorldData = JSON.parse(data); } catch(e) { savedWorldData = {}; }
+  }
+}
+
+function resetWorld() {
+  localStorage.removeItem('erikai_voxel_world');
+  savedWorldData = {};
+  
+  // Vymazať scény
+  for (let [key, mesh] of activeBlocks.entries()) {
+    scene.remove(mesh);
+  }
+  activeBlocks.clear();
+  
+  // Nové hory
+  noise = SimplexNoise();
+  playerPos = { x: 0, y: getTerrainHeight(0,0) + 3, z: 0 };
+  updateChunks();
+}
+
+function setupControls() {
+  const bindBtn = (id, keyName) => {
+    const el = document.getElementById(id);
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
+    el.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
+    el.addEventListener('mousedown', () => keys[keyName] = true);
+    el.addEventListener('mouseup', () => keys[keyName] = false);
+  };
+
+  bindBtn('btnForward', 'forward');
+  bindBtn('btnBackward', 'backward');
+  bindBtn('btnLeft', 'left');
+  bindBtn('btnRight', 'right');
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'w' || e.key === 'ArrowUp') keys.forward = true;
+    if (e.key === 's' || e.key === 'ArrowDown') keys.backward = true;
+    if (e.key === 'a' || e.key === 'ArrowLeft') keys.left = true;
+    if (e.key === 'd' || e.key === 'ArrowRight') keys.right = true;
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'w' || e.key === 'ArrowUp') keys.forward = false;
+    if (e.key === 's' || e.key === 'ArrowDown') keys.backward = false;
+    if (e.key === 'a' || e.key === 'ArrowLeft') keys.left = false;
+    if (e.key === 'd' || e.key === 'ArrowRight') keys.right = false;
+  });
+}
+
+function updatePlayerMovement() {
+  const speed = 0.15;
+  const rotSpeed = 0.04;
+
+  if (keys.left) playerAngle += rotSpeed;
+  if (keys.right) playerAngle -= rotSpeed;
+
+  let moveX = 0, moveZ = 0;
+  if (keys.forward) {
+    moveX -= Math.sin(playerAngle) * speed;
+    moveZ -= Math.cos(playerAngle) * speed;
+  }
+  if (keys.backward) {
+    moveX += Math.sin(playerAngle) * speed;
+    moveZ += Math.cos(playerAngle) * speed;
+  }
+
+  playerPos.x += moveX;
+  playerPos.z += moveZ;
+
+  // Prispôsobenie výšky terénu (Gravitácia/Chôdza po kopci)
+  const targetY = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.z)) + 1;
+  playerPos.y += (targetY - playerPos.y) * 0.2;
+
+  player.position.set(playerPos.x, playerPos.y, playerPos.z);
+  player.rotation.y = playerAngle;
+
+  // Kamera z 3. osoby (za chrbtom hráča)
+  const camDistance = 7;
+  const camHeight = 4;
+  camera.position.x = playerPos.x + Math.sin(playerAngle) * camDistance;
+  camera.position.z = playerPos.z + Math.cos(playerAngle) * camDistance;
+  camera.position.y = playerPos.y + camHeight;
+  camera.lookAt(playerPos.x, playerPos.y + 1, playerPos.z);
+}
+
+let lastFrameTime = performance.now();
+let frameCount = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  updatePlayerMovement();
+  updateChunks();
+
+  // Výpočet FPS
+  frameCount++;
+  const now = performance.now();
+  if (now - lastFrameTime >= 1000) {
+    document.getElementById('fpsVal').textContent = frameCount;
+    frameCount = 0;
+    lastFrameTime = now;
+  }
+
+  renderer.render(scene, camera);
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
