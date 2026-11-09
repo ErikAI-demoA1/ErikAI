@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v1.2 - Fixed World & Solid Ground</title>
+<title>ErikAI Voxel Craft 3D v1.4 - Z-Axis Height System</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -13,6 +13,7 @@
   --accent: #10b981;
   --accent-blue: #3b82f6;
   --accent-red: #ef4444;
+  --accent-amber: #f59e0b;
   --text: #ffffff;
 }
 * { box-sizing: border-box; user-select: none; touch-action: none; }
@@ -20,18 +21,33 @@ body, html {
   margin: 0; padding: 0; width: 100%; height: 100%;
   overflow: hidden; background: var(--bg); font-family: 'Segoe UI', sans-serif;
 }
-#gameCanvas { width: 100%; height: 100%; display: block; }
 
 #hud {
   position: absolute; top: 12px; left: 12px;
   background: var(--panel); border: 1px solid #2e364f;
   padding: 12px 16px; border-radius: 10px; color: var(--text);
-  font-size: 0.82rem; width: 300px; max-width: 90vw; z-index: 10;
+  font-size: 0.82rem; width: 310px; max-width: 90vw; z-index: 10;
   backdrop-filter: blur(8px); box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
 #hud h3 { margin: 0 0 6px 0; color: var(--accent); font-size: 0.95rem; }
 .stat-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
 .stat-val { font-weight: bold; color: var(--accent-blue); }
+.coord-val { font-weight: bold; color: var(--accent-amber); font-family: monospace; }
+
+#deathScreen {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(239, 68, 68, 0.88); display: none;
+  flex-direction: column; justify-content: center; align-items: center;
+  z-index: 100; color: white; text-align: center; padding: 20px;
+  backdrop-filter: blur(5px);
+}
+#deathScreen h1 { font-size: 2.5rem; margin: 0 0 10px 0; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+#deathScreen p { font-size: 1.1rem; margin-bottom: 20px; }
+#deathScreen button {
+  padding: 12px 24px; background: white; color: #ef4444; border: none;
+  border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
 
 #controls {
   position: absolute; bottom: 20px; left: 20px; right: 20px;
@@ -56,13 +72,20 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>🌲 ErikAI Voxel Biomes 3D v1.2</h3>
+  <h3>🌲 ErikAI Voxel Engine v1.4 (Z-Up)</h3>
+  <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Uložené bloky:</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Veľkosť dát:</span> <span id="storageSize" class="stat-val">0 B</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>FPS:</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Generovať Nový Svet</button>
+  <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Nový Svet</button>
+</div>
+
+<div id="deathScreen">
+  <h1>💀 ZOMREL SI!</h1>
+  <p>Prepadol si sa pod výšku Z < -5.</p>
+  <button onclick="respawnPlayer()">🔄 Oživiť / Reštartovať</button>
 </div>
 
 <div id="controls">
@@ -77,7 +100,9 @@ button.action-btn {
 </div>
 
 <script>
-// --- Fast Simplex Noise ---
+// --- Z-UP ORTOCENTRICKÉ NASTAVENIE TRI.JS ---
+THREE.Object3D.DefaultUp.set(0, 0, 1);
+
 const SimplexNoise = function(seed) {
   let s = seed || Math.random();
   const p = new Uint8Array(256);
@@ -109,11 +134,11 @@ const SimplexNoise = function(seed) {
 let currentSeed = Math.floor(Math.random() * 899999 + 100000);
 let noise = SimplexNoise(currentSeed);
 
-// --- SCÉNA A MATERIÁLY ---
 let scene, camera, renderer, player;
 let activeBlocks = new Map();
 let savedWorldData = {};
-let RENDER_DISTANCE = 11; // Bezpečný okruh pre plynulosť
+let RENDER_DISTANCE = 11;
+let isDead = false;
 
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 const materials = {
@@ -127,8 +152,9 @@ const materials = {
   bedrock: new THREE.MeshStandardMaterial({ color: 0x212121, roughness: 0.9 })
 };
 
-let playerPos = { x: 0, y: 10, z: 0 };
-let playerAngle = 0, cameraPitch = 0.35;
+// Z je VÝŠKA, X a Y sú rovinatý pohyb
+let playerPos = { x: 0, y: 0, z: 10 };
+let playerAngle = 0, cameraPitch = 0.45;
 let keys = { forward: false, backward: false, left: false, right: false };
 
 function init() {
@@ -145,14 +171,15 @@ function init() {
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.65));
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
-  dirLight.position.set(60, 120, 40);
+  dirLight.position.set(60, 40, 120);
   scene.add(dirLight);
 
   createPlayer();
   loadWorldFromStorage();
 
-  // Nastaviť správnu úvodnú výšku nad terénom
-  playerPos.y = getTerrainHeight(0, 0) + 2;
+  playerPos.x = 0;
+  playerPos.y = 0;
+  playerPos.z = getTerrainHeight(0, 0) + 2;
 
   setupControls();
   setupTouchLook();
@@ -165,62 +192,61 @@ function init() {
 
 function createPlayer() {
   player = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.4), new THREE.MeshStandardMaterial({ color: 0x1e88e5 }));
-  body.position.y = 0.6;
+  // V Z-Up rozhraní je Z výška
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 1.2), new THREE.MeshStandardMaterial({ color: 0x1e88e5 }));
+  body.position.z = 0.6;
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0xffcc80 }));
-  head.position.y = 1.45;
+  head.position.z = 1.45;
   player.add(body); player.add(head);
   scene.add(player);
 }
 
-function getTerrainHeight(x, z) {
-  let h = noise.noise2D(x * 0.03, z * 0.03) * 10 + noise.noise2D(x * 0.08, z * 0.08) * 3;
-  return Math.floor(h);
+// Z Výška terénu vypočítaná z X a Y
+function getTerrainHeight(x, y) {
+  let z = noise.noise2D(x * 0.03, y * 0.03) * 10 + noise.noise2D(x * 0.08, y * 0.08) * 3;
+  return Math.floor(z);
 }
 
-function getBiomeMaterial(x, z, y, maxHeight) {
-  const temperature = noise.noise2D(x * 0.01 + 50, z * 0.01 + 50);
-  if (y <= -10) return materials.bedrock;
-  if (y > 8) return materials.snow;
-  if (temperature < -0.3) return y === maxHeight ? materials.snow : materials.stone;
+function getBiomeMaterial(x, y, z, maxZ) {
+  const temperature = noise.noise2D(x * 0.01 + 50, y * 0.01 + 50);
+  if (z <= -10) return materials.bedrock;
+  if (z > 8) return materials.snow;
+  if (temperature < -0.3) return z === maxZ ? materials.snow : materials.stone;
   if (temperature > 0.45) return materials.sand;
-  if (y === maxHeight) return materials.grass;
-  if (y > maxHeight - 3) return materials.dirt;
+  if (z === maxZ) return materials.grass;
+  if (z > maxZ - 3) return materials.dirt;
   return materials.stone;
 }
 
-function isTreePosition(x, z) {
-  const h = getTerrainHeight(x, z);
-  const temp = noise.noise2D(x * 0.01 + 50, z * 0.01 + 50);
-  if (h <= 8 && temp >= -0.3 && temp <= 0.45) {
-    const treeNoise = noise.noise2D(x * 0.5, z * 0.5);
-    return treeNoise > 0.76;
+function isTreePosition(x, y) {
+  const z = getTerrainHeight(x, y);
+  const temp = noise.noise2D(x * 0.01 + 50, y * 0.01 + 50);
+  if (z <= 8 && temp >= -0.3 && temp <= 0.45) {
+    return noise.noise2D(x * 0.5, y * 0.5) > 0.76;
   }
   return false;
 }
 
 function updateChunks() {
   const pX = Math.floor(playerPos.x);
-  const pZ = Math.floor(playerPos.z);
+  const pY = Math.floor(playerPos.y);
   let neededKeys = new Set();
   let addedCount = 0;
 
   for (let x = pX - RENDER_DISTANCE; x <= pX + RENDER_DISTANCE; x++) {
-    for (let z = pZ - RENDER_DISTANCE; z <= pZ + RENDER_DISTANCE; z++) {
-      const dist = Math.sqrt((x - pX)**2 + (z - pZ)**2);
+    for (let y = pY - RENDER_DISTANCE; y <= pY + RENDER_DISTANCE; y++) {
+      const dist = Math.sqrt((x - pX)**2 + (y - pY)**2);
       if (dist > RENDER_DISTANCE) continue;
 
-      const height = getTerrainHeight(x, z);
-      
-      // PEVNÉ PODLOŽIE: Vypĺňame až po Y = -10 (Žiadne prázdno pod nohami)
-      const minDepth = Math.max(-10, height - 6);
+      const maxZ = getTerrainHeight(x, y);
+      const minZ = Math.max(-10, maxZ - 6);
 
-      for (let y = height; y >= minDepth; y--) {
+      for (let z = maxZ; z >= minZ; z--) {
         const key = `${x},${y},${z}`;
         neededKeys.add(key);
 
         if (!activeBlocks.has(key)) {
-          const mat = getBiomeMaterial(x, z, y, height);
+          const mat = getBiomeMaterial(x, y, z, maxZ);
           const mesh = new THREE.Mesh(boxGeo, mat);
           mesh.position.set(x, y, z);
           scene.add(mesh);
@@ -233,27 +259,26 @@ function updateChunks() {
         }
       }
 
-      // Kaskádový strom
-      if (isTreePosition(x, z)) {
+      if (isTreePosition(x, y)) {
         const trunkH = 3;
-        for (let ty = 1; ty <= trunkH; ty++) {
-          const treeKey = `${x},${height + ty},${z}`;
+        for (let tz = 1; tz <= trunkH; tz++) {
+          const treeKey = `${x},${y},${maxZ + tz}`;
           neededKeys.add(treeKey);
           if (!activeBlocks.has(treeKey)) {
             const mesh = new THREE.Mesh(boxGeo, materials.wood);
-            mesh.position.set(x, height + ty, z);
+            mesh.position.set(x, y, maxZ + tz);
             scene.add(mesh);
             activeBlocks.set(treeKey, mesh);
           }
         }
         for (let lx = -1; lx <= 1; lx++) {
-          for (let lz = -1; lz <= 1; lz++) {
-            for (let ly = trunkH + 1; ly <= trunkH + 2; ly++) {
-              const leafKey = `${x+lx},${height+ly},${z+lz}`;
+          for (let ly = -1; ly <= 1; ly++) {
+            for (let lz = trunkH + 1; lz <= trunkH + 2; lz++) {
+              const leafKey = `${x+lx},${y+ly},${maxZ+lz}`;
               neededKeys.add(leafKey);
               if (!activeBlocks.has(leafKey)) {
                 const mesh = new THREE.Mesh(boxGeo, materials.leaves);
-                mesh.position.set(x+lx, height+ly, z+lz);
+                mesh.position.set(x+lx, y+ly, maxZ+lz);
                 scene.add(mesh);
                 activeBlocks.set(leafKey, mesh);
               }
@@ -264,7 +289,6 @@ function updateChunks() {
     }
   }
 
-  // ODSTRÁNENIE NEPOTREBNÝCH BLOKOV Z RAM
   for (let [key, mesh] of activeBlocks.entries()) {
     if (!neededKeys.has(key)) {
       scene.remove(mesh);
@@ -288,6 +312,9 @@ function updateHUDStats() {
   document.getElementById('ramCount').textContent = activeBlocks.size;
   document.getElementById('totalBlocks').textContent = Object.keys(savedWorldData).length;
   document.getElementById('storageSize').textContent = formatBytes(new Blob([JSON.stringify(savedWorldData)]).size);
+  
+  // Z je VÝŠKA
+  document.getElementById('coordVal').textContent = `${Math.floor(playerPos.x)}, ${Math.floor(playerPos.y)}, ${Math.floor(playerPos.z)}`;
 }
 
 function saveWorldToStorage() {
@@ -321,7 +348,15 @@ function resetWorld() {
   noise = SimplexNoise(currentSeed);
   document.getElementById('seedVal').textContent = currentSeed;
   
-  playerPos = { x: 0, y: getTerrainHeight(0,0) + 2, z: 0 };
+  respawnPlayer();
+}
+
+function respawnPlayer() {
+  isDead = false;
+  document.getElementById('deathScreen').style.display = 'none';
+  playerPos.x = 0;
+  playerPos.y = 0;
+  playerPos.z = getTerrainHeight(0, 0) + 2;
   updateChunks();
 }
 
@@ -372,40 +407,50 @@ function setupControls() {
 }
 
 function updatePlayerMovement() {
+  if (isDead) return;
+
   const speed = 0.16;
-  let moveX = 0, moveZ = 0;
+  let moveX = 0, moveY = 0;
 
-  if (keys.forward) { moveX -= Math.sin(playerAngle) * speed; moveZ -= Math.cos(playerAngle) * speed; }
-  if (keys.backward) { moveX += Math.sin(playerAngle) * speed; moveZ += Math.cos(playerAngle) * speed; }
-  if (keys.left) { moveX -= Math.cos(playerAngle) * speed; moveZ += Math.sin(playerAngle) * speed; }
-  if (keys.right) { moveX += Math.cos(playerAngle) * speed; moveZ -= Math.sin(playerAngle) * speed; }
+  // Pohyb v rovine X a Y
+  if (keys.forward) { moveX -= Math.sin(playerAngle) * speed; moveY += Math.cos(playerAngle) * speed; }
+  if (keys.backward) { moveX += Math.sin(playerAngle) * speed; moveY -= Math.cos(playerAngle) * speed; }
+  if (keys.left) { moveX -= Math.cos(playerAngle) * speed; moveY -= Math.sin(playerAngle) * speed; }
+  if (keys.right) { moveX += Math.cos(playerAngle) * speed; moveY += Math.sin(playerAngle) * speed; }
 
-  playerPos.x += moveX; playerPos.z += moveZ;
+  playerPos.x += moveX; playerPos.y += moveY;
 
-  // PRÍSNA KONTROLA TERÉNU: Postava sa neprepadne pod zem
-  const currentTerrainH = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.z));
-  const targetY = currentTerrainH + 1;
+  // VÝŠKA Z JE KONTROLOVANÁ PODĽA TERÉNU
+  const currentTerrainZ = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y));
+  const targetZ = currentTerrainZ + 1;
 
-  // Smooth stúpanie a klesanie po kopcoch
-  playerPos.y += (targetY - playerPos.y) * 0.3;
-  if (playerPos.y < targetY) playerPos.y = targetY; // Záchranná poistka proti propadnutiu
+  playerPos.z += (targetZ - playerPos.z) * 0.25;
+  if (playerPos.z < targetZ) playerPos.z = targetZ;
+
+  // Kontrola smrti (Z < -5)
+  if (playerPos.z < -5) {
+    isDead = true;
+    document.getElementById('deathScreen').style.display = 'flex';
+  }
 
   player.position.set(playerPos.x, playerPos.y, playerPos.z);
-  player.rotation.y = playerAngle;
+  player.rotation.z = playerAngle;
 
   const camDist = 7;
   camera.position.x = playerPos.x + Math.sin(playerAngle) * (camDist * Math.cos(cameraPitch));
-  camera.position.z = playerPos.z + Math.cos(playerAngle) * (camDist * Math.cos(cameraPitch));
-  camera.position.y = playerPos.y + camDist * Math.sin(cameraPitch);
-  camera.lookAt(playerPos.x, playerPos.y + 1, playerPos.z);
+  camera.position.y = playerPos.y - Math.cos(playerAngle) * (camDist * Math.cos(cameraPitch));
+  camera.position.z = playerPos.z + camDist * Math.sin(cameraPitch);
+  camera.lookAt(playerPos.x, playerPos.y, playerPos.z + 1);
 }
 
 let lastFrameTime = performance.now(), frameCount = 0;
 
 function animate() {
   requestAnimationFrame(animate);
-  updatePlayerMovement();
-  updateChunks();
+  if (!isDead) {
+    updatePlayerMovement();
+    updateChunks();
+  }
 
   frameCount++;
   const now = performance.now();
