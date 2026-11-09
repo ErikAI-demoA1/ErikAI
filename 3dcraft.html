@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v2.0 - Real Gravity & High Spawn</title>
+<title>ErikAI Voxel Craft 3D v2.1 - Flat Spawn Edition</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -73,7 +73,7 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v2.0 (Gravity)</h3>
+  <h3>⚡ ErikAI Voxel Engine v2.1 (Flat Spawn)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.4 GB</span></div>
@@ -87,7 +87,7 @@ button.action-btn {
 <div id="deathScreen">
   <h1>💀 ZOMREL SI!</h1>
   <p>Prepadol si sa hlboko pod svet.</p>
-  <button onclick="respawnPlayer()">🔄 Oživiť v oblakoch</button>
+  <button onclick="respawnPlayer()">🔄 Oživiť na rovnej plošine</button>
 </div>
 
 <div id="controls">
@@ -153,9 +153,8 @@ const materials = {
   bedrock: new THREE.MeshStandardMaterial({ color: 0x212121, roughness: 0.9 })
 };
 
-// Začiatok vysoko v oblakoch, odkiaľ bude postava prirodzene padadť na zem
-let playerPos = { x: 0, y: 0, z: 22 };
-let playerVelocityZ = 0; // Rýchlosť pádu (gravitácia)
+let playerPos = { x: 0, y: 0, z: 25 };
+let playerVelocityZ = 0;
 let playerAngle = 0, cameraPitch = 0.45;
 let keys = { forward: false, backward: false, left: false, right: false };
 
@@ -179,11 +178,12 @@ function init() {
   createPlayer();
   loadWorldFromStorage();
 
-  buildPrebuiltBase();
+  // GARANTOR ROVNÉHO TERÉNU NA SPAWNE (Plošina vo výške Z = 4)
+  buildFlatSpawnArea();
 
   playerPos.x = 0;
   playerPos.y = 0;
-  playerPos.z = 22; // Vysoký spawn v oblakoch
+  playerPos.z = 25; // Bezpečný štart vysoko v oblakoch
   playerVelocityZ = 0;
 
   updateChunks();
@@ -208,15 +208,18 @@ function createPlayer() {
 }
 
 function getTerrainHeight(x, y) {
+  // Ak sme v tesnej blízkosti spawnu (radius 6 blokov), vrátime garantovanú rovnú výšku 4
+  if (Math.abs(x) <= 6 && Math.abs(y) <= 6) {
+    return 4;
+  }
   let z = noise.noise2D(x * 0.03, y * 0.03) * 12 + noise.noise2D(x * 0.08, y * 0.08) * 4;
   return Math.floor(z);
 }
 
-function buildPrebuiltBase() {
-  for (let x = -8; x <= 8; x++) {
-    for (let y = -8; y <= 8; y++) {
-      const h = Math.max(getTerrainHeight(x, y), 4);
-      for (let z = h; z >= -10; z--) {
+function buildFlatSpawnArea() {
+  for (let x = -7; x <= 7; x++) {
+    for (let y = -7; y <= 7; y++) {
+      for (let z = 4; z >= -10; z--) {
         const key = `${x},${y},${z}`;
         savedWorldData[key] = 1;
       }
@@ -225,6 +228,13 @@ function buildPrebuiltBase() {
 }
 
 function getBiomeMaterial(x, y, z, maxZ) {
+  if (Math.abs(x) <= 6 && Math.abs(y) <= 6) {
+    if (z === 4) return materials.grass;
+    if (z > 1) return materials.dirt;
+    if (z <= -10) return materials.bedrock;
+    return materials.stone;
+  }
+
   const temperature = noise.noise2D(x * 0.01 + 50, y * 0.01 + 50);
   if (z <= -16) return materials.bedrock;
   if (z > 10) return materials.snow;
@@ -236,6 +246,7 @@ function getBiomeMaterial(x, y, z, maxZ) {
 }
 
 function isTreePosition(x, y) {
+  if (Math.abs(x) <= 6 && Math.abs(y) <= 6) return false; // Žiadne stromy priamo na spawn plošine, aby prekážali
   const z = getTerrainHeight(x, y);
   const temp = noise.noise2D(x * 0.01 + 50, y * 0.01 + 50);
   if (z <= 10 && temp >= -0.3 && temp <= 0.45) {
@@ -374,10 +385,10 @@ function resetWorld() {
 function respawnPlayer() {
   isDead = false;
   document.getElementById('deathScreen').style.display = 'none';
-  buildPrebuiltBase();
+  buildFlatSpawnArea();
   playerPos.x = 0;
   playerPos.y = 0;
-  playerPos.z = 22; // Oživenie vysoko v oblakoch
+  playerPos.z = 25;
   playerVelocityZ = 0;
   updateChunks();
 }
@@ -441,14 +452,13 @@ function updatePlayerMovement() {
 
   playerPos.x += moveX; playerPos.y += moveY;
 
-  // REÁLNA GRAVITÁCIA A PÁD NA ZEM
   const groundZ = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y)) + 1;
   
   if (playerPos.z > groundZ) {
-    playerVelocityZ -= 0.025; // Zrýchlenie pádu (gravitácia)
+    playerVelocityZ -= 0.025;
     playerPos.z += playerVelocityZ;
     if (playerPos.z < groundZ) {
-      playerPos.z = groundZ; // Pristátie na zemi
+      playerPos.z = groundZ;
       playerVelocityZ = 0;
     }
   } else {
@@ -456,7 +466,6 @@ function updatePlayerMovement() {
     playerVelocityZ = 0;
   }
 
-  // Kontrola smrti (pád pod svet)
   if (playerPos.z < -15) {
     isDead = true;
     document.getElementById('deathScreen').style.display = 'flex';
