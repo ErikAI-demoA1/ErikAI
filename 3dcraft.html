@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v2.2 - Joystick & Flat Terrain</title>
+<title>ErikAI Voxel Craft 3D v2.3 - Seamless World & Better Player</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -83,7 +83,7 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v2.2 (Joystick & Flat)</h3>
+  <h3>⚡ ErikAI Voxel Engine v2.3 (Seamless)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.2 GB</span></div>
@@ -97,7 +97,7 @@ button.action-btn {
 <div id="deathScreen">
   <h1>💀 ZOMREL SI!</h1>
   <p>Prepadol si sa pod svet.</p>
-  <button onclick="respawnPlayer()">🔄 Oživiť na plošine</button>
+  <button onclick="respawnPlayer()">🔄 Oživiť na svete</button>
 </div>
 
 <!-- OVLÁDACIE PRVKY -->
@@ -141,7 +141,7 @@ let noise = SimplexNoise(currentSeed);
 let scene, camera, renderer, player;
 let activeBlocks = new Map();
 let savedWorldData = {};
-let RENDER_DISTANCE = 26; // OPTIMÁLNE PRE UTILIZÁCIU ~1.2 GB RAM A 60 FPS
+let RENDER_DISTANCE = 26; 
 let isDead = false;
 
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -161,7 +161,6 @@ let playerVelocityZ = 0;
 let isGrounded = false;
 let playerAngle = 0, cameraPitch = 0.45;
 
-// Joystick Vektory
 let joystickMove = { x: 0, y: 0 };
 let keyboardKeys = { forward: false, backward: false, left: false, right: false };
 
@@ -182,10 +181,8 @@ function init() {
   dirLight.position.set(100, 80, 150);
   scene.add(dirLight);
 
-  createPlayer();
+  createPlayerModel();
   loadWorldFromStorage();
-
-  buildFlatSpawnArea();
 
   playerPos.x = 0;
   playerPos.y = 0;
@@ -205,44 +202,59 @@ function init() {
   animate();
 }
 
-function createPlayer() {
+// KRAJŠIA DETAILNEJŠIA POSTAVIČKA
+function createPlayerModel() {
   player = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 1.2), new THREE.MeshStandardMaterial({ color: 0x1e88e5 }));
-  body.position.z = 0.6;
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0xffcc80 }));
-  head.position.z = 1.45;
-  player.add(body); player.add(head);
+
+  const matBody = new THREE.MeshStandardMaterial({ color: 0x1e88e5, roughness: 0.6 }); // Modré tričko
+  const matPants = new THREE.MeshStandardMaterial({ color: 0x1565c0, roughness: 0.7 }); // Nohavice
+  const matSkin = new THREE.MeshStandardMaterial({ color: 0xffcc80, roughness: 0.8 });  // Koža / tvár
+  const matHair = new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.9 });  // Vlasy
+
+  // Trup
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.7), matBody);
+  torso.position.z = 0.6;
+  player.add(torso);
+
+  // Hlava
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.45, 0.45), matSkin);
+  head.position.z = 1.15;
+  player.add(head);
+
+  // Vlasy
+  const hair = new THREE.Mesh(new THREE.BoxGeometry(0.47, 0.47, 0.2), matHair);
+  hair.position.set(0, -0.02, 1.35);
+  player.add(hair);
+
+  // Pravá noha
+  const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.5), matPants);
+  rightLeg.position.set(0.12, 0, 0.15);
+  player.add(rightLeg);
+
+  // Ľavá noha
+  const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.5), matPants);
+  leftLeg.position.set(-0.12, 0, 0.15);
+  player.add(leftLeg);
+
   scene.add(player);
 }
 
-// VYROVNANEJŠÍ TERÉN (VIAC PLOCHÝCH LÚK A JEMNÉ KOPCE)
+// PLYNULEJŠÍ A ZJEDNOTENÝ ŠUM TERÉNU (BEZ OSTRÝCH HRÁDZÍ)
 function getTerrainHeight(x, y) {
-  if (Math.abs(x) <= 8 && Math.abs(y) <= 8) return 4;
+  // Plynulý prechod pomocou radiálneho tlmenia stredu, aby bol štart vždy stabilný a bez dier
+  let distFromCenter = Math.sqrt(x * x + y * y);
+  let baseNoise = noise.noise2D(x * 0.02, y * 0.02) * 6 + noise.noise2D(x * 0.06, y * 0.06) * 2;
   
-  // Znížená výška šumu z 12+4 na 5+2 pre rozľahlé rašeliniska a pláne
-  let z = noise.noise2D(x * 0.015, y * 0.015) * 5 + noise.noise2D(x * 0.05, y * 0.05) * 2;
-  return Math.floor(z) + 2;
-}
-
-function buildFlatSpawnArea() {
-  for (let x = -9; x <= 9; x++) {
-    for (let y = -9; y <= 9; y++) {
-      for (let z = 4; z >= -10; z--) {
-        const key = `${x},${y},${z}`;
-        savedWorldData[key] = 1;
-      }
-    }
+  // V strede (okolo 0,0) jemne vyhladíme terén do roviny, ale plynulo bez štvorcových okrajov
+  if (distFromCenter < 10) {
+    let factor = distFromCenter / 10;
+    baseNoise = baseNoise * factor + 3 * (1 - factor);
   }
+  
+  return Math.floor(baseNoise) + 2;
 }
 
 function getBiomeMaterial(x, y, z, maxZ) {
-  if (Math.abs(x) <= 8 && Math.abs(y) <= 8) {
-    if (z === 4) return materials.grass;
-    if (z > 1) return materials.dirt;
-    if (z <= -10) return materials.bedrock;
-    return materials.stone;
-  }
-
   const temperature = noise.noise2D(x * 0.01 + 50, y * 0.01 + 50);
   if (z <= -16) return materials.bedrock;
   if (z > 10) return materials.snow;
@@ -254,11 +266,13 @@ function getBiomeMaterial(x, y, z, maxZ) {
 }
 
 function isTreePosition(x, y) {
-  if (Math.abs(x) <= 8 && Math.abs(y) <= 8) return false;
+  // Žiadne stromy v tesnej blízkosti spawnu
+  if (Math.abs(x) <= 4 && Math.abs(y) <= 4) return false;
+  
   const z = getTerrainHeight(x, y);
   const temp = noise.noise2D(x * 0.01 + 50, y * 0.01 + 50);
   if (z <= 10 && temp >= -0.3 && temp <= 0.45) {
-    return noise.noise2D(x * 0.4, y * 0.4) > 0.78;
+    return noise.noise2D(x * 0.35, y * 0.35) > 0.8;
   }
   return false;
 }
@@ -375,7 +389,7 @@ function loadWorldFromStorage() {
   }
 }
 
-// DÔKLADNÝ RESET PRE ČISTÝ NOVÝ SVET
+// KOMPLETNÝ RESET NA NOVÝ NÁHODNÝ SVET
 function resetWorld() {
   localStorage.removeItem('erikai_voxel_world');
   localStorage.removeItem('erikai_voxel_seed');
@@ -383,10 +397,10 @@ function resetWorld() {
   
   for (let [key, mesh] of activeBlocks.entries()) {
     scene.remove(mesh);
+    mesh.geometry.dispose();
   }
   activeBlocks.clear();
   
-  // Vygenerovanie nového unikatného seedu
   currentSeed = Math.floor(Math.random() * 899999 + 100000);
   noise = SimplexNoise(currentSeed);
   document.getElementById('seedVal').textContent = currentSeed;
@@ -397,7 +411,6 @@ function resetWorld() {
 function respawnPlayer() {
   isDead = false;
   document.getElementById('deathScreen').style.display = 'none';
-  buildFlatSpawnArea();
   playerPos.x = 0;
   playerPos.y = 0;
   playerPos.z = getTerrainHeight(0, 0) + 2;
@@ -405,7 +418,7 @@ function respawnPlayer() {
   updateChunks();
 }
 
-// NASTAVENIE ANALÓGOVÉHO JOYSTICKU
+// NASTAVENIE JOYSTICKU
 function setupJoystick() {
   const zone = document.getElementById('joystickZone');
   const knob = document.getElementById('joystickKnob');
@@ -463,13 +476,12 @@ function setupJoystick() {
   window.addEventListener('touchcancel', resetKnob);
 }
 
-// LOGIKA PRE SKÁKANIE (JUMP)
 function setupJumpBtn() {
   const btn = document.getElementById('jumpBtn');
   const triggerJump = (e) => {
     e.preventDefault();
     if (isGrounded && !isDead) {
-      playerVelocityZ = 0.32; // Odraz skoku
+      playerVelocityZ = 0.32;
       isGrounded = false;
     }
   };
@@ -532,10 +544,9 @@ function updatePlayerMovement() {
     playerPos.y += moveY;
   }
 
-  // GRAVITÁCIA A FYZIKA SKOKU
   const groundZ = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y)) + 1;
   
-  playerVelocityZ -= 0.02; // Gravitačné zrýchlenie
+  playerVelocityZ -= 0.02;
   playerPos.z += playerVelocityZ;
 
   if (playerPos.z <= groundZ) {
