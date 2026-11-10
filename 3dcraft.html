@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v3.3 - Ultimate Safe Teleport & Storage HUD</title>
+<title>ErikAI Voxel Craft 3D v3.4 - Fixed Respawn & Visible Enemy</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -44,16 +44,17 @@ body, html {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(220, 38, 38, 0.95); display: none;
   flex-direction: column; justify-content: center; align-items: center;
-  z-index: 99999; color: white; text-align: center; padding: 20px;
+  z-index: 999999; color: white; text-align: center; padding: 20px;
   backdrop-filter: blur(10px);
   pointer-events: auto;
 }
 #deathScreen h1 { font-size: 2.3rem; margin: 0 0 10px 0; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 #deathScreen p { font-size: 1.05rem; margin-bottom: 15px; }
 #deathScreen button {
-  padding: 12px 24px; background: white; color: #ef4444; border: none;
-  border-radius: 10px; font-size: 1.05rem; font-weight: bold; cursor: pointer;
-  box-shadow: 0 6px 25px rgba(0,0,0,0.5); pointer-events: auto; margin: 5px;
+  padding: 14px 28px; background: white; color: #ef4444; border: none;
+  border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
+  box-shadow: 0 6px 25px rgba(0,0,0,0.5); pointer-events: auto; margin: 8px;
+  width: 80%; max-width: 320px;
 }
 #deathScreen button:active { transform: scale(0.95); background: #f3f4f6; }
 
@@ -90,7 +91,7 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v3.3</h3>
+  <h3>⚡ ErikAI Voxel Engine v3.4</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.2 GB</span></div>
@@ -98,16 +99,17 @@ button.action-btn {
   <div class="stat-row"><span>Využitie úložiska:</span> <span id="storageSizeVal" class="stat-val">0 KB</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>FPS:</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">🛡️ Protikolízny systém aktívny.</div>
+  <div class="warning-text">🛡️ Viditeľný nepriateľ & stabilný respawn.</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Úplne Nový Svet</button>
 </div>
 
+<!-- Obrazovka smrti s čistými onclick akciami -->
 <div id="deathScreen">
   <h1>💀 CHYTIL ŤA NEPRIATEĽ!</h1>
-  <p>Zomrel si v boji. Svet a budovy sú uložené.</p>
-  <button id="respawnBtn">🔄 Oživiť normálne (5s imunita)</button>
-  <button id="safeTeleportBtn" style="background:#2563eb;">🛟 Bezpečný Teleport (Nezmaže svet)</button>
-  <button id="hardResetBtn" style="background:#334155; font-size:0.85rem; padding:8px 16px;">🗑️ Úplný Hard Reset Svetu</button>
+  <p>Zomrel si. Svet a budovy sú bezpečne uložené.</p>
+  <button onclick="respawnPlayer(false)" style="background:white; color:#ef4444;">🔄 Oživiť tu (5s imunita)</button>
+  <button onclick="respawnPlayer(true)" style="background:#2563eb; color:white;">🛟 Bezpečný Teleport na [0,0]</button>
+  <button onclick="resetWorld()" style="background:#334155; color:white; font-size:0.9rem; padding:10px 20px;">🗑️ Úplný Hard Reset Svetu</button>
 </div>
 
 <!-- OVLÁDACIE PRVKY -->
@@ -176,8 +178,7 @@ let isGrounded = false;
 let playerAngle = 0, cameraPitch = 0.45;
 let walkAnimationTime = 0;
 
-// Nepriateľ štartuje ďaleko (60, 60), aby ho bolo vidieť v diaľke
-let enemyPos = { x: 60, y: 60, z: 10 };
+let enemyPos = { x: 20, y: 20, z: 10 };
 let enemyVelocityZ = 0;
 let enemyGrounded = false;
 let enemyWalkAnim = 0;
@@ -215,9 +216,9 @@ function init() {
   playerPos.z = getSafeSpawnHeight(0, 0);
   playerVelocityZ = 0;
 
-  enemyPos.x = 60;
-  enemyPos.y = 60;
-  enemyPos.z = getSafeSpawnHeight(60, 60);
+  enemyPos.x = 20;
+  enemyPos.y = 20;
+  enemyPos.z = getSafeSpawnHeight(20, 20);
   enemyVelocityZ = 0;
 
   updateChunks();
@@ -227,23 +228,6 @@ function init() {
   setupTouchLook();
   setupKeyboardControls();
 
-  // Tlačidlá na obrazovke smrti s blokovaním bublania dotykov
-  const bindAction = (id, action) => {
-    const el = document.getElementById(id);
-    const trigger = (e) => {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      e.stopPropagation();
-      action();
-    };
-    el.addEventListener('click', trigger);
-    el.addEventListener('touchend', trigger);
-  };
-
-  bindAction('respawnBtn', () => respawnPlayer(false));
-  bindAction('safeTeleportBtn', () => respawnPlayer(true));
-  bindAction('hardResetBtn', () => resetWorld());
-
   window.addEventListener('resize', onWindowResize);
   document.getElementById('seedVal').textContent = currentSeed;
 
@@ -252,7 +236,6 @@ function init() {
 
 function getSafeSpawnHeight(x, y) {
   let groundZ = getTerrainHeight(x, y);
-  // Overenie, či blok nie je pevný, ak áno, posunieme ho vyššie, aby sa neprepadol
   while (isSolidBlock(x, y, groundZ + 1) || isSolidBlock(x, y, groundZ + 2)) {
     groundZ += 1;
   }
@@ -503,12 +486,11 @@ function updateHUDStats() {
   const totalKeys = Object.keys(savedWorldData).length;
   document.getElementById('totalBlocks').textContent = totalKeys;
 
-  // Výpočet presnej veľkosti v lokálnom úložisku (localStorage) v kB
   let totalBytes = 0;
   try {
     for (let key in localStorage) {
       if (localStorage.hasOwnProperty(key)) {
-        totalBytes += (localStorage[key].length + key.length) * 2; // UTF-16 charakter
+        totalBytes += (localStorage[key].length + key.length) * 2;
       }
     }
   } catch(e) {}
@@ -562,7 +544,6 @@ function respawnPlayer(forceTeleport = false) {
   // 5 sekundová ochranná imunita
   respawnProtection = Date.now() + 5000;
   
-  // Vynulovanie joysticku a klávesov
   keyboardKeys = { forward: false, backward: false, left: false, right: false };
   joystickMove = { x: 0, y: 0 };
   joystickTouchId = null;
@@ -570,7 +551,6 @@ function respawnPlayer(forceTeleport = false) {
   if (knob) knob.style.transform = `translate(0px, 0px)`;
 
   if (forceTeleport) {
-    // Bezpečný teleport na začiatok [0, 0] bez vymazania sveta
     playerPos.x = 0;
     playerPos.y = 0;
   }
@@ -579,17 +559,14 @@ function respawnPlayer(forceTeleport = false) {
   playerVelocityZ = 0;
   isGrounded = true;
   
-  // Nepriateľ sa objaví v diaľke na [60, 60]
-  enemyPos.x = 60;
-  enemyPos.y = 60;
-  enemyPos.z = getSafeSpawnHeight(60, 60);
+  // Nepriateľ sa objaví 20 blokov pred hráčom, otočený priamo na neho, aby ho hneď bolo vidieť
+  enemyPos.x = playerPos.x + 20;
+  enemyPos.y = playerPos.y + 20;
+  enemyPos.z = getSafeSpawnHeight(enemyPos.x, enemyPos.y);
   enemyVelocityZ = 0;
   enemyGrounded = true;
   
-  // Automatické otočenie kamery priamo smerom na nepriateľa, aby ho hráč hneď videl v diaľke
-  const dx = enemyPos.x - playerPos.x;
-  const dy = enemyPos.y - playerPos.y;
-  playerAngle = Math.atan2(-dx, dy);
+  playerAngle = 0;
   cameraPitch = 0.45;
 
   updateChunks();
