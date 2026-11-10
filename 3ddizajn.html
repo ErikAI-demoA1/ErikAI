@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 3D CATIA Studio v9.5 - Fixed 1:1 STL Holes</title>
+<title>ErikAI Pro 3D CATIA Studio v9.6 - Fixed STL Download & Holes</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
@@ -197,7 +197,7 @@ select.format-select {
     <button class="ghost" onclick="togglePanel()" style="background:#4f46e5; color:white;">⚙️ Správa Tvarov</button>
     <button class="ghost" onclick="copyProjectJSON()" style="background:#3b82f6; color:white;" title="Skopíruje projekt do schránky">📋 Kopírovať JSON</button>
     <button class="ghost" onclick="pasteProjectJSON()" style="background:#10b981; color:white;" title="Vloží projekt zo schránky">📥 Vložiť JSON</button>
-    <button class="ghost" onclick="exportToSTL()" style="background:#8b5cf6; color:white;" title="Presný 1:1 STL export s dierami pre SolidWorks">📤 Exportovať STL (1:1)</button>
+    <button class="ghost" onclick="exportToSTL()" style="background:#8b5cf6; color:white;" title="Presný 1:1 STL export s dierami">📤 Exportovať STL (1:1)</button>
     <button class="ghost" onclick="export3DHTML()" style="background:#d97706; color:white;">💾 Stiahnuť 3D HTML</button>
     <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Zmazať všetko</button>
   </div>
@@ -208,7 +208,7 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">3D CATIA Z-Up Studio v9.5 | Z >= 0 | Opravené diery v STL</span>
+  <span id="infoCoords">3D CATIA Z-Up Studio v9.6 | Z >= 0 | Opravené sťahowanie STL</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
@@ -305,7 +305,7 @@ async function pasteProjectJSON(){
   }
 }
 
-// Opravená funkcia pre generovanie cesty diery tak, aby sa správne vykreslila v STL
+// Presná cesta pre diery s korektným smerom pre zobrazenie v STL
 function createHolePath(holeShape, r, hx, hy, polySides){
   const holePath = new THREE.Path();
   const scHx = hx / 10;
@@ -313,7 +313,6 @@ function createHolePath(holeShape, r, hx, hy, polySides){
   const scR = r / 10;
 
   if(holeShape === 'circle'){
-    // V STL vyžaduje Path pre diery opačný smer otáčania (false / clockwise)
     holePath.absarc(scHx, scHy, scR, 0, Math.PI * 2, false);
   } else if(holeShape === 'square'){
     holePath.moveTo(scHx - scR, scHy - scR);
@@ -549,6 +548,7 @@ function updatePanel(){
   });
 }
 
+// Opravená funkcia exportu do STL s bezpečným spúšťaním sťahovania
 function exportToSTL(){
   if(shapes.length === 0){
     alert("V scéne sa nenachádzajú žiadne telesá na export.");
@@ -579,9 +579,12 @@ function exportToSTL(){
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = 'ErikAI_CATIA_Model_1to1.stl';
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
 }
 
+// Opravená funkcia exportu 3D HTML s bezpečne definovanou premennou link
 function export3DHTML(){
   const htmlContent = `<!DOCTYPE html>
 <html lang="sk">
@@ -645,10 +648,12 @@ function export3DHTML(){
 </html>`;
 
   const blob = new Blob([htmlContent], { type: 'text/html' });
-  link = document.createElement('a');
+  const link = document.createElement('a');
   link.download = `ErikAI_CATIA_3D_model.html`;
   link.href = URL.createObjectURL(blob);
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
 }
 
 window.onload = () => { init3D(); };
