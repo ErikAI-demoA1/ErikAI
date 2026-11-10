@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Voxel Craft 3D v3.4 - Fixed Respawn & Visible Enemy</title>
+<title>ErikAI Voxel Craft 3D v3.5</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -58,7 +58,6 @@ body, html {
 }
 #deathScreen button:active { transform: scale(0.95); background: #f3f4f6; }
 
-/* UI PRVKY: JOYSTICK A SKOK */
 #joystickZone {
   position: absolute; bottom: 30px; left: 30px;
   width: 110px; height: 110px; background: rgba(255, 255, 255, 0.12);
@@ -91,7 +90,7 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI Voxel Engine v3.4</h3>
+  <h3>⚡ ErikAI Voxel Engine v3.5</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z-Výška]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Odhad spotreby RAM:</span> <span id="estRam" class="ram-ultra">~1.2 GB</span></div>
@@ -99,11 +98,10 @@ button.action-btn {
   <div class="stat-row"><span>Využitie úložiska:</span> <span id="storageSizeVal" class="stat-val">0 KB</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>FPS:</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">🛡️ Viditeľný nepriateľ & stabilný respawn.</div>
+  <div class="warning-text">🛡️ Stabilný systém oživenia.</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Úplne Nový Svet</button>
 </div>
 
-<!-- Obrazovka smrti s čistými onclick akciami -->
 <div id="deathScreen">
   <h1>💀 CHYTIL ŤA NEPRIATEĽ!</h1>
   <p>Zomrel si. Svet a budovy sú bezpečne uložené.</p>
@@ -112,9 +110,8 @@ button.action-btn {
   <button onclick="resetWorld()" style="background:#334155; color:white; font-size:0.9rem; padding:10px 20px;">🗑️ Úplný Hard Reset Svetu</button>
 </div>
 
-<!-- OVLÁDACIE PRVKY -->
 <div id="joystickZone"><div id="joystickKnob"></div></div>
-<div id="jumpBtn">⏏️ JUMP</div>
+<div id="jumpBtn">🦘 JUMP</div>
 
 <script>
 THREE.Object3D.DefaultUp.set(0, 0, 1);
@@ -178,7 +175,7 @@ let isGrounded = false;
 let playerAngle = 0, cameraPitch = 0.45;
 let walkAnimationTime = 0;
 
-let enemyPos = { x: 20, y: 20, z: 10 };
+let enemyPos = { x: 15, y: 15, z: 10 };
 let enemyVelocityZ = 0;
 let enemyGrounded = false;
 let enemyWalkAnim = 0;
@@ -216,9 +213,9 @@ function init() {
   playerPos.z = getSafeSpawnHeight(0, 0);
   playerVelocityZ = 0;
 
-  enemyPos.x = 20;
-  enemyPos.y = 20;
-  enemyPos.z = getSafeSpawnHeight(20, 20);
+  enemyPos.x = 15;
+  enemyPos.y = 15;
+  enemyPos.z = getSafeSpawnHeight(15, 15);
   enemyVelocityZ = 0;
 
   updateChunks();
@@ -407,61 +404,6 @@ function updateChunks() {
           }
         }
       }
-
-      const bType = getBuildingType(x, y);
-      if (bType > 0) {
-        const bHeight = bType === 2 ? 8 : 4;
-        const groundZ = getTerrainHeight(x, y);
-        for (let bz = 1; bz <= bHeight; bz++) {
-          for (let bx = -1; bx <= 1; bx++) {
-            for (let by = -1; by <= 1; by++) {
-              if (bx === -1 || bx === 1 || by === -1 || by === 1 || bz === bHeight) {
-                const bKey = `${x+bx},${y+by},${groundZ+bz}`;
-                neededKeys.add(bKey);
-                solidBlocks.add(bKey);
-                if (!activeBlocks.has(bKey)) {
-                  let matToUse = materials.brick;
-                  if (bz > 1 && bz < bHeight && (bx === 0 || by === 0)) matToUse = materials.glass;
-                  const bMesh = new THREE.Mesh(boxGeo, matToUse);
-                  bMesh.position.set(x+bx, y+by, groundZ+bz);
-                  scene.add(bMesh);
-                  activeBlocks.set(bKey, bMesh);
-                }
-              }
-            }
-          }
-        }
-      }
-
-      if (isTreePosition(x, y)) {
-        const trunkH = 3;
-        for (let tz = 1; tz <= trunkH; tz++) {
-          const treeKey = `${x},${y},${maxZ + tz}`;
-          neededKeys.add(treeKey);
-          solidBlocks.add(treeKey);
-          if (!activeBlocks.has(treeKey)) {
-            const mesh = new THREE.Mesh(boxGeo, materials.wood);
-            mesh.position.set(x, y, maxZ + tz);
-            scene.add(mesh);
-            activeBlocks.set(treeKey, mesh);
-          }
-        }
-        for (let lx = -1; lx <= 1; lx++) {
-          for (let ly = -1; ly <= 1; ly++) {
-            for (let lz = trunkH + 1; lz <= trunkH + 2; lz++) {
-              const leafKey = `${x+lx},${y+ly},${maxZ+lz}`;
-              neededKeys.add(leafKey);
-              solidBlocks.add(leafKey);
-              if (!activeBlocks.has(leafKey)) {
-                const mesh = new THREE.Mesh(boxGeo, materials.leaves);
-                mesh.position.set(x+lx, y+ly, maxZ+lz);
-                scene.add(mesh);
-                activeBlocks.set(leafKey, mesh);
-              }
-            }
-          }
-        }
-      }
     }
   }
 
@@ -541,7 +483,7 @@ function respawnPlayer(forceTeleport = false) {
   isDead = false;
   document.getElementById('deathScreen').style.display = 'none';
   
-  // 5 sekundová ochranná imunita
+  // 5 sekundová ochranná imunita po oživení
   respawnProtection = Date.now() + 5000;
   
   keyboardKeys = { forward: false, backward: false, left: false, right: false };
@@ -559,9 +501,9 @@ function respawnPlayer(forceTeleport = false) {
   playerVelocityZ = 0;
   isGrounded = true;
   
-  // Nepriateľ sa objaví 20 blokov pred hráčom, otočený priamo na neho, aby ho hneď bolo vidieť
-  enemyPos.x = playerPos.x + 20;
-  enemyPos.y = playerPos.y + 20;
+  // Nepriateľ sa objaví 15 blokov vedľa teba, aby bol okamžite viditeľný a pripravený v akcii
+  enemyPos.x = playerPos.x + 15;
+  enemyPos.y = playerPos.y + 15;
   enemyPos.z = getSafeSpawnHeight(enemyPos.x, enemyPos.y);
   enemyVelocityZ = 0;
   enemyGrounded = true;
@@ -572,7 +514,6 @@ function respawnPlayer(forceTeleport = false) {
   updateChunks();
 }
 
-// OVLÁDANIE A JOYSTICK
 function setupJoystick() {
   const zone = document.getElementById('joystickZone');
   const knob = document.getElementById('joystickKnob');
@@ -767,7 +708,6 @@ function updatePlayerMovement() {
   const dy = playerPos.y - enemyPos.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  // Kontrola smrti (ignoruje sa počas 5-sekundovej imunity)
   if (Date.now() > respawnProtection && dist < 0.7 && Math.abs(playerPos.z - enemyPos.z) < 1.2) {
     isDead = true;
     document.getElementById('deathScreen').style.display = 'flex';
