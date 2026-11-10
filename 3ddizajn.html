@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 3D CATIA Studio v9.8 - Fixed STL Download Button</title>
+<title>ErikAI Pro 3D CATIA Studio v9.9 - Final STL Fix</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
@@ -197,7 +197,6 @@ select.format-select {
     <button class="ghost" onclick="togglePanel()" style="background:#4f46e5; color:white;">⚙️ Správa Tvarov</button>
     <button class="ghost" onclick="copyProjectJSON()" style="background:#3b82f6; color:white;" title="Skopíruje projekt do schránky">📋 Kopírovať JSON</button>
     <button class="ghost" onclick="pasteProjectJSON()" style="background:#10b981; color:white;" title="Vloží projekt zo schránky">📥 Vložiť JSON</button>
-    <!-- Opravené priame volanie funkcie sťahovania -->
     <button class="ghost" onclick="exportToSTL()" style="background:#8b5cf6; color:white;" title="Presný 1:1 STL export s dierami">📤 Exportovať STL (1:1)</button>
     <button class="ghost" onclick="export3DHTML()" style="background:#d97706; color:white;">💾 Stiahnuť 3D HTML</button>
     <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Zmazať všetko</button>
@@ -209,7 +208,7 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">3D CATIA Z-Up Studio v9.8 | Z >= 0 | Opravené tlačidlo STL</span>
+  <span id="infoCoords">3D CATIA Z-Up Studio v9.9 | Z >= 0 | STL oprava applyEuler</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
@@ -531,7 +530,7 @@ function updatePanel(){
         <label>Výška:</label><input type="number" value="${s.d||60}" oninput="updateShapeParam(${i}, 'd', this.value)">
         <label>Polom/R:</label><input type="number" value="${s.r||30}" oninput="updateShapeParam(${i}, 'r', this.value)">
       </div>
-      <div class="input-group-title">Pozícia a veľkosť diery / dutiny (mm):</div>
+      <div class="input-group-title">Pozícia a veľkość diery / dutiny (mm):</div>
       <div class="input-row">
         <label>Diera X:</label><input type="number" value="${s.hx||0}" oninput="updateShapeParam(${i}, 'hx', this.value)">
         <label>Diera Y:</label><input type="number" value="${s.hy||0}" oninput="updateShapeParam(${i}, 'hy', this.value)">
@@ -549,7 +548,7 @@ function updatePanel(){
   });
 }
 
-// Opravená funkcia exportu do STL s garantovaným spustením cez blob URL
+// Úplne opravený STL export bez použitia nepodporovanej metódy applyEuler
 function exportToSTL(){
   if(shapes.length === 0){
     alert("V scéne sa nenachádzajú žiadne telesá na export.");
@@ -561,15 +560,14 @@ function exportToSTL(){
     
     shapes.forEach((s) => {
       const geo = createGeometryForShape(s);
-      geo.translate((s.x||0)/10, (s.y||0)/10, Math.max(0, (s.z||0))/10);
       
-      const euler = new THREE.Euler(
-        THREE.MathUtils.degToRad(s.rx || 0),
-        THREE.MathUtils.degToRad(s.ry || 0),
-        THREE.MathUtils.degToRad(s.rz || 0),
-        'XYZ'
-      );
-      geo.applyEuler(euler);
+      // Aplikovanie rotácií priamo na BufferGeometry pomocou natívnych metód
+      if(s.rx) geo.rotateX(THREE.MathUtils.degToRad(s.rx));
+      if(s.ry) geo.rotateY(THREE.MathUtils.degToRad(s.ry));
+      if(s.rz) geo.rotateZ(THREE.MathUtils.degToRad(s.rz));
+
+      // Aplikovanie pozície
+      geo.translate((s.x||0)/10, (s.y||0)/10, Math.max(0, (s.z||0))/10);
 
       const mat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
       const mesh = new THREE.Mesh(geo, mat);
@@ -636,6 +634,10 @@ function export3DHTML(){
   const shapesData = ${JSON.stringify(shapes)};
   shapesData.forEach((s) => {
     const geo = createGeometryForShape(s);
+    if(s.rx) geo.rotateX(THREE.MathUtils.degToRad(s.rx));
+    if(s.ry) geo.rotateY(THREE.MathUtils.degToRad(s.ry));
+    if(s.rz) geo.rotateZ(THREE.MathUtils.degToRad(s.rz));
+
     const mat = new THREE.MeshStandardMaterial({ 
       color: s.color || '#10b981', 
       roughness: 0.3, metalness: 0.2,
@@ -643,11 +645,6 @@ function export3DHTML(){
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set((s.x||0)/10, (s.y||0)/10, Math.max(0, (s.z||0))/10);
-    mesh.rotation.set(
-      THREE.MathUtils.degToRad(s.rx || 0),
-      THREE.MathUtils.degToRad(s.ry || 0),
-      THREE.MathUtils.degToRad(s.rz || 0)
-    );
     scene.add(mesh);
   });
 
