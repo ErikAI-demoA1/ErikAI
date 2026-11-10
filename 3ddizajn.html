@@ -3,12 +3,10 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI Pro 3D CATIA Studio v9.4 - Perfect 1:1 STL s dierami</title>
+<title>ErikAI Pro 3D CATIA Studio v9.5 - Fixed 1:1 STL Holes</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
-<!-- Pridaná knižnica pre dokonalé spájanie dier v geometrii -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
 
 <style>
 :root{
@@ -210,7 +208,7 @@ select.format-select {
 </div>
 
 <div class="info" id="info">
-  <span id="infoCoords">3D CATIA Z-Up Studio v9.4 | Z >= 0 | Opravený 1:1 STL Export s dierami</span>
+  <span id="infoCoords">3D CATIA Z-Up Studio v9.5 | Z >= 0 | Opravené diery v STL</span>
   <span id="infoCount">Počet dielov: 0</span>
 </div>
 
@@ -307,6 +305,7 @@ async function pasteProjectJSON(){
   }
 }
 
+// Opravená funkcia pre generovanie cesty diery tak, aby sa správne vykreslila v STL
 function createHolePath(holeShape, r, hx, hy, polySides){
   const holePath = new THREE.Path();
   const scHx = hx / 10;
@@ -314,24 +313,25 @@ function createHolePath(holeShape, r, hx, hy, polySides){
   const scR = r / 10;
 
   if(holeShape === 'circle'){
-    holePath.absarc(scHx, scHy, scR, 0, Math.PI * 2, true);
+    // V STL vyžaduje Path pre diery opačný smer otáčania (false / clockwise)
+    holePath.absarc(scHx, scHy, scR, 0, Math.PI * 2, false);
   } else if(holeShape === 'square'){
     holePath.moveTo(scHx - scR, scHy - scR);
-    holePath.lineTo(scHx + scR, scHy - scR);
-    holePath.lineTo(scHx + scR, scHy + scR);
     holePath.lineTo(scHx - scR, scHy + scR);
+    holePath.lineTo(scHx + scR, scHy + scR);
+    holePath.lineTo(scHx + scR, scHy - scR);
     holePath.closePath();
   } else if(holeShape === 'triangle'){
     holePath.moveTo(scHx, scHy + scR);
-    holePath.lineTo(scHx + scR, scHy - scR);
     holePath.lineTo(scHx - scR, scHy - scR);
+    holePath.lineTo(scHx + scR, scHy - scR);
     holePath.closePath();
   } else if(holeShape === 'hexagon'){
-    for(let i=0; i<6; i++){
+    for(let i=5; i>=0; i--){
       const a = (i / 6) * Math.PI * 2;
       const px = scHx + Math.cos(a) * scR;
       const py = scHy + Math.sin(a) * scR;
-      if(i===0) holePath.moveTo(px, py); else holePath.lineTo(px, py);
+      if(i===5) holePath.moveTo(px, py); else holePath.lineTo(px, py);
     }
     holePath.closePath();
   }
@@ -549,7 +549,6 @@ function updatePanel(){
   });
 }
 
-// Opravený 1:1 STL export, ktorý garantuje prenos dier a rotácií
 function exportToSTL(){
   if(shapes.length === 0){
     alert("V scéne sa nenachádzajú žiadne telesá na export.");
@@ -560,10 +559,8 @@ function exportToSTL(){
   
   shapes.forEach((s) => {
     const geo = createGeometryForShape(s);
-    // Aplikujeme transformáciu priamo do geometrie, aby STL presne kopíroval pozíciu a rotáciu
     geo.translate((s.x||0)/10, (s.y||0)/10, Math.max(0, (s.z||0))/10);
     
-    // Rotácie
     const euler = new THREE.Euler(
       THREE.MathUtils.degToRad(s.rx || 0),
       THREE.MathUtils.degToRad(s.ry || 0),
@@ -648,7 +645,7 @@ function export3DHTML(){
 </html>`;
 
   const blob = new Blob([htmlContent], { type: 'text/html' });
-  const link = document.createElement('a');
+  link = document.createElement('a');
   link.download = `ErikAI_CATIA_3D_model.html`;
   link.href = URL.createObjectURL(blob);
   link.click();
