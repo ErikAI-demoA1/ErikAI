@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI 3D Craft Run (1M+ Blocks)</title>
+<title>ErikAI 3D Craft Run v4.0 (Ultra FPS)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -35,7 +35,6 @@ body, html {
 .stat-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
 .stat-val { font-weight: bold; color: var(--accent-blue); }
 .coord-val { font-weight: bold; color: var(--accent-amber); font-family: monospace; }
-.ram-ultra { font-weight: bold; color: #ec4899; }
 .warning-text { color: var(--accent-red); font-weight: bold; margin-top: 4px; font-size: 0.78rem; text-align: center; }
 
 #hud button { pointer-events: auto; }
@@ -89,14 +88,14 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI 3D Craft Run (1M+)</h3>
+  <h3>⚡ ErikAI 3D Craft v4.0 (Ultra FPS)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
-  <div class="stat-row"><span>Cieľové úložisko DB:</span> <span id="storageSizeVal" class="stat-val">0 KB / 50 GB</span></div>
+  <div class="stat-row"><span>Úložisko DB (do 50GB):</span> <span id="storageSizeVal" class="stat-val">0 KB</span></div>
   <div class="stat-row"><span>Celkové bloky (Svet):</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
-  <div class="stat-row"><span>FPS (Cieľ 30-60+):</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">🚀 IndexDB aktívna – Neobmedzený svet do 50 GB.</div>
+  <div class="stat-row"><span>FPS (Cieľ 30-60):</span> <span id="fpsVal" class="stat-val">60</span></div>
+  <div class="warning-text">🚀 Turbo Optimalizácia pre 1M+ blokov.</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Úplne Nový Svet</button>
 </div>
 
@@ -149,15 +148,14 @@ let scene, camera, renderer, player, enemy;
 let activeBlocks = new Map();
 let solidBlocks = new Set();
 let savedWorldData = {};
-let RENDER_DISTANCE = 18; // Dynamicky optimalizované pre stabilných 30-60+ FPS
+let RENDER_DISTANCE = 14; // Agresívnejšie znížené pre vysoké FPS (30-60+)
 let isDead = false;
 let respawnProtection = 0;
 let db = null;
 
-// IndexedDB inicializácia pre podporu obrovského úložiska do 50 GB namiesto 10MB localStorage
 function initIndexedDB() {
   return new Promise((resolve) => {
-    const request = indexedDB.OpenDBRequest ? indexedDB.open('ErikAICraftDB', 1) : indexedDB.open('ErikAICraftDB', 1);
+    const request = indexedDB.open('ErikAICraftDB_v4', 1);
     request.onerror = () => resolve(false);
     request.onsuccess = (e) => {
       db = e.target.result;
@@ -174,16 +172,15 @@ function initIndexedDB() {
 
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 
-// Farebnejšie a dynamickejšie materiály blokov
 const dynamicMaterials = [
-  new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.7 }), // Svetlá tráva
-  new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.6 }), // Neon modrá
-  new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.6 }), // Fialová
-  new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.7 }), // Oranžová
-  new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.7 }), // Žltá
-  new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.6 }), // Červená
-  new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.5, transparent: true, opacity: 0.8 }), // Sklo tyrkysové
-  new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.8 })  // Oceľ / Kameň
+  new THREE.MeshBasicMaterial({ color: 0x22c55e }), // Základné materiály bez svetlometov pre extrémny FPS boost
+  new THREE.MeshBasicMaterial({ color: 0x3b82f6 }),
+  new THREE.MeshBasicMaterial({ color: 0xa855f7 }),
+  new THREE.MeshBasicMaterial({ color: 0xf97316 }),
+  new THREE.MeshBasicMaterial({ color: 0xeab308 }),
+  new THREE.MeshBasicMaterial({ color: 0xef4444 }),
+  new THREE.MeshBasicMaterial({ color: 0x06b6d4 }),
+  new THREE.MeshBasicMaterial({ color: 0x64748b })
 ];
 
 let playerPos = { x: 0, y: 0, z: 10 };
@@ -192,7 +189,7 @@ let isGrounded = false;
 let playerAngle = 0, cameraPitch = 0.45;
 let walkAnimationTime = 0;
 
-let enemyPos = { x: 12, y: 12, z: 10 };
+let enemyPos = { x: 10, y: 10, z: 10 };
 let enemyVelocityZ = 0;
 let enemyGrounded = false;
 let enemyWalkAnim = 0;
@@ -204,19 +201,13 @@ let keyboardKeys = { forward: false, backward: false, left: false, right: false 
 async function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0f172a);
-  scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-  renderer = new THREE.WebGLRenderer({ antialias: false }); // Vypnutý antialias pre maximálne FPS
+  renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1)); // Fixný pixel ratio pre maximálnu plynulosť
   document.body.appendChild(renderer.domElement);
-
-  scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-  dirLight.position.set(100, 80, 150);
-  scene.add(dirLight);
 
   player = createDetailedCharacter(0x3b82f6, 0x1d4ed8);
   enemy = createDetailedCharacter(0xef4444, 0xb91c1c);
@@ -230,9 +221,9 @@ async function init() {
   playerPos.z = getSafeSpawnHeight(0, 0);
   playerVelocityZ = 0;
 
-  enemyPos.x = 12;
-  enemyPos.y = 12;
-  enemyPos.z = getSafeSpawnHeight(12, 12);
+  enemyPos.x = 10;
+  enemyPos.y = 10;
+  enemyPos.z = getSafeSpawnHeight(10, 10);
   enemyVelocityZ = 0;
 
   updateChunks();
@@ -258,11 +249,11 @@ function getSafeSpawnHeight(x, y) {
 
 function createDetailedCharacter(shirtColor, pantsColor) {
   const group = new THREE.Group();
-  const matShirt = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.6 });
-  const matPants = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.7 });
-  const matSkin = new THREE.MeshStandardMaterial({ color: 0xffcc80, roughness: 0.8 });
-  const matHair = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.9 });
-  const matShoes = new THREE.MeshStandardMaterial({ color: 0x212121 });
+  const matShirt = new THREE.MeshBasicMaterial({ color: shirtColor });
+  const matPants = new THREE.MeshBasicMaterial({ color: pantsColor });
+  const matSkin = new THREE.MeshBasicMaterial({ color: 0xffcc80 });
+  const matHair = new THREE.MeshBasicMaterial({ color: 0x3e2723 });
+  const matShoes = new THREE.MeshBasicMaterial({ color: 0x212121 });
 
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.28, 0.6), matShirt);
   torso.position.z = 0.55;
@@ -309,7 +300,6 @@ function createArmPart(matShirt, yOffset, zPos) {
   return arm;
 }
 
-// Viac rovinatý terén (jemnejšie strminy, menšia amplitúda kopcov)
 function getTerrainHeight(x, y) {
   let baseNoise = noise.noise2D(x * 0.015, y * 0.015) * 3.5 + noise.noise2D(x * 0.05, y * 0.05) * 1.2;
   return Math.floor(baseNoise) + 1;
@@ -344,7 +334,6 @@ function isSolidBlock(x, y, z) {
   return solidBlocks.has(`${Math.round(x)},${Math.round(y)},${Math.round(z)}`);
 }
 
-// Dynamické farebné priradenie materiálov pod základe pozície
 function getDynamicMaterial(x, y, z) {
   let index = Math.abs(Math.floor(x * 3 + y * 7 + z * 11)) % dynamicMaterials.length;
   return dynamicMaterials[index];
@@ -405,10 +394,9 @@ function updateHUDStats() {
   const totalKeys = Object.keys(savedWorldData).length;
   document.getElementById('totalBlocks').textContent = totalKeys;
 
-  // Odhad vyťaženia v IndexedDB s limitom do 50 GB
   const approxBytes = totalKeys * 12; 
   const totalKB = (approxBytes / 1024).toFixed(1);
-  document.getElementById('storageSizeVal').textContent = `${totalKB} KB / 50 GB`;
+  document.getElementById('storageSizeVal').textContent = `${totalKB} KB`;
 
   document.getElementById('coordVal').textContent = `${Math.floor(playerPos.x)}, ${Math.floor(playerPos.y)}, ${Math.floor(playerPos.z)}`;
 }
@@ -485,8 +473,8 @@ function respawnPlayer(forceTeleport = false) {
   playerVelocityZ = 0;
   isGrounded = true;
   
-  enemyPos.x = playerPos.x + 12;
-  enemyPos.y = playerPos.y + 12;
+  enemyPos.x = playerPos.x + 10;
+  enemyPos.y = playerPos.y + 10;
   enemyPos.z = getSafeSpawnHeight(enemyPos.x, enemyPos.y);
   enemyVelocityZ = 0;
   enemyGrounded = true;
@@ -685,7 +673,6 @@ function updatePlayerMovement() {
   player.rotation.z = playerAngle;
   updateCharacterAnimation(player, isMoving, false);
 
-  // POHYB NEPRIATEĽA
   const dx = playerPos.x - enemyPos.x;
   const dy = playerPos.y - enemyPos.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
