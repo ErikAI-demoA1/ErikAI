@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>RocketSK v3.2 — Full Goals & Joystick Aerial Control (ErikAI)</title>
+<title>RocketSK v3.3 — Ultimate Aerial & Flight Physics (ErikAI)</title>
 
 <style>
 html, body {
@@ -176,7 +176,7 @@ canvas { display: block; }
 
 <button id="startBtn">ŠTART / RESET</button>
 <div id="hud">RED: <span id="scoreA">0</span> • BLUE: <span id="scoreB">0</span> • <span id="speed">0</span> km/h</div>
-<div class="note">🎮 Joystick: Pohyb & 360° let vo vzduchu</div>
+<div class="note">🎮 Joystick: Pohyb, let a 360° rotácia vo vzduchu</div>
 <div id="boostContainer">
     <div id="boostLabel">BOOST</div>
     <div id="boostBarBg"><div id="boostBarFill"></div></div>
@@ -213,35 +213,35 @@ let boost = {val: 100, max: 100, active: false};
 const goalWidthRatio = 0.4, goalDepth = 4, goalHeight = 12;
 let half = arena / 2;
 
-// --- Skoky a manuálny 360° let (Aerials & Flips) ---
+// --- Skoky a Rocket League Aerial / Flip Fyzika ---
 let isJumping = false, jumpVel = 0, canDoubleJump = false;
 
 function jumpPlayer(){
     if(!playing) return;
     if(!isJumping){
-        // Prvý skok zo zeme
+        // 1. Skok zo zeme
         isJumping = true;
-        jumpVel = 13;
+        jumpVel = 14;
         canDoubleJump = true;
     } else if(canDoubleJump) {
-        // Druhý skok / Flip (smer sa určuje podľa joysticku)
+        // 2. Skok (Double-Jump / Flip): rotuje presne tam, kam hráč ťahá joystick
         canDoubleJump = false;
-        jumpVel = 11;
-        // Ak hráč drží joystick do strán alebo vpred/vzad, auto spraví otočku do tej strany
-        car.rotation.z -= joystickX * 1.5;
+        jumpVel = 10;
+        car.rotation.y -= joystickX * 1.8;
         car.rotation.x -= joystickY * 1.5;
+        car.rotation.z -= joystickX * 1.2;
     }
 }
 
 function updateJump(dt){
     if(isJumping){
         car.position.y += jumpVel * dt;
-        jumpVel -= 32 * dt; // gravitácia
+        jumpVel -= 28 * dt; // gravitácia vo vzduchu
 
-        // Ak je auto vo vzduchu, joystickom vie hráč kontrolovať náklon a rotáciu (Aerial control)
+        // Ak je auto vo vzduchu, joystickom plne ovládaš náklon, smer a rotáciu (Aerial Flight)
         if(car.position.y > 0.46) {
-            car.rotation.y -= joystickX * 2.5 * dt;
-            car.rotation.x -= joystickY * 2.0 * dt;
+            car.rotation.y -= joystickX * 3.0 * dt;
+            car.rotation.x -= joystickY * 2.5 * dt;
         }
 
         // Dopad na zem
@@ -250,7 +250,7 @@ function updateJump(dt){
             isJumping = false;
             jumpVel = 0;
             canDoubleJump = false;
-            // Vyrovnanie auta pri dopade
+            // Vyrovnanie auta pri dopade na zem
             car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, 0, 0.4);
             car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, 0, 0.4);
         }
@@ -337,14 +337,10 @@ function init(){
     // Steny a obojstranné bránky
     const w = arena / 2;
     const goalWidth = arena * goalWidthRatio;
-    const wallMat = new THREE.MeshStandardMaterial({color: 0x0d2342, roughness: 0.5});
-
-    // Vytvorenie sten s otvormi pre bránky
-    // Zadná stena (Červená bránka)
     createWallWithGoal(0, 2, -w, arena, goalWidth, 0xef4444);
-    // Predná stena (Modrá bránka)
     createWallWithGoal(0, 2, w, arena, goalWidth, 0x3b82f6);
-    // Bočné steny
+    
+    const wallMat = new THREE.MeshStandardMaterial({color: 0x0d2342, roughness: 0.5});
     scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arena), wallMat).translateOnAxis(new THREE.Vector3(-w,2,0), 1));
     scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arena), wallMat).translateOnAxis(new THREE.Vector3(w,2,0), 1));
 
@@ -358,22 +354,18 @@ function createWallWithGoal(x, y, z, totalWidth, gWidth, colorHex) {
     const wallMat = new THREE.MeshStandardMaterial({color: 0x0d2342, roughness: 0.5});
     const sideWidth = (totalWidth - gWidth) / 2;
     
-    // Ľavá časť steny
     const leftWall = new THREE.Mesh(new THREE.BoxGeometry(sideWidth, 4, 1.5), wallMat);
     leftWall.position.set(x - gWidth/2 - sideWidth/2, y, z);
     scene.add(leftWall);
 
-    // Pravá časť steny
     const rightWall = new THREE.Mesh(new THREE.BoxGeometry(sideWidth, 4, 1.5), wallMat);
     rightWall.position.set(x + gWidth/2 + sideWidth/2, y, z);
     scene.add(rightWall);
 
-    // Horná brvno bránky
     const crossbar = new THREE.Mesh(new THREE.BoxGeometry(gWidth, 1.5, 1.5), wallMat);
     crossbar.position.set(x, y + 2, z);
     scene.add(crossbar);
 
-    // Neónový rám bránky
     const frameMat = new THREE.MeshBasicMaterial({color: colorHex});
     const postL = new THREE.Mesh(new THREE.BoxGeometry(0.4, goalHeight, 1.6), frameMat);
     postL.position.set(x - gWidth/2, goalHeight/2, z);
@@ -412,7 +404,6 @@ function checkGoal(){
     const goalWidth = arena * goalWidthRatio;
     const gx = Math.abs(ball.position.x);
 
-    // Kontrola brániek na oboch stranách
     if(ball.position.z < -halfArena && gx < goalWidth / 2){
         score.B++; 
         triggerGoal("GÓÓÓL - MODRÝ TÍM!");
@@ -442,18 +433,18 @@ function animate(){
     const dt = Math.min(0.05, clock.getDelta());
 
     if(playing){
-        // Pohyb auta
+        // Pohyb auta po zemi
         if(targetSpeed > carSpeed) carSpeed += accel * dt;
         else if(targetSpeed < carSpeed) carSpeed -= brake * dt;
 
         const effectiveSpeed = carSpeed * (boost.active ? 2.4 : 1.0);
         const forward = new THREE.Vector3(Math.sin(car.rotation.y), 0, Math.cos(car.rotation.y));
         
-        // Let s boostom vo vzduchu
+        // --- LET A VZNÁŠANIE S BOOSTOM VO VZDUCHU ---
         if(isJumping && boost.active) {
-            car.position.y += 5 * dt;
-            const upDir = new THREE.Vector3(0, 1, 0).applyQuaternion(car.quaternion);
-            car.position.addScaledVector(upDir, effectiveSpeed * dt * 0.6);
+            jumpVel += 15 * dt; // Tlak boostu tlačí auto nahor
+            const flightDir = new THREE.Vector3(Math.sin(car.rotation.y), Math.max(0.2, -joystickY), Math.cos(car.rotation.y)).normalize();
+            car.position.addScaledVector(flightDir, 25 * dt);
         }
 
         car.position.addScaledVector(forward, effectiveSpeed * dt);
@@ -476,9 +467,9 @@ function animate(){
         if(carToBall.length() < 2.2){
             const n = carToBall.clone().normalize();
             ball.position.addScaledVector(n, 0.1);
-            const hitPower = Math.max(4, Math.abs(carSpeed) * (boost.active ? 2.5 : 1.5));
+            const hitPower = Math.max(4, Math.abs(carSpeed) * (boost.active ? 2.8 : 1.5));
             ballVel.copy(n.multiplyScalar(hitPower));
-            ballVel.y += Math.abs(carSpeed) * 0.4 + (isJumping ? 6 : 2);
+            ballVel.y += Math.abs(carSpeed) * 0.4 + (isJumping ? 7 : 2);
         }
 
         // Náraz lopty do stien / bránok
@@ -507,7 +498,7 @@ function animate(){
 
         // Boost stav
         if(boost.active){ 
-            boost.val -= 60 * dt; 
+            boost.val -= 55 * dt; 
             if(boost.val <= 0) { boost.val = 0; boost.active = false; } 
         } else { 
             boost.val = Math.min(boost.max, boost.val + 25 * dt); 
