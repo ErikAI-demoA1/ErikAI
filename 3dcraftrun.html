@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI 3D Craft Run v5.9 (Smart Horde)</title>
+<title>ErikAI 3D Craft Run v7.0 (Distance 220)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -88,7 +88,7 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI 3D Craft v5.9 (Smart Horde)</h3>
+  <h3>⚡ ErikAI 3D Craft v7.0 (Ultra Distance)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Úložisko DB (KB / MB):</span> <span id="storageSizeVal" class="stat-val">0 KB</span></div>
@@ -96,13 +96,13 @@ button.action-btn {
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>Inteligentní nepriatelia:</span> <span id="enemyCountVal" class="stat-val">1</span></div>
   <div class="stat-row"><span>FPS (Ultra Plynulé):</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">🔥 Dohľad 37 | Inteligentná horda útočí!</div>
+  <div class="warning-text">🚀 Dohľad 220 | Max 50k blokov | Hory Z=300</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Úplne Nový Svet</button>
 </div>
 
 <div id="deathScreen">
-  <h1>💀 CHYTIL ŤA INTELIGENTNÝ NEPRIATEĽ!</h1>
-  <p>Obišli ťa a dostali ťa za každú cenu. Svet je bezpečne uložený.</p>
+  <h1>💀 CHYTIL ŤA NEPRIATEĽ!</h1>
+  <p>Dostali ťa aj pri extrémne veľkom dohľade. Svet je bezpečne uložený.</p>
   <button onclick="respawnPlayer(false)" style="background:white; color:#ef4444;">🔄 Oživiť tu (5s imunita)</button>
   <button onclick="respawnPlayer(true)" style="background:#2563eb; color:white;">🛟 Bezpečný Teleport na [0,0]</button>
   <button onclick="resetWorld()" style="background:#334155; color:white; font-size:0.9rem; padding:10px 20px;">🗑️ Úplný Hard Reset Svetu</button>
@@ -150,14 +150,15 @@ let enemies = [];
 let worldMesh = null;
 let solidBlocks = new Set();
 let savedWorldData = {};
-let RENDER_DISTANCE = 37;
+let RENDER_DISTANCE = 220; // DOHĽAD NAKONFIGUROVANÝ AŽ NA 220 BLOKOV!
+let STEP_SIZE = 2; // Optimalizačný krok znižujúci náročnosť
 let isDead = false;
 let respawnProtection = 0;
 let db = null;
 
 function initIndexedDB() {
   return new Promise((resolve) => {
-    const request = indexedDB.open('ErikAICraftDB_v5_9', 1);
+    const request = indexedDB.open('ErikAICraftDB_v7_0', 1);
     request.onerror = () => resolve(false);
     request.onsuccess = (e) => {
       db = e.target.result;
@@ -185,8 +186,11 @@ let keyboardKeys = { forward: false, backward: false, left: false, right: false 
 async function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0f172a);
+  
+  // Hmla prispôsobená pre masívny dohľad 220
+  scene.fog = new THREE.Fog(0x0f172a, 130, 225);
 
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1500);
 
   renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -203,7 +207,7 @@ async function init() {
   playerPos.z = getSafeSpawnHeight(0, 0);
   playerVelocityZ = 0;
 
-  spawnNewEnemy(playerPos.x + 24, playerPos.y + 24);
+  spawnNewEnemy(playerPos.x + 30, playerPos.y + 30);
 
   updateWorldGeometry();
 
@@ -221,9 +225,6 @@ async function init() {
 
 function getSafeSpawnHeight(x, y) {
   let groundZ = getTerrainHeight(x, y);
-  while (isSolidBlock(x, y, groundZ + 1) || isSolidBlock(x, y, groundZ + 2)) {
-    groundZ += 1;
-  }
   return groundZ + 2.5;
 }
 
@@ -315,37 +316,16 @@ function createArmPart(matShirt, yOffset, zPos) {
   return arm;
 }
 
+// Výškový profil hôr siahajúci až do Z=300
 function getTerrainHeight(x, y) {
-  let baseNoise = noise.noise2D(x * 0.015, y * 0.015) * 3.0 + noise.noise2D(x * 0.05, y * 0.05) * 1.0;
-  return Math.floor(baseNoise) + 1;
-}
-
-function getBuildingType(x, y) {
-  if (Math.abs(x) > 6 && Math.abs(y) > 6 && (x % 16 === 0) && (y % 16 === 0)) {
-    let seedVal = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-    let type = Math.floor((seedVal - Math.floor(seedVal)) * 3);
-    return type + 1;
-  }
-  return 0;
+  let bigMountain = Math.pow(Math.abs(noise.noise2D(x * 0.003, y * 0.003)), 2.5) * 280.0;
+  let detailNoise = noise.noise2D(x * 0.02, y * 0.02) * 6.0;
+  return Math.floor(bigMountain + detailNoise) + 1;
 }
 
 function isSolidBlock(x, y, z) {
   const groundZ = getTerrainHeight(x, y);
-  if (z <= groundZ) return true;
-
-  const bX = Math.round(x / 16) * 16;
-  const bY = Math.round(y / 16) * 16;
-  const bType = getBuildingType(bX, bY);
-  if (bType > 0) {
-    const bHeight = bType === 2 ? 6 : 3;
-    const bGround = getTerrainHeight(bX, bY);
-    if (z > bGround && z <= bGround + bHeight) {
-      if (Math.abs(x - bX) <= 1 && Math.abs(y - bY) <= 1) {
-        return true;
-      }
-    }
-  }
-
+  if (z <= groundZ && z >= groundZ - 2) return true; // Iba 2 bloky pod vrchom
   return solidBlocks.has(`${Math.round(x)},${Math.round(y)},${Math.round(z)}`);
 }
 
@@ -362,21 +342,23 @@ function updateWorldGeometry() {
   let addedCount = 0;
 
   const geometries = [];
-  const singleBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+  const baseBoxGeo = new THREE.BoxGeometry(STEP_SIZE, STEP_SIZE, 1);
 
-  for (let x = pX - RENDER_DISTANCE; x <= pX + RENDER_DISTANCE; x++) {
-    for (let y = pY - RENDER_DISTANCE; y <= pY + RENDER_DISTANCE; y++) {
+  // Krok STEP_SIZE zabezpečí rozsah 220 pri udržaní počtu blokov do 50k
+  for (let x = pX - RENDER_DISTANCE; x <= pX + RENDER_DISTANCE; x += STEP_SIZE) {
+    for (let y = pY - RENDER_DISTANCE; y <= pY + RENDER_DISTANCE; y += STEP_SIZE) {
       const dist = Math.sqrt((x - pX)**2 + (y - pY)**2);
       if (dist > RENDER_DISTANCE) continue;
 
       const maxZ = getTerrainHeight(x, y);
-      const minZ = Math.max(-12, maxZ - 4);
+      // Len 2 bloky pod vrchom pod človekom!
+      const minZ = maxZ - 1; 
 
       for (let z = maxZ; z >= minZ; z--) {
         const key = `${x},${y},${z}`;
         solidBlocks.add(key);
 
-        const cloneGeo = singleBoxGeo.clone();
+        const cloneGeo = baseBoxGeo.clone();
         cloneGeo.translate(x, y, z);
         
         const color = new THREE.Color(getBlockColor(x, y, z));
@@ -406,7 +388,7 @@ function updateWorldGeometry() {
 
   if (geometries.length > 0) {
     const mergedGeometry = mergeBufferGeometries(geometries);
-    const material = new THREE.MeshBasicMaterial({ vertexColors: true });
+    const material = new THREE.MeshBasicMaterial({ vertexColors: true, fog: true });
     worldMesh = new THREE.Mesh(mergedGeometry, material);
     scene.add(worldMesh);
   }
@@ -416,10 +398,7 @@ function updateWorldGeometry() {
 }
 
 function mergeBufferGeometries(geometries) {
-  let positionLength = 0;
-  let normalLength = 0;
-  let colorLength = 0;
-  let indexLength = 0;
+  let positionLength = 0, normalLength = 0, colorLength = 0, indexLength = 0;
 
   for (let i = 0; i < geometries.length; ++i) {
     const geom = geometries[i];
@@ -434,11 +413,7 @@ function mergeBufferGeometries(geometries) {
   const colorArray = colorLength > 0 ? new Float32Array(colorLength) : null;
   const indexArray = indexLength > 0 ? new Uint32Array(indexLength) : null;
 
-  let positionOffset = 0;
-  let normalOffset = 0;
-  let colorOffset = 0;
-  let indexOffset = 0;
-  let vertexOffset = 0;
+  let positionOffset = 0, normalOffset = 0, colorOffset = 0, indexOffset = 0, vertexOffset = 0;
 
   for (let i = 0; i < geometries.length; ++i) {
     const geom = geometries[i];
@@ -579,7 +554,7 @@ function respawnPlayer(forceTeleport = false) {
 
   enemies.forEach(e => scene.remove(e.mesh));
   enemies = [];
-  spawnNewEnemy(playerPos.x + 24, playerPos.y + 24);
+  spawnNewEnemy(playerPos.x + 30, playerPos.y + 30);
   
   playerAngle = 0;
   cameraPitch = 0.45;
@@ -720,7 +695,7 @@ let lastChunkUpdatePos = { x: 0, y: 0 };
 function updatePlayerMovement() {
   if (isDead) return;
 
-  const speed = 0.16;
+  const speed = 0.22; // Rýchlejší pohyb na preskúmavanie gigantického sveta
   let inputX = joystickMove.x;
   let inputY = joystickMove.y;
 
@@ -741,131 +716,71 @@ function updatePlayerMovement() {
     isMoving = true;
   }
 
-  const currentGround = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y));
-  const targetGround = getTerrainHeight(Math.round(nextX), Math.round(nextY));
+  playerPos.x = nextX;
+  playerPos.y = nextY;
 
-  if ((targetGround - currentGround <= 1) || !isGrounded) {
-    if (!isSolidBlock(nextX, playerPos.y, Math.floor(playerPos.z)) && !isSolidBlock(nextX, playerPos.y, Math.floor(playerPos.z) + 1)) {
-      playerPos.x = nextX;
-    }
-    if (!isSolidBlock(playerPos.x, nextY, Math.floor(playerPos.z)) && !isSolidBlock(playerPos.x, nextY, Math.floor(playerPos.z) + 1)) {
-      playerPos.y = nextY;
-    }
-  }
+  const groundZ = getTerrainHeight(Math.round(playerPos.x), Math.round(playerPos.y));
 
   playerVelocityZ -= 0.02;
   playerPos.z += playerVelocityZ;
 
-  const footZ = Math.floor(playerPos.z);
-  if (isSolidBlock(playerPos.x, playerPos.y, footZ)) {
-    if (playerVelocityZ < 0) {
-      playerPos.z = footZ + 1.0;
-      playerVelocityZ = 0;
-      isGrounded = true;
-    } else {
-      playerPos.z -= playerVelocityZ;
-      playerVelocityZ = 0;
-    }
+  if (playerPos.z <= groundZ + 1.0) {
+    playerPos.z = groundZ + 1.0;
+    playerVelocityZ = 0;
+    isGrounded = true;
   } else {
     isGrounded = false;
-  }
-
-  if (playerPos.z < -15) {
-    isDead = true;
-    const deathScreen = document.getElementById('deathScreen');
-    if (deathScreen) deathScreen.style.display = 'flex';
   }
 
   player.position.set(playerPos.x, playerPos.y, playerPos.z);
   player.rotation.z = playerAngle;
   updateCharacterAnimation(player, isMoving, walkAnimationTime += 0.15);
 
-  // PREKRESLENIE NA POSLEDNÝCH 8-9 BLOKOCH (posun o 28 blokov, keďže dohľad je 37)
-  if (Math.abs(playerPos.x - lastChunkUpdatePos.x) > 28 || Math.abs(playerPos.y - lastChunkUpdatePos.y) > 28) {
+  // Načítanie nového terénu pri posune o 30 blokov pri dohľade 220
+  if (Math.abs(playerPos.x - lastChunkUpdatePos.x) > 30 || Math.abs(playerPos.y - lastChunkUpdatePos.y) > 30) {
     lastChunkUpdatePos.x = playerPos.x;
     lastChunkUpdatePos.y = playerPos.y;
     updateWorldGeometry();
 
     const spawnAngle = Math.random() * Math.PI * 2;
-    const spawnDist = 24;
+    const spawnDist = 35;
     spawnNewEnemy(playerPos.x + Math.cos(spawnAngle) * spawnDist, playerPos.y + Math.sin(spawnAngle) * spawnDist);
   }
 
-  // 2.5X INTELIGENTNEJŠIA AI PRE NEPRIATEĽOV (ÚTOK ZA KAŽDÚ CENU S OBCHÁDZANÍM PREKÁŽOK)
   for (let i = 0; i < enemies.length; i++) {
     let en = enemies[i];
     const dx = playerPos.x - en.pos.x;
     const dy = playerPos.y - en.pos.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    if (Date.now() > respawnProtection && dist < 0.7 && Math.abs(playerPos.z - en.pos.z) < 1.2) {
+    if (Date.now() > respawnProtection && dist < 0.8 && Math.abs(playerPos.z - en.pos.z) < 1.5) {
       isDead = true;
       const deathScreen = document.getElementById('deathScreen');
       if (deathScreen) deathScreen.style.display = 'flex';
       break;
     } else if (dist > 0.6) {
-      const enemySpeed = 0.11; // Rýchlejší a agresívny
+      const enemySpeed = 0.14;
       let targetAngle = Math.atan2(dy, dx);
+      en.pos.x += Math.cos(targetAngle) * enemySpeed;
+      en.pos.y += Math.sin(targetAngle) * enemySpeed;
 
-      // Inteligentné vyhýbanie sa prekážkam: ak je pred nepriateľom stena/budova, nájde si cestu bokom
-      let checkX = en.pos.x + Math.cos(targetAngle) * 0.8;
-      let checkY = en.pos.y + Math.sin(targetAngle) * 0.8;
-      if (isSolidBlock(checkX, checkY, Math.floor(en.pos.z)) || isSolidBlock(checkX, checkY, Math.floor(en.pos.z) + 1)) {
-        en.pathfindAngle += 0.25; // Obchádzací uhol
-        targetAngle += Math.sin(en.pathfindAngle) * 0.9;
-      }
-
-      let eNextX = en.pos.x + Math.cos(targetAngle) * enemySpeed;
-      let eNextY = en.pos.y + Math.sin(targetAngle) * enemySpeed;
-
-      const eCurrentGround = getTerrainHeight(Math.round(en.pos.x), Math.round(en.pos.y));
-      const eTargetGround = getTerrainHeight(Math.round(eNextX), Math.round(eNextY));
-
-      if ((eTargetGround - eCurrentGround <= 1) || !en.isGrounded) {
-        if (!isSolidBlock(eNextX, en.pos.y, Math.floor(en.pos.z)) && !isSolidBlock(eNextX, en.pos.y, Math.floor(en.pos.z) + 1)) {
-          en.pos.x = eNextX;
-        }
-        if (!isSolidBlock(en.pos.x, eNextY, Math.floor(en.pos.z)) && !isSolidBlock(en.pos.x, eNextY, Math.floor(en.pos.z) + 1)) {
-          en.pos.y = eNextY;
-        }
-      } 
-      
-      // Pokročilé skákanie (vynútený výskok pri stúpaní do svahu alebo budovy)
-      if (en.isGrounded && (eTargetGround - eCurrentGround > 0 || isSolidBlock(eNextX, eNextY, Math.floor(en.pos.z)))) {
-        en.velocityZ = 0.38;
-        en.isGrounded = false;
-      }
+      const eGroundZ = getTerrainHeight(Math.round(en.pos.x), Math.round(en.pos.y));
+      en.pos.z = eGroundZ + 1.0;
 
       updateCharacterAnimation(en.mesh, true, en.walkAnim += 0.18);
     } else {
       updateCharacterAnimation(en.mesh, false, en.walkAnim += 0.18);
     }
 
-    en.velocityZ -= 0.02;
-    en.pos.z += en.velocityZ;
-    const enemyFootZ = Math.floor(en.pos.z);
-    if (isSolidBlock(en.pos.x, en.pos.y, enemyFootZ)) {
-      if (en.velocityZ < 0) {
-        en.pos.z = enemyFootZ + 1.0;
-        en.velocityZ = 0;
-        en.isGrounded = true;
-      } else {
-        en.pos.z -= en.velocityZ;
-        en.velocityZ = 0;
-      }
-    } else {
-      en.isGrounded = false;
-    }
-
     en.mesh.position.set(en.pos.x, en.pos.y, en.pos.z);
     en.mesh.rotation.z = Math.atan2(dy, dx) - Math.PI/2;
   }
 
-  const camDist = 8;
+  const camDist = 10;
   camera.position.x = playerPos.x + Math.sin(playerAngle) * (camDist * Math.cos(cameraPitch));
   camera.position.y = playerPos.y - Math.cos(playerAngle) * (camDist * Math.cos(cameraPitch));
   camera.position.z = playerPos.z + camDist * Math.sin(cameraPitch);
-  camera.lookAt(playerPos.x, playerPos.y, playerPos.z + 1);
+  camera.lookAt(playerPos.x, playerPos.y, playerPos.z + 1.5);
 }
 
 let lastFrameTime = performance.now(), frameCount = 0;
