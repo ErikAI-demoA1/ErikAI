@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>RocketSK v5.3 — Fixed WebGL Viewport Coordinates (ErikAI)</title>
+<title>RocketSK v5.4 — Fixed (ErikAI)</title>
 
 <style>
 html, body {
@@ -166,6 +166,7 @@ let ball, ground;
 let clock, playing = false;
 let arenaSize = 200;
 let numPlayers = 2;
+let started = false;
 
 let playersData = [];
 let ballVel = new THREE.Vector3();
@@ -175,7 +176,7 @@ const maxSpeed = 22, accel = 40, brake = 50;
 function startGame(count) {
     numPlayers = count;
     document.getElementById('menuContainer').style.display = 'none';
-    
+
     playersData = [];
     for(let i=0; i<numPlayers; i++) {
         playersData.push({ speed: 0, targetSpeed: 0, steer: 0, boost: 100, activeBoost: false, score: 0 });
@@ -212,22 +213,22 @@ function buildUI() {
     setupJoysticks();
 }
 
+// Jediný zdroj pravdy pre rozloženie: súradnice zhora-zľava (CSS)
+function getViewRect(i, w, h) {
+    if(numPlayers === 2) return { x: 0, y: i * h/2, w: w, h: h/2 };
+    if(numPlayers === 3) {
+        if(i === 0) return { x: 0, y: 0, w: w, h: h/2 };
+        return { x: (i === 2) ? w/2 : 0, y: h/2, w: w/2, h: h/2 };
+    }
+    return { x: (i % 2) * w/2, y: (i < 2) ? 0 : h/2, w: w/2, h: h/2 };
+}
+
 function updateLayoutRects() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-
-    if(numPlayers === 2) {
-        setRect('viewportUI0', 0, 0, w, h/2);
-        setRect('viewportUI1', 0, h/2, w, h/2);
-    } else if(numPlayers === 3) {
-        setRect('viewportUI0', 0, 0, w, h/2);
-        setRect('viewportUI1', 0, h/2, w/2, h/2);
-        setRect('viewportUI2', w/2, h/2, w/2, h/2);
-    } else if(numPlayers === 4) {
-        setRect('viewportUI0', 0, 0, w/2, h/2);
-        setRect('viewportUI1', w/2, 0, w/2, h/2);
-        setRect('viewportUI2', 0, h/2, w/2, h/2);
-        setRect('viewportUI3', w/2, h/2, w/2, h/2);
+    for(let i=0; i<numPlayers; i++) {
+        const r = getViewRect(i, w, h);
+        setRect(`viewportUI${i}`, r.x, r.y, r.w, r.h);
     }
 }
 
@@ -239,6 +240,14 @@ function setRect(id, x, y, w, h) {
         el.style.width = w + 'px';
         el.style.height = h + 'px';
     }
+}
+
+function addMesh(geo, mat, x, y, z, ry) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    if(ry) m.rotation.y = ry;
+    scene.add(m);
+    return m;
 }
 
 function init3D() {
@@ -283,6 +292,9 @@ function init3D() {
 
     resetPositions();
 
+    // inicializuj kamery hneď za auto (aby nelietali z (0,0,0))
+    for(let i=0; i<numPlayers; i++) updateCamera(cameras[i], cars[i], true);
+
     ball = new THREE.Mesh(
         new THREE.SphereGeometry(1.2, 32, 32),
         new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, emissive: 0x222222 })
@@ -294,7 +306,7 @@ function init3D() {
 
     clock = new THREE.Clock();
     window.addEventListener('resize', onWindowResize);
-    animate();
+    if(!started) { started = true; animate(); }
 }
 
 function createCar(colorHex) {
@@ -318,22 +330,20 @@ function buildArenaGeometry() {
         const goalW = arenaSize * 0.4;
         createWallWithGoal(0, 2, -half, arenaSize, goalW, 0xef4444);
         createWallWithGoal(0, 2, half, arenaSize, goalW, 0x3b82f6);
-        
+
         if(numPlayers === 4) {
             createWallWithGoalZ(half, 2, 0, arenaSize, goalW, 0x10b981);
             createWallWithGoalZ(-half, 2, 0, arenaSize, goalW, 0xf59e0b);
         } else {
-            scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arenaSize), wallMat).position.set(-half, 2, 0));
-            scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arenaSize), wallMat).position.set(half, 2, 0));
+            addMesh(new THREE.BoxGeometry(1.5, 4, arenaSize), wallMat, -half, 2, 0);
+            addMesh(new THREE.BoxGeometry(1.5, 4, arenaSize), wallMat, half, 2, 0);
         }
     } else if(numPlayers === 3) {
         const r = half * 0.85;
         for(let i=0; i<3; i++) {
             const angle = (i / 3) * Math.PI * 2;
-            const wall = new THREE.Mesh(new THREE.BoxGeometry(120, 4, 1.5), wallMat);
-            wall.position.set(Math.sin(angle)*r*0.7, 2, Math.cos(angle)*r*0.7);
-            wall.rotation.y = -angle;
-            scene.add(wall);
+            addMesh(new THREE.BoxGeometry(120, 4, 1.5), wallMat,
+                Math.sin(angle)*r*0.7, 2, Math.cos(angle)*r*0.7, -angle);
         }
     }
 }
@@ -341,27 +351,25 @@ function buildArenaGeometry() {
 function createWallWithGoal(x, y, z, totalWidth, gWidth, colorHex) {
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x0d2342, roughness: 0.5 });
     const sideW = (totalWidth - gWidth) / 2;
-    scene.add(new THREE.Mesh(new THREE.BoxGeometry(sideW, 4, 1.5), wallMat).position.set(x - gWidth/2 - sideW/2, y, z));
-    scene.add(new THREE.Mesh(new THREE.BoxGeometry(sideW, 4, 1.5), wallMat).position.set(x + gWidth/2 + sideW/2, y, z));
-    scene.add(new THREE.Mesh(new THREE.BoxGeometry(gWidth, 1.5, 1.5), wallMat).position.set(x, y + 2, z));
+    addMesh(new THREE.BoxGeometry(sideW, 4, 1.5), wallMat, x - gWidth/2 - sideW/2, y, z);
+    addMesh(new THREE.BoxGeometry(sideW, 4, 1.5), wallMat, x + gWidth/2 + sideW/2, y, z);
+    addMesh(new THREE.BoxGeometry(gWidth, 1.5, 1.5), wallMat, x, y + 2, z);
 
     const frame = new THREE.MeshBasicMaterial({ color: colorHex });
-    const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 12, 1.6), frame); p1.position.set(x - gWidth/2, 6, z);
-    const p2 = p1.clone(); p2.position.x = x + gWidth/2;
-    scene.add(p1, p2);
+    addMesh(new THREE.BoxGeometry(0.4, 12, 1.6), frame, x - gWidth/2, 6, z);
+    addMesh(new THREE.BoxGeometry(0.4, 12, 1.6), frame, x + gWidth/2, 6, z);
 }
 
 function createWallWithGoalZ(x, y, z, totalDepth, gDepth, colorHex) {
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x0d2342, roughness: 0.5 });
     const sideD = (totalDepth - gDepth) / 2;
-    scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, sideD), wallMat).position.set(x, y, z - gDepth/2 - sideD/2));
-    scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, sideD), wallMat).position.set(x, y, z + gDepth/2 + sideD/2));
-    scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, gDepth), wallMat).position.set(x, y + 2, z));
+    addMesh(new THREE.BoxGeometry(1.5, 4, sideD), wallMat, x, y, z - gDepth/2 - sideD/2);
+    addMesh(new THREE.BoxGeometry(1.5, 4, sideD), wallMat, x, y, z + gDepth/2 + sideD/2);
+    addMesh(new THREE.BoxGeometry(1.5, 1.5, gDepth), wallMat, x, y + 2, z);
 
     const frame = new THREE.MeshBasicMaterial({ color: colorHex });
-    const p1 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 12, 0.4), frame); p1.position.set(x, 6, z - gDepth/2);
-    const p2 = p1.clone(); p2.position.z = z + gDepth/2;
-    scene.add(p1, p2);
+    addMesh(new THREE.BoxGeometry(1.6, 12, 0.4), frame, x, 6, z - gDepth/2);
+    addMesh(new THREE.BoxGeometry(1.6, 12, 0.4), frame, x, 6, z + gDepth/2);
 }
 
 function resetPositions() {
@@ -373,8 +381,10 @@ function resetPositions() {
         playersData[i].speed = 0;
         playersData[i].boost = 100;
     }
-    ball.position.set(0, 1.2, 0);
-    ballVel.set(0, 0, 0);
+    if(ball) {
+        ball.position.set(0, 1.2, 0);
+        ballVel.set(0, 0, 0);
+    }
 }
 
 function onWindowResize() {
@@ -396,7 +406,8 @@ function animate() {
             const effSpeed = p.speed * (p.activeBoost ? 2.3 : 1.0);
             const fwd = new THREE.Vector3(Math.sin(car.rotation.y), 0, Math.cos(car.rotation.y));
             car.position.addScaledVector(fwd, effSpeed * dt);
-            car.rotation.y += p.steer * 2.5 * dt;
+            // pri pohľade zozadu je doprava = záporný uhol (opravené otáčanie)
+            car.rotation.y -= p.steer * 2.5 * dt;
             p.speed *= 0.985;
 
             const limit = arenaSize / 2 - 2;
@@ -433,6 +444,11 @@ function animate() {
             else if(ball.position.z > half) { triggerGoal("GÓÓÓL - HRÁČ 1 BODUJE!", 0); }
             else if(numPlayers === 4 && ball.position.x > half) { triggerGoal("GÓÓÓL - HRÁČ 3 BODUJE!", 2); }
             else if(numPlayers === 4 && ball.position.x < -half) { triggerGoal("GÓÓÓL - HRÁČ 4 BODUJE!", 3); }
+            else if(numPlayers < 4) {
+                // bočné steny pre 2/3 hráčov: loptu odrazíme
+                if(ball.position.x > half) { ball.position.x = half; ballVel.x *= -0.7; }
+                if(ball.position.x < -half) { ball.position.x = -half; ballVel.x *= -0.7; }
+            }
         }
 
         for(let i=0; i<numPlayers; i++) {
@@ -440,49 +456,32 @@ function animate() {
         }
     }
 
+    // scissor test musí byť vypnutý, inak clear() zmaže len posledný výrez
+    renderer.setScissorTest(false);
     renderer.clear();
     const w = window.innerWidth;
     const h = window.innerHeight;
 
     for(let i=0; i<numPlayers; i++) {
-        let rx = 0, ry = 0, rw = w, rh = h/2;
+        const r = getViewRect(i, w, h);
+        // CSS (zhora) -> WebGL (zospodu)
+        const webGLY = h - r.y - r.h;
 
-        // Správny prepočet WebGL súradníc (Y rastie zospodu nahor)
-        if(numPlayers === 2) {
-            rw = w; rh = h / 2;
-            rx = 0;
-            ry = (i === 0) ? (h / 2) : 0;
-        } else if(numPlayers === 3) {
-            if(i === 0) {
-                rx = 0; ry = h / 2; rw = w; rh = h / 2;
-            } else if(i === 1) {
-                rx = 0; ry = 0; rw = w / 2; rh = h / 2;
-            } else if(i === 2) {
-                rx = w / 2; ry = 0; rw = w / 2; rh = h / 2;
-            }
-        } else if(numPlayers === 4) {
-            rw = w / 2; rh = h / 2;
-            rx = (i % 2 === 1) ? (w / 2) : 0;
-            ry = (i < 2) ? (h / 2) : 0;
-        }
-
-        // Konverzia Y zo zhora (CSS) na zospodu (WebGL)
-        let webGLY = h - ry - rh;
-
-        cameras[i].aspect = rw / rh;
+        cameras[i].aspect = r.w / r.h;
         cameras[i].updateProjectionMatrix();
 
-        renderer.setViewport(rx, webGLY, rw, rh);
-        renderer.setScissor(rx, webGLY, rw, rh);
+        renderer.setViewport(r.x, webGLY, r.w, r.h);
+        renderer.setScissor(r.x, webGLY, r.w, r.h);
         renderer.setScissorTest(true);
         renderer.render(scene, cameras[i]);
     }
 }
 
-function updateCamera(cam, car) {
-    const offset = new THREE.Vector3(0, 5, 11).applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation.y);
+function updateCamera(cam, car, snap) {
+    // auto jazdí smerom (sin, 0, cos), kamera musí byť ZA ním (záporné z)
+    const offset = new THREE.Vector3(0, 5, -11).applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation.y);
     const target = new THREE.Vector3().copy(car.position).add(offset);
-    cam.position.lerp(target, 0.2);
+    if(snap) cam.position.copy(target); else cam.position.lerp(target, 0.2);
     cam.lookAt(new THREE.Vector3().copy(car.position).add(new THREE.Vector3(0, 1, 0)));
 }
 
@@ -496,6 +495,7 @@ function triggerGoal(text, scorerIdx) {
     setTimeout(() => {
         banner.style.display = 'none';
         resetPositions();
+        for(let i=0; i<numPlayers; i++) updateCamera(cameras[i], cars[i], true);
         playing = true;
         goalCooldown = false;
     }, 1800);
