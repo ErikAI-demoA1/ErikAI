@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>RocketSK v5.1 — Fixed Splitscreen Layouts (ErikAI)</title>
+<title>RocketSK v5.2 — Perfect Sync Viewports (ErikAI)</title>
 
 <style>
 html, body {
@@ -65,7 +65,7 @@ html, body {
     pointer-events: none;
     z-index: 10;
     box-sizing: border-box;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
 }
 
 .hud-p {
@@ -259,7 +259,6 @@ function init3D() {
     dir.position.set(40, 80, 40);
     scene.add(dir);
 
-    // Podlaha
     ground = new THREE.Mesh(
         new THREE.PlaneGeometry(arenaSize, arenaSize),
         new THREE.MeshStandardMaterial({ color: 0x08162b, roughness: 0.8 })
@@ -447,17 +446,28 @@ function animate() {
 
     for(let i=0; i<numPlayers; i++) {
         let rx = 0, ry = 0, rw = w, rh = h/2;
+
         if(numPlayers === 2) {
-            ry = (i === 0) ? h/2 : 0;
-            rh = h/2;
+            // P0 hore, P1 dole
+            rh = h / 2;
+            ry = (i === 0) ? (h / 2) : 0;
+            rx = 0;
+            rw = w;
         } else if(numPlayers === 3) {
-            if(i === 0) { ry = h/2; rh = h/2; }
-            else if(i === 1) { rx = 0; ry = 0; rw = w/2; rh = h/2; }
-            else if(i === 2) { rx = w/2; ry = 0; rw = w/2; rh = h/2; }
+            // P0 hore cez celú šírku, P1 dole vľavo, P2 dole vpravo
+            if(i === 0) {
+                rx = 0; ry = h / 2; rw = w; rh = h / 2;
+            } else if(i === 1) {
+                rx = 0; ry = 0; rw = w / 2; rh = h / 2;
+            } else if(i === 2) {
+                rx = w / 2; ry = 0; rw = w / 2; rh = h / 2;
+            }
         } else if(numPlayers === 4) {
-            rx = (i % 2 === 1) ? w/2 : 0;
-            ry = (i < 2) ? h/2 : 0;
-            rw = w/2; rh = h/2;
+            // 2x2 mriežka
+            rw = w / 2;
+            rh = h / 2;
+            rx = (i % 2 === 1) ? (w / 2) : 0;
+            ry = (i < 2) ? (h / 2) : 0;
         }
 
         cameras[i].aspect = rw / rh;
