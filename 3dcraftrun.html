@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI 3D Craft Run v5.7.2 (Fix Screen)</title>
+<title>ErikAI 3D Craft Run v5.8 (Distance 37)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -88,13 +88,15 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI 3D Craft v5.7.2</h3>
+  <h3>⚡ ErikAI 3D Craft v5.8</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Úložisko DB (KB / MB):</span> <span id="storageSizeVal" class="stat-val">0 KB</span></div>
+  <div class="stat-row"><span>Celkové bloky (Svet):</span> <span id="totalBlocks" class="stat-val">0</span></div>
+  <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
   <div class="stat-row"><span>Zlých nepriateľov:</span> <span id="enemyCountVal" class="stat-val">1</span></div>
   <div class="stat-row"><span>FPS (Ultra Plynulé):</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">🔥 Dohľad 45 | Horda nepriateľov aktívna!</div>
+  <div class="warning-text">🔥 Dohľad 37 | Okraj 3-4 bloky</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Úplne Nový Svet</button>
 </div>
 
@@ -148,14 +150,14 @@ let enemies = [];
 let worldMesh = null;
 let solidBlocks = new Set();
 let savedWorldData = {};
-let RENDER_DISTANCE = 45;
+let RENDER_DISTANCE = 37; // Dohľad presne 37 blokov
 let isDead = false;
 let respawnProtection = 0;
 let db = null;
 
 function initIndexedDB() {
   return new Promise((resolve) => {
-    const request = indexedDB.open('ErikAICraftDB_v5_7_2', 1);
+    const request = indexedDB.open('ErikAICraftDB_v5_8', 1);
     request.onerror = () => resolve(false);
     request.onsuccess = (e) => {
       db = e.target.result;
@@ -194,15 +196,14 @@ async function init() {
   player = createDetailedCharacter(0x3b82f6, 0x1d4ed8);
   scene.add(player);
 
-  // Bezpečné načítanie DB s fallbackom, aby hra nezostala visieť
-  let dbLoaded = await initIndexedDB();
+  await initIndexedDB();
 
   playerPos.x = 0;
   playerPos.y = 0;
   playerPos.z = getSafeSpawnHeight(0, 0);
   playerVelocityZ = 0;
 
-  spawnNewEnemy(playerPos.x + 28, playerPos.y + 28);
+  spawnNewEnemy(playerPos.x + 24, playerPos.y + 24);
 
   updateWorldGeometry();
 
@@ -212,7 +213,8 @@ async function init() {
   setupKeyboardControls();
 
   window.addEventListener('resize', onWindowResize);
-  document.getElementById('seedVal').textContent = currentSeed;
+  const seedValEl = document.getElementById('seedVal');
+  if (seedValEl) seedValEl.textContent = currentSeed;
 
   animate();
 }
@@ -546,6 +548,8 @@ function resetWorld() {
   
   currentSeed = Math.floor(Math.random() * 899999 + 100000);
   noise = new SimplexNoise(currentSeed);
+  const seedValEl = document.getElementById('seedVal');
+  if (seedValEl) seedValEl.textContent = currentSeed;
   
   respawnPlayer(true);
 }
@@ -573,7 +577,7 @@ function respawnPlayer(forceTeleport = false) {
 
   enemies.forEach(e => scene.remove(e.mesh));
   enemies = [];
-  spawnNewEnemy(playerPos.x + 28, playerPos.y + 28);
+  spawnNewEnemy(playerPos.x + 24, playerPos.y + 24);
   
   playerAngle = 0;
   cameraPitch = 0.45;
@@ -774,13 +778,14 @@ function updatePlayerMovement() {
   player.rotation.z = playerAngle;
   updateCharacterAnimation(player, isMoving, walkAnimationTime += 0.15);
 
-  if (Math.abs(playerPos.x - lastChunkUpdatePos.x) > 40 || Math.abs(playerPos.y - lastChunkUpdatePos.y) > 40) {
+  // PREKRESLENIE NA POSLEDNÝch 3-4 BLOKOCH (posun o 33 blokov, keďže dohľad je 37)
+  if (Math.abs(playerPos.x - lastChunkUpdatePos.x) > 33 || Math.abs(playerPos.y - lastChunkUpdatePos.y) > 33) {
     lastChunkUpdatePos.x = playerPos.x;
     lastChunkUpdatePos.y = playerPos.y;
     updateWorldGeometry();
 
     const spawnAngle = Math.random() * Math.PI * 2;
-    const spawnDist = 27;
+    const spawnDist = 24;
     spawnNewEnemy(playerPos.x + Math.cos(spawnAngle) * spawnDist, playerPos.y + Math.sin(spawnAngle) * spawnDist);
   }
 
