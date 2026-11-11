@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>RocketSK v4.2 — Splitscreen Fixed Viewports (ErikAI)</title>
+<title>RocketSK v4.3 — Fixed UI & Splitscreen (ErikAI)</title>
 
 <style>
 html, body {
@@ -16,15 +16,27 @@ html, body {
     touch-action: none;
 }
 
-/* --- Rozdelenie obrazovky na 2 polovice --- */
+/* --- Plátno pre 3D hru cez celú obrazovku --- */
+#webgl-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* --- Rozdelenie dotykových vrstiev na 2 polovice --- */
 #viewport1, #viewport2 {
     position: absolute;
     left: 0;
     width: 100%;
     height: 50%;
     overflow: hidden;
+    pointer-events: none;
+    z-index: 10;
 }
-#viewport1 { top: 0; border-bottom: 3px solid #00ffcc; }
+#viewport1 { top: 0; border-bottom: 2px solid rgba(0,255,204,0.3); }
 #viewport2 { top: 50%; }
 
 /* --- HUD pre hráčov --- */
@@ -66,7 +78,7 @@ html, body {
     align-items: center;
     justify-content: center;
     pointer-events: auto;
-    border: 2px solid rgba(255,255,255,0.3);
+    border: 2px solid rgba(255,255,255,0.25);
     touch-action: none;
 }
 
@@ -98,12 +110,12 @@ html, body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    padding: 16px 32px;
+    padding: 18px 36px;
     border-radius: 14px;
     border: none;
     background: linear-gradient(145deg, #00ffcc, #00b386);
     color: #030810;
-    z-index: 100;
+    z-index: 1000;
     cursor: pointer;
     font-weight: 900;
     font-size: 18px;
@@ -121,20 +133,11 @@ html, body {
     font-size: 30px;
     font-weight: 900;
     color: #fff;
-    z-index: 110;
+    z-index: 1100;
     display: none;
     text-align: center;
     box-shadow: 0 0 30px rgba(255,120,60,0.9);
     text-transform: uppercase;
-}
-
-#webgl-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
 }
 </style>
 </head>
@@ -145,7 +148,7 @@ html, body {
 <div class="goal-banner" id="goalBanner">GÓÓÓL!</div>
 
 <!-- Hráč 1 (Horná polovica) -->
-<div id="viewport1" style="z-index:10;">
+<div id="viewport1">
     <div id="hudP1" class="hud-p">🔴 HRÁČ 1 • Skóre: <span id="scoreA">0</span> • Boost: <span id="boost1">100</span>%</div>
     <div class="player-controls">
         <div id="joy1" class="joystick"><div id="stick1" class="stick"></div></div>
@@ -154,7 +157,7 @@ html, body {
 </div>
 
 <!-- Hráč 2 (Dolná polovica) -->
-<div id="viewport2" style="z-index:10;">
+<div id="viewport2">
     <div id="hudP2" class="hud-p">🔵 HRÁČ 2 • Skóre: <span id="scoreB">0</span> • Boost: <span id="boost2">100</span>%</div>
     <div class="player-controls">
         <div id="joy2" class="joystick"><div id="stick2" class="stick"></div></div>
@@ -181,19 +184,18 @@ const goalWidthRatio = 0.4, goalHeight = 12;
 
 function init() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a1428);
+    scene.background = new THREE.Color(0x040b16);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.autoClear = false; // Dôležité pre rozdelenú obrazovku!
+    renderer.autoClear = false;
     document.getElementById('webgl-container').appendChild(renderer.domElement);
 
     cameraP1 = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight / 2), 0.1, 4000);
     cameraP2 = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight / 2), 0.1, 4000);
 
-    // Osvetlenie
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x223355, 0.9));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x112244, 0.9));
     const dir = new THREE.DirectionalLight(0xffffff, 1.0);
     dir.position.set(40, 80, 40);
     scene.add(dir);
@@ -201,21 +203,21 @@ function init() {
     // Podlaha s mriežkou pre lepšiu orientáciu
     const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(arena, arena),
-        new THREE.MeshStandardMaterial({ color: 0x0e1b33, roughness: 0.8 })
+        new THREE.MeshStandardMaterial({ color: 0x08162b, roughness: 0.8 })
     );
     ground.rotation.x = -Math.PI / 2;
     scene.add(ground);
 
-    const grid = new THREE.GridHelper(arena, 20, 0x00ffcc, 0x1f3a60);
+    const grid = new THREE.GridHelper(arena, 20, 0x00ffcc, 0x1a365d);
     grid.position.y = 0.05;
     scene.add(grid);
 
-    // Autá hráčov
-    carP1 = createCar(0xff3b3b); // Červené auto
+    // Autá
+    carP1 = createCar(0xff3b3b);
     carP1.position.set(0, 0.45, -30);
     scene.add(carP1);
 
-    carP2 = createCar(0x00bfff); // Modré auto
+    carP2 = createCar(0x00bfff);
     carP2.position.set(0, 0.45, 30);
     carP2.rotation.y = Math.PI;
     scene.add(carP2);
@@ -223,7 +225,7 @@ function init() {
     // Lopta
     ball = new THREE.Mesh(
         new THREE.SphereGeometry(1.2, 32, 32),
-        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, emissive: 0x333333 })
+        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, emissive: 0x222222 })
     );
     ball.position.set(0, 1.2, 0);
     scene.add(ball);
@@ -234,7 +236,7 @@ function init() {
     createWallWithGoal(0, 2, -w, arena, goalWidth, 0xef4444);
     createWallWithGoal(0, 2, w, arena, goalWidth, 0x3b82f6);
 
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x11284d, roughness: 0.5 });
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x0d2342, roughness: 0.5 });
     scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arena), wallMat).translateOnAxis(new THREE.Vector3(-w, 2, 0), 1));
     scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arena), wallMat).translateOnAxis(new THREE.Vector3(w, 2, 0), 1));
 
@@ -251,7 +253,6 @@ function createCar(colorHex) {
     body.position.y = 0.4;
     group.add(body);
 
-    // Pridáme smerový spojler, aby bolo jasné, kam auto pozera
     const spoilerMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
     const spoiler = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.2, 0.4), spoilerMat);
     spoiler.position.set(0, 0.8, -1.0);
@@ -261,7 +262,7 @@ function createCar(colorHex) {
 }
 
 function createWallWithGoal(x, y, z, totalWidth, gWidth, colorHex) {
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x11284d, roughness: 0.5 });
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x0d2342, roughness: 0.5 });
     const sideWidth = (totalWidth - gWidth) / 2;
     
     scene.add(new THREE.Mesh(new THREE.BoxGeometry(sideWidth, 4, 1.5), wallMat).position.set(x - gWidth/2 - sideWidth/2, y, z));
@@ -365,13 +366,13 @@ function animate() {
         if (carP1.position.distanceTo(ball.position) < 2.2) {
             const n = new THREE.Vector3().subVectors(ball.position, carP1.position).normalize();
             ball.position.addScaledVector(n, 0.1);
-            ballVel.copy(n.multiplyScalar(Math.max(4, Math.abs(p1.speed) * 2))));
+            ballVel.copy(n.multiplyScalar(Math.max(4, Math.abs(p1.speed) * 2)));
             ballVel.y += 5;
         }
         if (carP2.position.distanceTo(ball.position) < 2.2) {
             const n = new THREE.Vector3().subVectors(ball.position, carP2.position).normalize();
             ball.position.addScaledVector(n, 0.1);
-            ballVel.copy(n.multiplyScalar(Math.max(4, Math.abs(p2.speed) * 2))));
+            ballVel.copy(n.multiplyScalar(Math.max(4, Math.abs(p2.speed) * 2)));
             ballVel.y += 5;
         }
 
@@ -402,7 +403,6 @@ function animate() {
         checkGoal();
     }
 
-    // Vykreslenie rozdelenej obrazovky (Splitscreen Viewports)
     renderer.clear();
 
     const width = window.innerWidth;
