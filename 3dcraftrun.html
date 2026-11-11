@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI 3D Craft Run v5.0 (God-Speed 120 FPS)</title>
+<title>ErikAI 3D Craft Run v5.2 (Ultra Smooth)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -88,14 +88,14 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI 3D Craft v5.0 (120 FPS God-Speed)</h3>
+  <h3>⚡ ErikAI 3D Craft v5.2 (Ultra Smooth)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Úložisko DB (do 50GB):</span> <span id="storageSizeVal" class="stat-val">0 KB</span></div>
   <div class="stat-row"><span>Celkové bloky (Svet):</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
-  <div class="stat-row"><span>FPS (Cieľ 120+):</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">🔥 Hardcore Zlúčená Geometria (Max FPS).</div>
+  <div class="stat-row"><span>FPS (Plynulé):</span> <span id="fpsVal" class="stat-val">60</span></div>
+  <div class="warning-text">🚀 Dohľad 15 blokov + Plynulý Sync.</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Úplne Nový Svet</button>
 </div>
 
@@ -145,17 +145,17 @@ let currentSeed = Math.floor(Math.random() * 899999 + 100000);
 let noise = SimplexNoise(currentSeed);
 
 let scene, camera, renderer, player, enemy;
-let worldMesh = null; // Jediná zlúčená sieť pre extrémne FPS
+let worldMesh = null;
 let solidBlocks = new Set();
 let savedWorldData = {};
-let RENDER_DISTANCE = 12; // Ultra optimalizovaný okruh pre okamžitú odozvu a 120 FPS
+let RENDER_DISTANCE = 15; // Nastavený presný dohľad na 15 blokov
 let isDead = false;
 let respawnProtection = 0;
 let db = null;
 
 function initIndexedDB() {
   return new Promise((resolve) => {
-    const request = indexedDB.open('ErikAICraftDB_v5', 1);
+    const request = indexedDB.open('ErikAICraftDB_v5_2', 1);
     request.onerror = () => resolve(false);
     request.onsuccess = (e) => {
       db = e.target.result;
@@ -193,7 +193,7 @@ async function init() {
 
   renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(1); // Pevný pixel ratio pre maximálny výkon na 120Hz displejoch
+  renderer.setPixelRatio(1);
   document.body.appendChild(renderer.domElement);
 
   player = createDetailedCharacter(0x3b82f6, 0x1d4ed8);
@@ -287,7 +287,6 @@ function createArmPart(matShirt, yOffset, zPos) {
   return arm;
 }
 
-// Jemný rovinatý terén so stabilnou výškou
 function getTerrainHeight(x, y) {
   let baseNoise = noise.noise2D(x * 0.015, y * 0.015) * 3.0 + noise.noise2D(x * 0.05, y * 0.05) * 1.0;
   return Math.floor(baseNoise) + 1;
@@ -322,14 +321,12 @@ function isSolidBlock(x, y, z) {
   return solidBlocks.has(`${Math.round(x)},${Math.round(y)},${Math.round(z)}`);
 }
 
-// Farebné spektrum pre bloky
 const colorPalette = [0x22c55e, 0x3b82f6, 0xa855f7, 0xf97316, 0xeab308, 0xef4444, 0x06b6d4, 0x64748b];
 function getBlockColor(x, y, z) {
   let index = Math.abs(Math.floor(x * 3 + y * 7 + z * 11)) % colorPalette.length;
   return colorPalette[index];
 }
 
-// Hardcore Optimalizácia: Zlúčenie všetkých blokov do jednej jedinečnej geometrie pre 120 FPS
 function updateWorldGeometry() {
   const pX = Math.floor(playerPos.x);
   const pY = Math.floor(playerPos.y);
@@ -351,11 +348,9 @@ function updateWorldGeometry() {
         const key = `${x},${y},${z}`;
         solidBlocks.add(key);
 
-        // Klonovanie a posun geometrie pre jednorazové zlúčenie
         const cloneGeo = singleBoxGeo.clone();
         cloneGeo.translate(x, y, z);
         
-        // Priradenie farby cez vertexové atribúty pre optimálny výkon
         const color = new THREE.Color(getBlockColor(x, y, z));
         const colors = new Float32Array(cloneGeo.attributes.position.count * 3);
         for (let i = 0; i < colors.length; i += 3) {
@@ -374,7 +369,6 @@ function updateWorldGeometry() {
     }
   }
 
-  // Odstránenie starého sveta zo scény
   if (worldMesh) {
     scene.remove(worldMesh);
     worldMesh.geometry.dispose();
@@ -382,10 +376,7 @@ function updateWorldGeometry() {
     worldMesh = null;
   }
 
-  // Zlúčenie tisícok blokov do 1 objektu
   if (geometries.length > 0) {
-    // Použijeme jednoduchú BufferGeometry zjednotenú metódu (v r128 priamo cez BufferGeometryUtils alebo jednoduchým spojom)
-    // Keďže chceme plnú čistotu bez externých pluginov, spojíme ich cez pole bufferov:
     const mergedGeometry = mergeBufferGeometries(geometries);
     const material = new THREE.MeshBasicMaterial({ vertexColors: true });
     worldMesh = new THREE.Mesh(mergedGeometry, material);
@@ -396,7 +387,6 @@ function updateWorldGeometry() {
   updateHUDStats();
 }
 
-// Pomocná funkcia na bezpečné a rýchle spojenie Three.js geometrií
 function mergeBufferGeometries(geometries) {
   let positionLength = 0;
   let normalLength = 0;
@@ -745,8 +735,8 @@ function updatePlayerMovement() {
   player.rotation.z = playerAngle;
   updateCharacterAnimation(player, isMoving, false);
 
-  // Aktualizácia geometrie pri prechode na nové políčko
-  if (Math.abs(playerPos.x - lastChunkUpdatePos.x) > 2 || Math.abs(playerPos.y - lastChunkUpdatePos.y) > 2) {
+  // Optimalizovaný posun: Svet sa s dohľadom 15 blokov prekreslí až vtedy, keď hráč prejde aspoň 8 blokov (zabraňuje mikro-zaseknutiam)
+  if (Math.abs(playerPos.x - lastChunkUpdatePos.x) > 8 || Math.abs(playerPos.y - lastChunkUpdatePos.y) > 8) {
     lastChunkUpdatePos.x = playerPos.x;
     lastChunkUpdatePos.y = playerPos.y;
     updateWorldGeometry();
