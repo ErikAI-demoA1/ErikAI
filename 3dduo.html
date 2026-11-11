@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>RocketSK v5.0 — 2 to 4 Players Dynamic Arenas (ErikAI)</title>
+<title>RocketSK v5.1 — Fixed Splitscreen Layouts (ErikAI)</title>
 
 <style>
 html, body {
@@ -64,15 +64,17 @@ html, body {
     overflow: hidden;
     pointer-events: none;
     z-index: 10;
+    box-sizing: border-box;
+    border: 1px solid rgba(255,255,255,0.1);
 }
 
 .hud-p {
     position: absolute;
-    top: 8px; left: 10px;
-    padding: 4px 10px;
+    top: 6px; left: 8px;
+    padding: 3px 8px;
     border-radius: 6px;
-    font-size: 11px;
-    background: rgba(0, 0, 0, 0.75);
+    font-size: 10px;
+    background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(6px);
     z-index: 40;
     font-weight: 700;
@@ -80,7 +82,7 @@ html, body {
 
 .player-controls {
     position: absolute;
-    bottom: 8px; left: 10px; right: 10px;
+    bottom: 6px; left: 8px; right: 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -89,7 +91,7 @@ html, body {
 }
 
 .joystick {
-    width: 90px; height: 90px;
+    width: 75px; height: 75px;
     border-radius: 50%;
     background: rgba(255,255,255,0.08);
     backdrop-filter: blur(4px);
@@ -102,20 +104,20 @@ html, body {
 }
 
 .stick {
-    width: 38px; height: 38px;
+    width: 32px; height: 32px;
     border-radius: 50%;
     background: rgba(255,255,255,0.4);
     pointer-events: none;
 }
 
 .btn-boost {
-    padding: 10px 16px;
-    border-radius: 10px;
+    padding: 8px 14px;
+    border-radius: 8px;
     border: none;
     background: linear-gradient(145deg, #ff8c00, #ff4500);
     color: white;
     font-weight: 800;
-    font-size: 11px;
+    font-size: 10px;
     cursor: pointer;
     pointer-events: auto;
     box-shadow: 0 0 10px rgba(255,100,0,0.5);
@@ -189,7 +191,7 @@ function buildUI() {
     container.innerHTML = '';
 
     const colors = ['#ff4b4b', '#00bfff', '#10b981', '#f59e0b'];
-    const names = ['HRÁČ 1 (RED)', 'HRÁČ 2 (BLUE)', 'HRÁČ 3 (GREEN)', 'HRÁČ 4 (YELLOW)'];
+    const names = ['P1 (RED)', 'P2 (BLUE)', 'P3 (GREEN)', 'P4 (YELLOW)'];
 
     for(let i=0; i<numPlayers; i++) {
         const div = document.createElement('div');
@@ -197,7 +199,7 @@ function buildUI() {
         div.id = `viewportUI${i}`;
         div.innerHTML = `
             <div class="hud-p" id="hudP${i}" style="color:${colors[i]}; border:1px solid ${colors[i]}66;">
-                ${names[i]} • Skóre: <span id="score${i}">0</span> • Boost: <span id="boost${i}">100</span>%
+                ${names[i]} | Skóre: <span id="score${i}">0</span> | Boost: <span id="boost${i}">100</span>%
             </div>
             <div class="player-controls">
                 <div id="joy${i}" class="joystick"><div id="stick${i}" class="stick"></div></div>
@@ -271,7 +273,6 @@ function init3D() {
 
     const colors = [0xff3b3b, 0x00bfff, 0x10b981, 0xf59e0b];
 
-    // Vytvorenie áut a kamier podľa počtu hráčov
     for(let i=0; i<numPlayers; i++) {
         const cam = new THREE.PerspectiveCamera(75, 1, 0.1, 4000);
         cameras.push(cam);
@@ -283,7 +284,6 @@ function init3D() {
 
     resetPositions();
 
-    // Lopta
     ball = new THREE.Mesh(
         new THREE.SphereGeometry(1.2, 32, 32),
         new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, emissive: 0x222222 })
@@ -316,20 +316,18 @@ function buildArenaGeometry() {
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x0d2342, roughness: 0.5 });
 
     if(numPlayers === 2 || numPlayers === 4) {
-        // Obdĺžniková / Štvorcová aréna so 2 alebo 4 bránkami
         const goalW = arenaSize * 0.4;
-        createWallWithGoal(0, 2, -half, arenaSize, goalW, 0xef4444); // Sever
-        createWallWithGoal(0, 2, half, arenaSize, goalW, 0x3b82f6);  // Juh
+        createWallWithGoal(0, 2, -half, arenaSize, goalW, 0xef4444);
+        createWallWithGoal(0, 2, half, arenaSize, goalW, 0x3b82f6);
         
         if(numPlayers === 4) {
-            createWallWithGoalZ(half, 2, 0, arenaSize, goalW, 0x10b981); // Východ
-            createWallWithGoalZ(-half, 2, 0, arenaSize, goalW, 0xf59e0b); // Západ
+            createWallWithGoalZ(half, 2, 0, arenaSize, goalW, 0x10b981);
+            createWallWithGoalZ(-half, 2, 0, arenaSize, goalW, 0xf59e0b);
         } else {
             scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arenaSize), wallMat).position.set(-half, 2, 0));
             scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arenaSize), wallMat).position.set(half, 2, 0));
         }
     } else if(numPlayers === 3) {
-        // Trojuholníková aréna pre 3 hráčov
         const r = half * 0.85;
         for(let i=0; i<3; i++) {
             const angle = (i / 3) * Math.PI * 2;
@@ -402,12 +400,10 @@ function animate() {
             car.rotation.y += p.steer * 2.5 * dt;
             p.speed *= 0.985;
 
-            // Hranice
             const limit = arenaSize / 2 - 2;
             car.position.x = Math.max(-limit, Math.min(limit, car.position.x));
             car.position.z = Math.max(-limit, Math.min(limit, car.position.z));
 
-            // Boost stav
             if (p.activeBoost) { p.boost -= 50 * dt; if (p.boost <= 0) { p.boost = 0; p.activeBoost = false; } }
             else { p.boost = Math.min(100, p.boost + 25 * dt); }
 
@@ -415,7 +411,6 @@ function animate() {
             document.getElementById(`boost${i}`).innerText = Math.round(p.boost);
         }
 
-        // Fyzika lopty
         ballVel.y -= 15 * dt;
         ball.position.addScaledVector(ballVel, dt);
         if (ball.position.y < 1.2) {
@@ -424,7 +419,6 @@ function animate() {
             ballVel.x *= 0.98; ballVel.z *= 0.98;
         }
 
-        // Kolízie áut s loptou
         for(let i=0; i<numPlayers; i++) {
             if (cars[i].position.distanceTo(ball.position) < 2.2) {
                 const n = new THREE.Vector3().subVectors(ball.position, cars[i].position).normalize();
@@ -434,7 +428,6 @@ function animate() {
             }
         }
 
-        // Kontrola gólov
         const half = arenaSize / 2 - 1.5;
         if(!goalCooldown) {
             if(ball.position.z < -half) { triggerGoal("GÓÓÓL - HRÁČ 2 BODUJE!", 1); }
@@ -443,7 +436,6 @@ function animate() {
             else if(numPlayers === 4 && ball.position.x < -half) { triggerGoal("GÓÓÓL - HRÁČ 4 BODUJE!", 3); }
         }
 
-        // Kamery
         for(let i=0; i<numPlayers; i++) {
             updateCamera(cameras[i], cars[i]);
         }
@@ -500,7 +492,6 @@ function triggerGoal(text, scorerIdx) {
     }, 1800);
 }
 
-// --- Nezávislé multi-touch joysticky pre všetkých hráčov ---
 function setupJoysticks() {
     for(let i=0; i<numPlayers; i++) {
         initJoy(`joy${i}`, `stick${i}`, p => {
@@ -531,7 +522,7 @@ function initJoy(joyId, stickId, callback) {
     const stick = document.getElementById(stickId);
     let activePointerId = null;
     let startX = 0, startY = 0;
-    const maxR = 34;
+    const maxR = 26;
 
     joy.addEventListener('pointerdown', e => {
         if (activePointerId !== null) return;
