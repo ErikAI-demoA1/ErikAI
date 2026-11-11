@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>RocketSK v5.2 — Perfect Sync Viewports (ErikAI)</title>
+<title>RocketSK v5.3 — Fixed WebGL Viewport Coordinates (ErikAI)</title>
 
 <style>
 html, body {
@@ -447,14 +447,12 @@ function animate() {
     for(let i=0; i<numPlayers; i++) {
         let rx = 0, ry = 0, rw = w, rh = h/2;
 
+        // Správny prepočet WebGL súradníc (Y rastie zospodu nahor)
         if(numPlayers === 2) {
-            // P0 hore, P1 dole
-            rh = h / 2;
-            ry = (i === 0) ? (h / 2) : 0;
+            rw = w; rh = h / 2;
             rx = 0;
-            rw = w;
+            ry = (i === 0) ? (h / 2) : 0;
         } else if(numPlayers === 3) {
-            // P0 hore cez celú šírku, P1 dole vľavo, P2 dole vpravo
             if(i === 0) {
                 rx = 0; ry = h / 2; rw = w; rh = h / 2;
             } else if(i === 1) {
@@ -463,18 +461,19 @@ function animate() {
                 rx = w / 2; ry = 0; rw = w / 2; rh = h / 2;
             }
         } else if(numPlayers === 4) {
-            // 2x2 mriežka
-            rw = w / 2;
-            rh = h / 2;
+            rw = w / 2; rh = h / 2;
             rx = (i % 2 === 1) ? (w / 2) : 0;
             ry = (i < 2) ? (h / 2) : 0;
         }
 
+        // Konverzia Y zo zhora (CSS) na zospodu (WebGL)
+        let webGLY = h - ry - rh;
+
         cameras[i].aspect = rw / rh;
         cameras[i].updateProjectionMatrix();
 
-        renderer.setViewport(rx, ry, rw, rh);
-        renderer.setScissor(rx, ry, rw, rh);
+        renderer.setViewport(rx, webGLY, rw, rh);
+        renderer.setScissor(rx, webGLY, rw, rh);
         renderer.setScissorTest(true);
         renderer.render(scene, cameras[i]);
     }
