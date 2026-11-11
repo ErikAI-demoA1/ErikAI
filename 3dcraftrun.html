@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI 3D Craft Run v5.7.1 (Fixed)</title>
+<title>ErikAI 3D Craft Run v5.7.2 (Fix Screen)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -88,7 +88,7 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI 3D Craft v5.7.1</h3>
+  <h3>⚡ ErikAI 3D Craft v5.7.2</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Úložisko DB (KB / MB):</span> <span id="storageSizeVal" class="stat-val">0 KB</span></div>
@@ -155,7 +155,7 @@ let db = null;
 
 function initIndexedDB() {
   return new Promise((resolve) => {
-    const request = indexedDB.open('ErikAICraftDB_v5_7_1', 1);
+    const request = indexedDB.open('ErikAICraftDB_v5_7_2', 1);
     request.onerror = () => resolve(false);
     request.onsuccess = (e) => {
       db = e.target.result;
@@ -194,7 +194,8 @@ async function init() {
   player = createDetailedCharacter(0x3b82f6, 0x1d4ed8);
   scene.add(player);
 
-  await initIndexedDB();
+  // Bezpečné načítanie DB s fallbackom, aby hra nezostala visieť
+  let dbLoaded = await initIndexedDB();
 
   playerPos.x = 0;
   playerPos.y = 0;
@@ -253,7 +254,8 @@ function spawnNewEnemy(targetX, targetY) {
     walkAnim: Math.random() * 10
   });
 
-  document.getElementById('enemyCountVal').textContent = enemies.length;
+  const enemyCountEl = document.getElementById('enemyCountVal');
+  if (enemyCountEl) enemyCountEl.textContent = enemies.length;
 }
 
 function createDetailedCharacter(shirtColor, pantsColor) {
@@ -471,8 +473,11 @@ function mergeBufferGeometries(geometries) {
 
 function updateHUDStats() {
   const totalKeys = Object.keys(savedWorldData).length;
-  document.getElementById('totalBlocks').textContent = totalKeys;
-  document.getElementById('ramCount').textContent = solidBlocks.size;
+  const totalBlocksEl = document.getElementById('totalBlocks');
+  if (totalBlocksEl) totalBlocksEl.textContent = totalKeys;
+  
+  const ramCountEl = document.getElementById('ramCount');
+  if (ramCountEl) ramCountEl.textContent = solidBlocks.size;
 
   const approxBytes = totalKeys * 12; 
   let sizeStr = '';
@@ -481,9 +486,11 @@ function updateHUDStats() {
   } else {
     sizeStr = `${(approxBytes / (1024 * 1024)).toFixed(2)} MB`;
   }
-  document.getElementById('storageSizeVal').textContent = sizeStr;
+  const storageSizeEl = document.getElementById('storageSizeVal');
+  if (storageSizeEl) storageSizeEl.textContent = sizeStr;
 
-  document.getElementById('coordVal').textContent = `${Math.floor(playerPos.x)}, ${Math.floor(playerPos.y)}, ${Math.floor(playerPos.z)}`;
+  const coordEl = document.getElementById('coordVal');
+  if (coordEl) coordEl.textContent = `${Math.floor(playerPos.x)}, ${Math.floor(playerPos.y)}, ${Math.floor(playerPos.z)}`;
 }
 
 function saveWorldToIndexedDB() {
@@ -507,7 +514,8 @@ function loadWorldFromIndexedDB(callback) {
         if (e.target.result.seed) {
           currentSeed = e.target.result.seed;
           noise = new SimplexNoise(currentSeed);
-          document.getElementById('seedVal').textContent = currentSeed;
+          const seedValEl = document.getElementById('seedVal');
+          if (seedValEl) seedValEl.textContent = currentSeed;
         }
       }
       if(callback) callback();
@@ -544,7 +552,8 @@ function resetWorld() {
 
 function respawnPlayer(forceTeleport = false) {
   isDead = false;
-  document.getElementById('deathScreen').style.display = 'none';
+  const deathScreen = document.getElementById('deathScreen');
+  if (deathScreen) deathScreen.style.display = 'none';
   respawnProtection = Date.now() + 5000;
   
   keyboardKeys = { forward: false, backward: false, left: false, right: false };
@@ -575,6 +584,7 @@ function respawnPlayer(forceTeleport = false) {
 function setupJoystick() {
   const zone = document.getElementById('joystickZone');
   const knob = document.getElementById('joystickKnob');
+  if (!zone || !knob) return;
 
   zone.addEventListener('touchstart', (e) => {
     e.preventDefault();
@@ -626,6 +636,7 @@ function setupJoystick() {
 
 function setupJumpBtn() {
   const btn = document.getElementById('jumpBtn');
+  if (!btn) return;
   const triggerJump = (e) => {
     e.preventDefault();
     if (isGrounded && !isDead) {
@@ -755,7 +766,8 @@ function updatePlayerMovement() {
 
   if (playerPos.z < -15) {
     isDead = true;
-    document.getElementById('deathScreen').style.display = 'flex';
+    const deathScreen = document.getElementById('deathScreen');
+    if (deathScreen) deathScreen.style.display = 'flex';
   }
 
   player.position.set(playerPos.x, playerPos.y, playerPos.z);
@@ -780,7 +792,8 @@ function updatePlayerMovement() {
 
     if (Date.now() > respawnProtection && dist < 0.7 && Math.abs(playerPos.z - en.pos.z) < 1.2) {
       isDead = true;
-      document.getElementById('deathScreen').style.display = 'flex';
+      const deathScreen = document.getElementById('deathScreen');
+      if (deathScreen) deathScreen.style.display = 'flex';
       break;
     } else if (dist > 0.6) {
       const enemySpeed = 0.085;
@@ -845,7 +858,8 @@ function animate() {
   frameCount++;
   const now = performance.now();
   if (now - lastFrameTime >= 1000) {
-    document.getElementById('fpsVal').textContent = frameCount;
+    const fpsValEl = document.getElementById('fpsVal');
+    if (fpsValEl) fpsValEl.textContent = frameCount;
     frameCount = 0; lastFrameTime = now;
   }
   renderer.render(scene, camera);
