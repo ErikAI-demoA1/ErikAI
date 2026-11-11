@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>ErikAI Pro 3D CATIA Studio v10.0 - Advanced Shapes & Hollow Elbow</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+
+<style>
+:root{
+  --bg-color: #0b0d13;
+  --panel-bg: #1e222d;
+  --border-color: #2e364f;
+  --accent-green: #10b981;
+  --accent-blue: #3b82f6;
+  --accent-red: #ef4444;
+  --accent-amber: #f59e0b;
+  --accent-purple: #8b5cf6;
+  --text-main: #ffffff;
+  --text-muted: #94a3b8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-color);
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  touch-action: none;
+}
+header{
+  padding: 8px 12px;
+  background: var(--panel-bg);
+  border-bottom: 2px solid var(--border-color);
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content: space-between;
+  z-index: 10;
+}
+.panel{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+
+#workspaceContainer {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: #0b0d13;
+}
+
+#model3DContainer {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+button, select.format-select{
+  padding:7px 12px;
+  border:none;
+  border-radius:6px;
+  background: var(--accent-green);
+  color:#000;
+  font-weight: bold;
+  cursor:pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+button:hover, select.format-select:hover{filter: brightness(1.1); transform: translateY(-1px);}
+button.ghost{background: var(--panel-bg);border:1px solid var(--border-color);color:var(--text-main);}
+button.danger{background: var(--accent-red); color:white;}
+
+select.format-select {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  outline: none;
+}
+
+.info{padding:5px 12px;background: var(--panel-bg);font-size:0.8rem;color:var(--text-muted);border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;}
+
+#dimensionsPanel{
+  position:fixed;
+  top:60px;
+  right:15px;
+  background:var(--panel-bg);
+  border:1px solid var(--border-color);
+  padding:12px;
+  border-radius:10px;
+  max-height:85vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display:block;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+  width: 420px;
+  max-width: 95vw;
+  z-index: 1000;
+}
+.panel-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  cursor: grab;
+  user-select: none;
+  background: rgba(255,255,255,0.04);
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+.panel-header h3{margin:0;color:var(--accent-green);font-size:0.9rem;}
+.close-btn{
+  background: transparent; border: none; color: var(--text-muted); font-size: 1.1rem; font-weight: bold; cursor: pointer; padding: 0 4px; box-shadow: none;
+}
+
+.shape-card{
+  background: #121216;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.shape-card.active{
+  border-color: var(--accent-blue);
+  background: #1a233a;
+}
+.shape-title-row{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.input-group-title{ font-size: 0.72rem; color: var(--accent-blue); font-weight: bold; margin-top: 4px; }
+.input-row{ display: flex; gap: 6px; align-items: center; margin-top: 2px; flex-wrap: wrap; }
+.input-row label{ font-size: 0.73rem; color: var(--text-muted); white-space: nowrap; width: 55px; }
+.input-row input, .input-row select{
+  width: 62px;
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: #090b10;
+  color: white;
+  font-size: 0.8rem;
+}
+.input-row input[type="color"]{
+  width: 32px;
+  height: 26px;
+  padding: 0;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="panel">
+    <select id="shapeSelector" class="format-select">
+      <option value="box">🧊 Kocka / Kváder</option>
+      <option value="boxHole">🕳️ Kocka s dierou</option>
+      <option value="cylinder">🧪 Kruh / Valec</option>
+      <option value="pipe">⭕ Valec / Rúra s dutinou</option>
+      <option value="polygon">⬢ Mnohoúholník (5-8 uholník)</option>
+      <option value="semircle">🌗 Polkruh</option>
+      <option value="pie">🥧 Koláčový výsek</option>
+      <option value="semitriangle">📐 Pol-trojuholník</option>
+      <option value="elbow90">↩️ Koleno 90° (Duté)</option>
+      <option value="heart">❤️ Srdce</option>
+      <option value="star">⭐ Hviezda</option>
+      <option value="cross">➕ Kríž</option>
+      <option value="arrow">➡️ Šípka</option>
+      <option value="keyway">🔑 Drážka pre pero</option>
+    </select>
+
+    <select id="holeTypeSelector" class="format-select" style="border-color: var(--accent-amber);">
+      <option value="circle">Tvar diery: Kruh</option>
+      <option value="square">Tvar diery: Štvorec</option>
+      <option value="triangle">Tvar diery: Trojuholník</option>
+      <option value="hexagon">Tvar diery: 6-uholník</option>
+    </select>
+
+    <button onclick="addNewShape()" style="background:var(--accent-green);">➕ Pridať Tvar</button>
+  </div>
+
+  <div class="panel">
+    <button class="ghost" onclick="togglePanel()" style="background:#4f46e5; color:white;">⚙️ Správa Tvarov</button>
+    <button class="ghost" onclick="exportToSTL()" style="background:#8b5cf6; color:white;">📤 Exportovať STL (1:1)</button>
+    <button class="ghost" onclick="export3DHTML()" style="background:#d97706; color:white;">💾 Stiahnuť 3D HTML</button>
+    <button class="ghost" onclick="clearAll()" style="background:#dc2626; color:white;">🗑️ Zmazať všetko</button>
+  </div>
+</header>
+
+<div id="workspaceContainer">
+  <div id="model3DContainer"></div>
+</div>
+
+<div class="info" id="info">
+  <span id="infoCoords">ErikAI Studio v10.0 | Z >= 0 | Advanced Shapes & Hollow Elbow</span>
+  <span id="infoCount">Počet dielov: 0</span>
+</div>
+
+<div id="dimensionsPanel">
+  <div class="panel-header">
+    <h3>CATIA Editor Tvarov & Dier</h3>
+    <button class="close-btn" onclick="togglePanel()">✕</button>
+  </div>
+  <div id="dimsContent">Zatiaľ žiadne telesá v scéne. Vytvorte nové teleso.</div>
+</div>
+
+<script>
+THREE.Object3D.DefaultUp.set(0, 0, 1);
+
+let shapes = [
+  { type: 'boxHole', holeShape: 'circle', x: 0, y: 0, z: 0, w: 120, h: 120, d: 40, r: 30, hx: 0, hy: 0, holeR: 20, polySides: 6, fillet: 0, chamfer: 0, rx: 0, ry: 0, rz: 0, color: '#3b82f6' }
+];
+
+let selectedShapeIndex = 0;
+let scene, camera, renderer, controls;
+
+const container3D = document.getElementById('model3DContainer');
+const infoCount = document.getElementById('infoCount');
+const dimsContent = document.getElementById('dimsContent');
+const dimsPanel = document.getElementById('dimensionsPanel');
+
+function togglePanel(){
+  const show = dimsPanel.style.display !== 'none';
+  dimsPanel.style.display = show ? 'none' : 'block';
+}
+
+function addNewShape(){
+  const type = document.getElementById('shapeSelector').value;
+  const holeType = document.getElementById('holeTypeSelector').value;
+  
+  shapes.push({
+    type: type,
+    holeShape: holeType,
+    x: 0, y: 0, z: 0,
+    w: 100, h: 100, d: 60, r: 30,
+    hx: 0, hy: 0, holeR: 15,
+    polySides: 6,
+    fillet: 0,
+    chamfer: 0,
+    rx: 0, ry: 0, rz: 0,
+    color: '#10b981'
+  });
+
+  selectedShapeIndex = shapes.length - 1;
+  updateScene3D();
+  updatePanel();
+}
+
+function clearAll(){
+  shapes = [];
+  selectedShapeIndex = null;
+  updateScene3D();
+  updatePanel();
+}
+
+function createHolePath(holeShape, r, hx, hy){
+  const holePath = new THREE.Path();
+  const scHx = hx / 10;
+  const scHy = hy / 10;
+  const scR = r / 10;
+
+  if(holeShape === 'circle'){
+    holePath.absarc(scHx, scHy, scR, 0, Math.PI * 2, true);
+  } else if(holeShape === 'square'){
+    holePath.moveTo(scHx - scR, scHy - scR);
+    holePath.lineTo(scHx + scR, scHy - scR);
+    holePath.lineTo(scHx + scR, scHy + scR);
+    holePath.lineTo(scHx - scR, scHy + scR);
+    holePath.closePath();
+  } else if(holeShape === 'triangle'){
+    holePath.moveTo(scHx, scHy + scR);
+    holePath.lineTo(scHx + scR, scHy - scR);
+    holePath.lineTo(scHx - scR, scHy - scR);
+    holePath.closePath();
+  } else if(holeShape === 'hexagon'){
+    for(let i=0; i<6; i++){
+      const a = (i / 6) * Math.PI * 2;
+      const px = scHx + Math.cos(a) * scR;
+      const py = scHy + Math.sin(a) * scR;
+      if(i===0) holePath.moveTo(px, py); else holePath.lineTo(px, py);
+    }
+    holePath.closePath();
+  }
+  return holePath;
+}
+
+function buildProfileWithHole(s){
+  const shape = new THREE.Shape();
+  const scW = (s.w || 100) / 10;
+  const scH = (s.h || 100) / 10;
+  const scR = (s.r || 30) / 10;
+  const type = s.type;
+
+  if(type === 'box' || type === 'boxHole'){
+    shape.moveTo(-scW/2, -scH/2);
+    shape.lineTo(scW/2, -scH/2);
+    shape.lineTo(scW/2, scH/2);
+    shape.lineTo(-scW/2, scH/2);
+    shape.closePath();
+  } else if(type === 'cylinder' || type === 'pipe'){
+    shape.absarc(0, 0, scR, 0, Math.PI * 2, false);
+  } else if(type === 'polygon'){
+    const sides = Math.max(5, Math.min(8, s.polySides || 6));
+    for(let i=0; i<sides; i++){
+      const a = (i / sides) * Math.PI * 2;
+      const px = Math.cos(a) * scR;
+      const py = Math.sin(a) * scR;
+      if(i===0) shape.moveTo(px, py); else shape.lineTo(px, py);
+    }
+    shape.closePath();
+  } else if(type === 'semircle'){
+    shape.absarc(0, 0, scR, 0, Math.PI, false);
+    shape.closePath();
+  } else if(type === 'pie'){
+    shape.moveTo(0, 0);
+    shape.absarc(0, 0, scR, 0, Math.PI / 2, false);
+    shape.lineTo(0, 0);
+    shape.closePath();
+  } else if(type === 'semitriangle'){
+    shape.moveTo(-scW/2, -scH/2);
+    shape.lineTo(scW/2, -scH/2);
+    shape.lineTo(-scW/2, scH/2);
+    shape.closePath();
+  } else if(type === 'heart'){
+    const x = 0, y = 0;
+    shape.moveTo(x, y + scH/4);
+    shape.bezierCurveTo(x, y + scH/2, x - scW/2, y + scH/2, x - scW/2, y);
+    shape.bezierCurveTo(x - scW/2, y - scH/4, x, y - scH/2, x, y - scH);
+    shape.bezierCurveTo(x, y - scH/2, x + scW/2, y - scH/4, x + scW/2, y);
+    shape.bezierCurveTo(x + scW/2, y + scH/2, x, y + scH/2, x, y + scH/4);
+  } else if(type === 'star'){
+    const points = 5;
+    const outerR = scR;
+    const innerR = scR / 2;
+    for(let i=0; i < points * 2; i++){
+      const r = (i % 2 === 0) ? outerR : innerR;
+      const a = (i / (points * 2)) * Math.PI * 2 - Math.PI/2;
+      const px = Math.cos(a) * r;
+      const py = Math.sin(a) * r;
+      if(i === 0) shape.moveTo(px, py); else shape.lineTo(px, py);
+    }
+    shape.closePath();
+  } else if(type === 'cross'){
+    const t = scW / 3;
+    shape.moveTo(-t/2, scH/2);
+    shape.lineTo(t/2, scH/2);
+    shape.lineTo(t/2, t/2);
+    shape.lineTo(scW/2, t/2);
+    shape.lineTo(scW/2, -t/2);
+    shape.lineTo(t/2, -t/2);
+    shape.lineTo(t/2, -scH/2);
+    shape.lineTo(-t/2, -scH/2);
+    shape.lineTo(-t/2, -t/2);
+    shape.lineTo(-scW/2, -t/2);
+    shape.lineTo(-scW/2, t/2);
+    shape.lineTo(-t/2, t/2);
+    shape.closePath();
+  } else if(type === 'arrow'){
+    shape.moveTo(-scW/2, -scH/4);
+    shape.lineTo(0, -scH/4);
+    shape.lineTo(0, -scH/2);
+    shape.lineTo(scW/2, 0);
+    shape.lineTo(0, scH/2);
+    shape.lineTo(0, scH/4);
+    shape.lineTo(-scW/2, scH/4);
+    shape.closePath();
+  } else if(type === 'keyway'){
+    shape.absarc(0, 0, scR, 0, Math.PI * 2, false);
+    const kw = scW / 3;
+    const kh = scH / 2;
+    const keyPath = new THREE.Path();
+    keyPath.moveTo(-kw/2, scR - 2);
+    keyPath.lineTo(kw/2, scR - 2);
+    keyPath.lineTo(kw/2, scR + kh);
+    keyPath.lineTo(-kw/2, scR + kh);
+    keyPath.closePath();
+    shape.holes.push(keyPath);
+  } else {
+    shape.moveTo(-scW/2, -scH/2);
+    shape.lineTo(scW/2, -scH/2);
+    shape.lineTo(scW/2, scH/2);
+    shape.lineTo(-scW/2, scH/2);
+    shape.closePath();
+  }
+
+  // Pridanie diery, ak je definovaná
+  if(type === 'boxHole' || type === 'pipe' || (type !== 'box' && type !== 'cylinder' && type !== 'elbow90' && s.holeR > 0)){
+    if(type !== 'keyway'){
+      const hPath = createHolePath(s.holeShape, s.holeR || 15, s.hx || 0, s.hy || 0);
+      shape.holes.push(hPath);
+    }
+  }
+
+  return shape;
+}
+
+function createGeometryForShape(s){
+  let geo;
+  const scD = (s.d || 60) / 10;
+  const scR = (s.r || 30) / 10;
+  const holeR = (s.holeR || 15) / 10;
+
+  if(s.type === 'elbow90') {
+    // Vytvorenie dutého kolena 90° pomocou Extrude s cestou a vnútornou dierou
+    const elbowShape = new THREE.Shape();
+    elbowShape.absarc(0, 0, scR, 0, Math.PI * 2, false);
+    if(holeR > 0){
+      const innerHole = new THREE.Path();
+      innerHole.absarc(0, 0, holeR, 0, Math.PI * 2, true);
+      elbowShape.holes.push(innerHole);
+    }
+
+    const curve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, scD * 1.5),
+      new THREE.Vector3(scD * 1.5, 0, scD * 1.5)
+    );
+    geo = new THREE.ExtrudeGeometry(elbowShape, { steps: 30, extrudePath: curve, bevelEnabled: false });
+  } else {
+    const profileShape = buildProfileWithHole(s);
+    geo = new THREE.ExtrudeGeometry(profileShape, { depth: scD, bevelEnabled: false, curveSegments: 32 });
+    geo.center();
+    geo.translate(0, 0, scD / 2);
+  }
+  return geo;
+}
+
+function init3D(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b0d13);
+
+  camera = new THREE.PerspectiveCamera(45, container3D.clientWidth / container3D.clientHeight, 0.1, 1000);
+  camera.position.set(180, -220, 160);
+  camera.up.set(0, 0, 1);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(container3D.clientWidth, container3D.clientHeight);
+  container3D.appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+  let dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  dirLight.position.set(150, 200, 250);
+  scene.add(dirLight);
+
+  let grid = new THREE.GridHelper(400, 40, 0x10b981, 0x2e364f);
+  grid.rotateX(Math.PI / 2);
+  scene.add(grid);
+
+  updateScene3D();
+  updatePanel();
+  animate3D();
+}
+
+function updateScene3D(){
+  const removeObjects = [];
+  scene.traverse(child => { if(child.isMesh) removeObjects.push(child); });
+  removeObjects.forEach(m => scene.remove(m));
+
+  shapes.forEach((s, idx) => {
+    const geo = createGeometryForShape(s);
+    const isSelected = idx === selectedShapeIndex;
+    const meshColor = s.color || '#10b981';
+    const mat = new THREE.MeshStandardMaterial({ 
+      color: isSelected ? '#3b82f6' : meshColor, 
+      roughness: 0.3, metalness: 0.2,
+      side: THREE.DoubleSide
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    
+    let worldX = (s.x || 0) / 10;
+    let worldY = (s.y || 0) / 10;
+    let worldZ = Math.max(0, (s.z || 0)) / 10;
+
+    mesh.position.set(worldX, worldY, worldZ);
+    mesh.rotation.set(
+      THREE.MathUtils.degToRad(s.rx || 0),
+      THREE.MathUtils.degToRad(s.ry || 0),
+      THREE.MathUtils.degToRad(s.rz || 0)
+    );
+    scene.add(mesh);
+  });
+
+  infoCount.textContent = `Počet dielov: ${shapes.length}`;
+}
+
+function updateShapeParam(index, field, value){
+  if(!shapes[index]) return;
+  if(field === 'color' || field === 'holeShape'){
+    shapes[index][field] = value;
+  } else {
+    shapes[index][field] = parseFloat(value) || 0;
+    if(field === 'z') shapes[index].z = Math.max(0, shapes[index].z);
+  }
+  updateScene3D();
+}
+
+function animate3D(){
+  requestAnimationFrame(animate3D);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+function updatePanel(){
+  dimsContent.innerHTML = '';
+  if(shapes.length === 0){
+    dimsContent.innerHTML = 'Žiadne telesá v scéne.';
+    return;
+  }
+  shapes.forEach((s, i) => {
+    let card = document.createElement('div');
+    card.className = `shape-card ${i === selectedShapeIndex ? 'active' : ''}`;
+    card.onclick = (e) => { 
+      if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'BUTTON'){
+        selectedShapeIndex = i; 
+        updateScene3D(); 
+        updatePanel();
+      }
+    };
+    
+    let polySidesRow = (s.type === 'polygon') ? `
+      <div class="input-group-title">Počet strán polygónu (5-8):</div>
+      <div class="input-row">
+        <label>Strany:</label><input type="number" min="5" max="8" value="${s.polySides||6}" oninput="updateShapeParam(${i}, 'polySides', this.value)">
+      </div>` : '';
+
+    card.innerHTML = `
+      <div class="shape-title-row">
+        <strong>#${i+1} ${s.type.toUpperCase()}</strong>
+        <button class="danger" style="padding:2px 6px;" onclick="event.stopPropagation(); shapes.splice(${i},1); selectedShapeIndex=0; updateScene3D(); updatePanel();">🗑️ Zmazať</button>
+      </div>
+      <div class="input-group-title">Súradnice [Z >= 0] & Farba (mm):</div>
+      <div class="input-row">
+        <label>X:</label><input type="number" value="${s.x||0}" oninput="updateShapeParam(${i}, 'x', this.value)">
+        <label>Y:</label><input type="number" value="${s.y||0}" oninput="updateShapeParam(${i}, 'y', this.value)">
+        <label>Z:</label><input type="number" min="0" value="${Math.max(0, s.z||0)}" oninput="updateShapeParam(${i}, 'z', this.value)">
+        <label>Farba:</label><input type="color" value="${s.color||'#10b981'}" oninput="updateShapeParam(${i}, 'color', this.value)">
+      </div>
+      <div class="input-group-title">Rotácie (stupne):</div>
+      <div class="input-row">
+        <label>Rot X:</label><input type="number" value="${s.rx||0}" oninput="updateShapeParam(${i}, 'rx', this.value)">
+        <label>Rot Y:</label><input type="number" value="${s.ry||0}" oninput="updateShapeParam(${i}, 'ry', this.value)">
+        <label>Rot Z:</label><input type="number" value="${s.rz||0}" oninput="updateShapeParam(${i}, 'rz', this.value)">
+      </div>
+      <div class="input-group-title">Rozmery telesa (mm):</div>
+      <div class="input-row">
+        <label>Šírka:</label><input type="number" value="${s.w||100}" oninput="updateShapeParam(${i}, 'w', this.value)">
+        <label>Hĺbka:</label><input type="number" value="${s.h||100}" oninput="updateShapeParam(${i}, 'h', this.value)">
+        <label>Výška:</label><input type="number" value="${s.d||60}" oninput="updateShapeParam(${i}, 'd', this.value)">
+        <label>Polom/R:</label><input type="number" value="${s.r||30}" oninput="updateShapeParam(${i}, 'r', this.value)">
+      </div>
+      ${polySidesRow}
+      <div class="input-group-title">Zaoblenie & Skosenie hrán (CAD):</div>
+      <div class="input-row">
+        <label>Zaoblenie:</label><input type="number" min="0" value="${s.fillet||0}" oninput="updateShapeParam(${i}, 'fillet', this.value)" title="Zaoblenie hrán (Fillet)">
+        <label>Skosenie:</label><input type="number" min="0" value="${s.chamfer||0}" oninput="updateShapeParam(${i}, 'chamfer', this.value)" title="Skosenie hrán (Chamfer)">
+      </div>
+      <div class="input-group-title">Pozícia a veľkosť diery / dutiny (mm):</div>
+      <div class="input-row">
+        <label>Diera X:</label><input type="number" value="${s.hx||0}" oninput="updateShapeParam(${i}, 'hx', this.value)">
+        <label>Diera Y:</label><input type="number" value="${s.hy||0}" oninput="updateShapeParam(${i}, 'hy', this.value)">
+        <label>Veľk.D:</label><input type="number" value="${s.holeR||15}" oninput="updateShapeParam(${i}, 'holeR', this.value)">
+        <label>Typ D:</label>
+        <select onchange="updateShapeParam(${i}, 'holeShape', this.value)" style="width:62px; background:#090b10; color:white; border:1px solid var(--border-color); border-radius:4px; font-size:0.75rem;">
+          <option value="circle" ${s.holeShape==='circle'?'selected':''}>Kruh</option>
+          <option value="square" ${s.holeShape==='square'?'selected':''}>Štvorec</option>
+          <option value="triangle" ${s.holeShape==='triangle'?'selected':''}>Troj.</option>
+          <option value="hexagon" ${s.holeShape==='hexagon'?'selected':''}>6-uhol.</option>
+        </select>
+      </div>
+    `;
+    dimsContent.appendChild(card);
+  });
+}
+
+function exportToSTL(){
+  if(shapes.length === 0){
+    alert("V scéne sa nenachádzajú žiadne telesá na export.");
+    return;
+  }
+  try {
+    const exporter = new THREE.STLExporter();
+    const exportScene = new THREE.Scene();
+    
+    shapes.forEach((s) => {
+      const geo = createGeometryForShape(s);
+      if(s.rx) geo.rotateX(THREE.MathUtils.degToRad(s.rx));
+      if(s.ry) geo.rotateY(THREE.MathUtils.degToRad(s.ry));
+      if(s.rz) geo.rotateZ(THREE.MathUtils.degToRad(s.rz));
+      geo.translate((s.x||0)/10, (s.y||0)/10, Math.max(0, (s.z||0))/10);
+
+      const mat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+      const mesh = new THREE.Mesh(geo, mat);
+      exportScene.add(mesh);
+    });
+
+    const result = exporter.parse(exportScene, { binary: true });
+    const blob = new Blob([result], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'ErikAI_CATIA_Advanced_Model_1to1.stl';
+    document.body.appendChild(link);
+    link.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }, 200);
+  } catch (err) {
+    alert("Chyba pri generovaní STL: " + err.message);
+  }
+}
+
+function export3DHTML(){
+  const htmlContent = `<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="utf-8"/>
+<title>ErikAI CATIA Advanced 3D Model</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>
+<style>
+  body { margin: 0; overflow: hidden; background: #0b0d13; font-family: sans-serif; color: white; }
+  #info { position: absolute; top: 10px; left: 10px; padding: 8px 12px; background: rgba(30,34,45,0.8); border-radius: 6px; }
+</style>
+</head>
+<body>
+<div id="info"><h3>ErikAI CATIA Advanced Model</h3></div>
+<script>
+  THREE.Object3D.DefaultUp.set(0, 0, 1);
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b0d13);
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(180, -220, 160);
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  dirLight.position.set(150, 200, 250);
+  scene.add(dirLight);
+  const grid = new THREE.GridHelper(400, 40, 0x10b981, 0x2e364f);
+  grid.rotateX(Math.PI / 2);
+  scene.add(grid);
+
+  ${createHolePath.toString()}
+  ${buildProfileWithHole.toString()}
+  ${createGeometryForShape.toString()}
+
+  const shapesData = ${JSON.stringify(shapes)};
+  shapesData.forEach((s) => {
+    const geo = createGeometryForShape(s);
+    if(s.rx) geo.rotateX(THREE.MathUtils.degToRad(s.rx));
+    if(s.ry) geo.rotateY(THREE.MathUtils.degToRad(s.ry));
+    if(s.rz) geo.rotateZ(THREE.MathUtils.degToRad(s.rz));
+
+    const mat = new THREE.MeshStandardMaterial({ 
+      color: s.color || '#10b981', 
+      roughness: 0.3, metalness: 0.2,
+      side: THREE.DoubleSide
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set((s.x||0)/10, (s.y||0)/10, Math.max(0, (s.z||0))/10);
+    scene.add(mesh);
+  });
+
+  function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+  animate();
+  window.onresize = () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+<\/script>
+</body>
+</html>`;
+
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `ErikAI_CATIA_Advanced_Model.html`;
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => {
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }, 200);
+}
+
+window.onload = () => { init3D(); };
+</script>
+</body>
+</html>
