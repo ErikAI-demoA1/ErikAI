@@ -91,9 +91,9 @@ button.action-btn {
   <h3>⚡ ErikAI 3D Craft v5.7 (Horda)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
-  <div class="stat-row"><span>Úložisko DB:</span> <span id="storageSizeVal" class="stat-val">0 KB</span></div>
+  <div class="stat-row"><span>Úložisko DB (KB / MB):</span> <span id="storageSizeVal" class="stat-val">0 KB</span></div>
   <div class="stat-row"><span>Zlých nepriateľov:</span> <span id="enemyCountVal" class="stat-val">1</span></div>
-  <div class="stat-row"><span>FPS (Max Turbo):</span> <span id="fpsVal" class="stat-val">60</span></div>
+  <div class="stat-row"><span>FPS (Ultra Plynulé):</span> <span id="fpsVal" class="stat-val">60</span></div>
   <div class="warning-text">🔥 Dohľad 45 | Horda nepriateľov aktívna!</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Úplne Nový Svet</button>
 </div>
@@ -144,11 +144,11 @@ let currentSeed = Math.floor(Math.random() * 899999 + 100000);
 let noise = SimplexNoise(currentSeed);
 
 let scene, camera, renderer, player;
-let enemies = []; // Zoznam nepriateľov v hode
+let enemies = [];
 let worldMesh = null;
 let solidBlocks = new Set();
 let savedWorldData = {};
-let RENDER_DISTANCE = 45; // Dohľad 45 blokov
+let RENDER_DISTANCE = 45; // Zvýšený dohľad na 45 blokov
 let isDead = false;
 let respawnProtection = 0;
 let db = null;
@@ -201,7 +201,6 @@ async function init() {
   playerPos.z = getSafeSpawnHeight(0, 0);
   playerVelocityZ = 0;
 
-  // Vytvoríme prvého nepriateľa v bezpečnej vzdialenosti
   spawnNewEnemy(playerPos.x + 28, playerPos.y + 28);
 
   updateWorldGeometry();
@@ -534,7 +533,6 @@ function resetWorld() {
     worldMesh = null;
   }
 
-  // Vymažeme starých nepriateľov zo scény
   enemies.forEach(e => scene.remove(e.mesh));
   enemies = [];
   
@@ -565,7 +563,6 @@ function respawnPlayer(forceTeleport = false) {
   playerVelocityZ = 0;
   isGrounded = true;
 
-  // Vymažeme nepriateľov a vytvoríme nového v bezpečí (odstup 27 blokov)
   enemies.forEach(e => scene.remove(e.mesh));
   enemies = [];
   spawnNewEnemy(playerPos.x + 28, playerPos.y + 28);
@@ -766,19 +763,17 @@ function updatePlayerMovement() {
   player.rotation.z = playerAngle;
   updateCharacterAnimation(player, isMoving, walkAnimationTime += 0.15);
 
-  // EDGE TRIGGER (Dohľad 45, prekreslenie pri priblížení na posledných 5 blokov, teda posun o 40 blokov):
+  // ULTIMATE EDGE TRIGGER (Dohľad 45, prekreslenie pri priblížení na posledných 5 blokov, teda posun o 40 blokov):
   if (Math.abs(playerPos.x - lastChunkUpdatePos.x) > 40 || Math.abs(playerPos.y - lastChunkUpdatePos.y) > 40) {
     lastChunkUpdatePos.x = playerPos.x;
     lastChunkUpdatePos.y = playerPos.y;
     updateWorldGeometry();
 
-    // S každým prekreslením sveta spawneme nového nepriateľa v bezpečnej vzdialenosti (27 blokov)
     const spawnAngle = Math.random() * Math.PI * 2;
     const spawnDist = 27;
     spawnNewEnemy(playerPos.x + Math.cos(spawnAngle) * spawnDist, playerPos.y + Math.sin(spawnAngle) * spawnDist);
   }
 
-  // Fyzika a pohyb všetkých nepriateľov v hode
   for (let i = 0; i < enemies.length; i++) {
     let en = enemies[i];
     const dx = playerPos.x - en.pos.x;
