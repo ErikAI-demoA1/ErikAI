@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>RocketSK — Goals, AI & Jump (ErikAI)</title>
+<title>RocketSK v3.0 — Rocket League Style (ErikAI)</title>
 
 <style>
 html, body {
     margin: 0;
     height: 100%;
     font-family: 'Inter', Arial, Helvetica, sans-serif;
-    background: linear-gradient(160deg, #061426 0%, #0a1a36 100%);
+    background: radial-gradient(circle at center, #0a1f3d 0%, #030810 100%);
     color: #fff;
     overflow: hidden;
 }
@@ -20,16 +20,53 @@ html, body {
     position: fixed;
     left: 12px;
     top: 12px;
-    padding: 12px 16px;
+    padding: 12px 18px;
     border-radius: 12px;
-    font-size: 14px;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(10px);
+    font-size: 15px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(12px);
     z-index: 40;
-    box-shadow: 0 0 18px rgba(0, 255, 200, 0.45);
+    box-shadow: 0 0 20px rgba(0, 255, 200, 0.4);
     color: #00ffe0;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.5px;
+    border: 1px solid rgba(0,255,220,0.2);
+}
+
+/* --- Boost Bar Container --- */
+#boostContainer {
+    position: fixed;
+    right: 12px;
+    top: 60px;
+    width: 160px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 8px 12px;
+    z-index: 40;
+    border: 1px solid rgba(255,140,0,0.3);
+    box-shadow: 0 0 15px rgba(255,140,0,0.2);
+}
+#boostLabel {
+    font-size: 11px;
+    color: #ff9d00;
+    font-weight: 800;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+}
+#boostBarBg {
+    width: 100%;
+    height: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 5px;
+    overflow: hidden;
+}
+#boostBarFill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff9d00, #ff4500);
+    box-shadow: 0 0 10px #ff4500;
+    transition: width 0.1s linear;
 }
 
 /* --- Mini info --- */
@@ -40,21 +77,22 @@ html, body {
     padding: 10px 14px;
     border-radius: 10px;
     font-size: 13px;
-    background: rgba(0, 0, 0, 0.25);
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(6px);
     z-index: 40;
     color: #a0d4ff;
     font-weight: 500;
-    box-shadow: 0 0 12px rgba(0, 128, 255, 0.35);
+    box-shadow: 0 0 12px rgba(0, 128, 255, 0.3);
+    border: 1px solid rgba(0,128,255,0.2);
 }
 
 /* --- Note / tip --- */
 .note {
     position: fixed;
     left: 12px;
-    top: 60px;
-    color: #9fb2d1;
-    font-size: 13px;
+    top: 66px;
+    color: #8faac9;
+    font-size: 12px;
     z-index: 40;
     text-shadow: 0 0 4px rgba(0,0,0,0.5);
 }
@@ -64,25 +102,32 @@ html, body {
     position: fixed;
     left: 50%;
     top: 40%;
-    transform: translate(-50%, -50%);
-    background: linear-gradient(90deg, #ff7a3c, #ff3f3f);
-    padding: 24px 32px;
-    border-radius: 14px;
-    font-size: 38px;
-    font-weight: 800;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: linear-gradient(135deg, #ff7a3c, #ff1e1e);
+    padding: 28px 48px;
+    border-radius: 18px;
+    font-size: 42px;
+    font-weight: 900;
     color: #fff;
     z-index: 60;
     display: none;
     text-align: center;
-    box-shadow: 0 0 30px rgba(255,120,60,0.8), 0 0 50px rgba(255,255,255,0.3);
+    box-shadow: 0 0 40px rgba(255,120,60,0.9), inset 0 0 20px rgba(255,255,255,0.5);
     text-transform: uppercase;
+    letter-spacing: 2px;
+    animation: goalPop 0.4s ease forwards;
+}
+
+@keyframes goalPop {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 
 /* --- Joystick --- */
 #ui {
     position: fixed;
-    left: 12px;
-    bottom: 12px;
+    left: 16px;
+    bottom: 16px;
     display: flex;
     gap: 12px;
     align-items: center;
@@ -93,118 +138,119 @@ html, body {
 .joystick {
     width: 130px; height: 130px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.04);
-    backdrop-filter: blur(4px);
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
     justify-content: center;
     touch-action: none;
     pointer-events: auto;
-    box-shadow: 0 0 12px rgba(0,255,220,0.35), inset 0 0 6px rgba(0,255,220,0.2);
-    border: 2px solid rgba(0,255,220,0.3);
+    box-shadow: 0 0 16px rgba(0,255,220,0.3), inset 0 0 8px rgba(0,255,220,0.2);
+    border: 2px solid rgba(0,255,220,0.35);
 }
 
 .stick {
     width: 56px; height: 56px;
     border-radius: 50%;
-    background: rgba(0,255,220,0.12);
+    background: rgba(0,255,220,0.2);
     display: flex;
     align-items: center;
     justify-content: center;
     transform: translate(0,0);
-    box-shadow: 0 0 10px rgba(0,255,220,0.45);
-    border: 1px solid rgba(0,255,220,0.5);
+    box-shadow: 0 0 12px rgba(0,255,220,0.5);
+    border: 1px solid rgba(0,255,220,0.7);
 }
 
 /* --- Right-side buttons --- */
 #controlsRight {
     position: fixed;
-    right: 12px;
-    bottom: 12px;
+    right: 16px;
+    bottom: 16px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
     pointer-events: none;
     z-index: 40;
 }
 
 .btn {
-    padding: 12px 18px;
-    border-radius: 12px;
+    padding: 14px 22px;
+    border-radius: 14px;
     border: none;
-    background: linear-gradient(145deg, #1db954, #1ed760);
+    background: linear-gradient(145deg, #ff8c00, #ff4500);
     color: white;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     pointer-events: auto;
-    transition: all 0.2s ease;
-    box-shadow: 0 0 14px rgba(0,255,180,0.4);
-    text-shadow: 0 0 2px rgba(0,0,0,0.4);
+    transition: all 0.15s ease;
+    box-shadow: 0 0 16px rgba(255,100,0,0.5);
+    text-shadow: 0 0 3px rgba(0,0,0,0.5);
+    font-size: 14px;
+    letter-spacing: 0.5px;
 }
 
-.btn:hover { 
-    background: linear-gradient(145deg, #1ed760, #1db954);
-    box-shadow: 0 0 18px rgba(0,255,180,0.6);
+.btn:active { transform: scale(0.94); }
+
+.btn.jump-btn {
+    background: linear-gradient(145deg, #00bfff, #1e90ff);
+    box-shadow: 0 0 16px rgba(0,191,255,0.5);
 }
 
 .btn.ghost { 
     background: rgba(255,255,255,0.08);
     color: #00ffe0;
-    box-shadow: 0 0 10px rgba(0,255,220,0.3);
+    box-shadow: 0 0 12px rgba(0,255,220,0.3);
+    border: 1px solid rgba(0,255,220,0.2);
 }
 
 /* --- Reset / Start Button --- */
 #startBtn {
     position: fixed;
     top: 12px;
-    right: 12px;
-    padding: 12px 20px;
+    right: 140px;
+    padding: 10px 18px;
     border-radius: 12px;
     border: none;
-    background: linear-gradient(145deg, #ff4b4b, #ff6b6b);
-    color: #fff;
+    background: linear-gradient(145deg, #00ffcc, #00b386);
+    color: #030810;
     z-index: 50;
     cursor: pointer;
-    font-weight: 700;
-    box-shadow: 0 0 16px rgba(255,75,75,0.6), 0 0 12px rgba(255,180,180,0.35);
+    font-weight: 800;
+    box-shadow: 0 0 15px rgba(0,255,200,0.5);
     transition: all 0.2s ease;
 }
 
 #startBtn:hover { 
-    background: linear-gradient(145deg, #ff6b6b, #ff4b4b);
-    box-shadow: 0 0 22px rgba(255,100,100,0.7), 0 0 16px rgba(255,200,200,0.4);
+    background: linear-gradient(145deg, #00b386, #00ffcc);
+    box-shadow: 0 0 20px rgba(0,255,200,0.8);
 }
 
-/* --- Canvas --- */
 canvas { display: block; }
-
-/* --- Responsive Joystick --- */
-@media (min-width: 900px) {
-    .joystick { width: 110px; height: 110px; }
-    .stick { width: 48px; height: 48px; }
-}
-    </style>
-
+</style>
 </head>
 <body>
 
 <!-- HUD -->
-<button id="startBtn">Spusti / Reset</button>
-<div id="hud">goly — Red: <span id="scoreA">0</span> • Blue: <span id="scoreB">0</span> • speed: <span id="speed">0</span></div>
-<div id="mini">Aréna: <span id="arenaSize">200</span>m</div>
-<div class="note">RocketBall — teraz s bránami, skóre, boost, drift, AI & jump</div>
-<div class="goal-banner" id="goalBanner">GOAL!</div>
+<button id="startBtn">ŠTART / RESET</button>
+<div id="hud">RED: <span id="scoreA">0</span> • BLUE: <span id="scoreB">0</span> • RÝCHLOSŤ: <span id="speed">0</span> km/h</div>
+<div id="mini">Aréna: 200m</div>
+<div class="note">🎮 Ovládanie: Joystick + BOOST + JUMP (dvojitý skok / 360° flipy)</div>
+<div id="boostContainer">
+    <div id="boostLabel">BOOST</div>
+    <div id="boostBarBg"><div id="boostBarFill"></div></div>
+</div>
+<div class="goal-banner" id="goalBanner">GÓÓÓL!</div>
 
 <!-- UI -->
 <div id="ui">
-  <div id="joy" class="joystick" aria-label="Joystick">
+  <div id="joy" class="joystick">
     <div id="stick" class="stick"></div>
   </div>
 </div>
 
 <div id="controlsRight">
-  <button id="boostBtn" class="btn">BOOST</button>
-  <button id="jumpBtn" class="btn">JUMP</button>
+  <button id="boostBtn" class="btn">⚡ BOOST</button>
+  <button id="jumpBtn" class="btn jump-btn">🚀 JUMP / FLIP</button>
   <button id="cameraBtn" class="btn ghost">Kamera: Follow</button>
 </div>
 
@@ -213,357 +259,378 @@ canvas { display: block; }
 // --- Scene / Objects ---
 let scene, camera, renderer;
 let car, ball, ground, aiCar;
-let clock, playing=false;
-let carSpeed=0, targetSpeed=0, steer=0;
+let clock, playing = false;
+let carSpeed = 0, targetSpeed = 0, steer = 0;
 let ballVel = new THREE.Vector3();
 let arena = 200;
 const hudSpeed = document.getElementById('speed');
 const scoreAEl = document.getElementById('scoreA');
 const scoreBEl = document.getElementById('scoreB');
 const goalBanner = document.getElementById('goalBanner');
-document.getElementById('arenaSize').innerText = arena;
-let score = {A:0,B:0};
-let goalCooldown=false;
+const boostBarFill = document.getElementById('boostBarFill');
+let score = {A: 0, B: 0};
+let goalCooldown = false;
 
-// Tuned physics
-let maxSpeed=16, accel=37, brake=46, driftFactor=0.83;
-let boostMultiplier=2.6, boostDuration=1200, boostDrainRate=80, boostRechargeRate=25;
-let boost = {val:100,max:100,active:false};
+// Rocket League fyzika & tuning
+let maxSpeed = 24, accel = 45, brake = 55;
+let boostMultiplier = 2.4, boostDuration = 1500, boostDrainRate = 70, boostRechargeRate = 30;
+let boost = {val: 100, max: 100, active: false};
 
 // Arena / Goals
-const goalWidthRatio = 0.36, goalDepth=2.5;
-let half;
+const goalWidthRatio = 0.38, goalDepth = 3;
+let half = arena / 2;
 
-// --- Jump ---
-let isJumping=false, jumpVel=0;
-function jumpPlayer(){ if(!playing || isJumping) return; isJumping=true; jumpVel=9; }
-function updateJump(dt){
-  if(isJumping){
-    car.position.y += jumpVel*dt;
-    jumpVel -= 15*dt;
-    if(car.position.y<=0.5){ car.position.y=0.5; isJumping=false; jumpVel=0; }
-  }
+// --- Jump & Rocket League 360° Aerial / Flips ---
+let isJumping = false, jumpVel = 0, canDoubleJump = false;
+let carRotationVelocity = new THREE.Vector3(); // pre 360° rotácie/flipy vo vzduchu
+
+function jumpPlayer(){
+    if(!playing) return;
+    if(!isJumping){
+        // Prvý skok
+        isJumping = true;
+        jumpVel = 14;
+        canDoubleJump = true;
+    } else if(canDoubleJump) {
+        // Druhý skok / Flip (360° rotácia do smeru jazdy alebo do strany)
+        jumpVel = 12;
+        canDoubleJump = false;
+        carRotationVelocity.set(Math.random()*15 - 7.5, Math.random()*20 - 10, Math.random()*15 - 7.5);
+    }
 }
 
-// --- AI ---
+function updateJump(dt){
+    if(isJumping){
+        car.position.y += jumpVel * dt;
+        jumpVel -= 35 * dt; // gravitácia
+
+        // Rotácia auta pri flipoch vo vzduchu
+        car.rotation.x += carRotationVelocity.x * dt;
+        car.rotation.y += carRotationVelocity.y * dt;
+        car.rotation.z += carRotationVelocity.z * dt;
+
+        if(car.position.y <= 0.45){
+            car.position.y = 0.45;
+            isJumping = false;
+            jumpVel = 0;
+            canDoubleJump = false;
+            // Vyrovnanie rotácie auta späť na zem
+            car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, 0, 0.3);
+            car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, 0, 0.3);
+            carRotationVelocity.set(0,0,0);
+        }
+    }
+}
+
+// --- Vylepšená AI pre súpera ---
 function initAI(){
-  aiCar = new THREE.Group(); // skupina pre celé auto
+    aiCar = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({color: 0x1e90ff, roughness: 0.2, metalness: 0.8});
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.6, 2.6), bodyMat);
+    body.position.y = 0.5;
+    aiCar.add(body);
 
-  // --- Karoséria auta ---
-  const bodyMat = new THREE.MeshStandardMaterial({
-    color: 0x1e90ff,       // luxusná modrá
-    roughness: 0.2,        // hladký lesklý povrch
-    metalness: 0.7,        // kovový efekt
-    emissive: 0x001a33,
-    emissiveIntensity: 0.2
-  });
-  const bodyGeo = new THREE.BoxGeometry(1.9, 0.6, 2.6);
-  const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.position.y = 0.5;
-  aiCar.add(body);
+    const wheelMat = new THREE.MeshStandardMaterial({color: 0x111, roughness: 0.5});
+    const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.2, 24);
+    [[-0.9, 0.15, 1.1], [0.9, 0.15, 1.1], [-0.9, 0.15, -1.1], [0.9, 0.15, -1.1]].forEach(pos=>{
+        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(...pos);
+        aiCar.add(wheel);
+    });
+    aiCar.position.set(0, 0.45, 20);
+    scene.add(aiCar);
+}
 
-  // --- Kolesá ---
-  const wheelMat = new THREE.MeshStandardMaterial({color:0x222222, roughness:0.5, metalness:0.3});
-  const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.2, 24);
-  const wheelPositions = [
-    [-0.9, 0.15, 1.1], [0.9, 0.15, 1.1],   // predné
-    [-0.9, 0.15, -1.1], [0.9, 0.15, -1.1]  // zadné
-  ];
-  wheelPositions.forEach(pos=>{
-    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-    wheel.rotation.z = Math.PI / 2; // otočenie do správnej osi
-    wheel.position.set(...pos);
-    aiCar.add(wheel);
-  });
-
-  // --- Svetlá ---
-  const lightMat = new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1});
-  const headLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.1,0.05), lightMat);
-  const headRight = headLeft.clone();
-  headLeft.position.set(-0.6, 0.35, 1.3);
-  headRight.position.set(0.6, 0.35, 1.3);
-  aiCar.add(headLeft, headRight);
-
-  // --- Poloha auta ---
-  aiCar.position.set(0, 0, 10);
-
-  // --- Pridanie do scény ---
-  scene.add(aiCar);
-    }
-    
+let aiJumpTimer = 0;
 function updateAI(dt){
-  if(!playing) return;
+    if(!playing) return;
+    const futureBall = ball.position.clone().add(ballVel.clone().multiplyScalar(0.4));
+    const dirToBall = new THREE.Vector3().subVectors(futureBall, aiCar.position);
+    const dist = dirToBall.length();
 
-  // --- Predikcia lopty ---
-  const futureBall = ball.position.clone().add(ballVel.clone().multiplyScalar(0.5)); // predpovedá pohyb lopty
-
-  // --- Vektor od auta k lopte ---
-  const dirToBall = new THREE.Vector3().subVectors(futureBall, aiCar.position);
-  const dist = dirToBall.length();
-
-  // --- Dynamická rýchlosť ---
-  let desiredSpeed = maxSpeed * 0.6 + Math.min(maxSpeed*0.4, dist*2); // základ + prispôsobenie podľa vzdialenosti
-
-  // --- Obranné správanie ---
-  const halfArena = arena/2-0.7;
-  if(futureBall.z < 0){ // lopta je blízko AI brány
-    const defenseOffset = new THREE.Vector3(0,0,halfArena-6);
-    dirToBall.add(defenseOffset.sub(aiCar.position).multiplyScalar(0.6));
-    desiredSpeed = maxSpeed*0.9; // rýchlejší návrat na obranu
-  }
-
-  // --- Otáčanie auta smerom k lopte ---
-  const targetAngle = Math.atan2(dirToBall.x, dirToBall.z);
-  let angleDiff = targetAngle - aiCar.rotation.y;
-  angleDiff = ((angleDiff + Math.PI) % (2*Math.PI)) - Math.PI;
-  const turnSpeed = Math.min(3, Math.max(1.5, dist*0.5)); // adaptívna rýchlosť otáčania
-  aiCar.rotation.y += angleDiff * turnSpeed * dt;
-
-  // --- Pohyb dopredu ---
-  const forward = new THREE.Vector3(Math.sin(aiCar.rotation.y),0,Math.cos(aiCar.rotation.y));
-  aiCar.position.addScaledVector(forward, desiredSpeed*dt);
-
-  // --- Kolízia s loptou ---
-  const rCar=1.42, rBall=0.95, minDist=rCar+rBall;
-  const carToBall = new THREE.Vector3().subVectors(ball.position, aiCar.position);
-  if(carToBall.length() < minDist){
-    const n = carToBall.clone().normalize();
-    ball.position.addScaledVector(n, (minDist-carToBall.length())+0.01);
-    const impulse = n.clone().multiplyScalar(Math.max(1, desiredSpeed)+1.5);
-    impulse.y = Math.min(3, 0.9 + Math.abs(desiredSpeed)*0.25); // vyšší odraz lopty
-    ballVel.add(impulse);
-    aiCar.position.addScaledVector(n, -0.03*Math.min(desiredSpeed,4));
-  }
-
-  // --- Ochrana pred opustením arény ---
-  aiCar.position.x = Math.max(-halfArena, Math.min(halfArena, aiCar.position.x));
-  aiCar.position.z = Math.max(-halfArena, Math.min(halfArena, aiCar.position.z));
+    let desiredSpeed = maxSpeed * 0.75;
+    if(futureBall.z > 15) { // Obranný režim
+        dirToBall.add(new THREE.Vector3(0,0,half - 5).sub(aiCar.position));
     }
+
+    const targetAngle = Math.atan2(dirToBall.x, dirToBall.z);
+    let angleDiff = targetAngle - aiCar.rotation.y;
+    angleDiff = ((angleDiff + Math.PI) % (2 * Math.PI)) - Math.PI;
+    aiCar.rotation.y += angleDiff * 3.5 * dt;
+
+    const forward = new THREE.Vector3(Math.sin(aiCar.rotation.y), 0, Math.cos(aiCar.rotation.y));
+    aiCar.position.addScaledVector(forward, desiredSpeed * dt);
+
+    // AI skok, ak je lopta blízko a vo výške
+    aiJumpTimer += dt;
+    if(dist < 5 && ball.position.y > 1 && aiJumpTimer > 1.5) {
+        aiJumpTimer = 0;
+        ballVel.y += 6;
+    }
+
+    // Kolízia AI s loptou
+    const carToBall = new THREE.Vector3().subVectors(ball.position, aiCar.position);
+    if(carToBall.length() < 2.2){
+        const n = carToBall.clone().normalize();
+        ball.position.addScaledVector(n, 0.1);
+        ballVel.add(n.clone().multiplyScalar(16));
+        ballVel.y += 4;
+    }
+
+    const halfArena = arena/2 - 1;
+    aiCar.position.x = Math.max(-halfArena, Math.min(halfArena, aiCar.position.x));
+    aiCar.position.z = Math.max(-halfArena, Math.min(halfArena, aiCar.position.z));
+}
 
 // --- Init Scene ---
 function init(){
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x061426);
-  camera = new THREE.PerspectiveCamera(80, window.innerWidth/window.innerHeight,0.1,4000);
-  camera.position.set(0,7,27);
-  renderer = new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(window.innerWidth,window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-  document.body.appendChild(renderer.domElement);
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x040b16);
+    scene.fog = new THREE.FogExp2(0x040b16, 0.008);
 
-  const hemi = new THREE.HemisphereLight(0xffffff,0x222a3a,0.8); scene.add(hemi);
-  const dir = new THREE.DirectionalLight(0xffffff,0.6); dir.position.set(8,20,10); scene.add(dir);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 4000);
+    renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
 
-  const gmat = new THREE.MeshStandardMaterial({color:0x123442, roughness:0.95});
-  ground = new THREE.Mesh(new THREE.PlaneGeometry(arena,arena,6,6), gmat);
-  ground.rotation.x=-Math.PI/2; scene.add(ground);
+    // Svetlá
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x112244, 0.7); 
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9); 
+    dir.position.set(30, 60, 30);
+    dir.castShadow = true;
+    scene.add(dir);
 
-  // --- Profesionálne hráčove auto ---
-const carMat = new THREE.MeshStandardMaterial({
-  color: 0xff6b6b,        // základná farba auta
-  roughness: 0.2,         // hladký povrch
-  metalness: 0.8,         // realistický kovový lesk
-  envMapIntensity: 1,     // intenzita odrazov
-  clearcoat: 1,            // vrchný lesklý lak
-  clearcoatRoughness: 0.05 // veľmi jemný lesk
-});
-const carGeo = new THREE.BoxGeometry(1.9, 0.6, 2.6, 5, 2, 5); // viac segmentov = hladší tvar
-car = new THREE.Mesh(carGeo, carMat);
-car.position.set(0, 0.5, 0);
-car.castShadow = true;
-car.receiveShadow = true;
-scene.add(car);
+    // Aréna podlaha s mriežkou v štýle Rocket League
+    const gmat = new THREE.MeshStandardMaterial({color: 0x08162b, roughness: 0.8, metalness: 0.2});
+    ground = new THREE.Mesh(new THREE.PlaneGeometry(arena, arena, 30, 30), gmat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
 
-// --- Profesionálna lopta ---
-const ballMat = new THREE.MeshStandardMaterial({
-  color: 0xffff7f,
-  roughness: 0.15,      // hladký povrch
-  metalness: 0.3,       // jemný kovový lesk
-  envMapIntensity: 0.9  // realistické odrazy
-});
-const ballGeo = new THREE.SphereGeometry(0.95, 64, 64); // viac segmentov = hladší a detailnejší
-ball = new THREE.Mesh(ballGeo, ballMat);
-ball.position.set(6, 0.95, -6);
-ball.castShadow = true;
-ball.receiveShadow = true;
-scene.add(ball);
+    // Stredový kruh
+    const ringGeo = new THREE.RingGeometry(14, 15, 32);
+    const ringMat = new THREE.MeshBasicMaterial({color: 0x00ffcc, side: THREE.DoubleSide, transparent: true, opacity: 0.4});
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.02;
+    scene.add(ring);
+
+    // Hráčovo auto (Luxusný športiak)
+    car = new THREE.Group();
+    const carMat = new THREE.MeshStandardMaterial({color: 0xff3b3b, roughness: 0.2, metalness: 0.8, clearcoat: 1});
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 2.6), carMat);
+    body.position.y = 0.4;
+    car.add(body);
+
+    const cabinMat = new THREE.MeshStandardMaterial({color: 0x111, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.8});
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.4, 1.4), cabinMat);
+    cabin.position.set(0, 0.75, -0.1);
+    car.add(cabin);
+    car.position.set(0, 0.45, 0);
+    scene.add(car);
+
+    // Lopta (Futbalová lopta Rocket League štýl)
+    const ballMat = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 0.2, metalness: 0.1, emissive: 0x222222});
+    ball = new THREE.Mesh(new THREE.SphereGeometry(1.1, 32, 32), ballMat);
+    ball.position.set(0, 1.1, -10);
+    scene.add(ball);
+
+    // Ochranné steny arény so žiariacimi neónmi
+    const wallMat = new THREE.MeshStandardMaterial({color: 0x0d2342, roughness: 0.5, metalness: 0.6});
+    const neonMat = new THREE.MeshBasicMaterial({color: 0x00ffcc});
+    const w = arena / 2;
     
-  // Arena walls
-  const wallMat = new THREE.MeshStandardMaterial({color:0xADFF2F});
-  const w = arena/2;
-  const wallGeoH = new THREE.BoxGeometry(arena+2,2.2,1);
-  const wallGeoV = new THREE.BoxGeometry(1,2.2,arena+2);
-  scene.add(new THREE.Mesh(wallGeoH, wallMat).position.set(0,1,-w));
-  scene.add(new THREE.Mesh(wallGeoH, wallMat).position.set(0,1,w));
-  scene.add(new THREE.Mesh(wallGeoV, wallMat).position.set(-w,1,0));
-  scene.add(new THREE.Mesh(wallGeoV, wallMat).position.set(w,1,0));
+    const wallH = new THREE.Mesh(new THREE.BoxGeometry(arena, 4, 1.5), wallMat);
+    wallH.position.set(0, 2, -w);
+    scene.add(wallH);
 
-  // --- Profesionálne bránky ---
-half = arena / 2;
-const goalWidth = arena * goalWidthRatio;
-const goalHeight = 32; // realistická výška bránky
-const goalDepth = 2.5;
+    const wallH2 = wallH.clone();
+    wallH2.position.z = w;
+    scene.add(wallH2);
 
-// --- Ľavá (červená) bránka ---
-const goalLeftMat = new THREE.MeshStandardMaterial({
-    color: 0xff4b4b,
-    metalness: 0.6,       // kovový efekt
-    roughness: 0.2,       // jemný lesk
-    emissive: 0x220000,   // jemné žiarenie
-    emissiveIntensity: 0.3,
-});
-const gLeft = new THREE.Mesh(
-    new THREE.BoxGeometry(goalWidth, goalHeight, goalDepth), 
-    goalLeftMat
-);
-gLeft.position.set(0, goalHeight / 2, -half + goalDepth / 2 + 0.1);
+    const wallV = new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arena), wallMat);
+    wallV.position.set(-w, 2, 0);
+    scene.add(wallV);
 
-// --- Pridanie mriežky (netu) ---
-const netMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.4,
-    side: THREE.DoubleSide
-});
-const net = new THREE.Mesh(new THREE.PlaneGeometry(goalWidth, goalHeight), netMat);
-net.position.set(0, goalHeight / 2, -half + goalDepth + 0.01); // jemne za bránkou
-scene.add(net);
+    const wallV2 = wallV.clone();
+    wallV2.position.x = w;
+    scene.add(wallV2);
 
-// --- Pravá (modrá) bránka ---
-const goalRightMat = new THREE.MeshStandardMaterial({
-    color: 0x4b9eff,
-    metalness: 0.6,
-    roughness: 0.2,
-    emissive: 0x002255,
-    emissiveIntensity: 0.3,
-});
-const gRight = new THREE.Mesh(
-    new THREE.BoxGeometry(goalWidth, goalHeight, goalDepth), 
-    goalRightMat
-);
-gRight.position.set(0, goalHeight / 2, half - goalDepth / 2 - 0.1);
+    // --- Bránky s neónovým rámom ---
+    const goalWidth = arena * goalWidthRatio;
+    const goalHeight = 14;
+    const frameMat = new THREE.MeshBasicMaterial({color: 0xff3b3b}); // Červená bránka
+    
+    // Ľavá bránka (Červená)
+    const gLeftGroup = new THREE.Group();
+    const postL = new THREE.Mesh(new THREE.BoxGeometry(0.6, goalHeight, goalDepth), frameMat);
+    postL.position.set(-goalWidth/2, goalHeight/2, 0);
+    const postR = postL.clone();
+    postR.position.x = goalWidth/2;
+    const crossbar = new THREE.Mesh(new THREE.BoxGeometry(goalWidth, 0.6, goalDepth), frameMat);
+    crossbar.position.set(0, goalHeight, 0);
+    gLeftGroup.add(postL, postR, crossbar);
+    gLeftGroup.position.set(0, 0, -w + goalDepth/2);
+    scene.add(gLeftGroup);
 
-// --- Mriežka (net) pre modrú bránku ---
-const netRight = new THREE.Mesh(new THREE.PlaneGeometry(goalWidth, goalHeight), netMat);
-netRight.position.set(0, goalHeight / 2, half - goalDepth - 0.01);
-scene.add(gLeft);
-scene.add(gRight);
-scene.add(netRight);
-  initAI();
+    // Pravá bránka (Modrá)
+    const frameMatBlue = new THREE.MeshBasicMaterial({color: 0x00bfff});
+    const gRightGroup = new THREE.Group();
+    const postL2 = new THREE.Mesh(new THREE.BoxGeometry(0.6, goalHeight, goalDepth), frameMatBlue);
+    postL2.position.set(-goalWidth/2, goalHeight/2, 0);
+    const postR2 = postL2.clone();
+    postR2.position.x = goalWidth/2;
+    const crossbar2 = new THREE.Mesh(new THREE.BoxGeometry(goalWidth, 0.6, goalDepth), frameMatBlue);
+    crossbar2.position.set(0, goalHeight, 0);
+    gRightGroup.add(postL2, postR2, crossbar2);
+    gRightGroup.position.set(0, 0, w - goalDepth/2);
+    scene.add(gRightGroup);
 
-  clock = new THREE.Clock();
-  window.addEventListener('resize', onResize);
-  animate();
+    initAI();
+
+    clock = new THREE.Clock();
+    window.addEventListener('resize', onResize);
+    animate();
 }
 
-// Resize
-function onResize(){ camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); }
-
-// Reset positions
-function resetPositions(afterGoal=false){
-  car.position.set(0,0.5, afterGoal? (Math.random()>0.5?6:-6):0);
-  car.rotation.set(0,0,0); carSpeed=0; targetSpeed=0; steer=0;
-  ball.position.set((Math.random()-0.5)*6,0.95,(Math.random()-0.5)*6 - (afterGoal? (Math.random()>0.5?-8:8):0));
-  ballVel.set(0,0,0);
-  boost.val=boost.max; boost.active=false;
-  aiCar.position.set(0,0.5, afterGoal? -6 : 10);
-  updateHUD();
+function onResize(){ 
+    camera.aspect = window.innerWidth / window.innerHeight; 
+    camera.updateProjectionMatrix(); 
+    renderer.setSize(window.innerWidth, window.innerHeight); 
 }
 
-// HUD
+function resetPositions(afterGoal = false){
+    car.position.set(0, 0.45, afterGoal ? 12 : 0);
+    car.rotation.set(0, 0, 0); 
+    carSpeed = 0; targetSpeed = 0; steer = 0;
+    ball.position.set(0, 1.1, afterGoal ? 0 : -8);
+    ballVel.set(0, 0, 0);
+    boost.val = boost.max; 
+    boost.active = false;
+    aiCar.position.set(0, 0.45, afterGoal ? -12 : 20);
+    aiCar.rotation.set(0, Math.PI, 0);
+}
+
 function updateHUD(){
-  hudSpeed.innerText = Math.round(Math.abs(carSpeed*10))/10;
-  scoreAEl.innerText = score.A; scoreBEl.innerText = score.B;
+    hudSpeed.innerText = Math.round(Math.abs(carSpeed * 7.5));
+    scoreAEl.innerText = score.A; 
+    scoreBEl.innerText = score.B;
+    boostBarFill.style.width = `${(boost.val / boost.max) * 100}%`;
 }
 
-// Goal banner
-function showGoalBanner(){ goalBanner.style.display=''; setTimeout(()=>goalBanner.style.display='none',1400); }
+function showGoalBanner(){ 
+    goalBanner.style.display = 'block'; 
+    setTimeout(() => goalBanner.style.display = 'none', 1600); 
+}
 
-// Goal detection
 function checkGoal(){
-  if(goalCooldown) return;
-  const halfArena = arena/2-0.7;
-  const goalWidth = arena*goalWidthRatio;
-  const gx = Math.abs(ball.position.x);
-  if(ball.position.z<-halfArena+0.2 && gx<goalWidth/2){ score.B++; scoreBEl.innerText=score.B; goalHappened('B'); }
-  else if(ball.position.z>halfArena-0.2 && gx<goalWidth/2){ score.A++; scoreAEl.innerText=score.A; goalHappened('A'); }
+    if(goalCooldown) return;
+    const halfArena = arena / 2 - 1;
+    const goalWidth = arena * goalWidthRatio;
+    const gx = Math.abs(ball.position.x);
+
+    if(ball.position.z < -halfArena && gx < goalWidth / 2){ 
+        score.B++; goalHappened('BLUE'); 
+    } else if(ball.position.z > halfArena && gx < goalWidth / 2){ 
+        score.A++; goalHappened('RED'); 
+    }
 }
+
 function goalHappened(team){
-  goalCooldown=true;
-  showGoalBanner();
-  playing=false;
-  setTimeout(()=>{
-    resetPositions(true);
-    playing=true;
-    goalCooldown=false;
-  },1400);
+    goalCooldown = true;
+    showGoalBanner();
+    playing = false;
+    setTimeout(() => {
+        resetPositions(true);
+        playing = true;
+        goalCooldown = false;
+    }, 1600);
 }
 
-// --- Animate ---
+// --- Hlavná Animačná Slučka ---
 function animate(){
-  requestAnimationFrame(animate);
-  const dt = Math.min(0.05, clock.getDelta());
+    requestAnimationFrame(animate);
+    const dt = Math.min(0.05, clock.getDelta());
 
-  if(playing){
-    if(targetSpeed>carSpeed){ carSpeed+=accel*dt; if(carSpeed>targetSpeed) carSpeed=targetSpeed; }
-    else if(targetSpeed<carSpeed){ carSpeed-=brake*dt; if(carSpeed<targetSpeed) carSpeed=targetSpeed; }
+    if(playing){
+        // Zrýchlenie / Spomalenie auta
+        if(targetSpeed > carSpeed){ carSpeed += accel * dt; if(carSpeed > targetSpeed) carSpeed = targetSpeed; }
+        else if(targetSpeed < carSpeed){ carSpeed -= brake * dt; if(carSpeed < targetSpeed) carSpeed = targetSpeed; }
 
-    const effectiveSpeed = carSpeed * (boost.active? boostMultiplier:1.0);
-    const forward = new THREE.Vector3(Math.sin(car.rotation.y),0,Math.cos(car.rotation.y));
-    car.position.addScaledVector(forward, effectiveSpeed*dt);
-    car.rotation.y += steer*(0.8 + (Math.abs(carSpeed)/maxSpeed)*1.8)*dt;
-    carSpeed *= 0.999 - (0.0004*dt*100);
+        const effectiveSpeed = carSpeed * (boost.active ? boostMultiplier : 1.0);
+        const forward = new THREE.Vector3(Math.sin(car.rotation.y), 0, Math.cos(car.rotation.y));
+        car.position.addScaledVector(forward, effectiveSpeed * dt);
+        car.rotation.y += steer * (1.2 + (Math.abs(carSpeed) / maxSpeed) * 1.5) * dt;
+        carSpeed *= 0.985;
 
-    // Ball physics
-    ballVel.y -= 9.8*dt; ball.position.addScaledVector(ballVel,dt);
-    if(ball.position.y<0.95){ ball.position.y=0.95; if(ballVel.y<0) ballVel.y*=-0.42; ballVel.x*=0.993; ballVel.z*=0.993; }
+        // Fyzika lopty
+        ballVel.y -= 14 * dt; // gravitácia lopty
+        ball.position.addScaledVector(ballVel, dt);
 
-    // Car-ball collision
-    const carToBall = new THREE.Vector3().subVectors(ball.position,car.position);
-    const dist = carToBall.length(); const rBall=0.95,rCar=1.42,minDist=rBall+rCar;
-    if(dist<minDist){
-      const n = carToBall.clone().normalize();
-      ball.position.addScaledVector(n,(minDist-dist)+0.01);
-      const impulse = n.clone().multiplyScalar(Math.max(1,carSpeed)*(boost.active? boostMultiplier:1.0)+1.2);
-      impulse.y = Math.min(2.6,0.9+Math.abs(carSpeed)*0.18); ballVel.add(impulse);
-      car.position.addScaledVector(n,-0.02*Math.min(carSpeed,3.2));
+        if(ball.position.y < 1.1){ 
+            ball.position.y = 1.1; 
+            if(ballVel.y < 0) ballVel.y *= -0.55; // odraz od zeme
+            ballVel.x *= 0.985; 
+            ballVel.z *= 0.985; 
+        }
+
+        // Kolízia auto <-> lopta
+        const carToBall = new THREE.Vector3().subVectors(ball.position, car.position);
+        const dist = carToBall.length(); 
+        const minDist = 1.1 + 1.2; // polomer lopty + polomer auta
+        
+        if(dist < minDist){
+            const n = carToBall.clone().normalize();
+            ball.position.addScaledVector(n, (minDist - dist) + 0.05);
+            const hitPower = Math.max(2, Math.abs(carSpeed) * (boost.active ? 2.2 : 1.2));
+            const impulse = n.clone().multiplyScalar(hitPower);
+            impulse.y = Math.max(3, Math.abs(carSpeed) * 0.35); // pridá loptu do vzduchu po údere
+            ballVel.add(impulse);
+        }
+
+        // Náraz do stien arény
+        const halfArena = arena / 2 - 1.2;
+        if(ball.position.x < -halfArena){ ball.position.x = -halfArena; ballVel.x *= -0.7; }
+        if(ball.position.x > halfArena){ ball.position.x = halfArena; ballVel.x *= -0.7; }
+        if(ball.position.z < -halfArena){ ball.position.z = -halfArena; ballVel.z *= -0.7; }
+        if(ball.position.z > halfArena){ ball.position.z = halfArena; ballVel.z *= -0.7; }
+
+        car.position.x = Math.max(-halfArena, Math.min(halfArena, car.position.x));
+        car.position.z = Math.max(-halfArena, Math.min(halfArena, car.position.z));
+
+        // Kamera sledujúca auto (Chase Cam)
+        const camOffset = new THREE.Vector3(0, 5.5, 12).applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation.y);
+        const camTarget = new THREE.Vector3().copy(car.position).add(camOffset);
+        camera.position.lerp(camTarget, 0.15);
+        camera.lookAt(new THREE.Vector3().copy(car.position).add(new THREE.Vector3(0, 1, 0)));
+
+        // Boost riadenie
+        if(boost.active){ 
+            boost.val -= boostDrainRate * dt; 
+            if(boost.val <= 0){ boost.val = 0; boost.active = false; } 
+        } else { 
+            boost.val = Math.min(boost.max, boost.val + boostRechargeRate * dt); 
+        }
+
+        updateJump(dt);
+        updateAI(dt);
+        updateHUD();
+        checkGoal();
     }
 
-    const halfArena = arena/2-0.7;
-    if(ball.position.x<-halfArena){ ball.position.x=-halfArena; ballVel.x*=-0.72; }
-    if(ball.position.x>halfArena){ ball.position.x=halfArena; ballVel.x*=-0.72; }
-    if(ball.position.z<-halfArena){ ball.position.z=-halfArena; ballVel.z*=-0.72; }
-    if(ball.position.z>halfArena){ ball.position.z=halfArena; ballVel.z*=-0.72; }
-
-    car.position.x = Math.max(-halfArena, Math.min(halfArena, car.position.x));
-    car.position.z = Math.max(-halfArena, Math.min(halfArena, car.position.z));
-
-    if(cameraFollow){
-      const camOffset = new THREE.Vector3(0,6.2,13.2).applyAxisAngle(new THREE.Vector3(0,1,0),car.rotation.y);
-      const camTarget = new THREE.Vector3().copy(car.position).add(camOffset);
-      camera.position.lerp(camTarget,0.14);
-      camera.lookAt(new THREE.Vector3().copy(car.position).add(new THREE.Vector3(0,1.2,0)));
-    }
-
-    // Boost management
-    if(boost.active){ boost.val-=boostDrainRate*dt; if(boost.val<=0){ boost.val=0; boost.active=false; } }
-    else{ boost.val = Math.min(boost.max, boost.val+boostRechargeRate*dt); }
-
-    updateJump(dt);   // jump update
-    updateAI(dt);     // AI update
-    updateHUD();
-    checkGoal();
-  }
-
-  renderer.render(scene,camera);
+    renderer.render(scene, camera);
 }
 
-// --- Joystick Input ---
+// --- Joystick Ovládanie ---
 const joy = document.getElementById('joy');
 const stick = document.getElementById('stick');
 let active = false;
 let start = {x: 0, y: 0};
-const maxR = 48; // polomer joysticku
+const maxR = 45;
 
 function joyDown(ev) {
     ev.preventDefault();
@@ -582,7 +649,7 @@ function joyMove(ev) {
     moveStick(p.clientX, p.clientY);
 }
 
-function joyUp(ev) {
+function joyUp() {
     active = false;
     stick.style.transform = 'translate(0,0)';
     targetSpeed = 0;
@@ -592,84 +659,55 @@ function joyUp(ev) {
 function moveStick(cx, cy) {
     const dx = cx - start.x;
     const dy = cy - start.y;
-
-    // obmedz stick v kruhu
     const distance = Math.min(Math.sqrt(dx*dx + dy*dy), maxR);
     const angle = Math.atan2(dy, dx);
     const xPos = distance * Math.cos(angle);
     const yPos = distance * Math.sin(angle);
 
     stick.style.transform = `translate(${xPos}px, ${yPos}px)`;
-
-    // mapovanie na auto: Y = dopredu/dozadu, X = doľava/doprava
-    targetSpeed = - (yPos / maxR) * maxSpeed;  // dopredu = +Y na auto
-    steer = xPos / maxR;                        // doľava = -1, doprava = +1
+    targetSpeed = - (yPos / maxR) * maxSpeed;
+    steer = xPos / maxR;
 }
 
-// eventy
-joy.addEventListener('pointerdown', joyDown, {passive:false});
-joy.addEventListener('pointermove', joyMove, {passive:false});
+joy.addEventListener('pointerdown', joyDown, {passive: false});
+joy.addEventListener('pointermove', joyMove, {passive: false});
 window.addEventListener('pointerup', joyUp);
-
-joy.addEventListener('touchstart', joyDown, {passive:false});
-joy.addEventListener('touchmove', joyMove, {passive:false});
+joy.addEventListener('touchstart', joyDown, {passive: false});
+joy.addEventListener('touchmove', joyMove, {passive: false});
 window.addEventListener('touchend', joyUp);
-// --- Boost Button ---
+
+// --- Boost & Jump Tlačidlá ---
 const boostBtn = document.getElementById('boostBtn');
-boostBtn.addEventListener('click',()=>{ if(!playing) return; if(boost.val>18&&!boost.active) enableBoost(); });
-boostBtn.addEventListener('touchstart',(e)=>{ e.preventDefault(); if(!playing) return; if(boost.val>18&&!boost.active) enableBoost(); });
-function enableBoost(){ if(boost.val<=0) return; boost.active=true; setTimeout(()=>{boost.active=false;}, boostDuration); }
+boostBtn.addEventListener('pointerdown', () => { if(boost.val > 15) boost.active = true; });
+boostBtn.addEventListener('pointerup', () => { boost.active = false; });
+boostBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if(boost.val > 15) boost.active = true; });
+boostBtn.addEventListener('touchend', () => { boost.active = false; });
 
-// --- Jump Button ---
 const jumpBtn = document.getElementById('jumpBtn');
-jumpBtn.addEventListener('click',()=>{ jumpPlayer(); });
-jumpBtn.addEventListener('touchstart',(e)=>{ e.preventDefault(); jumpPlayer(); });
+jumpBtn.addEventListener('click', () => jumpPlayer());
+jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); jumpPlayer(); });
 
-// --- Camera Toggle ---
-let cameraFollow=true;
-document.getElementById('cameraBtn').addEventListener('click',()=>{ 
-    cameraFollow=!cameraFollow; 
-    document.getElementById('cameraBtn').innerText=cameraFollow?'Kamera: Follow':'Kamera: Free'; 
+window.addEventListener('keydown', (e) => {
+    if(e.code === 'Space') jumpPlayer();
+    if(e.code === 'KeyF') { if(boost.val > 15) boost.active = true; }
+});
+window.addEventListener('keyup', (e) => {
+    if(e.code === 'KeyF') boost.active = false;
 });
 
-// --- Jump Key ---
-window.addEventListener('keydown', (e)=>{ if(e.code==='Space'){ jumpPlayer(); } });
-
-// --- Start / Reset ---
+// --- Start / Reset Tlačidlo ---
 document.getElementById('startBtn').addEventListener('click', () => {
     playing = true;
     resetPositions(false);
-    document.getElementById('startBtn').innerText = 'Reset';
+    document.getElementById('startBtn').innerText = 'RESET';
 });
 
-
-
-// --- Initialize ---
+// Spustenie inicializácie
 init();
 resetPositions(false);
-animate();
 </script>
 
-    <script>
-  // ==========================================
-  // ERIKAI OS — UNIVERZÁLNY BEZPEČNOSTNÝ STRÁŽCA
-  // ==========================================
-  const povolenyHostitel = "erikai-demoa1.github.io";
-  
-  // Overenie, či prebehol proces v session pamäti alebo či prichádza zo správnej domény
-  const jeOvereny = sessionStorage.getItem('erikai_auth_token') === 'VERIFIED_OK';
-  let pristupOk = jeOvereny || document.referrer.includes(povolenyHostitel);
 
-  // Ak sa niekto pokúsi otvoriť podstránku napriamo (na čierno)
-  if (!pristupOk && window.location.hostname !== "127.0.0.1" && window.location.hostname !== "localhost") {
-    
-    // Vtipné upozornenie
-    alert("🚨 Haha, chcel si sa sem dostať zadarmo bez overenia?! Tak takto teda nie! Šup-šup naspäť na začiatok, pekne od 1. kroku sa prihlásiť! 🏃‍♂️💨");
-    
-    // Presmerovanie na hlavnú vstupnú bránu ErikAI OS
-    window.location.href = "https://erikai-demoa1.github.io/ErikAI/";
-  }
-</script>
 
 </body>
-  </html>
+</html>
