@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>RocketSK v4.0 — 2 Player Splitscreen Local Mobile (ErikAI)</title>
+<title>RocketSK v4.1 — Multi-touch Independent Joysticks (ErikAI)</title>
 
 <style>
 html, body {
@@ -58,7 +58,7 @@ html, body {
 }
 
 .joystick {
-    width: 100px; height: 100px;
+    width: 110px; height: 110px;
     border-radius: 50%;
     background: rgba(255,255,255,0.06);
     backdrop-filter: blur(4px);
@@ -67,25 +67,28 @@ html, body {
     justify-content: center;
     pointer-events: auto;
     border: 2px solid rgba(255,255,255,0.2);
+    touch-action: none;
 }
 
 .stick {
-    width: 42px; height: 42px;
+    width: 46px; height: 46px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.35);
+    pointer-events: none;
 }
 
 .btn-boost {
-    padding: 10px 18px;
-    border-radius: 10px;
+    padding: 12px 20px;
+    border-radius: 12px;
     border: none;
     background: linear-gradient(145deg, #ff8c00, #ff4500);
     color: white;
     font-weight: 800;
-    font-size: 12px;
+    font-size: 13px;
     cursor: pointer;
     pointer-events: auto;
     box-shadow: 0 0 12px rgba(255,100,0,0.5);
+    touch-action: none;
 }
 .btn-boost:active { transform: scale(0.92); }
 
@@ -160,8 +163,8 @@ let clock, playing = false;
 let arena = 200;
 
 // Stav hráčov
-let p1 = { speed: 0, targetSpeed: 0, steer: 0, joyX: 0, joyY: 0, boost: 100, activeBoost: false };
-let p2 = { speed: 0, targetSpeed: 0, steer: 0, joyX: 0, joyY: 0, boost: 100, activeBoost: false };
+let p1 = { speed: 0, targetSpeed: 0, steer: 0, boost: 100, activeBoost: false };
+let p2 = { speed: 0, targetSpeed: 0, steer: 0, boost: 100, activeBoost: false };
 
 let ballVel = new THREE.Vector3();
 let score = { A: 0, B: 0 };
@@ -177,17 +180,14 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight / 2);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Dve kamery pre splitscreen
     cameraP1 = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight / 2), 0.1, 4000);
     cameraP2 = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight / 2), 0.1, 4000);
 
-    // Svetlá
     scene.add(new THREE.HemisphereLight(0xffffff, 0x112244, 0.8));
     const dir = new THREE.DirectionalLight(0xffffff, 0.9);
     dir.position.set(30, 60, 30);
     scene.add(dir);
 
-    // Podlaha
     ground = new THREE.Mesh(
         new THREE.PlaneGeometry(arena, arena),
         new THREE.MeshStandardMaterial({ color: 0x08162b, roughness: 0.8 })
@@ -195,18 +195,15 @@ function init() {
     ground.rotation.x = -Math.PI / 2;
     scene.add(ground);
 
-    // Hráč 1 Auto (Červené)
     carP1 = createCar(0xff3b3b);
     carP1.position.set(0, 0.45, -20);
     scene.add(carP1);
 
-    // Hráč 2 Auto (Modré)
     carP2 = createCar(0x00bfff);
     carP2.position.set(0, 0.45, 20);
     carP2.rotation.y = Math.PI;
     scene.add(carP2);
 
-    // Lopta
     ball = new THREE.Mesh(
         new THREE.SphereGeometry(1.1, 32, 32),
         new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 })
@@ -214,11 +211,10 @@ function init() {
     ball.position.set(0, 1.1, 0);
     scene.add(ball);
 
-    // Steny a obojstranné bránky
     const w = arena / 2;
     const goalWidth = arena * goalWidthRatio;
-    createWallWithGoal(0, 2, -w, arena, goalWidth, 0xef4444); // Červená bránka
-    createWallWithGoal(0, 2, w, arena, goalWidth, 0x3b82f6);  // Modrá bránka
+    createWallWithGoal(0, 2, -w, arena, goalWidth, 0xef4444);
+    createWallWithGoal(0, 2, w, arena, goalWidth, 0x3b82f6);
 
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x0d2342, roughness: 0.5 });
     scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arena), wallMat).translateOnAxis(new THREE.Vector3(-w, 2, 0), 1));
@@ -313,7 +309,6 @@ function animate() {
     const dt = Math.min(0.05, clock.getDelta());
 
     if (playing) {
-        // Pohyb Hráč 1
         if (p1.targetSpeed > p1.speed) p1.speed += accel * dt;
         else if (p1.targetSpeed < p1.speed) p1.speed -= brake * dt;
         const effSpeed1 = p1.speed * (p1.activeBoost ? 2.3 : 1.0);
@@ -322,7 +317,6 @@ function animate() {
         carP1.rotation.y += p1.steer * 2.5 * dt;
         p1.speed *= 0.985;
 
-        // Pohyb Hráč 2
         if (p2.targetSpeed > p2.speed) p2.speed += accel * dt;
         else if (p2.targetSpeed < p2.speed) p2.speed -= brake * dt;
         const effSpeed2 = p2.speed * (p2.activeBoost ? 2.3 : 1.0);
@@ -331,7 +325,6 @@ function animate() {
         carP2.rotation.y += p2.steer * 2.5 * dt;
         p2.speed *= 0.985;
 
-        // Fyzika lopty
         ballVel.y -= 15 * dt;
         ball.position.addScaledVector(ballVel, dt);
         if (ball.position.y < 1.1) {
@@ -340,14 +333,12 @@ function animate() {
             ballVel.x *= 0.98; ballVel.z *= 0.98;
         }
 
-        // Kolízia auta P1 s loptou
         if (carP1.position.distanceTo(ball.position) < 2.2) {
             const n = new THREE.Vector3().subVectors(ball.position, carP1.position).normalize();
             ball.position.addScaledVector(n, 0.1);
             ballVel.copy(n.multiplyScalar(Math.max(4, Math.abs(p1.speed) * 2)));
             ballVel.y += 5;
         }
-        // Kolízia auta P2 s loptou
         if (carP2.position.distanceTo(ball.position) < 2.2) {
             const n = new THREE.Vector3().subVectors(ball.position, carP2.position).normalize();
             ball.position.addScaledVector(n, 0.1);
@@ -355,7 +346,6 @@ function animate() {
             ballVel.y += 5;
         }
 
-        // Hranice arény pre loptu
         const halfArena = arena / 2 - 1.5;
         if (Math.abs(ball.position.x) > halfArena) { ball.position.x = Math.sign(ball.position.x) * halfArena; ballVel.x *= -0.7; }
         if (Math.abs(ball.position.z) > halfArena) {
@@ -365,17 +355,14 @@ function animate() {
             }
         }
 
-        // Ohraničenie áut v aréne
         carP1.position.x = Math.max(-halfArena, Math.min(halfArena, carP1.position.x));
         carP1.position.z = Math.max(-halfArena, Math.min(halfArena, carP1.position.z));
         carP2.position.x = Math.max(-halfArena, Math.min(halfArena, carP2.position.x));
         carP2.position.z = Math.max(-halfArena, Math.min(halfArena, carP2.position.z));
 
-        // Kamery za autami (Chase Cams)
         updateCamera(cameraP1, carP1);
         updateCamera(cameraP2, carP2);
 
-        // Správa boostov
         if (p1.activeBoost) { p1.boost -= 50 * dt; if (p1.boost <= 0) { p1.boost = 0; p1.activeBoost = false; } }
         else { p1.boost = Math.min(100, p1.boost + 25 * dt); }
 
@@ -386,7 +373,6 @@ function animate() {
         checkGoal();
     }
 
-    // Vykreslenie rozdelenej obrazovky
     renderer.clear();
     renderer.setViewport(0, window.innerHeight / 2, window.innerWidth, window.innerHeight / 2);
     renderer.render(scene, cameraP1);
@@ -402,10 +388,10 @@ function updateCamera(cam, car) {
     cam.lookAt(new THREE.Vector3().copy(car.position).add(new THREE.Vector3(0, 1, 0)));
 }
 
-// --- Dotykové ovládanie pre 2 nezávislé joysticky ---
+// --- Skutočne nezávislé multi-touch joysticky (viazané na pointerId) ---
 function setupJoysticks() {
-    initJoy('joy1', 'stick1', p => { p1.joyX = p.x; p1.joyY = p.y; p1.targetSpeed = -p.y * maxSpeed; p1.steer = p.x; });
-    initJoy('joy2', 'stick2', p => { p2.joyX = p.x; p2.joyY = p.y; p2.targetSpeed = -p.y * maxSpeed; p2.steer = p.x; });
+    initJoy('joy1', 'stick1', p => { p1.targetSpeed = -p.y * maxSpeed; p1.steer = p.x; });
+    initJoy('joy2', 'stick2', p => { p2.targetSpeed = -p.y * maxSpeed; p2.steer = p.x; });
 
     setupBoostBtn('boost1Btn', p1);
     setupBoostBtn('boost2Btn', p2);
@@ -414,28 +400,35 @@ function setupJoysticks() {
 function initJoy(joyId, stickId, callback) {
     const joy = document.getElementById(joyId);
     const stick = document.getElementById(stickId);
-    let active = false, startX = 0, startY = 0;
+    let activePointerId = null;
+    let startX = 0, startY = 0;
     const maxR = 38;
 
     joy.addEventListener('pointerdown', e => {
-        active = true;
+        if (activePointerId !== null) return; // Ak už tento joystick drží iný prst, ignoruj
+        activePointerId = e.pointerId;
+        joy.setPointerCapture(e.pointerId);
+
         const rect = joy.getBoundingClientRect();
         startX = rect.left + rect.width / 2;
         startY = rect.top + rect.height / 2;
         update(e.clientX, e.clientY);
     });
 
-    window.addEventListener('pointermove', e => {
-        if (!active) return;
+    joy.addEventListener('pointermove', e => {
+        if (e.pointerId !== activePointerId) return;
         update(e.clientX, e.clientY);
     });
 
-    window.addEventListener('pointerup', () => {
-        if (!active) return;
-        active = false;
+    const release = e => {
+        if (e.pointerId !== activePointerId) return;
+        activePointerId = null;
         stick.style.transform = 'translate(0px, 0px)';
         callback({ x: 0, y: 0 });
-    });
+    };
+
+    joy.addEventListener('pointerup', release);
+    joy.addEventListener('pointercancel', release);
 
     function update(cx, cy) {
         const dx = cx - startX;
@@ -451,8 +444,23 @@ function initJoy(joyId, stickId, callback) {
 
 function setupBoostBtn(btnId, playerObj) {
     const btn = document.getElementById(btnId);
-    btn.addEventListener('pointerdown', () => { if (playerObj.boost > 10) playerObj.activeBoost = true; });
-    btn.addEventListener('pointerup', () => { playerObj.activeBoost = false; });
+    let boostPointerId = null;
+
+    btn.addEventListener('pointerdown', e => {
+        if (boostPointerId !== null) return;
+        boostPointerId = e.pointerId;
+        btn.setPointerCapture(e.pointerId);
+        if (playerObj.boost > 10) playerObj.activeBoost = true;
+    });
+
+    const endBoost = e => {
+        if (e.pointerId !== boostPointerId) return;
+        boostPointerId = null;
+        playerObj.activeBoost = false;
+    };
+
+    btn.addEventListener('pointerup', endBoost);
+    btn.addEventListener('pointercancel', endBoost);
 }
 
 document.getElementById('startBtn').addEventListener('click', () => {
