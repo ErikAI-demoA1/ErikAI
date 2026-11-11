@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>RocketSK v3.1 — Fixed Physics, Goals & Aerials (ErikAI)</title>
+<title>RocketSK v3.2 — Full Goals & Joystick Aerial Control (ErikAI)</title>
 
 <style>
 html, body {
@@ -20,16 +20,15 @@ html, body {
     position: fixed;
     left: 12px;
     top: 12px;
-    padding: 12px 18px;
+    padding: 10px 14px;
     border-radius: 12px;
-    font-size: 15px;
+    font-size: 13px;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(12px);
     z-index: 40;
     box-shadow: 0 0 20px rgba(0, 255, 200, 0.4);
     color: #00ffe0;
     font-weight: 700;
-    letter-spacing: 0.5px;
     border: 1px solid rgba(0,255,220,0.2);
 }
 
@@ -38,60 +37,39 @@ html, body {
     position: fixed;
     right: 12px;
     top: 60px;
-    width: 160px;
+    width: 150px;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(10px);
     border-radius: 10px;
     padding: 8px 12px;
     z-index: 40;
     border: 1px solid rgba(255,140,0,0.3);
-    box-shadow: 0 0 15px rgba(255,140,0,0.2);
 }
 #boostLabel {
     font-size: 11px;
     color: #ff9d00;
     font-weight: 800;
     margin-bottom: 4px;
-    letter-spacing: 1px;
 }
 #boostBarBg {
     width: 100%;
-    height: 10px;
+    height: 8px;
     background: rgba(255,255,255,0.1);
-    border-radius: 5px;
+    border-radius: 4px;
     overflow: hidden;
 }
 #boostBarFill {
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, #ff9d00, #ff4500);
-    box-shadow: 0 0 10px #ff4500;
-    transition: width 0.05s linear;
-}
-
-/* --- Mini info --- */
-#mini {
-    position: fixed;
-    right: 12px;
-    top: 12px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    font-size: 13px;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(6px);
-    z-index: 40;
-    color: #a0d4ff;
-    font-weight: 500;
-    box-shadow: 0 0 12px rgba(0, 128, 255, 0.3);
-    border: 1px solid rgba(0,128,255,0.2);
 }
 
 .note {
     position: fixed;
     left: 12px;
-    top: 66px;
+    top: 58px;
     color: #8faac9;
-    font-size: 12px;
+    font-size: 11px;
     z-index: 40;
     text-shadow: 0 0 4px rgba(0,0,0,0.5);
 }
@@ -103,17 +81,16 @@ html, body {
     top: 40%;
     transform: translate(-50%, -50%) scale(0.8);
     background: linear-gradient(135deg, #ff7a3c, #ff1e1e);
-    padding: 28px 48px;
-    border-radius: 18px;
-    font-size: 42px;
+    padding: 24px 40px;
+    border-radius: 16px;
+    font-size: 36px;
     font-weight: 900;
     color: #fff;
     z-index: 60;
     display: none;
     text-align: center;
-    box-shadow: 0 0 40px rgba(255,120,60,0.9), inset 0 0 20px rgba(255,255,255,0.5);
+    box-shadow: 0 0 40px rgba(255,120,60,0.9);
     text-transform: uppercase;
-    letter-spacing: 2px;
 }
 
 /* --- Joystick --- */
@@ -122,14 +99,12 @@ html, body {
     left: 16px;
     bottom: 16px;
     display: flex;
-    gap: 12px;
-    align-items: center;
-    pointer-events: none;
     z-index: 40;
+    pointer-events: none;
 }
 
 .joystick {
-    width: 130px; height: 130px;
+    width: 120px; height: 120px;
     border-radius: 50%;
     background: rgba(255,255,255,0.05);
     backdrop-filter: blur(6px);
@@ -138,19 +113,13 @@ html, body {
     justify-content: center;
     touch-action: none;
     pointer-events: auto;
-    box-shadow: 0 0 16px rgba(0,255,220,0.3), inset 0 0 8px rgba(0,255,220,0.2);
     border: 2px solid rgba(0,255,220,0.35);
 }
 
 .stick {
-    width: 56px; height: 56px;
+    width: 50px; height: 50px;
     border-radius: 50%;
-    background: rgba(0,255,220,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transform: translate(0,0);
-    box-shadow: 0 0 12px rgba(0,255,220,0.5);
+    background: rgba(0,255,220,0.25);
     border: 1px solid rgba(0,255,220,0.7);
 }
 
@@ -162,12 +131,12 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    pointer-events: none;
     z-index: 40;
+    pointer-events: none;
 }
 
 .btn {
-    padding: 14px 22px;
+    padding: 14px 20px;
     border-radius: 14px;
     border: none;
     background: linear-gradient(145deg, #ff8c00, #ff4500);
@@ -175,30 +144,29 @@ html, body {
     font-weight: 700;
     cursor: pointer;
     pointer-events: auto;
-    box-shadow: 0 0 16px rgba(255,100,0,0.5);
     font-size: 14px;
+    box-shadow: 0 0 16px rgba(255,100,0,0.4);
 }
 
 .btn:active { transform: scale(0.94); }
 
 .btn.jump-btn {
     background: linear-gradient(145deg, #00bfff, #1e90ff);
-    box-shadow: 0 0 16px rgba(0,191,255,0.5);
+    box-shadow: 0 0 16px rgba(0,191,255,0.4);
 }
 
 #startBtn {
     position: fixed;
     top: 12px;
-    right: 140px;
-    padding: 10px 18px;
-    border-radius: 12px;
+    right: 12px;
+    padding: 10px 16px;
+    border-radius: 10px;
     border: none;
     background: linear-gradient(145deg, #00ffcc, #00b386);
     color: #030810;
     z-index: 50;
     cursor: pointer;
     font-weight: 800;
-    box-shadow: 0 0 15px rgba(0,255,200,0.5);
 }
 
 canvas { display: block; }
@@ -207,9 +175,8 @@ canvas { display: block; }
 <body>
 
 <button id="startBtn">ŠTART / RESET</button>
-<div id="hud">RED: <span id="scoreA">0</span> • BLUE: <span id="scoreB">0</span> • RÝCHLOSŤ: <span id="speed">0</span> km/h</div>
-<div id="mini">Aréna: 200m</div>
-<div class="note">🎮 Joystick na pohyb • 1x JUMP výskok • 2x JUMP flip / rotácia vo vzduchu</div>
+<div id="hud">RED: <span id="scoreA">0</span> • BLUE: <span id="scoreB">0</span> • <span id="speed">0</span> km/h</div>
+<div class="note">🎮 Joystick: Pohyb & 360° let vo vzduchu</div>
 <div id="boostContainer">
     <div id="boostLabel">BOOST</div>
     <div id="boostBarBg"><div id="boostBarFill"></div></div>
@@ -230,7 +197,7 @@ canvas { display: block; }
 let scene, camera, renderer;
 let car, ball, ground, aiCar;
 let clock, playing = false;
-let carSpeed = 0, targetSpeed = 0, steer = 0;
+let carSpeed = 0, targetSpeed = 0, steer = 0, joystickX = 0, joystickY = 0;
 let ballVel = new THREE.Vector3();
 let arena = 200;
 const hudSpeed = document.getElementById('speed');
@@ -243,40 +210,38 @@ let goalCooldown = false;
 
 let maxSpeed = 24, accel = 45, brake = 55;
 let boost = {val: 100, max: 100, active: false};
-const goalWidthRatio = 0.38, goalDepth = 3;
+const goalWidthRatio = 0.4, goalDepth = 4, goalHeight = 12;
 let half = arena / 2;
 
-// --- Skoky a Aerial Flipy ako v Rocket League ---
+// --- Skoky a manuálny 360° let (Aerials & Flips) ---
 let isJumping = false, jumpVel = 0, canDoubleJump = false;
-let isFlipsing = false, flipTimer = 0;
-let aerialPitch = 0, aerialRoll = 0;
 
 function jumpPlayer(){
     if(!playing) return;
     if(!isJumping){
         // Prvý skok zo zeme
         isJumping = true;
-        jumpVel = 12;
+        jumpVel = 13;
         canDoubleJump = true;
     } else if(canDoubleJump) {
-        // Druhý skok (Flip / Kotrmelac do strán alebo vpred)
+        // Druhý skok / Flip (smer sa určuje podľa joysticku)
         canDoubleJump = false;
-        isFlipsing = true;
-        flipTimer = 0.4; // trvanie flipu
-        jumpVel = 10;
+        jumpVel = 11;
+        // Ak hráč drží joystick do strán alebo vpred/vzad, auto spraví otočku do tej strany
+        car.rotation.z -= joystickX * 1.5;
+        car.rotation.x -= joystickY * 1.5;
     }
 }
 
 function updateJump(dt){
     if(isJumping){
         car.position.y += jumpVel * dt;
-        jumpVel -= 30 * dt; // gravitácia
+        jumpVel -= 32 * dt; // gravitácia
 
-        // Ak drží hráč joystick dopredu/dozadu počas druhého skoku, urobí flip
-        if(isFlipsing){
-            flipTimer -= dt;
-            car.rotation.x += (steer !== 0 ? 15 : 25) * dt; // rotácia pri flipe
-            if(flipTimer <= 0) isFlipsing = false;
+        // Ak je auto vo vzduchu, joystickom vie hráč kontrolovať náklon a rotáciu (Aerial control)
+        if(car.position.y > 0.46) {
+            car.rotation.y -= joystickX * 2.5 * dt;
+            car.rotation.x -= joystickY * 2.0 * dt;
         }
 
         // Dopad na zem
@@ -285,9 +250,9 @@ function updateJump(dt){
             isJumping = false;
             jumpVel = 0;
             canDoubleJump = false;
-            isFlipsing = false;
-            car.rotation.x = 0;
-            car.rotation.z = 0;
+            // Vyrovnanie auta pri dopade
+            car.rotation.x = THREE.MathUtils.lerp(car.rotation.x, 0, 0.4);
+            car.rotation.z = THREE.MathUtils.lerp(car.rotation.z, 0, 0.4);
         }
     }
 }
@@ -299,7 +264,7 @@ function initAI(){
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.6, 2.6), bodyMat);
     body.position.y = 0.5;
     aiCar.add(body);
-    aiCar.position.set(0, 0.45, 20);
+    aiCar.position.set(0, 0.45, 25);
     scene.add(aiCar);
 }
 
@@ -310,10 +275,10 @@ function updateAI(dt){
     
     let angleDiff = targetAngle - aiCar.rotation.y;
     angleDiff = ((angleDiff + Math.PI) % (2 * Math.PI)) - Math.PI;
-    aiCar.rotation.y += angleDiff * 3 * dt;
+    aiCar.rotation.y += angleDiff * 3.5 * dt;
 
     const forward = new THREE.Vector3(Math.sin(aiCar.rotation.y), 0, Math.cos(aiCar.rotation.y));
-    aiCar.position.addScaledVector(forward, 15 * dt);
+    aiCar.position.addScaledVector(forward, 16 * dt);
 
     const carToBall = new THREE.Vector3().subVectors(ball.position, aiCar.position);
     if(carToBall.length() < 2.2){
@@ -321,6 +286,10 @@ function updateAI(dt){
         ballVel.add(n.clone().multiplyScalar(18));
         ballVel.y += 5;
     }
+
+    const halfArena = arena / 2 - 2;
+    aiCar.position.x = Math.max(-halfArena, Math.min(halfArena, aiCar.position.x));
+    aiCar.position.z = Math.max(-halfArena, Math.min(halfArena, aiCar.position.z));
 }
 
 // --- Inicializácia Scény ---
@@ -365,11 +334,17 @@ function init(){
     ball.position.set(0, 1.1, -10);
     scene.add(ball);
 
-    // Steny arény
+    // Steny a obojstranné bránky
     const w = arena / 2;
+    const goalWidth = arena * goalWidthRatio;
     const wallMat = new THREE.MeshStandardMaterial({color: 0x0d2342, roughness: 0.5});
-    scene.add(new THREE.Mesh(new THREE.BoxGeometry(arena, 4, 1.5), wallMat).translateOnAxis(new THREE.Vector3(0,2,-w), 1));
-    scene.add(new THREE.Mesh(new THREE.BoxGeometry(arena, 4, 1.5), wallMat).translateOnAxis(new THREE.Vector3(0,2,w), 1));
+
+    // Vytvorenie sten s otvormi pre bránky
+    // Zadná stena (Červená bránka)
+    createWallWithGoal(0, 2, -w, arena, goalWidth, 0xef4444);
+    // Predná stena (Modrá bránka)
+    createWallWithGoal(0, 2, w, arena, goalWidth, 0x3b82f6);
+    // Bočné steny
     scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arena), wallMat).translateOnAxis(new THREE.Vector3(-w,2,0), 1));
     scene.add(new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, arena), wallMat).translateOnAxis(new THREE.Vector3(w,2,0), 1));
 
@@ -379,6 +354,34 @@ function init(){
     animate();
 }
 
+function createWallWithGoal(x, y, z, totalWidth, gWidth, colorHex) {
+    const wallMat = new THREE.MeshStandardMaterial({color: 0x0d2342, roughness: 0.5});
+    const sideWidth = (totalWidth - gWidth) / 2;
+    
+    // Ľavá časť steny
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(sideWidth, 4, 1.5), wallMat);
+    leftWall.position.set(x - gWidth/2 - sideWidth/2, y, z);
+    scene.add(leftWall);
+
+    // Pravá časť steny
+    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(sideWidth, 4, 1.5), wallMat);
+    rightWall.position.set(x + gWidth/2 + sideWidth/2, y, z);
+    scene.add(rightWall);
+
+    // Horná brvno bránky
+    const crossbar = new THREE.Mesh(new THREE.BoxGeometry(gWidth, 1.5, 1.5), wallMat);
+    crossbar.position.set(x, y + 2, z);
+    scene.add(crossbar);
+
+    // Neónový rám bránky
+    const frameMat = new THREE.MeshBasicMaterial({color: colorHex});
+    const postL = new THREE.Mesh(new THREE.BoxGeometry(0.4, goalHeight, 1.6), frameMat);
+    postL.position.set(x - gWidth/2, goalHeight/2, z);
+    const postR = postL.clone();
+    postR.position.x = x + gWidth/2;
+    scene.add(postL, postR);
+}
+
 function onResize(){ 
     camera.aspect = window.innerWidth / window.innerHeight; 
     camera.updateProjectionMatrix(); 
@@ -386,14 +389,14 @@ function onResize(){
 }
 
 function resetPositions(afterGoal = false){
-    car.position.set(0, 0.45, afterGoal ? 12 : 0);
+    car.position.set(0, 0.45, afterGoal ? 15 : 0);
     car.rotation.set(0, 0, 0); 
     carSpeed = 0; targetSpeed = 0; steer = 0;
     ball.position.set(0, 1.1, 0);
     ballVel.set(0, 0, 0);
     boost.val = boost.max; 
     boost.active = false;
-    aiCar.position.set(0, 0.45, -15);
+    aiCar.position.set(0, 0.45, -20);
 }
 
 function updateHUD(){
@@ -405,11 +408,11 @@ function updateHUD(){
 
 function checkGoal(){
     if(goalCooldown) return;
-    const halfArena = arena / 2 - 2;
+    const halfArena = arena / 2 - 1.5;
     const goalWidth = arena * goalWidthRatio;
     const gx = Math.abs(ball.position.x);
 
-    // Kontrola brániek (Červená alebo Modrá strana)
+    // Kontrola brániek na oboch stranách
     if(ball.position.z < -halfArena && gx < goalWidth / 2){
         score.B++; 
         triggerGoal("GÓÓÓL - MODRÝ TÍM!");
@@ -446,13 +449,15 @@ function animate(){
         const effectiveSpeed = carSpeed * (boost.active ? 2.4 : 1.0);
         const forward = new THREE.Vector3(Math.sin(car.rotation.y), 0, Math.cos(car.rotation.y));
         
-        // Ak je auto vo vzduchu a používa boost, môže lietať nahor/dopredu
+        // Let s boostom vo vzduchu
         if(isJumping && boost.active) {
-            car.position.y += 4 * dt;
+            car.position.y += 5 * dt;
+            const upDir = new THREE.Vector3(0, 1, 0).applyQuaternion(car.quaternion);
+            car.position.addScaledVector(upDir, effectiveSpeed * dt * 0.6);
         }
 
         car.position.addScaledVector(forward, effectiveSpeed * dt);
-        car.rotation.y += steer * 2.2 * dt;
+        if(!isJumping) car.rotation.y += steer * 2.5 * dt;
         carSpeed *= 0.985;
 
         // Fyzika lopty
@@ -476,13 +481,16 @@ function animate(){
             ballVel.y += Math.abs(carSpeed) * 0.4 + (isJumping ? 6 : 2);
         }
 
-        // Náraz lopty do stien
+        // Náraz lopty do stien / bránok
         const halfArena = arena / 2 - 1.5;
-        if(Math.abs(ball.position.x) > halfArena){ ball.position.x = Math.sign(ball.position.x) * halfArena; ballVel.x *= -0.7; }
+        const goalWidth = arena * goalWidthRatio;
+        
+        if(Math.abs(ball.position.x) > halfArena){ 
+            ball.position.x = Math.sign(ball.position.x) * halfArena; 
+            ballVel.x *= -0.7; 
+        }
         if(Math.abs(ball.position.z) > halfArena){ 
-            // Ak nejde do bránky, odrazí sa od steny
-            const goalWidth = arena * goalWidthRatio;
-            if(Math.abs(ball.position.x) > goalWidth / 2 || ball.position.y > 14) {
+            if(Math.abs(ball.position.x) > goalWidth / 2 || ball.position.y > goalHeight) {
                 ball.position.z = Math.sign(ball.position.z) * halfArena; 
                 ballVel.z *= -0.7; 
             }
@@ -491,7 +499,7 @@ function animate(){
         car.position.x = Math.max(-halfArena, Math.min(halfArena, car.position.x));
         car.position.z = Math.max(-halfArena, Math.min(halfArena, car.position.z));
 
-        // Plynulá stabilná kamera za autom (Chase Cam)
+        // Kamera za autom (Chase Cam)
         const camOffset = new THREE.Vector3(0, 5, 11).applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation.y);
         const camTarget = new THREE.Vector3().copy(car.position).add(camOffset);
         camera.position.lerp(camTarget, 0.2);
@@ -523,7 +531,7 @@ const maxR = 45;
 
 function joyDown(e) { e.preventDefault(); active = true; updateTouch(e); }
 function joyMove(e) { if(!active) return; e.preventDefault(); updateTouch(e); }
-function joyUp() { active = false; stick.style.transform = 'translate(0,0)'; targetSpeed = 0; steer = 0; }
+function joyUp() { active = false; stick.style.transform = 'translate(0,0)'; targetSpeed = 0; steer = 0; joystickX = 0; joystickY = 0; }
 
 function updateTouch(e) {
     const p = e.touches ? e.touches[0] : e;
@@ -534,8 +542,10 @@ function updateTouch(e) {
     const angle = Math.atan2(dy, dx);
     
     stick.style.transform = `translate(${dist * Math.cos(angle)}px, ${dist * Math.sin(angle)}px)`;
-    targetSpeed = - (dy / maxR) * maxSpeed;
-    steer = dx / maxR;
+    joystickX = dx / maxR;
+    joystickY = dy / maxR;
+    targetSpeed = - joystickY * maxSpeed;
+    steer = joystickX;
 }
 
 joy.addEventListener('pointerdown', joyDown);
