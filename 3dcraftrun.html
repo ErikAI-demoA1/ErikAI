@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>ErikAI 3D Craft Run v5.2 (Ultra Smooth)</title>
+<title>ErikAI 3D Craft Run v5.3 (Smart Edge)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
@@ -88,14 +88,14 @@ button.action-btn {
 <body>
 
 <div id="hud">
-  <h3>⚡ ErikAI 3D Craft v5.2 (Ultra Smooth)</h3>
+  <h3>⚡ ErikAI 3D Craft v5.3 (Smart Edge)</h3>
   <div class="stat-row"><span>Súradnice [X, Y, Z]:</span> <span id="coordVal" class="coord-val">0, 0, 0</span></div>
   <div class="stat-row"><span>Aktívne bloky v RAM:</span> <span id="ramCount" class="stat-val">0</span></div>
   <div class="stat-row"><span>Úložisko DB (do 50GB):</span> <span id="storageSizeVal" class="stat-val">0 KB</span></div>
   <div class="stat-row"><span>Celkové bloky (Svet):</span> <span id="totalBlocks" class="stat-val">0</span></div>
   <div class="stat-row"><span>Seed sveta:</span> <span id="seedVal" class="stat-val">0</span></div>
-  <div class="stat-row"><span>FPS (Plynulé):</span> <span id="fpsVal" class="stat-val">60</span></div>
-  <div class="warning-text">🚀 Dohľad 15 blokov + Plynulý Sync.</div>
+  <div class="stat-row"><span>FPS (Smart Edge):</span> <span id="fpsVal" class="stat-val">60</span></div>
+  <div class="warning-text">🔥 Dohľad 25 blokov + Okrajový Sync (2-5).</div>
   <button class="action-btn" onclick="resetWorld()">🎲 Vymazať & Úplne Nový Svet</button>
 </div>
 
@@ -148,14 +148,14 @@ let scene, camera, renderer, player, enemy;
 let worldMesh = null;
 let solidBlocks = new Set();
 let savedWorldData = {};
-let RENDER_DISTANCE = 15; // Nastavený presný dohľad na 15 blokov
+let RENDER_DISTANCE = 25; // Masívny dohľad 25 blokov
 let isDead = false;
 let respawnProtection = 0;
 let db = null;
 
 function initIndexedDB() {
   return new Promise((resolve) => {
-    const request = indexedDB.open('ErikAICraftDB_v5_2', 1);
+    const request = indexedDB.open('ErikAICraftDB_v5_3', 1);
     request.onerror = () => resolve(false);
     request.onsuccess = (e) => {
       db = e.target.result;
@@ -624,8 +624,8 @@ function setupTouchLook() {
   });
   window.addEventListener('touchmove', (e) => {
     if (isDead) return;
-    const t = e.target;
-    if (t.id !== 'jumpBtn' && t.id !== 'joystickZone' && t.id !== 'joystickKnob' && t.tagName !== 'BUTTON') {
+    const t.id = e.target.id;
+    if (t !== 'jumpBtn' && t !== 'joystickZone' && t !== 'joystickKnob' && e.target.tagName !== 'BUTTON') {
       if (e.touches.length > 0) {
         const deltaX = e.touches[0].clientX - touchStartX;
         const deltaY = e.touches[0].clientY - touchStartY;
@@ -735,8 +735,8 @@ function updatePlayerMovement() {
   player.rotation.z = playerAngle;
   updateCharacterAnimation(player, isMoving, false);
 
-  // Optimalizovaný posun: Svet sa s dohľadom 15 blokov prekreslí až vtedy, keď hráč prejde aspoň 8 blokov (zabraňuje mikro-zaseknutiam)
-  if (Math.abs(playerPos.x - lastChunkUpdatePos.x) > 8 || Math.abs(playerPos.y - lastChunkUpdatePos.y) > 8) {
+  // SMART EDGE TRIGGER: Dohľad je 25 blokov, ale svet sa prekreslí iba vtedy, keď sa hráč priblíži k okraju na posledných 4 bloky (> 21)
+  if (Math.abs(playerPos.x - lastChunkUpdatePos.x) > 21 || Math.abs(playerPos.y - lastChunkUpdatePos.y) > 21) {
     lastChunkUpdatePos.x = playerPos.x;
     lastChunkUpdatePos.y = playerPos.y;
     updateWorldGeometry();
