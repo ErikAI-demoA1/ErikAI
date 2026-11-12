@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ErikAI - Data Extractor & Training Tool</title>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: monospace;
+            padding: 20px;
+            max-width: 700px;
+            margin: auto;
+        }
+        h2 { color: #58a6ff; }
+        textarea {
+            width: 100%;
+            height: 140px;
+            background: #161b22;
+            color: #7ee787;
+            border: 1px solid #30363d;
+            padding: 10px;
+            font-family: monospace;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+        button:hover { background: #2ea043; }
+        .output-box {
+            background: #040d21;
+            padding: 15px;
+            border: 1px solid #1f6feb;
+            border-radius: 4px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+            color: #ff7b72;
+        }
+        .stats {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>ErikAI Tréningový Importér</h2>
+    <p>Skopíruj text z akejkoľvek stránky, vlož ho sem a tento nástroj ho automaticky očistí a premení na dáta pripravené pre tvoju AI!</p>
+    
+    <label>Vlož surový skopírovaný text zo stránky:</label><br>
+    <textarea id="rawInput" placeholder="Sem skopíruj text z webu..."></textarea>
+    
+    <button onclick="processTrainingData()">Spracovať a pridať do AI pamäte</button>
+
+    <div class="stats" id="statsInfo">Spracovaných položiek: 0 | Počet znakov: 0</div>
+
+    <h3>Vyčistený výstup pre AI (Formát tréningu):</h3>
+    <div class="output-box" id="cleanOutput">Zatiaľ žiadne dáta...</div>
+    
+    <button style="background: #1f6feb;" onclick="downloadDataset()">Stiahnuť celú novú AI databázu (JSON)</button>
+
+    <script>
+        // Lokálna pamäť pre tréningové dáta
+        let trainingDataset = [];
+
+        function processTrainingData() {
+            let rawText = document.getElementById('rawInput').value;
+            
+            if (!rawText.trim()) {
+                alert("Najprv vlož nejaký text!");
+                return;
+            }
+
+            // 1. Automatické čistenie textu (odstránenie prebytočných medzier, tabulátorov a prázdnych riadkov)
+            let cleanedText = rawText
+                .replace(/[\t\r]+/g, " ")
+                .replace(/\s+/g, " ")
+                .trim();
+
+            // 2. Rozdelenie na menšie tréningové bloky (napr. podľa viet alebo odstavcov pre lepšie učenie AI)
+            let blocks = cleanedText.split(/(?<=[.!?])\s+/); // Rozdelenie na vety
+
+            let newEntriesCount = 0;
+            blocks.forEach(block => {
+                if(block.length > 10) { // Ignorujeme príliš krátke fragmenty
+                    trainingDataset.push({
+                        id: trainingDataset.length + 1,
+                        context: block,
+                        timestamp: new Date().toISOString()
+                    });
+                    newEntriesCount++;
+                }
+            });
+
+            // 3. Zobrazenie výsledku
+            document.getElementById('cleanOutput').innerText = JSON.stringify(trainingDataset, null, 2);
+            document.getElementById('statsInfo').innerText = `Celkovo v pamäti: ${trainingDataset.length} vedomostí | Pridané teraz: ${newEntriesCount} viet`;
+            
+            // Vyčistenie vstupného poľa pre ďalší web
+            document.getElementById('rawInput').value = "";
+        }
+
+        function downloadDataset() {
+            if (trainingDataset.length === 0) {
+                alert("Pamäť AI je prázdna!");
+                return;
+            }
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(trainingDataset, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "erikai_training_data.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+    </script>
+
+</body>
+</html>
