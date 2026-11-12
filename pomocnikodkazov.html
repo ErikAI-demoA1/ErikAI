@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ErikAI - Generátor Navigačných Kódov</title>
+  <title>ErikAI - Pokročilý Generátor Navigačných Kódov</title>
   <style>
     :root {
       --bg: #090a0f;
@@ -12,6 +12,7 @@
       --accent: #3b82f6;
       --accent-hover: #2563eb;
       --green: #10b981;
+      --purple: #8b5cf6;
       --text: #f1f5f9;
       --muted: #94a3b8;
     }
@@ -31,7 +32,7 @@
 
     .container {
       width: 100%;
-      max-width: 650px;
+      max-width: 700px;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 18px;
@@ -76,9 +77,26 @@
       outline: none;
     }
 
-    input:focus {
-      border-color: var(--accent);
+    input:focus { border-color: var(--accent); }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
     }
+
+    .btn-add {
+      flex: 1;
+      background: var(--purple);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-add:hover { opacity: 0.9; }
 
     .output-section {
       margin-top: 22px;
@@ -94,7 +112,9 @@
       color: #38bdf8;
       word-break: break-all;
       margin-top: 6px;
-      position: relative;
+      max-height: 150px;
+      overflow-y: auto;
+      white-space: pre-wrap;
     }
 
     .output-header {
@@ -124,41 +144,37 @@
       border-top: 1px solid var(--border);
     }
 
-    .nav-btn {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #1e2530;
-      border: 1px solid var(--border);
-      padding: 12px 16px;
-      border-radius: 10px;
-      color: white;
-      text-decoration: none;
-      font-weight: 600;
-      margin-top: 8px;
+    .multi-list-section {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px dashed var(--border);
     }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h1>🛠️ ErikAI Code & Link Generator</h1>
-    <p class="subtitle">Zadaj názov súboru a popis, generátor ti okamžite vytvorí obidva formáty kódov.</p>
+    <h1>🛠️ ErikAI Master Code Generator</h1>
+    <p class="subtitle">Generuj všetky 3 štýly odkazov a hromadný zoznam do svojho ErikAI OS.</p>
 
     <div class="input-group">
-      <label for="fileName">Názov HTML súboru (napr. eshop.html):</label>
-      <input type="text" id="fileName" value="eshop.html" oninput="generateCodes()">
+      <label for="fileName">Názov HTML súboru (napr. rychlost.html):</label>
+      <input type="text" id="fileName" value="rychlost.html" oninput="generateCodes()">
     </div>
 
     <div class="input-group">
       <label for="fileTitle">Textový názov / Popis (s emoji):</label>
-      <input type="text" id="fileTitle" value="🏙️ ErikAI Šablóna na inzeracie tovaru/produktu 19" oninput="generateCodes()">
+      <input type="text" id="fileTitle" value="🪪 ERIKAI Kalkulačka Rýchlosť" oninput="generateCodes()">
     </div>
 
-    <!-- Výstup 1: HTML Tlačidlo -->
+    <div class="action-row">
+      <button class="btn-add" onclick="addItemToList()">➕ Pridať položku do hromadného zoznamu</button>
+    </div>
+
+    <!-- Výstup 1: HTML Tlačidlo so spanmi -->
     <div class="output-section">
       <div class="output-header">
-        <label>1. HTML Tlačidlo (`&lt;a class="nav-btn"...&gt;`):</label>
+        <label>1. HTML Tlačidlo (nav-btn štýl):</label>
         <button class="btn-copy" onclick="copyText('codeHtml')">Kopírovať</button>
       </div>
       <div class="output-box" id="codeHtml"></div>
@@ -173,14 +189,38 @@
       <div class="output-box" id="codeJs"></div>
     </div>
 
+    <!-- Výstup 3: Jednoduchý odkaz -->
+    <div class="output-section">
+      <div class="output-header">
+        <label>3. Jednoduchý odkaz (`&lt;a href="..."&gt;Názov&lt;/a&gt;`):</label>
+        <button class="btn-copy" onclick="copyText('codeSimple')">Kopírovať</button>
+      </div>
+      <div class="output-box" id="codeSimple"></div>
+    </div>
+
     <!-- Živá ukážka -->
     <div class="preview-box">
       <label>Živá náhľad tlačidla:</label>
-      <div id="buttonPreview"></div>
+      <div id="buttonPreview" style="margin-top: 8px;"></div>
+    </div>
+
+    <!-- Hromadný zoznam -->
+    <div class="multi-list-section">
+      <h3 style="color: #a78bfa; font-size: 1.1rem; margin-bottom: 10px;">📋 Hromadný JS Zoznam (Všetky pridané)</h3>
+      <div class="output-header" style="margin-top: 0;">
+        <label>Skopíruj naraz celú zmes:</label>
+        <div>
+          <button class="btn-copy" style="background:#dc2626; margin-right:6px;" onclick="clearList()">Vymazať</button>
+          <button class="btn-copy" onclick="copyText('multiOutput')">Kopírovať zoznam</button>
+        </div>
+      </div>
+      <div class="output-box" id="multiOutput" style="color: #10b981; min-height: 80px;">[ ]</div>
     </div>
   </div>
 
   <script>
+    let itemsList = [];
+
     function generateCodes() {
       const file = document.getElementById('fileName').value.trim();
       const title = document.getElementById('fileTitle').value.trim();
@@ -193,8 +233,35 @@
       const jsCode = `{file: "${file}", name: "${title}"},`;
       document.getElementById('codeJs').textContent = jsCode;
 
+      // Formát 3: Jednoduchý odkaz
+      const simpleCode = `<a href="${file}">${title}</a>`;
+      document.getElementById('codeSimple').textContent = simpleCode;
+
       // Živý náhľad
-      document.getElementById('buttonPreview').innerHTML = htmlCode;
+      document.getElementById('buttonPreview').innerHTML = simpleCode;
+    }
+
+    function addItemToList() {
+      const file = document.getElementById('fileName').value.trim();
+      const title = document.getElementById('fileTitle').value.trim();
+      if (!file || !title) return;
+
+      itemsList.push({ file, name: title });
+      updateMultiOutput();
+    }
+
+    function updateMultiOutput() {
+      let formatted = "[\n";
+      itemsList.forEach(item => {
+        formatted += `  {file: "${item.file}", name: "${item.name}"},\n`;
+      });
+      formatted += "]";
+      document.getElementById('multiOutput').textContent = formatted;
+    }
+
+    function clearList() {
+      itemsList = [];
+      updateMultiOutput();
     }
 
     function copyText(elementId) {
@@ -206,6 +273,7 @@
 
     // Spustenie pri štarte
     generateCodes();
+    updateMultiOutput();
   </script>
 </body>
 </html>
