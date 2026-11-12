@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ErikAI - Živý Generátor Odpovedí</title>
+    <title>ErikAI - Rýchly Zapisovač</title>
     <style>
         body {
             background-color: #0d1117;
@@ -14,6 +14,11 @@
             margin: auto;
         }
         h2 { color: #58a6ff; }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
         input, textarea {
             width: 100%;
             background: #161b22;
@@ -22,21 +27,26 @@
             padding: 10px;
             font-family: monospace;
             border-radius: 4px;
-            margin-bottom: 10px;
             box-sizing: border-box;
         }
-        textarea { height: 100px; resize: vertical; }
+        input { height: 40px; flex: 1; }
+        textarea { height: 100px; resize: vertical; margin-bottom: 10px; }
+        
+        .actions {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
         button {
             background: #238636;
             color: white;
             border: none;
-            padding: 12px 20px;
-            font-size: 15px;
+            padding: 10px 18px;
+            font-size: 14px;
             font-weight: bold;
             border-radius: 6px;
             cursor: pointer;
-            margin-right: 5px;
-            margin-bottom: 5px;
         }
         button:hover { background: #2ea043; }
         .btn-blue { background: #1f6feb; }
@@ -49,75 +59,73 @@
             padding: 15px;
             border: 1px solid #1f6feb;
             border-radius: 4px;
-            margin-top: 15px;
+            margin-top: 10px;
             white-space: pre-wrap;
             word-break: break-all;
-            max-height: 300px;
+            max-height: 350px;
             overflow-y: auto;
             color: #7ee787;
             font-size: 14px;
         }
-        .flex-row {
-            display: flex;
-            gap: 10px;
-        }
+        label { font-size: 13px; color: #8b949e; }
     </style>
 </head>
 <body>
 
-    <h2>ErikAI Živý Zapisovač Odpovedí</h2>
-    <p>Pridávaj kľúče a texty. V dolnom okne hneď vidíš živý náhľad čistého kódu bez slova <code>const</code>, pripravený na kopírovanie!</p>
+    <h2>ErikAI Rýchly Zapisovač</h2>
+    <p>Zadaj kľúč a hodnotu. Kód sa formátuje a ukladá automaticky!</p>
     
-    <label>Kľúč (napr. pes, auto, dom):</label><br>
-    <input type="text" id="inputKey" placeholder="Zadaj kľúčové slovo...">
+    <label>Kľúč (napr. pes):</label>
+    <input type="text" id="inputKey" placeholder="Sem napíš kľúčové slovo..." oninput="autoSave()">
 
-    <label>Definícia / Text z webu:</label><br>
-    <inputTextarea id="inputText" placeholder="Sem skopíruj text..."></inputTextarea>
+    <label style="margin-top: 10px; display: block;">Hodnota / Text z webu:</label>
+    <textarea id="inputText" placeholder="Sem vlož definíciu alebo text..." oninput="autoSave()"></textarea>
     
-    <button onclick="addEntry()">➕ Pridať do zoznamu</button>
-    <button class="btn-blue" onclick="copyCode()">📋 Skopírovať čistý kód</button>
-    <button class="btn-blue" onclick="downloadCode()">💾 Stiahnuť ako TXT</button>
-    <button class="btn-red" onclick="clearAll()">🗑️ Vymazať všetko</button>
+    <div class="actions">
+        <button onclick="addEntry()">➕ Pridať do zoznamu</button>
+        <button class="btn-blue" onclick="copyCode()">📋 Skopírovať čistý kód</button>
+        <button class="btn-blue" onclick="downloadCode()">💾 Stiahnuť TXT</button>
+        <button class="btn-red" onclick="clearAll()">🗑️ Vymazať všetko</button>
+    </div>
 
-    <h3>Živý náhľad výstupného kódu:</h3>
-    <div class="preview-box" id="livePreview">// Tu sa bude postupne vytvárať tvoj kód...</div>
+    <label>Živý náhľad čistého kódu (pripravený na vloženie):</label>
+    <div class="preview-box" id="livePreview">// Tu sa objaví vygenerovaný kód...</div>
 
     <script>
-        // Pole pre ukladanie položiek
         let entries = [];
 
         function addEntry() {
-            let key = document.getElementById('inputKey').value.toLowerCase().trim();
-            let text = document.getElementById('inputText').value;
+            let keyInput = document.getElementById('inputKey');
+            let textInput = document.getElementById('inputText');
+            
+            let key = keyInput.value.toLowerCase().trim();
+            let text = textInput.value;
 
             if (!key || !text) {
-                alert("Musíš vyplniť kľúč aj text!");
+                alert("Musíš vyplniť kľúč aj hodnotu!");
                 return;
             }
 
-            // Očistenie textu od nebezpečných úvodzoviek a zalomení riadkov
+            // Čistenie textu, aby nerozbil úvodzovky v JS
             let cleanText = text
                 .replace(/[\t\r\n]+/g, " ")
                 .replace(/\s+/g, " ")
                 .replace(/"/g, '\\"')
                 .trim();
 
-            // Uložíme objekt
             entries.push({ key: key, text: cleanText });
 
-            // Aktualizácia živého náhľadu
+            // Aktualizácia náhľadu
             updatePreview();
 
-            // Vyčistenie vstupných polí pre rýchle pokračovanie
-            document.getElementById('inputKey').value = "";
-            document.getElementById('inputText').value = "";
-            document.getElementById('inputKey').focus();
+            // Vyčistenie polí pre okamžité písanie ďalšej položky
+            keyInput.value = "";
+            textInput.value = "";
+            keyInput.focus();
         }
 
         function getFormattedCode() {
             if (entries.length === 0) return "// Zatiaľ žiadne záznamy...";
-            
-            // Vygeneruje presne tie riadky, ktoré chceš (bez slova const odpovede = { ... })
             return entries.map(item => `    "${item.key}": "${item.text}",`).join("\n");
         }
 
@@ -150,7 +158,7 @@
         }
 
         function clearAll() {
-            if (confirm("Naozaj chceš vymazať všetky doteraz pridané záznamy?")) {
+            if (confirm("Naozaj chceš vymazať všetko?")) {
                 entries = [];
                 updatePreview();
             }
