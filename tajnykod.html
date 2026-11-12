@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ErikAI - Tajné Správy (AES Šifrovač)</title>
+  <style>
+    :root {
+      --bg: #090a0f;
+      --card: #131722;
+      --border: rgba(255, 255, 255, 0.1);
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --green: #10b981;
+      --green-hover: #059669;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: radial-gradient(circle at top, #1e293b 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 15px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 650px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 25px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.5rem;
+      margin-bottom: 6px;
+      color: #60a5fa;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 22px;
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    textarea, input {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0b0d14;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    textarea { resize: vertical; min-height: 100px; }
+    textarea:focus, input:focus { border-color: var(--accent); }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 13px;
+      border-radius: 10px;
+      border: none;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.2s;
+      color: white;
+    }
+
+    .btn-enc { background: var(--accent); }
+    .btn-enc:hover { background: var(--accent-hover); }
+
+    .btn-dec { background: var(--green); }
+    .btn-dec:hover { background: var(--green-hover); }
+
+    .output-section {
+      margin-top: 25px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .output-box {
+      background: #0b0d14;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #38bdf8;
+      word-break: break-all;
+      margin-top: 6px;
+      min-height: 80px;
+      max-height: 150px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .btn-copy {
+      background: var(--muted);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-copy:hover { background: #64748b; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>✉️ ErikAI Tajné Správy</h1>
+    <p class="subtitle">Zašifruj správu pre priateľa alebo ju bezpečne odomkni pomocou hesla</p>
+
+    <div class="input-group">
+      <label for="secretKey">Zdieľané heslo (kľúč pre oboch):</label>
+      <input type="password" id="secretKey" placeholder="Zadaj tajné heslo...">
+    </div>
+
+    <div class="input-group">
+      <label for="inputText">Správa (alebo zašifrovaný kód):</label>
+      <textarea id="inputText" placeholder="Sem napíš správu na zašifrovanie, alebo vlož kód na dešifrovanie..."></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-enc" onclick="encryptMessage()">🔒 Zašifrovať správu</button>
+      <button class="btn btn-dec" onclick="decryptMessage()">🔓 Odomknúť / Prečítať</button>
+    </div>
+
+    <div class="output-section">
+      <div class="output-header">
+        <label>Výsledok:</label>
+        <button class="btn-copy" onclick="copyResult()">Kopírovať</button>
+      </div>
+      <div class="output-box" id="resultOutput">Zatiaľ tu nie je žiadny výsledok...</div>
+    </div>
+  </div>
+
+  <script>
+    // Konverzia hesla na šifrovací kľúč pomocou SHA-256
+    async function getKey(password) {
+      const enc = new TextEncoder();
+      const hash = await crypto.subtle.digest('SHA-256', enc.encode(password));
+      return await crypto.subtle.importKey(
+        "raw",
+        hash,
+        { name: "AES-GCM" },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    // Zašifrovanie správy
+    async function encryptMessage() {
+      try {
+        const password = document.getElementById('secretKey').value;
+        const text = document.getElementById('inputText').value;
+        if (!password || !text) {
+          alert("Musíš zadať heslo aj text správy!");
+          return;
+        }
+
+        const key = await getKey(password);
+        const iv = crypto.getRandomValues(new Uint8Array(12)); // Náhodný vektor pre bezpečnosť
+        const encoded = new TextEncoder().encode(text);
+
+        const encrypted = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: iv },
+          key,
+          encoded
+        );
+
+        // Spojenie IV a zašifrovaných dát do jedného reťazca
+        const combined = new Uint8Array(iv.length + new Uint8Array(encrypted).length);
+        combined.set(iv);
+        combined.set(new Uint8Array(encrypted), iv.length);
+
+        const base64String = btoa(String.fromCharCode(...combined));
+        document.getElementById('resultOutput').textContent = base64String;
+      } catch (e) {
+        alert("Chyba pri šifrovaní: " + e.message);
+      }
+    }
+
+    // Dešifrovanie (prečítanie) správy
+    async function decryptMessage() {
+      try {
+        const password = document.getElementById('secretKey').value;
+        const base64Text = document.getElementById('inputText').value.trim();
+        if (!password || !base64Text) {
+          alert("Musíš zadať heslo aj zašifrovaný kód!");
+          return;
+        }
+
+        const key = await getKey(password);
+        const combined = Uint8Array.from(atob(base64Text), c => c.charCodeAt(0));
+
+        const iv = combined.slice(0, 12);
+        const encrypted = combined.slice(12);
+
+        const decrypted = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: iv },
+          key,
+          encrypted
+        );
+
+        const decodedText = new TextDecoder().decode(decrypted);
+        document.getElementById('resultOutput').textContent = decodedText;
+      } catch (e) {
+        document.getElementById('resultOutput').textContent = "❌ Chyba: Nesprávne heslo alebo poškodený kód správy!";
+      }
+    }
+
+    function copyResult() {
+      const text = document.getElementById('resultOutput').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Skopírované do schránky!");
+      });
+    }
+  </script>
+</body>
+</html>
