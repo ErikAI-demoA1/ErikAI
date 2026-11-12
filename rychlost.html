@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ ErikAI OS – Kalkulačka Rýchlosti Behu</title>
+  <style>
+    :root {
+      --bg: #090a0f;
+      --card: #131722;
+      --border: rgba(255, 255, 255, 0.1);
+      --accent: #8b5cf6;
+      --accent-hover: #7c3aed;
+      --green: #10b981;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: radial-gradient(circle at top, #161b29 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 15px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 520px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 25px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.6rem;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, #fff, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 22px;
+    }
+
+    .presets {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .preset-btn:hover {
+      border-color: var(--accent);
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px 15px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0b0d14;
+      color: #fff;
+      font-size: 1.1rem;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-main {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: 0.2s;
+    }
+
+    .btn-main:hover { background: var(--accent-hover); }
+
+    .results {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .stat-box {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 8px;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--green);
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 4px;
+      display: block;
+    }
+
+    .rating {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(139, 92, 246, 0.12);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      text-align: center;
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    /* Vstavané stopky */
+    .stopwatch {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .sw-time {
+      font-family: monospace;
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin: 8px 0;
+      color: #38bdf8;
+    }
+
+    .sw-controls {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .sw-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>⚡ ErikAI Speed Analyzer</h1>
+    <p class="subtitle">Presný výpočet ľudskej rýchlosti zo vzdialenosti a času</p>
+
+    <!-- Rýchle voľby vzdialenosti -->
+    <div class="presets">
+      <button class="preset-btn" onclick="setDist(50)">50 m</button>
+      <button class="preset-btn" onclick="setDist(60)">60 m</button>
+      <button class="preset-btn" onclick="setDist(100)">100 m</button>
+      <button class="preset-btn" onclick="setDist(200)">200 m</button>
+      <button class="preset-btn" onclick="setDist(400)">400 m</button>
+    </div>
+
+    <div class="input-group">
+      <label for="distance">Vzdialenosť (v metroch):</label>
+      <input type="number" id="distance" value="100" step="0.1" min="1" oninput="calculateSpeed()">
+    </div>
+
+    <div class="input-group">
+      <label for="time">Čas behu (v sekundách, napr. 12.45):</label>
+      <input type="number" id="time" value="13.50" step="0.01" min="0.1" oninput="calculateSpeed()">
+    </div>
+
+    <button class="btn-main" onclick="calculateSpeed()">🚀 Vypočítať presnú rýchlosť</button>
+
+    <!-- Výsledky -->
+    <div class="results">
+      <div class="stat-box">
+        <span class="stat-val" id="kmh">26.67</span>
+        <span class="stat-label">km/h</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-val" id="ms">7.41</span>
+        <span class="stat-label">m/s</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-val" id="pace">2:15</span>
+        <span class="stat-label">min / km</span>
+      </div>
+    </div>
+
+    <div class="rating" id="ratingText">
+      🏃‍♂️ Veľmi dobrý rekreačný šprint!
+    </div>
+
+    <!-- Integrované stopky -->
+    <div class="stopwatch">
+      <span style="font-size: 0.85rem; color: var(--muted);">⏱️ Rýchle stopky (čas sa prenesie do výpočtu)</span>
+      <div class="sw-time" id="swDisplay">0.00 s</div>
+      <div class="sw-controls">
+        <button class="sw-btn" style="background: #16a34a;" onclick="startSW()">Štart</button>
+        <button class="sw-btn" style="background: #dc2626;" onclick="stopSW()">Stop & Použiť</button>
+        <button class="sw-btn" style="background: #475569;" onclick="resetSW()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function setDist(meters) {
+      document.getElementById('distance').value = meters;
+      calculateSpeed();
+    }
+
+    function calculateSpeed() {
+      const dist = parseFloat(document.getElementById('distance').value);
+      const time = parseFloat(document.getElementById('time').value);
+
+      if (!dist || !time || dist <= 0 || time <= 0) {
+        document.getElementById('kmh').textContent = "0.00";
+        document.getElementById('ms').textContent = "0.00";
+        document.getElementById('pace').textContent = "--:--";
+        document.getElementById('ratingText').textContent = "Zadaj platnú vzdialenosť a čas.";
+        return;
+      }
+
+      // Výpočty
+      const ms = dist / time;
+      const kmh = ms * 3.6;
+
+      // Tempo (sekundy na 1 km)
+      const secPerKm = 1000 / ms;
+      const paceMin = Math.floor(secPerKm / 60);
+      const paceSec = Math.round(secPerKm % 60).toString().padStart(2, '0');
+
+      document.getElementById('kmh').textContent = kmh.toFixed(2);
+      document.getElementById('ms').textContent = ms.toFixed(2);
+      document.getElementById('pace').textContent = `${paceMin}:${paceSec}`;
+
+      // Vyhodnotenie rýchlosti
+      const ratingEl = document.getElementById('ratingText');
+      if (kmh >= 37) {
+        ratingEl.textContent = "⚡ Svetová extratrieda (Úroveň Usaina Bolta ~37.5 km/h)!";
+      } else if (kmh >= 30) {
+        ratingEl.textContent = "🔥 Profesionálny šprintér / vrcholový športovec!";
+      } else if (kmh >= 24) {
+        ratingEl.textContent = "🏃‍♂️ Rýchly šprint – nadpriemerná atletická forma!";
+      } else if (kmh >= 16) {
+        ratingEl.textContent = "👟 Svižný beh / kondičný šprint.";
+      } else if (kmh >= 9) {
+        ratingEl.textContent = "jogging / vytrvalostný klus.";
+      } else {
+        ratingEl.textContent = "🚶 Rýchla chôdza alebo ľahký výklus.";
+      }
+    }
+
+    // Stopky logika
+    let swInterval = null;
+    let startTime = 0;
+    let elapsed = 0;
+
+    function startSW() {
+      if (swInterval) return;
+      startTime = Date.now() - elapsed;
+      swInterval = setInterval(() => {
+        elapsed = Date.now() - startTime;
+        document.getElementById('swDisplay').textContent = (elapsed / 1000).toFixed(2) + " s";
+      }, 10);
+    }
+
+    function stopSW() {
+      if (!swInterval) return;
+      clearInterval(swInterval);
+      swInterval = null;
+      const finalSec = (elapsed / 1000).toFixed(2);
+      document.getElementById('time').value = finalSec;
+      calculateSpeed();
+    }
+
+    function resetSW() {
+      clearInterval(swInterval);
+      swInterval = null;
+      elapsed = 0;
+      document.getElementById('swDisplay').textContent = "0.00 s";
+    }
+
+    // Prvý prepočet pri otvorení
+    calculateSpeed();
+  </script>
+</body>
+</html>
