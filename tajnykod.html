@@ -198,22 +198,18 @@
   </div>
 
   <script>
-    // Funkcia, ktorá vezme 3 heslá, každé preženie cez SHA-256 a spojí ich do jedného finálneho AES kľúča
     async function getCombinedKey(p1, p2, p3) {
       const enc = new TextEncoder();
 
-      // Vyrobíme samostatný SHA-256 hash pre každé heslo
       const hash1 = await crypto.subtle.digest('SHA-256', enc.encode(p1));
       const hash2 = await crypto.subtle.digest('SHA-256', enc.encode(p2));
       const hash3 = await crypto.subtle.digest('SHA-256', enc.encode(p3));
 
-      // Spojíme všetky 3 hashe (3 x 32 bajtov = 96 bajtov) do jedného poľa
       const combined = new Uint8Array(96);
       combined.set(new Uint8Array(hash1), 0);
       combined.set(new Uint8Array(hash2), 32);
       combined.set(new Uint8Array(hash3), 64);
 
-      // Výsledok ešte raz preženieme cez SHA-256, aby sme dostali presne 256-bitový (32-bajtový) kľúč pre AES
       const finalHash = await crypto.subtle.digest('SHA-256', combined);
 
       return await crypto.subtle.importKey(
@@ -254,7 +250,8 @@
         const base64String = btoa(String.fromCharCode(...combinedData));
         document.getElementById('resultOutput').textContent = base64String;
       } catch (e) {
-        alert("Chyba pri šifrovaní: " e.message);
+        // OPRAVA TU: chýbalo znamienko + pre spojenie textu a premennej chyby
+        alert("Chyba pri šifrovaní: " + e.message);
       }
     }
 
@@ -290,7 +287,8 @@
     }
 
     function copyResult() {
-      const text = document.getElementById('resultOutput'].textContent;
+      // OPRAVA TU: zátvorka namiesto bodky v selectore elementu
+      const text = document.getElementById('resultOutput').textContent;
       navigator.clipboard.writeText(text).then(() => {
         alert("Skopírované do schránky!");
       });
