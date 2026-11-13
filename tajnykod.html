@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ErikAI - Trojité SHA-256 + Jedno AES-256</title>
+  <title>ErikAI - Nuclear P2P Cipher (5x SHA + AES-256)</title>
   <style>
     :root {
       --bg: #090a0f;
@@ -32,7 +32,7 @@
 
     .container {
       width: 100%;
-      max-width: 650px;
+      max-width: 700px;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 18px;
@@ -50,23 +50,23 @@
     .subtitle {
       text-align: center;
       color: var(--muted);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       margin-bottom: 22px;
     }
 
     .input-group {
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     label {
       display: block;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: var(--muted);
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       font-weight: 600;
     }
 
-    textarea, input {
+    textarea, input, select {
       width: 100%;
       padding: 10px 14px;
       border-radius: 10px;
@@ -79,7 +79,7 @@
     }
 
     textarea { resize: vertical; min-height: 90px; }
-    textarea:focus, input:focus { border-color: var(--accent); }
+    textarea:focus, input:focus, select:focus { border-color: var(--accent); }
 
     .passwords-box {
       background: rgba(255, 255, 255, 0.02);
@@ -87,6 +87,38 @@
       padding: 15px;
       border-radius: 12px;
       margin-bottom: 16px;
+    }
+
+    .advanced-box {
+      background: rgba(59, 130, 246, 0.05);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #cbd5e1;
+    }
+
+    .checkbox-row input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .timer-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
     }
 
     .btn-row {
@@ -125,7 +157,7 @@
       border-radius: 10px;
       padding: 12px;
       font-family: monospace;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: #38bdf8;
       word-break: break-all;
       margin-top: 6px;
@@ -158,23 +190,45 @@
 <body>
 
   <div class="container">
-    <h1>🔐 ErikAI Tri-SHA + AES-256</h1>
-    <p class="subtitle">3 nezávislé heslá (3x SHA-256) spojené do jedného AES-256 kľúča</p>
+    <h1>🛡️ ErikAI Nuclear 5x SHA Cipher</h1>
+    <p class="subtitle">5-stupňová kaskáda hesiel (5x SHA-256) + AES-256 + Časovač samozničenia</p>
 
     <div class="passwords-box">
       <div class="input-group">
-        <label for="pass1">1. Heslo (Prvá SHA-256 vrstva):</label>
-        <input type="password" id="pass1" placeholder="Zadaj prvé heslo...">
+        <label for="pass1">1. Tajné heslo:</label>
+        <input type="password" id="pass1" placeholder="Zadaj 1. heslo...">
       </div>
-
       <div class="input-group">
-        <label for="pass2">2. Heslo (Druhá SHA-256 vrstva):</label>
-        <input type="password" id="pass2" placeholder="Zadaj druhé heslo...">
+        <label for="pass2">2. Tajné heslo:</label>
+        <input type="password" id="pass2" placeholder="Zadaj 2. heslo...">
       </div>
-
       <div class="input-group">
-        <label for="pass3">3. Heslo (Tretia SHA-256 vrstva):</label>
-        <input type="password" id="pass3" placeholder="Zadaj tretie heslo...">
+        <label for="pass3">3. Tajné heslo:</label>
+        <input type="password" id="pass3" placeholder="Zadaj 3. heslo...">
+      </div>
+      <div class="input-group">
+        <label for="pass4">4. Tajné heslo:</label>
+        <input type="password" id="pass4" placeholder="Zadaj 4. heslo...">
+      </div>
+      <div class="input-group">
+        <label for="pass5">5. Tajné heslo:</label>
+        <input type="password" id="pass5" placeholder="Zadaj 5. heslo...">
+      </div>
+    </div>
+
+    <div class="advanced-box">
+      <label class="checkbox-row">
+        <input type="checkbox" id="enableExpiry" onclick="toggleExpiry()">
+        <span>Aktivovať časovú expiráciu (samozničenie správy)</span>
+      </label>
+      <div id="expirySettings" style="display: none;" class="timer-row">
+        <input type="number" id="expiryValue" value="15" min="1" style="flex: 2;">
+        <select id="expiryUnit" style="flex: 3;">
+          <option value="seconds">Sekúnd</option>
+          <option value="minutes" selected>Minút</option>
+          <option value="hours">Hodín</option>
+          <option value="days">Dní</option>
+        </select>
       </div>
     </div>
 
@@ -198,19 +252,32 @@
   </div>
 
   <script>
-    async function getCombinedKey(p1, p2, p3) {
+    function toggleExpiry() {
+      const box = document.getElementById('expirySettings');
+      const isChecked = document.getElementById('enableExpiry').checked;
+      box.style.display = isChecked ? 'flex' : 'none';
+    }
+
+    // 5-stupňové kaskádové spojenie hesiel cez 5x SHA-256 do 1 finálneho AES kľúča
+    async function get5ShaKey(p1, p2, p3, p4, p5) {
       const enc = new TextEncoder();
 
-      const hash1 = await crypto.subtle.digest('SHA-256', enc.encode(p1));
-      const hash2 = await crypto.subtle.digest('SHA-256', enc.encode(p2));
-      const hash3 = await crypto.subtle.digest('SHA-256', enc.encode(p3));
+      const h1 = await crypto.subtle.digest('SHA-256', enc.encode(p1));
+      const h2 = await crypto.subtle.digest('SHA-256', enc.encode(p2));
+      const h3 = await crypto.subtle.digest('SHA-256', enc.encode(p3));
+      const h4 = await crypto.subtle.digest('SHA-256', enc.encode(p4));
+      const h5 = await crypto.subtle.digest('SHA-256', enc.encode(p5));
 
-      const combined = new Uint8Array(96);
-      combined.set(new Uint8Array(hash1), 0);
-      combined.set(new Uint8Array(hash2), 32);
-      combined.set(new Uint8Array(hash3), 64);
+      // Spojíme 5 x 32 bajtov = 160 bajtov hrubej sily
+      const megaCombined = new Uint8Array(160);
+      megaCombined.set(new Uint8Array(h1), 0);
+      megaCombined.set(new Uint8Array(h2), 32);
+      megaCombined.set(new Uint8Array(h3), 64);
+      megaCombined.set(new Uint8Array(h4), 96);
+      megaCombined.set(new Uint8Array(h5), 128);
 
-      const finalHash = await crypto.subtle.digest('SHA-256', combined);
+      // Finálne premiešanie cez SHA-256 pre presný 256-bitový AES kľúč
+      const finalHash = await crypto.subtle.digest('SHA-256', megaCombined);
 
       return await crypto.subtle.importKey(
         "raw",
@@ -223,19 +290,40 @@
 
     async function encryptMessage() {
       try {
-        const p1 = document.getElementById('pass1').value;
-        const p2 = document.getElementById('pass2').value;
-        const p3 = document.getElementById('pass3').value;
+        const passwords = [
+          document.getElementById('pass1').value,
+          document.getElementById('pass2').value,
+          document.getElementById('pass3').value,
+          document.getElementById('pass4').value,
+          document.getElementById('pass5').value
+        ];
         const text = document.getElementById('inputText').value;
+        const enableExpiry = document.getElementById('enableExpiry').checked;
 
-        if (!p1 || !p2 || !p3 || !text) {
-          alert("Musíš zadať všetky 3 heslá a aj text správy!");
+        if (passwords.some(p => !p) || !text) {
+          alert("Musíš vyplniť všetkých 5 hesiel a text správy!");
           return;
         }
 
-        const key = await getCombinedKey(p1, p2, p3);
+        let expireTimestamp = 0;
+        if (enableExpiry) {
+          const val = parseFloat(document.getElementById('expiryValue').value);
+          const unit = document.getElementById('expiryUnit').value;
+          let multiplier = 1000;
+          if (unit === 'minutes') multiplier = 60 * 1000;
+          if (unit === 'hours') multiplier = 60 * 60 * 1000;
+          if (unit === 'days') multiplier = 24 * 60 * 60 * 1000;
+          expireTimestamp = Date.now() + (val * multiplier);
+        }
+
+        const payload = {
+          m: text,
+          exp: expireTimestamp
+        };
+
+        const key = await get5ShaKey(...passwords);
         const iv = crypto.getRandomValues(new Uint8Array(12));
-        const encoded = new TextEncoder().encode(text);
+        const encoded = new TextEncoder().encode(JSON.stringify(payload));
 
         const encrypted = await crypto.subtle.encrypt(
           { name: "AES-GCM", iv: iv },
@@ -250,26 +338,28 @@
         const base64String = btoa(String.fromCharCode(...combinedData));
         document.getElementById('resultOutput').textContent = base64String;
       } catch (e) {
-        // OPRAVA TU: chýbalo znamienko + pre spojenie textu a premennej chyby
         alert("Chyba pri šifrovaní: " + e.message);
       }
     }
 
     async function decryptMessage() {
       try {
-        const p1 = document.getElementById('pass1').value;
-        const p2 = document.getElementById('pass2').value;
-        const p3 = document.getElementById('pass3').value;
+        const passwords = [
+          document.getElementById('pass1').value,
+          document.getElementById('pass2').value,
+          document.getElementById('pass3').value,
+          document.getElementById('pass4').value,
+          document.getElementById('pass5').value
+        ];
         const base64Text = document.getElementById('inputText').value.trim();
 
-        if (!p1 || !p2 || !p3 || !base64Text) {
-          alert("Musíš zadať všetky 3 heslá a zašifrovaný kód!");
+        if (passwords.some(p => !p) || !base64Text) {
+          alert("Musíš zadať všetkých 5 hesiel a zašifrovaný kód!");
           return;
         }
 
-        const key = await getCombinedKey(p1, p2, p3);
+        const key = await get5ShaKey(...passwords);
         const combinedData = Uint8Array.from(atob(base64Text), c => c.charCodeAt(0));
-
         const iv = combinedData.slice(0, 12);
         const encrypted = combinedData.slice(12);
 
@@ -279,15 +369,23 @@
           encrypted
         );
 
-        const decodedText = new TextDecoder().decode(decrypted);
-        document.getElementById('resultOutput').textContent = decodedText;
+        const decodedString = new TextDecoder().decode(decrypted);
+        const payload = JSON.parse(decodedString);
+
+        if (payload.exp && payload.exp > 0) {
+          if (Date.now() > payload.exp) {
+            document.getElementById('resultOutput').textContent = "💥 EXPIROVANÉ: Platnosť tejto správy už vypršala!";
+            return;
+          }
+        }
+
+        document.getElementById('resultOutput').textContent = payload.m;
       } catch (e) {
-        document.getElementById('resultOutput').textContent = "❌ Chyba: Niektoré z 3 hesiel je nesprávne, alebo je kód poškodený!";
+        document.getElementById('resultOutput').textContent = "❌ Chyba: Niektoré z 5 hesiel je nesprávne, alebo je kód poškodený!";
       }
     }
 
     function copyResult() {
-      // OPRAVA TU: zátvorka namiesto bodky v selectore elementu
       const text = document.getElementById('resultOutput').textContent;
       navigator.clipboard.writeText(text).then(() => {
         alert("Skopírované do schránky!");
