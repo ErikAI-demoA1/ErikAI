@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ErikAI - Tajné Správy (AES Šifrovač)</title>
+  <title>ErikAI - Trojité SHA-256 + Jedno AES-256</title>
   <style>
     :root {
       --bg: #090a0f;
@@ -55,31 +55,39 @@
     }
 
     .input-group {
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     label {
       display: block;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: var(--muted);
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       font-weight: 600;
     }
 
     textarea, input {
       width: 100%;
-      padding: 12px 15px;
+      padding: 10px 14px;
       border-radius: 10px;
       border: 1px solid var(--border);
       background: #0b0d14;
       color: #fff;
-      font-size: 1rem;
+      font-size: 0.95rem;
       outline: none;
       font-family: inherit;
     }
 
-    textarea { resize: vertical; min-height: 100px; }
+    textarea { resize: vertical; min-height: 90px; }
     textarea:focus, input:focus { border-color: var(--accent); }
+
+    .passwords-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px dashed var(--border);
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
 
     .btn-row {
       display: flex;
@@ -150,12 +158,24 @@
 <body>
 
   <div class="container">
-    <h1>✉️ ErikAI Tajné Správy</h1>
-    <p class="subtitle">Zašifruj správu pre priateľa alebo ju bezpečne odomkni pomocou hesla</p>
+    <h1>🔐 ErikAI Tri-SHA + AES-256</h1>
+    <p class="subtitle">3 nezávislé heslá (3x SHA-256) spojené do jedného AES-256 kľúča</p>
 
-    <div class="input-group">
-      <label for="secretKey">Zdieľané heslo (kľúč pre oboch):</label>
-      <input type="password" id="secretKey" placeholder="Zadaj tajné heslo...">
+    <div class="passwords-box">
+      <div class="input-group">
+        <label for="pass1">1. Heslo (Prvá SHA-256 vrstva):</label>
+        <input type="password" id="pass1" placeholder="Zadaj prvé heslo...">
+      </div>
+
+      <div class="input-group">
+        <label for="pass2">2. Heslo (Druhá SHA-256 vrstva):</label>
+        <input type="password" id="pass2" placeholder="Zadaj druhé heslo...">
+      </div>
+
+      <div class="input-group">
+        <label for="pass3">3. Heslo (Tretia SHA-256 vrstva):</label>
+        <input type="password" id="pass3" placeholder="Zadaj tretie heslo...">
+      </div>
     </div>
 
     <div class="input-group">
@@ -164,8 +184,8 @@
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-enc" onclick="encryptMessage()">🔒 Zašifrovať správu</button>
-      <button class="btn btn-dec" onclick="decryptMessage()">🔓 Odomknúť / Prečítať</button>
+      <button class="btn btn-enc" onclick="encryptMessage()">🔒 Zašifrovať</button>
+      <button class="btn btn-dec" onclick="decryptMessage()">🔓 Odomknúť</button>
     </div>
 
     <div class="output-section">
@@ -178,31 +198,47 @@
   </div>
 
   <script>
-    // Konverzia hesla na šifrovací kľúč pomocou SHA-256
-    async function getKey(password) {
+    // Funkcia, ktorá vezme 3 heslá, každé preženie cez SHA-256 a spojí ich do jedného finálneho AES kľúča
+    async function getCombinedKey(p1, p2, p3) {
       const enc = new TextEncoder();
-      const hash = await crypto.subtle.digest('SHA-256', enc.encode(password));
+
+      // Vyrobíme samostatný SHA-256 hash pre každé heslo
+      const hash1 = await crypto.subtle.digest('SHA-256', enc.encode(p1));
+      const hash2 = await crypto.subtle.digest('SHA-256', enc.encode(p2));
+      const hash3 = await crypto.subtle.digest('SHA-256', enc.encode(p3));
+
+      // Spojíme všetky 3 hashe (3 x 32 bajtov = 96 bajtov) do jedného poľa
+      const combined = new Uint8Array(96);
+      combined.set(new Uint8Array(hash1), 0);
+      combined.set(new Uint8Array(hash2), 32);
+      combined.set(new Uint8Array(hash3), 64);
+
+      // Výsledok ešte raz preženieme cez SHA-256, aby sme dostali presne 256-bitový (32-bajtový) kľúč pre AES
+      const finalHash = await crypto.subtle.digest('SHA-256', combined);
+
       return await crypto.subtle.importKey(
         "raw",
-        hash,
+        finalHash,
         { name: "AES-GCM" },
         false,
         ["encrypt", "decrypt"]
       );
     }
 
-    // Zašifrovanie správy
     async function encryptMessage() {
       try {
-        const password = document.getElementById('secretKey').value;
+        const p1 = document.getElementById('pass1').value;
+        const p2 = document.getElementById('pass2').value;
+        const p3 = document.getElementById('pass3').value;
         const text = document.getElementById('inputText').value;
-        if (!password || !text) {
-          alert("Musíš zadať heslo aj text správy!");
+
+        if (!p1 || !p2 || !p3 || !text) {
+          alert("Musíš zadať všetky 3 heslá a aj text správy!");
           return;
         }
 
-        const key = await getKey(password);
-        const iv = crypto.getRandomValues(new Uint8Array(12)); // Náhodný vektor pre bezpečnosť
+        const key = await getCombinedKey(p1, p2, p3);
+        const iv = crypto.getRandomValues(new Uint8Array(12));
         const encoded = new TextEncoder().encode(text);
 
         const encrypted = await crypto.subtle.encrypt(
@@ -211,33 +247,34 @@
           encoded
         );
 
-        // Spojenie IV a zašifrovaných dát do jedného reťazca
-        const combined = new Uint8Array(iv.length + new Uint8Array(encrypted).length);
-        combined.set(iv);
-        combined.set(new Uint8Array(encrypted), iv.length);
+        const combinedData = new Uint8Array(iv.length + new Uint8Array(encrypted).length);
+        combinedData.set(iv);
+        combinedData.set(new Uint8Array(encrypted), iv.length);
 
-        const base64String = btoa(String.fromCharCode(...combined));
+        const base64String = btoa(String.fromCharCode(...combinedData));
         document.getElementById('resultOutput').textContent = base64String;
       } catch (e) {
-        alert("Chyba pri šifrovaní: " + e.message);
+        alert("Chyba pri šifrovaní: " e.message);
       }
     }
 
-    // Dešifrovanie (prečítanie) správy
     async function decryptMessage() {
       try {
-        const password = document.getElementById('secretKey').value;
+        const p1 = document.getElementById('pass1').value;
+        const p2 = document.getElementById('pass2').value;
+        const p3 = document.getElementById('pass3').value;
         const base64Text = document.getElementById('inputText').value.trim();
-        if (!password || !base64Text) {
-          alert("Musíš zadať heslo aj zašifrovaný kód!");
+
+        if (!p1 || !p2 || !p3 || !base64Text) {
+          alert("Musíš zadať všetky 3 heslá a zašifrovaný kód!");
           return;
         }
 
-        const key = await getKey(password);
-        const combined = Uint8Array.from(atob(base64Text), c => c.charCodeAt(0));
+        const key = await getCombinedKey(p1, p2, p3);
+        const combinedData = Uint8Array.from(atob(base64Text), c => c.charCodeAt(0));
 
-        const iv = combined.slice(0, 12);
-        const encrypted = combined.slice(12);
+        const iv = combinedData.slice(0, 12);
+        const encrypted = combinedData.slice(12);
 
         const decrypted = await crypto.subtle.decrypt(
           { name: "AES-GCM", iv: iv },
@@ -248,12 +285,12 @@
         const decodedText = new TextDecoder().decode(decrypted);
         document.getElementById('resultOutput').textContent = decodedText;
       } catch (e) {
-        document.getElementById('resultOutput').textContent = "❌ Chyba: Nesprávne heslo alebo poškodený kód správy!";
+        document.getElementById('resultOutput').textContent = "❌ Chyba: Niektoré z 3 hesiel je nesprávne, alebo je kód poškodený!";
       }
     }
 
     function copyResult() {
-      const text = document.getElementById('resultOutput').textContent;
+      const text = document.getElementById('resultOutput'].textContent;
       navigator.clipboard.writeText(text).then(() => {
         alert("Skopírované do schránky!");
       });
