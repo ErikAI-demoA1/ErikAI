@@ -164,7 +164,7 @@ let state = {
   options: { groupCount: 2, knockSlots: 8 }
 };
 
-const lsKey = 'erikai_tournament_v4';
+const lsKey = 'erikai_tournament_v5';
 
 function saveState() {
   localStorage.setItem(lsKey, JSON.stringify(state));
@@ -362,7 +362,6 @@ function renderMatchesView() {
     });
   } else if(state.format === 'knockout') {
     if(state.bracket.length === 0) { matchesArea.innerHTML = '<div class="small">Žiadny pavúk.</div>'; return; }
-    // V móde vyraďovačky zobrazíme zápasy VŠETKÝCH kôl postupne, aby sa dalo kliknúť a pokračovať ďalej
     state.bracket.forEach((round, rIdx) => {
       let roundName = `Kolo ${rIdx+1}`;
       if(rIdx === state.bracket.length - 1) roundName = 'Finále 🏆';
@@ -388,13 +387,13 @@ function createMatchCard(m, groupName = null) {
   
   div.innerHTML = `
     <div class="match-row">
-      <div style="flex:1; font-weight:600; font-size:13px; ${isTBD ? 'color:var(--muted);' : ''}">${m.aName}</div>
+      <div id="nameA_${m.id}" style="flex:1; font-weight:600; font-size:13px; ${isTBD ? 'color:var(--muted);' : ''}">${m.aName}</div>
       <div class="score-inputs">
-        <input type="number" min="0" ${isTBD ? 'disabled' : ''} value="${m.scoreA !== null ? m.scoreA : ''}" placeholder="-" oninput="updateScore('${m.id}', this.parentElement.children[0].value, this.parentElement.children[2].value, '${groupName || ''}')">
+        <input type="number" min="0" ${isTBD ? 'disabled' : ''} value="${m.scoreA !== null ? m.scoreA : ''}" placeholder="-" oninput="updateScore('${m.id}', this.value, this.parentElement.children[2].value, '${groupName || ''}')">
         <span>:</span>
-        <input type="number" min="0" ${isTBD ? 'disabled' : ''} value="${m.scoreB !== null ? m.scoreB : ''}" placeholder="-" oninput="updateScore('${m.id}', this.parentElement.children[0].value, this.parentElement.children[2].value, '${groupName || ''}')">
+        <input type="number" min="0" ${isTBD ? 'disabled' : ''} value="${m.scoreB !== null ? m.scoreB : ''}" placeholder="-" oninput="updateScore('${m.id}', this.parentElement.children[0].value, this.value, '${groupName || ''}')">
       </div>
-      <div style="flex:1; text-align:right; font-weight:600; font-size:13px; ${isTBD ? 'color:var(--muted);' : ''}">${m.bName}</div>
+      <div id="nameB_${m.id}" style="flex:1; text-align:right; font-weight:600; font-size:13px; ${isTBD ? 'color:var(--muted);' : ''}">${m.bName}</div>
     </div>
   `;
   return div;
@@ -421,10 +420,15 @@ window.updateScore = function(id, sA, sB, groupName) {
         if(scoreA !== null && scoreB !== null && scoreA !== scoreB) {
           const winner = scoreA > scoreB ? m.aName : m.bName;
           propagateKnockoutWinner(r, id, winner);
+        } else {
+          // Ak sa zmaže skóre, vymažeme postupujúceho v ďalšom kole
+          propagateKnockoutWinner(r, id, 'TBD');
         }
         break;
       }
     }
+    // Aktualizujú sa mená v UI bez nutnosti kompletnej re-generácie zoznamu
+    updateBracketDomNames();
   }
 
   saveState();
@@ -446,8 +450,48 @@ function propagateKnockoutWinner(roundIdx, matchId, winnerName) {
       } else {
         nextMatch.bName = winnerName;
       }
+      // Ak sa zmenil tím na TBD, vymažeme mu aj skóre v dalšom kole
+      if(winnerName === 'TBD') {
+        nextMatch.scoreA = null;
+        nextMatch.scoreB = null;
+        propagateKnockoutWinner(nextRoundIdx, nextMatch.id, 'TBD');
+      }
     }
   }
+}
+
+function updateBracketDomNames() {
+  if(state.format !== 'knockout') return;
+  state.bracket.forEach(round => {
+    round.forEach(m => {
+      const elA = document.getElementById(`nameA_${m.id}`);
+      const elB = document.getElementById(`nameB_${m.id}`);
+      if(elA) {
+        elA.textContent = m.aName;
+        elA.style.color = (m.aName === 'TBD') ? 'var(--muted)' : 'var(--text)';
+      }
+      if(elB) {
+        elB.textContent = m.bName;
+        elB.style.color = (m.bName === 'TBD') ? 'var(--muted)' : 'var(--text)';
+      }
+      // Povolenie/zakázanie inputov podľa toho, či sú tímy známe
+      const isTBD = (m.aName === 'TBD' || m.bName === 'TBD');
+      const card = elA ? elA.closest('.match-card') : null;
+      if(card) {
+        const inputs = card.querySelectorAll('input');
+        inputs.forEach(inp => {
+          if(isTBD && !inp.disabled) {
+            inp.disabled = true;
+            inp.value = '';
+            m.scoreA = null;
+            m.scoreB = null;
+          } else if(!isTBD && inp.disabled) {
+            inp.disabled = false;
+          }
+        });
+      }
+    });
+  });
 }
 
 function renderTableView() {
