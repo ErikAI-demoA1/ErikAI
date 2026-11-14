@@ -1,1554 +1,273 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ErikAI Ultra Arena– battle režim</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f3f3f3;
-      padding: 20px;
-      text-align: center;
-    }
-    h1 {
-      color: #1e4e4e;
-    }
-    select, button {
-      padding: 8px;
-      margin: 10px;
-      font-size: 16px;
-    }
-    .board {
-      display: grid;
-      grid-template-columns: repeat(250, 40px);
-      grid-template-rows: repeat(250, 40px);
-      margin: 0 auto;
-      border: 3px solid #999;
-      width: fit-content;
-    }
-    .cell {
-      width: 28px;
-      height: 28px;
-      border: 3px solid #ccc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .triangle {
-      width: 0;
-      height: 0;
-      border-left: 10px solid transparent;
-      border-right: 10px solid transparent;
-      border-bottom: 21px solid red;
-      position: relative;
-    }
-    .triangle::after {
-      content: attr(data-number);
-      position: absolute;
-      top: -22px;
-      font-size: 10px;
-      font-weight: bold;
-      color: black;
-    }
-    .player-info {
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    footer {
-      font-size: 12px;
-      color: #444;
-      margin-top: 20px;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ErikAI Ultra Arena — Battle režim (10k hráčov)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#061426; --card:#071228; --accent1:#06b6d4; --accent2:#8b5cf6; --text:#e6eef8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:Inter,system-ui,Arial;
+    background:linear-gradient(160deg,var(--bg),#041426 120%);
+    color:var(--text); padding:18px; text-align:center; min-height:100vh;
+  }
+  h1{color:var(--accent1); margin-bottom:5px;}
+  .panel{
+    background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.05); padding:14px; border-radius:12px;
+    max-width:800px; margin:0 auto 14px auto; box-shadow:0 8px 26px rgba(0,0,0,0.5);
+  }
+  input, select, button{
+    padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);
+    background:rgba(0,0,0,0.3); color:var(--text); font-size:14px; margin:4px;
+  }
+  button{
+    background:linear-gradient(90deg,var(--accent2),var(--accent1)); color:#041021; font-weight:700; cursor:pointer; border:none;
+  }
+  button:hover{opacity:0.9}
+  
+  /* HERNÁ PLOCHA */
+  .board-container{
+    width:100%; max-width:900px; height:500px; margin:0 auto; overflow:auto;
+    border:2px solid rgba(255,255,255,0.1); border-radius:10px; background:#040e1a; position:relative;
+  }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(100, 32px);
+    grid-template-rows: repeat(100, 32px);
+    width: fit-content;
+    margin: 0 auto;
+  }
+  .cell {
+    width: 32px; height: 32px; border: 1px solid rgba(255,255,255,0.04);
+    display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  .triangle {
+    width: 0; height: 0;
+    border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 16px solid red;
+    position: relative;
+  }
+  .triangle::after {
+    content: attr(data-number);
+    position: absolute; top: -16px; left: -6px;
+    font-size: 9px; font-weight: bold; color: #fff;
+    text-shadow: 0 0 2px #000;
+  }
+  
+  /* AKTÍVNY HRÁČ - SVETELNÝ EFEKT */
+  .active-player-box {
+    display: inline-block; padding: 8px 16px; border-radius: 8px; margin: 8px 0;
+    font-weight: bold; font-size: 16px; background: rgba(255,255,255,0.05);
+    border: 2px dashed var(--accent1); transition: all 0.3s ease;
+  }
+  .player-info { margin-top: 8px; font-size: 14px; color: #9fb2d1; }
+  footer { font-size: 11px; color: #667c99; margin-top: 20px; }
+  body.dark-mode { background: #0b0f19; color: #fff; }
+</style>
 </head>
 <body>
-  <h1> ErikAI Ultra Arena– battle režim </h1>
 
-<p id="cas" style="font-size: 18px;"></p>
+  <h1>ErikAI Ultra Arena — Battle režim</h1>
+  <p id="cas" style="font-size: 14px; color:#9fb2d1;"></p>
 
-  <script>
-    function aktualizujCas() {
-      const teraz = new Date();
-      const moznosti = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      };
-      const casText = teraz.toLocaleDateString('sk-SK', moznosti);
-      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${casText}`;
-    }
-    setInterval(aktualizujCas, 1000);
-    aktualizujCas();
-  </script>
-
-  <button onclick="toggleTheme()">🌓 Zmeniť režim</button>
-
-<script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
-</script>
-
-<style>
-  body.dark-mode {
-    background-color: #121212;
-    color: white;
-  }
-</style>
-<select id="jazykovyVyber" onchange="prelozStranku(this.value)">
-  <option value="">🌍 Vyber jazyk</option>
-  <option value="af">Afrikaans</option>
-  <option value="sq">Albanian</option>
-  <option value="am">Amharic</option>
-  <option value="ar">Arabic</option>
-  <option value="hy">Armenian</option>
-  <option value="az">Azerbaijani</option>
-  <option value="eu">Basque</option>
-  <option value="be">Belarusian</option>
-  <option value="bn">Bengali</option>
-  <option value="bs">Bosnian</option>
-  <option value="bg">Bulgarian</option>
-  <option value="ca">Catalan</option>
-  <option value="ceb">Cebuano</option>
-  <option value="zh-CN">Chinese (Simplified)</option>
-  <option value="zh-TW">Chinese (Traditional)</option>
-  <option value="hr">Croatian</option>
-  <option value="cs">Czech</option>
-  <option value="da">Danish</option>
-  <option value="nl">Dutch</option>
-  <option value="en">English</option>
-  <option value="eo">Esperanto</option>
-  <option value="et">Estonian</option>
-  <option value="fi">Finnish</option>
-  <option value="fr">French</option>
-  <option value="gl">Galician</option>
-  <option value="ka">Georgian</option>
-  <option value="de">German</option>
-  <option value="el">Greek</option>
-  <option value="gu">Gujarati</option>
-  <option value="ht">Haitian Creole</option>
-  <option value="ha">Hausa</option>
-  <option value="haw">Hawaiian</option>
-  <option value="he">Hebrew</option>
-  <option value="hi">Hindi</option>
-  <option value="hmn">Hmong</option>
-  <option value="hu">Hungarian</option>
-  <option value="is">Icelandic</option>
-  <option value="ig">Igbo</option>
-  <option value="id">Indonesian</option>
-  <option value="ga">Irish</option>
-  <option value="it">Italian</option>
-  <option value="ja">Japanese</option>
-  <option value="jw">Javanese</option>
-  <option value="kn">Kannada</option>
-  <option value="kk">Kazakh</option>
-  <option value="km">Khmer</option>
-  <option value="ko">Korean</option>
-  <option value="ku">Kurdish</option>
-  <option value="ky">Kyrgyz</option>
-  <option value="lo">Lao</option>
-  <option value="la">Latin</option>
-  <option value="lv">Latvian</option>
-  <option value="lt">Lithuanian</option>
-  <option value="lb">Luxembourgish</option>
-  <option value="mk">Macedonian</option>
-  <option value="mg">Malagasy</option>
-  <option value="ms">Malay</option>
-  <option value="ml">Malayalam</option>
-  <option value="mt">Maltese</option>
-  <option value="mi">Maori</option>
-  <option value="mr">Marathi</option>
-  <option value="mn">Mongolian</option>
-  <option value="my">Myanmar</option>
-  <option value="ne">Nepali</option>
-  <option value="no">Norwegian</option>
-  <option value="ny">Nyanja</option>
-  <option value="ps">Pashto</option>
-  <option value="fa">Persian</option>
-  <option value="pl">Polish</option>
-  <option value="pt">Portuguese</option>
-  <option value="pa">Punjabi</option>
-  <option value="ro">Romanian</option>
-  <option value="ru">Russian</option>
-  <option value="sm">Samoan</option>
-  <option value="gd">Scots Gaelic</option>
-  <option value="sr">Serbian</option>
-  <option value="st">Sesotho</option>
-  <option value="sn">Shona</option>
-  <option value="sd">Sindhi</option>
-  <option value="si">Sinhala</option>
-  <option value="sk">Slovak</option>
-  <option value="sl">Slovenian</option>
-  <option value="so">Somali</option>
-  <option value="es">Spanish</option>
-  <option value="su">Sundanese</option>
-  <option value="sw">Swahili</option>
-  <option value="sv">Swedish</option>
-  <option value="tl">Tagalog</option>
-  <option value="tg">Tajik</option>
-  <option value="ta">Tamil</option>
-  <option value="te">Telugu</option>
-  <option value="th">Thai</option>
-  <option value="tr">Turkish</option>
-  <option value="uk">Ukrainian</option>
-  <option value="ur">Urdu</option>
-  <option value="uz">Uzbek</option>
-  <option value="vi">Vietnamese</option>
-  <option value="cy">Welsh</option>
-  <option value="xh">Xhosa</option>
-  <option value="yi">Yiddish</option>
-  <option value="yo">Yoruba</option>
-  <option value="zu">Zulu</option>
-</select>
-
-<script>
-  function prelozStranku(jazyk) {
-    if (jazyk !== "") {
-      const currentUrl = window.location.href;
-      window.location.href = `https://translate.google.com/translate?sl=auto&tl=${jazyk}&u=${encodeURIComponent(currentUrl)}`;
-    }
-  }
-</script>
-  
-  <div>
-    <label>Počet hráčov:</label>
-    <select id="playerCount">
-      <option>1 hráči</option>
-      <option>2 hráči</option>
-      <option>3 hráči</option>
-      <option>4 hráči</option>
-      <option>5 hráči</option>
-      <option>6 hráči</option>
-      <option>7 hráčov</option>
-      <option>8 hráčov</option>
-      <option>9 hráčov</option>
-      <option>10 hráčov</option>
-      <option>11 hráčov</option>
-      <option>12 hráčov</option>
-      <option>13 hráčov</option>
-      <option>14 hráčov</option>
-      <option>15 hráčov</option>
-      <option>16 hráčov</option>
-      <option>17 hráčov</option>
-      <option>18 hráčov</option>
-      <option>19 hráčov</option>
-      <option>20 hráčov</option>
-      <option>21 hráčov</option>
-<option>22 hráčov</option>
-<option>23 hráčov</option>
-<option>24 hráčov</option>
-<option>25 hráčov</option>
-<option>26 hráčov</option>
-<option>27 hráčov</option>
-<option>28 hráčov</option>
-<option>29 hráčov</option>
-<option>30 hráčov</option>
-<option>31 hráčov</option>
-<option>32 hráčov</option>
-<option>33 hráčov</option>
-<option>34 hráčov</option>
-<option>35 hráčov</option>
-<option>36 hráčov</option>
-<option>37 hráčov</option>
-<option>38 hráčov</option>
-<option>39 hráčov</option>
-<option>40 hráčov</option>
-<option>41 hráčov</option>
-<option>42 hráčov</option>
-<option>43 hráčov</option>
-<option>44 hráčov</option>
-<option>45 hráčov</option>
-<option>46 hráčov</option>
-<option>47 hráčov</option>
-<option>48 hráčov</option>
-<option>49 hráčov</option>
-<option>50 hráčov</option>
-<option>51 hráčov</option>
-<option>52 hráčov</option>
-<option>53 hráčov</option>
-<option>54 hráčov</option>
-<option>55 hráčov</option>
-<option>56 hráčov</option>
-<option>57 hráčov</option>
-<option>58 hráčov</option>
-<option>59 hráčov</option>
-<option>60 hráčov</option>
-<option>61 hráčov</option>
-<option>62 hráčov</option>
-<option>63 hráčov</option>
-<option>64 hráčov</option>
-<option>65 hráčov</option>
-<option>66 hráčov</option>
-<option>67 hráčov</option>
-<option>68 hráčov</option>
-<option>69 hráčov</option>
-<option>70 hráčov</option>
-<option>71 hráčov</option>
-<option>72 hráčov</option>
-<option>73 hráčov</option>
-<option>74 hráčov</option>
-<option>75 hráčov</option>
-<option>76 hráčov</option>
-<option>77 hráčov</option>
-<option>78 hráčov</option>
-<option>79 hráčov</option>
-<option>80 hráčov</option>
-<option>81 hráčov</option>
-<option>82 hráčov</option>
-<option>83 hráčov</option>
-<option>84 hráčov</option>
-<option>85 hráčov</option>
-<option>86 hráčov</option>
-<option>87 hráčov</option>
-<option>88 hráčov</option>
-<option>89 hráčov</option>
-<option>90 hráčov</option>
-<option>91 hráčov</option>
-<option>92 hráčov</option>
-<option>93 hráčov</option>
-<option>94 hráčov</option>
-<option>95 hráčov</option>
-<option>96 hráčov</option>
-<option>97 hráčov</option>
-<option>98 hráčov</option>
-<option>99 hráčov</option>
-      <option>100 hráčov</option>
-<option>101 hráčov</option>
-<option>102 hráčov</option>
-<option>103 hráčov</option>
-<option>104 hráčov</option>
-<option>105 hráčov</option>
-<option>106 hráčov</option>
-<option>107 hráčov</option>
-<option>108 hráčov</option>
-<option>109 hráčov</option>
-<option>110 hráčov</option>
-<option>111 hráčov</option>
-<option>112 hráčov</option>
-<option>113 hráčov</option>
-<option>114 hráčov</option>
-<option>115 hráčov</option>
-<option>116 hráčov</option>
-<option>117 hráčov</option>
-<option>118 hráčov</option>
-<option>119 hráčov</option>
-<option>120 hráčov</option>
-<option>121 hráčov</option>
-<option>122 hráčov</option>
-<option>123 hráčov</option>
-<option>124 hráčov</option>
-<option>125 hráčov</option>
-<option>126 hráčov</option>
-<option>127 hráčov</option>
-<option>128 hráčov</option>
-<option>129 hráčov</option>
-<option>130 hráčov</option>
-<option>131 hráčov</option>
-<option>132 hráčov</option>
-<option>133 hráčov</option>
-<option>134 hráčov</option>
-<option>135 hráčov</option>
-<option>136 hráčov</option>
-<option>137 hráčov</option>
-<option>138 hráčov</option>
-<option>139 hráčov</option>
-<option>140 hráčov</option>
-<option>141 hráčov</option>
-<option>142 hráčov</option>
-<option>143 hráčov</option>
-<option>144 hráčov</option>
-<option>145 hráčov</option>
-<option>146 hráčov</option>
-<option>147 hráčov</option>
-<option>148 hráčov</option>
-<option>149 hráčov</option>
-<option>150 hráčov</option>
-<option>151 hráčov</option>
-<option>152 hráčov</option>
-<option>153 hráčov</option>
-<option>154 hráčov</option>
-<option>155 hráčov</option>
-<option>156 hráčov</option>
-<option>157 hráčov</option>
-<option>158 hráčov</option>
-<option>159 hráčov</option>
-<option>160 hráčov</option>
-<option>161 hráčov</option>
-<option>162 hráčov</option>
-<option>163 hráčov</option>
-<option>164 hráčov</option>
-<option>165 hráčov</option>
-<option>166 hráčov</option>
-<option>167 hráčov</option>
-<option>168 hráčov</option>
-<option>169 hráčov</option>
-<option>170 hráčov</option>
-<option>171 hráčov</option>
-<option>172 hráčov</option>
-<option>173 hráčov</option>
-<option>174 hráčov</option>
-<option>175 hráčov</option>
-<option>176 hráčov</option>
-<option>177 hráčov</option>
-<option>178 hráčov</option>
-<option>179 hráčov</option>
-<option>180 hráčov</option>
-<option>181 hráčov</option>
-<option>182 hráčov</option>
-<option>183 hráčov</option>
-<option>184 hráčov</option>
-<option>185 hráčov</option>
-<option>186 hráčov</option>
-<option>187 hráčov</option>
-<option>188 hráčov</option>
-<option>189 hráčov</option>
-<option>190 hráčov</option>
-<option>191 hráčov</option>
-<option>192 hráčov</option>
-<option>193 hráčov</option>
-<option>194 hráčov</option>
-<option>195 hráčov</option>
-<option>196 hráčov</option>
-<option>197 hráčov</option>
-<option>198 hráčov</option>
-<option>199 hráčov</option>
-<option>200 hráčov</option>
-<option>201 hráčov</option>
-<option>202 hráčov</option>
-<option>203 hráčov</option>
-<option>204 hráčov</option>
-<option>205 hráčov</option>
-<option>206 hráčov</option>
-<option>207 hráčov</option>
-<option>208 hráčov</option>
-<option>209 hráčov</option>
-<option>210 hráčov</option>
-<option>211 hráčov</option>
-<option>212 hráčov</option>
-<option>213 hráčov</option>
-<option>214 hráčov</option>
-<option>215 hráčov</option>
-<option>216 hráčov</option>
-<option>217 hráčov</option>
-<option>218 hráčov</option>
-<option>219 hráčov</option>
-<option>220 hráčov</option>
-<option>221 hráčov</option>
-<option>222 hráčov</option>
-<option>223 hráčov</option>
-<option>224 hráčov</option>
-<option>225 hráčov</option>
-<option>226 hráčov</option>
-<option>227 hráčov</option>
-<option>228 hráčov</option>
-<option>229 hráčov</option>
-<option>230 hráčov</option>
-<option>231 hráčov</option>
-<option>232 hráčov</option>
-<option>233 hráčov</option>
-<option>234 hráčov</option>
-<option>235 hráčov</option>
-<option>236 hráčov</option>
-<option>237 hráčov</option>
-<option>238 hráčov</option>
-<option>239 hráčov</option>
-<option>240 hráčov</option>
-<option>241 hráčov</option>
-<option>242 hráčov</option>
-<option>243 hráčov</option>
-<option>244 hráčov</option>
-<option>245 hráčov</option>
-<option>246 hráčov</option>
-<option>247 hráčov</option>
-<option>248 hráčov</option>
-<option>249 hráčov</option>
-<option>250 hráčov</option>
-<option>251 hráčov</option>
-<option>252 hráčov</option>
-<option>253 hráčov</option>
-<option>254 hráčov</option>
-<option>255 hráčov</option>
-<option>256 hráčov</option>
-<option>257 hráčov</option>
-<option>258 hráčov</option>
-<option>259 hráčov</option>
-<option>260 hráčov</option>
-<option>261 hráčov</option>
-<option>262 hráčov</option>
-<option>263 hráčov</option>
-<option>264 hráčov</option>
-<option>265 hráčov</option>
-<option>266 hráčov</option>
-<option>267 hráčov</option>
-<option>268 hráčov</option>
-<option>269 hráčov</option>
-<option>270 hráčov</option>
-<option>271 hráčov</option>
-<option>272 hráčov</option>
-<option>273 hráčov</option>
-<option>274 hráčov</option>
-<option>275 hráčov</option>
-<option>276 hráčov</option>
-<option>277 hráčov</option>
-<option>278 hráčov</option>
-<option>279 hráčov</option>
-<option>280 hráčov</option>
-<option>281 hráčov</option>
-<option>282 hráčov</option>
-<option>283 hráčov</option>
-<option>284 hráčov</option>
-<option>285 hráčov</option>
-<option>286 hráčov</option>
-<option>287 hráčov</option>
-<option>288 hráčov</option>
-<option>289 hráčov</option>
-<option>290 hráčov</option>
-<option>291 hráčov</option>
-<option>292 hráčov</option>
-<option>293 hráčov</option>
-<option>294 hráčov</option>
-<option>295 hráčov</option>
-<option>296 hráčov</option>
-<option>297 hráčov</option>
-<option>298 hráčov</option>
-<option>299 hráčov</option>
-      <option>300 hráčov</option>
-<option>301 hráčov</option>
-<option>302 hráčov</option>
-<option>303 hráčov</option>
-<option>304 hráčov</option>
-<option>305 hráčov</option>
-<option>306 hráčov</option>
-<option>307 hráčov</option>
-<option>308 hráčov</option>
-<option>309 hráčov</option>
-<option>310 hráčov</option>
-<option>311 hráčov</option>
-<option>312 hráčov</option>
-<option>313 hráčov</option>
-<option>314 hráčov</option>
-<option>315 hráčov</option>
-<option>316 hráčov</option>
-<option>317 hráčov</option>
-<option>318 hráčov</option>
-<option>319 hráčov</option>
-<option>320 hráčov</option>
-<option>321 hráčov</option>
-<option>322 hráčov</option>
-<option>323 hráčov</option>
-<option>324 hráčov</option>
-<option>325 hráčov</option>
-<option>326 hráčov</option>
-<option>327 hráčov</option>
-<option>328 hráčov</option>
-<option>329 hráčov</option>
-<option>330 hráčov</option>
-<option>331 hráčov</option>
-<option>332 hráčov</option>
-<option>333 hráčov</option>
-<option>334 hráčov</option>
-<option>335 hráčov</option>
-<option>336 hráčov</option>
-<option>337 hráčov</option>
-<option>338 hráčov</option>
-<option>339 hráčov</option>
-<option>340 hráčov</option>
-<option>341 hráčov</option>
-<option>342 hráčov</option>
-<option>343 hráčov</option>
-<option>344 hráčov</option>
-<option>345 hráčov</option>
-<option>346 hráčov</option>
-<option>347 hráčov</option>
-<option>348 hráčov</option>
-<option>349 hráčov</option>
-<option>350 hráčov</option>
-<option>351 hráčov</option>
-<option>352 hráčov</option>
-<option>353 hráčov</option>
-<option>354 hráčov</option>
-<option>355 hráčov</option>
-<option>356 hráčov</option>
-<option>357 hráčov</option>
-<option>358 hráčov</option>
-<option>359 hráčov</option>
-<option>360 hráčov</option>
-<option>361 hráčov</option>
-<option>362 hráčov</option>
-<option>363 hráčov</option>
-<option>364 hráčov</option>
-<option>365 hráčov</option>
-<option>366 hráčov</option>
-<option>367 hráčov</option>
-<option>368 hráčov</option>
-<option>369 hráčov</option>
-<option>370 hráčov</option>
-<option>371 hráčov</option>
-<option>372 hráčov</option>
-<option>373 hráčov</option>
-<option>374 hráčov</option>
-<option>375 hráčov</option>
-<option>376 hráčov</option>
-<option>377 hráčov</option>
-<option>378 hráčov</option>
-<option>379 hráčov</option>
-<option>380 hráčov</option>
-<option>381 hráčov</option>
-<option>382 hráčov</option>
-<option>383 hráčov</option>
-<option>384 hráčov</option>
-<option>385 hráčov</option>
-<option>386 hráčov</option>
-<option>387 hráčov</option>
-<option>388 hráčov</option>
-<option>389 hráčov</option>
-<option>390 hráčov</option>
-<option>391 hráčov</option>
-<option>392 hráčov</option>
-<option>393 hráčov</option>
-<option>394 hráčov</option>
-<option>395 hráčov</option>
-<option>396 hráčov</option>
-<option>397 hráčov</option>
-<option>398 hráčov</option>
-<option>399 hráčov</option>
-<option>400 hráčov</option>
-<option>401 hráčov</option>
-<option>402 hráčov</option>
-<option>403 hráčov</option>
-<option>404 hráčov</option>
-<option>405 hráčov</option>
-<option>406 hráčov</option>
-<option>407 hráčov</option>
-<option>408 hráčov</option>
-<option>409 hráčov</option>
-<option>410 hráčov</option>
-<option>411 hráčov</option>
-<option>412 hráčov</option>
-<option>413 hráčov</option>
-<option>414 hráčov</option>
-<option>415 hráčov</option>
-<option>416 hráčov</option>
-<option>417 hráčov</option>
-<option>418 hráčov</option>
-<option>419 hráčov</option>
-<option>420 hráčov</option>
-<option>421 hráčov</option>
-<option>422 hráčov</option>
-<option>423 hráčov</option>
-<option>424 hráčov</option>
-<option>425 hráčov</option>
-<option>426 hráčov</option>
-<option>427 hráčov</option>
-<option>428 hráčov</option>
-<option>429 hráčov</option>
-<option>430 hráčov</option>
-<option>431 hráčov</option>
-<option>432 hráčov</option>
-<option>433 hráčov</option>
-<option>434 hráčov</option>
-<option>435 hráčov</option>
-<option>436 hráčov</option>
-<option>437 hráčov</option>
-<option>438 hráčov</option>
-<option>439 hráčov</option>
-<option>440 hráčov</option>
-<option>441 hráčov</option>
-<option>442 hráčov</option>
-<option>443 hráčov</option>
-<option>444 hráčov</option>
-<option>445 hráčov</option>
-<option>446 hráčov</option>
-<option>447 hráčov</option>
-<option>448 hráčov</option>
-<option>449 hráčov</option>
-<option>450 hráčov</option>
-<option>451 hráčov</option>
-<option>452 hráčov</option>
-<option>453 hráčov</option>
-<option>454 hráčov</option>
-<option>455 hráčov</option>
-<option>456 hráčov</option>
-<option>457 hráčov</option>
-<option>458 hráčov</option>
-<option>459 hráčov</option>
-<option>460 hráčov</option>
-<option>461 hráčov</option>
-<option>462 hráčov</option>
-<option>463 hráčov</option>
-<option>464 hráčov</option>
-<option>465 hráčov</option>
-<option>466 hráčov</option>
-<option>467 hráčov</option>
-<option>468 hráčov</option>
-<option>469 hráčov</option>
-<option>470 hráčov</option>
-<option>471 hráčov</option>
-<option>472 hráčov</option>
-<option>473 hráčov</option>
-<option>474 hráčov</option>
-<option>475 hráčov</option>
-<option>476 hráčov</option>
-<option>477 hráčov</option>
-<option>478 hráčov</option>
-<option>479 hráčov</option>
-<option>480 hráčov</option>
-<option>481 hráčov</option>
-<option>482 hráčov</option>
-<option>483 hráčov</option>
-<option>484 hráčov</option>
-<option>485 hráčov</option>
-<option>486 hráčov</option>
-<option>487 hráčov</option>
-<option>488 hráčov</option>
-<option>489 hráčov</option>
-<option>490 hráčov</option>
-<option>491 hráčov</option>
-<option>492 hráčov</option>
-<option>493 hráčov</option>
-<option>494 hráčov</option>
-<option>495 hráčov</option>
-<option>496 hráčov</option>
-<option>497 hráčov</option>
-<option>498 hráčov</option>
-<option>499 hráčov</option>
-      <option>500 hráčov</option>
-<option>501 hráčov</option>
-<option>502 hráčov</option>
-<option>503 hráčov</option>
-<option>504 hráčov</option>
-<option>505 hráčov</option>
-<option>506 hráčov</option>
-<option>507 hráčov</option>
-<option>508 hráčov</option>
-<option>509 hráčov</option>
-<option>510 hráčov</option>
-<option>511 hráčov</option>
-<option>512 hráčov</option>
-<option>513 hráčov</option>
-<option>514 hráčov</option>
-<option>515 hráčov</option>
-<option>516 hráčov</option>
-<option>517 hráčov</option>
-<option>518 hráčov</option>
-<option>519 hráčov</option>
-<option>520 hráčov</option>
-<option>521 hráčov</option>
-<option>522 hráčov</option>
-<option>523 hráčov</option>
-<option>524 hráčov</option>
-<option>525 hráčov</option>
-<option>526 hráčov</option>
-<option>527 hráčov</option>
-<option>528 hráčov</option>
-<option>529 hráčov</option>
-<option>530 hráčov</option>
-<option>531 hráčov</option>
-<option>532 hráčov</option>
-<option>533 hráčov</option>
-<option>534 hráčov</option>
-<option>535 hráčov</option>
-<option>536 hráčov</option>
-<option>537 hráčov</option>
-<option>538 hráčov</option>
-<option>539 hráčov</option>
-<option>540 hráčov</option>
-<option>541 hráčov</option>
-<option>542 hráčov</option>
-<option>543 hráčov</option>
-<option>544 hráčov</option>
-<option>545 hráčov</option>
-<option>546 hráčov</option>
-<option>547 hráčov</option>
-<option>548 hráčov</option>
-<option>549 hráčov</option>
-<option>550 hráčov</option>
-<option>551 hráčov</option>
-<option>552 hráčov</option>
-<option>553 hráčov</option>
-<option>554 hráčov</option>
-<option>555 hráčov</option>
-<option>556 hráčov</option>
-<option>557 hráčov</option>
-<option>558 hráčov</option>
-<option>559 hráčov</option>
-<option>560 hráčov</option>
-<option>561 hráčov</option>
-<option>562 hráčov</option>
-<option>563 hráčov</option>
-<option>564 hráčov</option>
-<option>565 hráčov</option>
-<option>566 hráčov</option>
-<option>567 hráčov</option>
-<option>568 hráčov</option>
-<option>569 hráčov</option>
-<option>570 hráčov</option>
-<option>571 hráčov</option>
-<option>572 hráčov</option>
-<option>573 hráčov</option>
-<option>574 hráčov</option>
-<option>575 hráčov</option>
-<option>576 hráčov</option>
-<option>577 hráčov</option>
-<option>578 hráčov</option>
-<option>579 hráčov</option>
-<option>580 hráčov</option>
-<option>581 hráčov</option>
-<option>582 hráčov</option>
-<option>583 hráčov</option>
-<option>584 hráčov</option>
-<option>585 hráčov</option>
-<option>586 hráčov</option>
-<option>587 hráčov</option>
-<option>588 hráčov</option>
-<option>589 hráčov</option>
-<option>590 hráčov</option>
-<option>591 hráčov</option>
-<option>592 hráčov</option>
-<option>593 hráčov</option>
-<option>594 hráčov</option>
-<option>595 hráčov</option>
-<option>596 hráčov</option>
-<option>597 hráčov</option>
-<option>598 hráčov</option>
-<option>599 hráčov</option>
-<option>600 hráčov</option>
-<option>601 hráčov</option>
-<option>602 hráčov</option>
-<option>603 hráčov</option>
-<option>604 hráčov</option>
-<option>605 hráčov</option>
-<option>606 hráčov</option>
-<option>607 hráčov</option>
-<option>608 hráčov</option>
-<option>609 hráčov</option>
-<option>610 hráčov</option>
-<option>611 hráčov</option>
-<option>612 hráčov</option>
-<option>613 hráčov</option>
-<option>614 hráčov</option>
-<option>615 hráčov</option>
-<option>616 hráčov</option>
-<option>617 hráčov</option>
-<option>618 hráčov</option>
-<option>619 hráčov</option>
-<option>620 hráčov</option>
-<option>621 hráčov</option>
-<option>622 hráčov</option>
-<option>623 hráčov</option>
-<option>624 hráčov</option>
-<option>625 hráčov</option>
-<option>626 hráčov</option>
-<option>627 hráčov</option>
-<option>628 hráčov</option>
-<option>629 hráčov</option>
-<option>630 hráčov</option>
-<option>631 hráčov</option>
-<option>632 hráčov</option>
-<option>633 hráčov</option>
-<option>634 hráčov</option>
-<option>635 hráčov</option>
-<option>636 hráčov</option>
-<option>637 hráčov</option>
-<option>638 hráčov</option>
-<option>639 hráčov</option>
-<option>640 hráčov</option>
-<option>641 hráčov</option>
-<option>642 hráčov</option>
-<option>643 hráčov</option>
-<option>644 hráčov</option>
-<option>645 hráčov</option>
-<option>646 hráčov</option>
-<option>647 hráčov</option>
-<option>648 hráčov</option>
-<option>649 hráčov</option>
-<option>650 hráčov</option>
-<option>651 hráčov</option>
-<option>652 hráčov</option>
-<option>653 hráčov</option>
-<option>654 hráčov</option>
-<option>655 hráčov</option>
-<option>656 hráčov</option>
-<option>657 hráčov</option>
-<option>658 hráčov</option>
-<option>659 hráčov</option>
-<option>660 hráčov</option>
-<option>661 hráčov</option>
-<option>662 hráčov</option>
-<option>663 hráčov</option>
-<option>664 hráčov</option>
-<option>665 hráčov</option>
-<option>666 hráčov</option>
-<option>667 hráčov</option>
-<option>668 hráčov</option>
-<option>669 hráčov</option>
-<option>670 hráčov</option>
-<option>671 hráčov</option>
-<option>672 hráčov</option>
-<option>673 hráčov</option>
-<option>674 hráčov</option>
-<option>675 hráčov</option>
-<option>676 hráčov</option>
-<option>677 hráčov</option>
-<option>678 hráčov</option>
-<option>679 hráčov</option>
-<option>680 hráčov</option>
-<option>681 hráčov</option>
-<option>682 hráčov</option>
-<option>683 hráčov</option>
-<option>684 hráčov</option>
-<option>685 hráčov</option>
-<option>686 hráčov</option>
-<option>687 hráčov</option>
-<option>688 hráčov</option>
-<option>689 hráčov</option>
-<option>690 hráčov</option>
-<option>691 hráčov</option>
-<option>692 hráčov</option>
-<option>693 hráčov</option>
-<option>694 hráčov</option>
-<option>695 hráčov</option>
-<option>696 hráčov</option>
-<option>697 hráčov</option>
-<option>698 hráčov</option>
-<option>699 hráčov</option>
-      <option>700 hráčov</option>
-<option>701 hráčov</option>
-<option>702 hráčov</option>
-<option>703 hráčov</option>
-<option>704 hráčov</option>
-<option>705 hráčov</option>
-<option>706 hráčov</option>
-<option>707 hráčov</option>
-<option>708 hráčov</option>
-<option>709 hráčov</option>
-<option>710 hráčov</option>
-<option>711 hráčov</option>
-<option>712 hráčov</option>
-<option>713 hráčov</option>
-<option>714 hráčov</option>
-<option>715 hráčov</option>
-<option>716 hráčov</option>
-<option>717 hráčov</option>
-<option>718 hráčov</option>
-<option>719 hráčov</option>
-<option>720 hráčov</option>
-<option>721 hráčov</option>
-<option>722 hráčov</option>
-<option>723 hráčov</option>
-<option>724 hráčov</option>
-<option>725 hráčov</option>
-<option>726 hráčov</option>
-<option>727 hráčov</option>
-<option>728 hráčov</option>
-<option>729 hráčov</option>
-<option>730 hráčov</option>
-<option>731 hráčov</option>
-<option>732 hráčov</option>
-<option>733 hráčov</option>
-<option>734 hráčov</option>
-<option>735 hráčov</option>
-<option>736 hráčov</option>
-<option>737 hráčov</option>
-<option>738 hráčov</option>
-<option>739 hráčov</option>
-<option>740 hráčov</option>
-<option>741 hráčov</option>
-<option>742 hráčov</option>
-<option>743 hráčov</option>
-<option>744 hráčov</option>
-<option>745 hráčov</option>
-<option>746 hráčov</option>
-<option>747 hráčov</option>
-<option>748 hráčov</option>
-<option>749 hráčov</option>
-<option>750 hráčov</option>
-<option>751 hráčov</option>
-<option>752 hráčov</option>
-<option>753 hráčov</option>
-<option>754 hráčov</option>
-<option>755 hráčov</option>
-<option>756 hráčov</option>
-<option>757 hráčov</option>
-<option>758 hráčov</option>
-<option>759 hráčov</option>
-<option>760 hráčov</option>
-<option>761 hráčov</option>
-<option>762 hráčov</option>
-<option>763 hráčov</option>
-<option>764 hráčov</option>
-<option>765 hráčov</option>
-<option>766 hráčov</option>
-<option>767 hráčov</option>
-<option>768 hráčov</option>
-<option>769 hráčov</option>
-<option>770 hráčov</option>
-<option>771 hráčov</option>
-<option>772 hráčov</option>
-<option>773 hráčov</option>
-<option>774 hráčov</option>
-<option>775 hráčov</option>
-<option>776 hráčov</option>
-<option>777 hráčov</option>
-<option>778 hráčov</option>
-<option>779 hráčov</option>
-<option>780 hráčov</option>
-<option>781 hráčov</option>
-<option>782 hráčov</option>
-<option>783 hráčov</option>
-<option>784 hráčov</option>
-<option>785 hráčov</option>
-<option>786 hráčov</option>
-<option>787 hráčov</option>
-<option>788 hráčov</option>
-<option>789 hráčov</option>
-<option>790 hráčov</option>
-<option>791 hráčov</option>
-<option>792 hráčov</option>
-<option>793 hráčov</option>
-<option>794 hráčov</option>
-<option>795 hráčov</option>
-<option>796 hráčov</option>
-<option>797 hráčov</option>
-<option>798 hráčov</option>
-<option>799 hráčov</option>
-<option>800 hráčov</option>
-<option>801 hráčov</option>
-<option>802 hráčov</option>
-<option>803 hráčov</option>
-<option>804 hráčov</option>
-<option>805 hráčov</option>
-<option>806 hráčov</option>
-<option>807 hráčov</option>
-<option>808 hráčov</option>
-<option>809 hráčov</option>
-<option>810 hráčov</option>
-<option>811 hráčov</option>
-<option>812 hráčov</option>
-<option>813 hráčov</option>
-<option>814 hráčov</option>
-<option>815 hráčov</option>
-<option>816 hráčov</option>
-<option>817 hráčov</option>
-<option>818 hráčov</option>
-<option>819 hráčov</option>
-<option>820 hráčov</option>
-<option>821 hráčov</option>
-<option>822 hráčov</option>
-<option>823 hráčov</option>
-<option>824 hráčov</option>
-<option>825 hráčov</option>
-<option>826 hráčov</option>
-<option>827 hráčov</option>
-<option>828 hráčov</option>
-<option>829 hráčov</option>
-<option>830 hráčov</option>
-<option>831 hráčov</option>
-<option>832 hráčov</option>
-<option>833 hráčov</option>
-<option>834 hráčov</option>
-<option>835 hráčov</option>
-<option>836 hráčov</option>
-<option>837 hráčov</option>
-<option>838 hráčov</option>
-<option>839 hráčov</option>
-<option>840 hráčov</option>
-<option>841 hráčov</option>
-<option>842 hráčov</option>
-<option>843 hráčov</option>
-<option>844 hráčov</option>
-<option>845 hráčov</option>
-<option>846 hráčov</option>
-<option>847 hráčov</option>
-<option>848 hráčov</option>
-<option>849 hráčov</option>
-<option>850 hráčov</option>
-<option>851 hráčov</option>
-<option>852 hráčov</option>
-<option>853 hráčov</option>
-<option>854 hráčov</option>
-<option>855 hráčov</option>
-<option>856 hráčov</option>
-<option>857 hráčov</option>
-<option>858 hráčov</option>
-<option>859 hráčov</option>
-<option>860 hráčov</option>
-<option>861 hráčov</option>
-<option>862 hráčov</option>
-<option>863 hráčov</option>
-<option>864 hráčov</option>
-<option>865 hráčov</option>
-<option>866 hráčov</option>
-<option>867 hráčov</option>
-<option>868 hráčov</option>
-<option>869 hráčov</option>
-<option>870 hráčov</option>
-<option>871 hráčov</option>
-<option>872 hráčov</option>
-<option>873 hráčov</option>
-<option>874 hráčov</option>
-<option>875 hráčov</option>
-<option>876 hráčov</option>
-<option>877 hráčov</option>
-<option>878 hráčov</option>
-<option>879 hráčov</option>
-<option>880 hráčov</option>
-<option>881 hráčov</option>
-<option>882 hráčov</option>
-<option>883 hráčov</option>
-<option>884 hráčov</option>
-<option>885 hráčov</option>
-<option>886 hráčov</option>
-<option>887 hráčov</option>
-<option>888 hráčov</option>
-<option>889 hráčov</option>
-<option>890 hráčov</option>
-<option>891 hráčov</option>
-<option>892 hráčov</option>
-<option>893 hráčov</option>
-<option>894 hráčov</option>
-<option>895 hráčov</option>
-<option>896 hráčov</option>
-<option>897 hráčov</option>
-<option>898 hráčov</option>
-<option>899 hráčov</option>
-      <option>900 hráčov</option>
-<option>901 hráčov</option>
-<option>902 hráčov</option>
-<option>903 hráčov</option>
-<option>904 hráčov</option>
-<option>905 hráčov</option>
-<option>906 hráčov</option>
-<option>907 hráčov</option>
-<option>908 hráčov</option>
-<option>909 hráčov</option>
-<option>910 hráčov</option>
-<option>911 hráčov</option>
-<option>912 hráčov</option>
-<option>913 hráčov</option>
-<option>914 hráčov</option>
-<option>915 hráčov</option>
-<option>916 hráčov</option>
-<option>917 hráčov</option>
-<option>918 hráčov</option>
-<option>919 hráčov</option>
-<option>920 hráčov</option>
-<option>921 hráčov</option>
-<option>922 hráčov</option>
-<option>923 hráčov</option>
-<option>924 hráčov</option>
-<option>925 hráčov</option>
-<option>926 hráčov</option>
-<option>927 hráčov</option>
-<option>928 hráčov</option>
-<option>929 hráčov</option>
-<option>930 hráčov</option>
-<option>931 hráčov</option>
-<option>932 hráčov</option>
-<option>933 hráčov</option>
-<option>934 hráčov</option>
-<option>935 hráčov</option>
-<option>936 hráčov</option>
-<option>937 hráčov</option>
-<option>938 hráčov</option>
-<option>939 hráčov</option>
-<option>940 hráčov</option>
-<option>941 hráčov</option>
-<option>942 hráčov</option>
-<option>943 hráčov</option>
-<option>944 hráčov</option>
-<option>945 hráčov</option>
-<option>946 hráčov</option>
-<option>947 hráčov</option>
-<option>948 hráčov</option>
-<option>949 hráčov</option>
-<option>950 hráčov</option>
-<option>951 hráčov</option>
-<option>952 hráčov</option>
-<option>953 hráčov</option>
-<option>954 hráčov</option>
-<option>955 hráčov</option>
-<option>956 hráčov</option>
-<option>957 hráčov</option>
-<option>958 hráčov</option>
-<option>959 hráčov</option>
-<option>960 hráčov</option>
-<option>961 hráčov</option>
-<option>962 hráčov</option>
-<option>963 hráčov</option>
-<option>964 hráčov</option>
-<option>965 hráčov</option>
-<option>966 hráčov</option>
-<option>967 hráčov</option>
-<option>968 hráčov</option>
-<option>969 hráčov</option>
-<option>970 hráčov</option>
-<option>971 hráčov</option>
-<option>972 hráčov</option>
-<option>973 hráčov</option>
-<option>974 hráčov</option>
-<option>975 hráčov</option>
-<option>976 hráčov</option>
-<option>977 hráčov</option>
-<option>978 hráčov</option>
-<option>979 hráčov</option>
-<option>980 hráčov</option>
-<option>981 hráčov</option>
-<option>982 hráčov</option>
-<option>983 hráčov</option>
-<option>984 hráčov</option>
-<option>985 hráčov</option>
-<option>986 hráčov</option>
-<option>987 hráčov</option>
-<option>988 hráčov</option>
-<option>989 hráčov</option>
-<option>990 hráčov</option>
-<option>991 hráčov</option>
-<option>992 hráčov</option>
-<option>993 hráčov</option>
-<option>994 hráčov</option>
-<option>995 hráčov</option>
-<option>996 hráčov</option>
-<option>997 hráčov</option>
-<option>998 hráčov</option>
-<option>999 hráčov</option>
-<option>1000 hráčov</option>
-<option>1001 hráčov</option>
-<option>1002 hráčov</option>
-<option>1003 hráčov</option>
-<option>1004 hráčov</option>
-<option>1005 hráčov</option>
-<option>1006 hráčov</option>
-<option>1007 hráčov</option>
-<option>1008 hráčov</option>
-<option>1009 hráčov</option>
-<option>1010 hráčov</option>
-<option>1011 hráčov</option>
-<option>1012 hráčov</option>
-<option>1013 hráčov</option>
-<option>1014 hráčov</option>
-<option>1015 hráčov</option>
-<option>1016 hráčov</option>
-<option>1017 hráčov</option>
-<option>1018 hráčov</option>
-<option>1019 hráčov</option>
-<option>1020 hráčov</option>
-<option>1021 hráčov</option>
-<option>1022 hráčov</option>
-<option>1023 hráčov</option>
-<option>1024 hráčov</option>
-<option>1025 hráčov</option>
-<option>1026 hráčov</option>
-<option>1027 hráčov</option>
-<option>1028 hráčov</option>
-<option>1029 hráčov</option>
-<option>1030 hráčov</option>
-<option>1031 hráčov</option>
-<option>1032 hráčov</option>
-<option>1033 hráčov</option>
-<option>1034 hráčov</option>
-<option>1035 hráčov</option>
-<option>1036 hráčov</option>
-<option>1037 hráčov</option>
-<option>1038 hráčov</option>
-<option>1039 hráčov</option>
-<option>1040 hráčov</option>
-<option>1041 hráčov</option>
-<option>1042 hráčov</option>
-<option>1043 hráčov</option>
-<option>1044 hráčov</option>
-<option>1045 hráčov</option>
-<option>1046 hráčov</option>
-<option>1047 hráčov</option>
-<option>1048 hráčov</option>
-<option>1049 hráčov</option>
-<option>1050 hráčov</option>
-<option>1051 hráčov</option>
-<option>1052 hráčov</option>
-<option>1053 hráčov</option>
-<option>1054 hráčov</option>
-<option>1055 hráčov</option>
-<option>1056 hráčov</option>
-<option>1057 hráčov</option>
-<option>1058 hráčov</option>
-<option>1059 hráčov</option>
-<option>1060 hráčov</option>
-<option>1061 hráčov</option>
-<option>1062 hráčov</option>
-<option>1063 hráčov</option>
-<option>1064 hráčov</option>
-<option>1065 hráčov</option>
-<option>1066 hráčov</option>
-<option>1067 hráčov</option>
-<option>1068 hráčov</option>
-<option>1069 hráčov</option>
-<option>1070 hráčov</option>
-<option>1071 hráčov</option>
-<option>1072 hráčov</option>
-<option>1073 hráčov</option>
-<option>1074 hráčov</option>
-<option>1075 hráčov</option>
-<option>1076 hráčov</option>
-<option>1077 hráčov</option>
-<option>1078 hráčov</option>
-<option>1079 hráčov</option>
-<option>1080 hráčov</option>
-<option>1081 hráčov</option>
-<option>1082 hráčov</option>
-<option>1083 hráčov</option>
-<option>1084 hráčov</option>
-<option>1085 hráčov</option>
-<option>1086 hráčov</option>
-<option>1087 hráčov</option>
-<option>1088 hráčov</option>
-<option>1089 hráčov</option>
-<option>1090 hráčov</option>
-<option>1091 hráčov</option>
-<option>1092 hráčov</option>
-<option>1093 hráčov</option>
-<option>1094 hráčov</option>
-<option>1095 hráčov</option>
-<option>1096 hráčov</option>
-<option>1097 hráčov</option>
-<option>1098 hráčov</option>
-<option>1099 hráčov</option>
-      <option selected>1100 hráčov</option>
-    </select>
-    <button onclick="rollDice()">Hod kockou 🎲</button>
+  <div class="panel">
+    <div>
+      <label>Počet hráčov (1 – 10 000):</label>
+      <input type="number" id="playerCountInput" min="1" max="10000" value="100" style="width:100px;">
+      <button onclick="initGame()">🔄 Spustiť / Nastaviť hru</button>
+      <button onclick="rollDice()">Hod kockou 🎲</button>
+    </div>
+    
+    <div id="activeIndicator" class="active-player-box">Pripravený na hru</div>
+    <div class="player-info" id="info">Zadaj počet hráčov a klikni na Spustiť hru.</div>
   </div>
-  <div class="player-info" id="info"></div>
-  <div class="board" id="board"></div>
+
+  <div class="board-container">
+    <div class="board" id="board"></div>
+  </div>
 
   <footer>
     This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License. © 2025 Erik Mohylák – All rights reserved.
   </footer>
 
   <script>
+    // Hodiny v reálnom čase
+    function aktualizujCas() {
+      const teraz = new Date();
+      document.getElementById('cas').innerText = `🕓 Aktuálny čas: ${teraz.toLocaleDateString('sk-SK', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    }
+    setInterval(aktualizujCas, 1000);
+    aktualizujCas();
+
     const board = document.getElementById("board");
     const info = document.getElementById("info");
-    const colors = ["red", "blue", "green", "yellow", "orange", "purple", "pink", "cyan", "lime", "magenta", "brown", "navy", "black", "gray", "gold", "darkgreen", "darkorange", "violet", "teal", "indigo", "crimson", "deepskyblue", "forestgreen", "darkred", "chartreuse", "hotpink", "slateblue", "coral", "khaki", "steelblue","maroon", "olive", "skyblue", "orchid", "turquoise", "salmon", "plum", "chocolate", "lightgreen", "firebrick", "mediumblue", "darkcyan", "aquamarine", "darkmagenta", "lavender", "lightcoral", "dodgerblue", "mediumorchid", "sienna", "thistle", "springgreen", "tomato", "darkkhaki", "peachpuff", "rosybrown", "mediumslateblue", "seagreen", "mistyrose", "cadetblue", "goldenrod", "slategrey", "powderblue", "limegreen", "mediumvioletred", "lightblue", "indianred", "palegreen", "lightpink", "darkblue", "mediumseagreen", "mediumturquoise", "peru", "palevioletred", "burlywood", "darkolivegreen", "lightseagreen", "gainsboro", "blanchedalmond", "mediumaquamarine", "darkgoldenrod", "lightsteelblue", "navajowhite", "darkslategray", "papayawhip", "rosybrown", "oldlace", "mediumspringgreen", "lightsalmon", "darkslateblue", "lightyellow", "seashell", "honeydew", "azure", "lavenderblush", "moccasin", "wheat", "lemonchiffon", "snow", "floralwhite", "mintcream", "red1", "red2", "red3", "red4", "red5", "red6", "red7", "red8", "red9", "red10", "blue1", "blue2", "blue3", "blue4", "blue5", "blue6", "blue7", "blue8", "blue9", "blue10",
- "green1", "green2", "green3", "green4", "green5", "green6", "green7", "green8", "green9", "green10",
- "yellow1", "yellow2", "yellow3", "yellow4", "yellow5", "yellow6", "yellow7", "yellow8", "yellow9", "yellow10",
- "orange1", "orange2", "orange3", "orange4", "orange5", "orange6", "orange7", "orange8", "orange9", "orange10",
- "purple1", "purple2", "purple3", "purple4", "purple5", "purple6", "purple7", "purple8", "purple9", "purple10",
- "pink1", "pink2", "pink3", "pink4", "pink5", "pink6", "pink7", "pink8", "pink9", "pink10",
- "cyan1", "cyan2", "cyan3", "cyan4", "cyan5", "cyan6", "cyan7", "cyan8", "cyan9", "cyan10",
- "lime1", "lime2", "lime3", "lime4", "lime5", "lime6", "lime7", "lime8", "lime9", "lime10",
- "magenta1", "magenta2", "magenta3", "magenta4", "magenta5", "magenta6", "magenta7", "magenta8", "magenta9", "magenta10",
- "brown1", "brown2", "brown3", "brown4", "brown5", "brown6", "brown7", "brown8", "brown9", "brown10",
- "navy1", "navy2", "navy3", "navy4", "navy5", "navy6", "navy7", "navy8", "navy9", "navy10",
- "black1", "black2", "black3", "black4", "black5", "black6", "black7", "black8", "black9", "black10",
- "gray1", "gray2", "gray3", "gray4", "gray5", "gray6", "gray7", "gray8", "gray9", "gray10",
- "gold1", "gold2", "gold3", "gold4", "gold5", "gold6", "gold7", "gold8", "gold9", "gold10",
- "darkgreen1", "darkgreen2", "darkgreen3", "darkgreen4", "darkgreen5", "darkgreen6", "darkgreen7", "darkgreen8", "darkgreen9", "darkgreen10",
- "darkorange1", "darkorange2", "darkorange3", "darkorange4", "darkorange5", "darkorange6", "darkorange7", "darkorange8", "darkorange9", "darkorange10",
- "violet1", "violet2", "violet3", "violet4", "violet5", "violet6", "violet7", "violet8", "violet9", "violet10",
- "teal1", "teal2", "teal3", "teal4", "teal5", "teal6", "teal7", "teal8", "teal9", "teal10",
- "indigo1", "indigo2", "indigo3", "indigo4", "indigo5", "indigo6", "indigo7", "indigo8", "indigo9", "indigo10", "crimson1", "crimson2", "crimson3", "crimson4", "crimson5", "crimson6", "crimson7", "crimson8", "crimson9", "crimson10",
- "deepskyblue1", "deepskyblue2", "deepskyblue3", "deepskyblue4", "deepskyblue5", "deepskyblue6", "deepskyblue7", "deepskyblue8", "deepskyblue9", "deepskyblue10",
- "forestgreen1", "forestgreen2", "forestgreen3", "forestgreen4", "forestgreen5", "forestgreen6", "forestgreen7", "forestgreen8", "forestgreen9", "forestgreen10",
- "darkred1", "darkred2", "darkred3", "darkred4", "darkred5", "darkred6", "darkred7", "darkred8", "darkred9", "darkred10",
- "chartreuse1", "chartreuse2", "chartreuse3", "chartreuse4", "chartreuse5", "chartreuse6", "chartreuse7", "chartreuse8", "chartreuse9", "chartreuse10",
- "hotpink1", "hotpink2", "hotpink3", "hotpink4", "hotpink5", "hotpink6", "hotpink7", "hotpink8", "hotpink9", "hotpink10",
- "slateblue1", "slateblue2", "slateblue3", "slateblue4", "slateblue5", "slateblue6", "slateblue7", "slateblue8", "slateblue9", "slateblue10",
- "coral1", "coral2", "coral3", "coral4", "coral5", "coral6", "coral7", "coral8", "coral9", "coral10",
- "khaki1", "khaki2", "khaki3", "khaki4", "khaki5", "khaki6", "khaki7", "khaki8", "khaki9", "khaki10",
- "steelblue1", "steelblue2", "steelblue3", "steelblue4", "steelblue5", "steelblue6", "steelblue7", "steelblue8", "steelblue9", "steelblue10",
- "maroon1", "maroon2", "maroon3", "maroon4", "maroon5", "maroon6", "maroon7", "maroon8", "maroon9", "maroon10",
- "olive1", "olive2", "olive3", "olive4", "olive5", "olive6", "olive7", "olive8", "olive9", "olive10",
- "skyblue1", "skyblue2", "skyblue3", "skyblue4", "skyblue5", "skyblue6", "skyblue7", "skyblue8", "skyblue9", "skyblue10",
- "orchid1", "orchid2", "orchid3", "orchid4", "orchid5", "orchid6", "orchid7", "orchid8", "orchid9", "orchid10",
- "turquoise1", "turquoise2", "turquoise3", "turquoise4", "turquoise5", "turquoise6", "turquoise7", "turquoise8", "turquoise9", "turquoise10",
- "salmon1", "salmon2", "salmon3", "salmon4", "salmon5", "salmon6", "salmon7", "salmon8", "salmon9", "salmon10",
- "plum1", "plum2", "plum3", "plum4", "plum5", "plum6", "plum7", "plum8", "plum9", "plum10",
- "chocolate1", "chocolate2", "chocolate3", "chocolate4", "chocolate5", "chocolate6", "chocolate7", "chocolate8", "chocolate9", "chocolate10",
- "lightgreen1", "lightgreen2", "lightgreen3", "lightgreen4", "lightgreen5", "lightgreen6", "lightgreen7", "lightgreen8", "lightgreen9", "lightgreen10",
- "firebrick1", "firebrick2", "firebrick3", "firebrick4", "firebrick5", "firebrick6", "firebrick7", "firebrick8", "firebrick9", "firebrick10", "mediumblue1", "mediumblue2", "mediumblue3", "mediumblue4", "mediumblue5", "mediumblue6", "mediumblue7", "mediumblue8", "mediumblue9", "mediumblue10",
- "darkcyan1", "darkcyan2", "darkcyan3", "darkcyan4", "darkcyan5", "darkcyan6", "darkcyan7", "darkcyan8", "darkcyan9", "darkcyan10",
- "aquamarine1", "aquamarine2", "aquamarine3", "aquamarine4", "aquamarine5", "aquamarine6", "aquamarine7", "aquamarine8", "aquamarine9", "aquamarine10",
- "darkmagenta1", "darkmagenta2", "darkmagenta3", "darkmagenta4", "darkmagenta5", "darkmagenta6", "darkmagenta7", "darkmagenta8", "darkmagenta9", "darkmagenta10",
- "lavender1", "lavender2", "lavender3", "lavender4", "lavender5", "lavender6", "lavender7", "lavender8", "lavender9", "lavender10",
- "lightcoral1", "lightcoral2", "lightcoral3", "lightcoral4", "lightcoral5", "lightcoral6", "lightcoral7", "lightcoral8", "lightcoral9", "lightcoral10",
- "dodgerblue1", "dodgerblue2", "dodgerblue3", "dodgerblue4", "dodgerblue5", "dodgerblue6", "dodgerblue7", "dodgerblue8", "dodgerblue9", "dodgerblue10",
- "mediumorchid1", "mediumorchid2", "mediumorchid3", "mediumorchid4", "mediumorchid5", "mediumorchid6", "mediumorchid7", "mediumorchid8", "mediumorchid9", "mediumorchid10",
- "sienna1", "sienna2", "sienna3", "sienna4", "sienna5", "sienna6", "sienna7", "sienna8", "sienna9", "sienna10",
- "thistle1", "thistle2", "thistle3", "thistle4", "thistle5", "thistle6", "thistle7", "thistle8", "thistle9", "thistle10",
- "springgreen1", "springgreen2", "springgreen3", "springgreen4", "springgreen5", "springgreen6", "springgreen7", "springgreen8", "springgreen9", "springgreen10",
- "tomato1", "tomato2", "tomato3", "tomato4", "tomato5", "tomato6", "tomato7", "tomato8", "tomato9", "tomato10",
- "darkkhaki1", "darkkhaki2", "darkkhaki3", "darkkhaki4", "darkkhaki5", "darkkhaki6", "darkkhaki7", "darkkhaki8", "darkkhaki9", "darkkhaki10",
- "peachpuff1", "peachpuff2", "peachpuff3", "peachpuff4", "peachpuff5", "peachpuff6", "peachpuff7", "peachpuff8", "peachpuff9", "peachpuff10",
- "rosybrown1", "rosybrown2", "rosybrown3", "rosybrown4", "rosybrown5", "rosybrown6", "rosybrown7", "rosybrown8", "rosybrown9", "rosybrown10",
- "mediumslateblue1", "mediumslateblue2", "mediumslateblue3", "mediumslateblue4", "mediumslateblue5", "mediumslateblue6", "mediumslateblue7", "mediumslateblue8", "mediumslateblue9", "mediumslateblue10",
- "seagreen1", "seagreen2", "seagreen3", "seagreen4", "seagreen5", "seagreen6", "seagreen7", "seagreen8", "seagreen9", "seagreen10",
- "mistyrose1", "mistyrose2", "mistyrose3", "mistyrose4", "mistyrose5", "mistyrose6", "mistyrose7", "mistyrose8", "mistyrose9", "mistyrose10",
- "cadetblue1", "cadetblue2", "cadetblue3", "cadetblue4", "cadetblue5", "cadetblue6", "cadetblue7", "cadetblue8", "cadetblue9", "cadetblue10",
- "goldenrod1", "goldenrod2", "goldenrod3", "goldenrod4", "goldenrod5", "goldenrod6", "goldenrod7", "goldenrod8", "goldenrod9", "goldenrod10", "slategrey1", "slategrey2", "slategrey3", "slategrey4", "slategrey5", "slategrey6", "slategrey7", "slategrey8", "slategrey9", "slategrey10",
- "powderblue1", "powderblue2", "powderblue3", "powderblue4", "powderblue5", "powderblue6", "powderblue7", "powderblue8", "powderblue9", "powderblue10",
- "limegreen1", "limegreen2", "limegreen3", "limegreen4", "limegreen5", "limegreen6", "limegreen7", "limegreen8", "limegreen9", "limegreen10",
- "mediumvioletred1", "mediumvioletred2", "mediumvioletred3", "mediumvioletred4", "mediumvioletred5", "mediumvioletred6", "mediumvioletred7", "mediumvioletred8", "mediumvioletred9", "mediumvioletred10",
- "lightblue1", "lightblue2", "lightblue3", "lightblue4", "lightblue5", "lightblue6", "lightblue7", "lightblue8", "lightblue9", "lightblue10",
- "indianred1", "indianred2", "indianred3", "indianred4", "indianred5", "indianred6", "indianred7", "indianred8", "indianred9", "indianred10",
- "palegreen1", "palegreen2", "palegreen3", "palegreen4", "palegreen5", "palegreen6", "palegreen7", "palegreen8", "palegreen9", "palegreen10",
- "lightpink1", "lightpink2", "lightpink3", "lightpink4", "lightpink5", "lightpink6", "lightpink7", "lightpink8", "lightpink9", "lightpink10",
- "darkblue1", "darkblue2", "darkblue3", "darkblue4", "darkblue5", "darkblue6", "darkblue7", "darkblue8", "darkblue9", "darkblue10",
- "mediumseagreen1", "mediumseagreen2", "mediumseagreen3", "mediumseagreen4", "mediumseagreen5", "mediumseagreen6", "mediumseagreen7", "mediumseagreen8", "mediumseagreen9", "mediumseagreen10",
- "mediumturquoise1", "mediumturquoise2", "mediumturquoise3", "mediumturquoise4", "mediumturquoise5", "mediumturquoise6", "mediumturquoise7", "mediumturquoise8", "mediumturquoise9", "mediumturquoise10",
- "peru1", "peru2", "peru3", "peru4", "peru5", "peru6", "peru7", "peru8", "peru9", "peru10",
- "palevioletred1", "palevioletred2", "palevioletred3", "palevioletred4", "palevioletred5", "palevioletred6", "palevioletred7", "palevioletred8", "palevioletred9", "palevioletred10",
- "burlywood1", "burlywood2", "burlywood3", "burlywood4", "burlywood5", "burlywood6", "burlywood7", "burlywood8", "burlywood9", "burlywood10",
- "darkolivegreen1", "darkolivegreen2", "darkolivegreen3", "darkolivegreen4", "darkolivegreen5", "darkolivegreen6", "darkolivegreen7", "darkolivegreen8", "darkolivegreen9", "darkolivegreen10",
- "lightseagreen1", "lightseagreen2", "lightseagreen3", "lightseagreen4", "lightseagreen5", "lightseagreen6", "lightseagreen7", "lightseagreen8", "lightseagreen9", "lightseagreen10",
- "gainsboro1", "gainsboro2", "gainsboro3", "gainsboro4", "gainsboro5", "gainsboro6", "gainsboro7", "gainsboro8", "gainsboro9", "gainsboro10",
- "blanchedalmond1", "blanchedalmond2", "blanchedalmond3", "blanchedalmond4", "blanchedalmond5", "blanchedalmond6", "blanchedalmond7", "blanchedalmond8", "blanchedalmond9", "blanchedalmond10",
- "mediumaquamarine1", "mediumaquamarine2", "mediumaquamarine3", "mediumaquamarine4", "mediumaquamarine5", "mediumaquamarine6", "mediumaquamarine7", "mediumaquamarine8", "mediumaquamarine9", "mediumaquamarine10",
- "darkgoldenrod1", "darkgoldenrod2", "darkgoldenrod3", "darkgoldenrod4", "darkgoldenrod5", "darkgoldenrod6", "darkgoldenrod7", "darkgoldenrod8", "darkgoldenrod9", "darkgoldenrod10", "lightsteelblue1", "lightsteelblue2", "lightsteelblue3", "lightsteelblue4", "lightsteelblue5", "lightsteelblue6", "lightsteelblue7", "lightsteelblue8", "lightsteelblue9", "lightsteelblue10",
- "navajowhite1", "navajowhite2", "navajowhite3", "navajowhite4", "navajowhite5", "navajowhite6", "navajowhite7", "navajowhite8", "navajowhite9", "navajowhite10",
- "darkslategray1", "darkslategray2", "darkslategray3", "darkslategray4", "darkslategray5", "darkslategray6", "darkslategray7", "darkslategray8", "darkslategray9", "darkslategray10",
- "papayawhip1", "papayawhip2", "papayawhip3", "papayawhip4", "papayawhip5", "papayawhip6", "papayawhip7", "papayawhip8", "papayawhip9", "papayawhip10",
- "oldlace1", "oldlace2", "oldlace3", "oldlace4", "oldlace5", "oldlace6", "oldlace7", "oldlace8", "oldlace9", "oldlace10",
- "mediumspringgreen1", "mediumspringgreen2", "mediumspringgreen3", "mediumspringgreen4", "mediumspringgreen5", "mediumspringgreen6", "mediumspringgreen7", "mediumspringgreen8", "mediumspringgreen9", "mediumspringgreen10",
- "lightsalmon1", "lightsalmon2", "lightsalmon3", "lightsalmon4", "lightsalmon5", "lightsalmon6", "lightsalmon7", "lightsalmon8", "lightsalmon9", "lightsalmon10",
- "darkslateblue1", "darkslateblue2", "darkslateblue3", "darkslateblue4", "darkslateblue5", "darkslateblue6", "darkslateblue7", "darkslateblue8", "darkslateblue9", "darkslateblue10",
- "lightyellow1", "lightyellow2", "lightyellow3", "lightyellow4", "lightyellow5", "lightyellow6", "lightyellow7", "lightyellow8", "lightyellow9", "lightyellow10",
- "seashell1", "seashell2", "seashell3", "seashell4", "seashell5", "seashell6", "seashell7", "seashell8", "seashell9", "seashell10",
- "honeydew1", "honeydew2", "honeydew3", "honeydew4", "honeydew5", "honeydew6", "honeydew7", "honeydew8", "honeydew9", "honeydew10",
- "azure1", "azure2", "azure3", "azure4", "azure5", "azure6", "azure7", "azure8", "azure9", "azure10",
- "lavenderblush1", "lavenderblush2", "lavenderblush3", "lavenderblush4", "lavenderblush5", "lavenderblush6", "lavenderblush7", "lavenderblush8", "lavenderblush9", "lavenderblush10",
- "moccasin1", "moccasin2", "moccasin3", "moccasin4", "moccasin5", "moccasin6", "moccasin7", "moccasin8", "moccasin9", "moccasin10",
- "wheat1", "wheat2", "wheat3", "wheat4", "wheat5", "wheat6", "wheat7", "wheat8", "wheat9", "wheat10",
- "lemonchiffon1", "lemonchiffon2", "lemonchiffon3", "lemonchiffon4", "lemonchiffon5", "lemonchiffon6", "lemonchiffon7", "lemonchiffon8", "lemonchiffon9", "lemonchiffon10",
- "snow1", "snow2", "snow3", "snow4", "snow5", "snow6", "snow7", "snow8", "snow9", "snow10",
- "floralwhite1", "floralwhite2", "floralwhite3", "floralwhite4", "floralwhite5", "floralwhite6", "floralwhite7", "floralwhite8", "floralwhite9", "floralwhite10",
- "mintcream1", "mintcream2", "mintcream3", "mintcream4", "mintcream5", "mintcream6", "mintcream7", "mintcream8", "mintcream9", "mintcream10"];
-
+    const activeIndicator = document.getElementById("activeIndicator");
+    
     let currentPlayer = 0;
     let diceRoll = 0;
     let players = [];
+    const GRID_SIZE = 100; // 100x100 = 10 000 políčok pre max výkon a prehľadnosť
+    const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
 
-    // Vytvorenie 25x25 gridu
-    for (let y = 0; y < 250; y++) {
-      for (let x = 0; x < 250; x++) {
-        const cell = document.createElement("div");
-        cell.className = "cell";
-        cell.dataset.x = x;
-        cell.dataset.y = y;
-        cell.addEventListener("click", () => cellClicked(cell));
-        board.appendChild(cell);
+    // Generovanie mriežky 100x100 (10 000 políčok)
+    function createBoard() {
+      board.innerHTML = "";
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.x = x;
+          cell.dataset.y = y;
+          cell.addEventListener("click", () => cellClicked(cell));
+          board.appendChild(cell);
+        }
       }
     }
 
+    // Generovanie náhodných pestrých farieb pre 10k hráčov
+    function getRandomColor(index) {
+      const hue = (index * 137.5) % 360; // Zlatý rez pre optimálne rozlíšenie farieb
+      return `hsl(${hue}, 80%, 60%)`;
+    }
+
+    function initGame() {
+      const countInput = parseInt(document.getElementById("playerCountInput").value) || 10;
+      const count = Math.max(1, Math.min(10000, countInput));
+      
+      createBoard();
+      players = [];
+      currentPlayer = 0;
+      diceRoll = 0;
+
+      const usedPositions = new Set();
+      for (let i = 0; i < count; i++) {
+        const color = getRandomColor(i);
+        let pos;
+        do {
+          pos = Math.floor(Math.random() * TOTAL_CELLS);
+        } while (usedPositions.has(pos));
+        usedPositions.add(pos);
+
+        players.push({ id: i + 1, color: color, pos: pos });
+      }
+
+      renderPlayers();
+      updateActiveVisual();
+      info.innerText = `Hra pripravená pre ${count} hráčov. Na rade je Hráč 1. Klikni „Hod kockou 🎲“.`;
+    }
+
+    function renderPlayers() {
+      // Vyčistenie buniek
+      board.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
+      // Vykreslenie hráčov na pozíciách
+      players.forEach((p, idx) => {
+        if (p.pos !== -1 && p.pos < board.children.length) {
+          const cell = board.children[p.pos];
+          const fig = document.createElement("div");
+          fig.className = "triangle";
+          fig.style.borderBottomColor = p.color;
+          fig.dataset.player = idx;
+          fig.dataset.number = p.id;
+          cell.appendChild(fig);
+        }
+      });
+    }
+
+    function updateActiveVisual() {
+      if (players.length === 0) return;
+      const activeP = players[currentPlayer];
+      activeIndicator.innerText = `🎮 Na rade: Hráč ${activeP.id}`;
+      activeIndicator.style.borderColor = activeP.color;
+      activeIndicator.style.boxShadow = `0 0 15px ${activeP.color}`;
+    }
+
     function rollDice() {
-      const playerSelect = document.getElementById("playerCount");
-      const count = parseInt(playerSelect.value);
-      if (players.length !== count) setupPlayers(count);
+      if (players.length === 0) {
+        initGame();
+        return;
+      }
       if (players[currentPlayer].pos === -1) {
         nextTurn();
         return;
       }
 
       diceRoll = Math.floor(Math.random() * 6) + 1;
-      const color = players[currentPlayer].color;
-      info.innerText = `Hráč ${currentPlayer + 1} (${color}) hodil: ${diceRoll}. Vyber políčko na pohyb.`;
-    }
-
-    function setupPlayers(count) {
-      players = [];
-      board.querySelectorAll(".cell").forEach(cell => cell.innerHTML = "");
-      const used = new Set();
-      for (let i = 0; i < count; i++) {
-        const color = colors[i];
-        let pos;
-        do {
-          pos = Math.floor(Math.random() * (250 * 250));
-        } while (used.has(pos));
-        used.add(pos);
-
-        const cell = board.children[pos];
-        const fig = document.createElement("div");
-        fig.className = "triangle";
-        fig.style.borderBottomColor = color;
-        fig.dataset.player = i;
-        fig.dataset.number = i + 1;
-        cell.appendChild(fig);
-        players.push({ color, pos: pos });
-      }
+      const activeP = players[currentPlayer];
+      info.innerText = `Hráč ${activeP.id} hodil číslo: ${diceRoll}. Vyber cieľové políčko v dosahu ${diceRoll} krokov (manhattan).`;
     }
 
     function cellClicked(cell) {
-      if (!diceRoll) return;
-
-      const player = players[currentPlayer];
-      if (player.pos === -1) return;
-
-      const currentCell = board.children[player.pos];
-      const targetIndex = Array.from(board.children).indexOf(cell);
-      const dx = Math.abs(cell.dataset.x - currentCell.dataset.x);
-      const dy = Math.abs(cell.dataset.y - currentCell.dataset.y);
-      const distance = dx + dy;
-
-      if (distance !== diceRoll) {
-        info.innerText += ` Môžeš ísť presne o ${diceRoll} políčok.`;
+      if (!diceRoll) {
+        info.innerText = "Najprv musíš hodiť kockou!";
         return;
       }
 
-      if (cell.children.length > 0) {
-        const otherFig = cell.children[0];
-        const otherPlayerIndex = parseInt(otherFig.dataset.player);
-        if (otherPlayerIndex !== currentPlayer) {
-          players[otherPlayerIndex].pos = -1;
-          cell.innerHTML = "";
-        } else {
-          info.innerText += " Nemôžeš ísť na svoju figúrku!";
+      const activeP = players[currentPlayer];
+      if (activeP.pos === -1) return;
+
+      const currentCell = board.children[activeP.pos];
+      const targetIndex = Array.from(board.children).indexOf(cell);
+      
+      const cx = parseInt(currentCell.dataset.x);
+      const cy = parseInt(currentCell.dataset.y);
+      const tx = parseInt(cell.dataset.x);
+      const ty = parseInt(cell.dataset.y);
+      
+      const distance = Math.abs(tx - cx) + Math.abs(ty - cy);
+
+      if (distance !== diceRoll) {
+        info.innerText = `Neplatný pohyb! Musíš prejsť presne o ${diceRoll} políčok (aktuálna vzdialenosť je ${distance}).`;
+        return;
+      }
+
+      // Kontrola, či na cieľovom políčku niekto nestojí (eliminácia)
+      const targetPlayerIdx = players.findIndex(p => p.pos === targetIndex);
+      if (targetPlayerIdx !== -1) {
+        if (targetPlayerIdx === currentPlayer) {
+          info.innerText = "Nemôžeš vstúpiť na vlastnú figúrku!";
           return;
+        } else {
+          // Vyradenie súpera
+          players[targetPlayerIdx].pos = -1;
+          info.innerText = `⚠️ Hráč ${activeP.id} vyradil hráča ${players[targetPlayerIdx].id}!`;
         }
       }
 
-      board.children[player.pos].innerHTML = "";
-
-      const fig = document.createElement("div");
-      fig.className = "triangle";
-      fig.style.borderBottomColor = player.color;
-      fig.dataset.player = currentPlayer;
-      fig.dataset.number = currentPlayer + 1;
-      cell.appendChild(fig);
-      player.pos = targetIndex;
-
+      activeP.pos = targetIndex;
       diceRoll = 0;
+      renderPlayers();
       nextTurn();
     }
 
     function nextTurn() {
+      if (players.length === 0) return;
       currentPlayer = (currentPlayer + 1) % players.length;
-      const nextColor = players[currentPlayer].color;
-      info.innerText = `Hráč ${currentPlayer + 1} (${nextColor}) na ťahu. Klikni „Hod kockou 🎲“.`;
+      updateActiveVisual();
+      const activeP = players[currentPlayer];
+      info.innerText = `Na rade je Hráč ${activeP.id}. Klikni „Hod kockou 🎲“.`;
     }
+
+    // Inicializácia pri štarte na 100 hráčov ako predvolená vzorka
+    initGame();
   </script>
+
 <script>
   // ==========================================
   // ERIKAI OS — UNIVERZÁLNY BEZPEČNOSTNÝ STRÁŽCA
   // ==========================================
   const povolenyHostitel = "erikai-demoa1.github.io";
-  
-  // Overenie, či prebehol proces v session pamäti alebo či prichádza zo správnej domény
   const jeOvereny = sessionStorage.getItem('erikai_auth_token') === 'VERIFIED_OK';
   let pristupOk = jeOvereny || document.referrer.includes(povolenyHostitel);
 
-  // Ak sa niekto pokúsi otvoriť podstránku napriamo (na čierno)
   if (!pristupOk && window.location.hostname !== "127.0.0.1" && window.location.hostname !== "localhost") {
-    
-    // Vtipné upozornenie
     alert("🚨 Haha, chcel si sa sem dostať zadarmo bez overenia?! Tak takto teda nie! Šup-šup naspäť na začiatok, pekne od 1. kroku sa prihlásiť! 🏃‍♂️💨");
-    
-    // Presmerovanie na hlavnú vstupnú bránu ErikAI OS
     window.location.href = "https://erikai-demoa1.github.io/ErikAI/";
   }
 </script>
 
-  
 </body>
 </html>
