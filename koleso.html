@@ -42,8 +42,8 @@ button{cursor:pointer;background:linear-gradient(90deg,var(--accent),#8b5cf6);bo
 .small{font-size:13px;padding:6px}
 .items{margin-top:8px;max-height:250px;overflow:auto;border-radius:8px;padding:8px;background:var(--glass)}
 .item{display:flex;align-items:center;gap:8px;padding:6px;border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,0.02)}
-.item input[type="text"]{flex:1;background:transparent;border:none;color:var(--text);padding:4px}
-.color{width:36px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);padding:2px}
+.item input[type="text"]{flex:1;background:transparent;border:1px solid rgba(255,255,255,0.1);color:var(--text);padding:6px;border-radius:6px}
+.color{width:36px;height:32px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);padding:2px;cursor:pointer}
 .controls{display:flex;gap:8px;margin-top:8px}
 .controls button{flex:1}
 .wheel-wrap{display:flex;gap:12px;align-items:center;justify-content:center;padding:8px}
@@ -148,7 +148,7 @@ let lastTickSegment=-1;
 
 function randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
 function hsv(h,s,v){const f=(n,k=(n+h/60)%6)=>v-v*s*Math.max(Math.min(k,4-k,1),0);const r=Math.round(f(5)*255),g=Math.round(f(3)*255),b=Math.round(f(1)*255);return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');}
-function colorForIndex(idx,seedHex){const baseHue=(idx*47)%360;return hsv(baseHue,0.45,0.95);}
+function colorForIndex(idx){const baseHue=(idx*47)%360;return hsv(baseHue,0.45,0.95);}
 
 function renderWheel(){
   wheelGroup.innerHTML='';
@@ -156,7 +156,6 @@ function renderWheel(){
   if(n===0){document.getElementById('centerText').textContent='Pridaj položky'; return;}
   const radius=230;
   const slice=360/n;
-  const seedColor=document.getElementById('colorSeed').value;
   for(let i=0;i<n;i++){
     const start=(i*slice)-90,end=start+slice,large=slice>180?1:0;
     const x1=radius*Math.cos(start*Math.PI/180),y1=radius*Math.sin(start*Math.PI/180);
@@ -164,7 +163,7 @@ function renderWheel(){
     const d=`M 0 0 L ${x1} ${y1} A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2} Z`;
     const path=document.createElementNS('http://www.w3.org/2000/svg','path');
     path.setAttribute('d',d);
-    const col=items[i].color||colorForIndex(i,seedColor);
+    const col=items[i].color||colorForIndex(i);
     path.setAttribute('fill',col);
     path.setAttribute('stroke','rgba(0,0,0,0.15)');
     wheelGroup.appendChild(path);
@@ -180,24 +179,40 @@ function renderWheel(){
   }
 }
 
+function updateTextareaFromItems(){
+  const ta = document.getElementById('itemsInput');
+  ta.value = items.map(it => it.text).join('\n');
+}
+
 function refreshItemsList(){
   const wrap=document.getElementById('itemsList'); wrap.innerHTML='';
   items.forEach((it,idx)=>{
     const div=document.createElement('div'); div.className='item';
     const input=document.createElement('input'); input.type='text'; input.value=it.text;
-    input.addEventListener('input',e=>{items[idx].text=e.target.value; syncFromList();});
+    input.addEventListener('input',e=>{
+      items[idx].text=e.target.value; 
+      renderWheel();
+      updateTextareaFromItems();
+      saveCurrentDraft();
+    });
     const color=document.createElement('input'); color.type='color'; color.value=it.color||colorForIndex(idx);
-    color.addEventListener('input',e=>{items[idx].color=e.target.value; syncFromList();});
+    color.addEventListener('input',e=>{
+      items[idx].color=e.target.value; 
+      renderWheel();
+      saveCurrentDraft();
+    });
     const del=document.createElement('button'); del.textContent='✖'; del.style.width='42px';
-    del.addEventListener('click',()=>{items.splice(idx,1); syncFromList();});
+    del.addEventListener('click',()=>{
+      items.splice(idx,1); 
+      refreshItemsList();
+    });
     div.appendChild(input); div.appendChild(color); div.appendChild(del);
     wrap.appendChild(div);
   });
   renderWheel();
+  updateTextareaFromItems();
   saveCurrentDraft();
 }
-
-function syncFromList(){renderWheel(); refreshItemsList();}
 
 function loadPresets(){try{const raw=localStorage.getItem(lsKey);if(!raw)return{};return JSON.parse(raw);}catch(e){return{}}}
 function savePresets(obj){localStorage.setItem(lsKey,JSON.stringify(obj)); renderPresets();}
@@ -271,14 +286,13 @@ document.getElementById('applyItems').addEventListener('click',()=>{
   if(!txt){alert('Zadaj aspoň jednu položku.'); return;}
   const lines = txt.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   const seed = document.getElementById('colorSeed').value;
-  items = lines.map((t, i) => ({ text: t, color: colorForIndex(i, seed) }));
+  items = lines.map((t, i) => ({ text: t, color: items[i]?.color || colorForIndex(i) }));
   refreshItemsList();
 });
 
 document.getElementById('addRandom').addEventListener('click', () => {
   const demo = ['Výhra', 'Strata', 'Bod +3', 'Druhá šanca', 'Bonus', 'Skús znova'];
-  const seed = document.getElementById('colorSeed').value;
-  demo.forEach((t, i) => items.push({ text: t, color: colorForIndex(items.length + i, seed) }));
+  demo.forEach((t, i) => items.push({ text: t, color: colorForIndex(items.length) }));
   refreshItemsList();
 });
 
@@ -332,34 +346,29 @@ document.getElementById('colorSeed').addEventListener('input', () => {
   saveCurrentDraft(); 
 });
 
-document.getElementById('itemsInput').addEventListener('keydown', (e) => {
-  if(e.ctrlKey && e.key === 'Enter') document.getElementById('applyItems').click();
-});
-
 document.addEventListener('visibilitychange', () => { if(document.hidden) saveCurrentDraft(); });
 
 renderPresets();
 loadCurrentDraft();
-renderWheel();
+if(items.length === 0){
+  // Predvolené demo ak je prázdno
+  items = [
+    {text: 'Výhra', color: colorForIndex(0)},
+    {text: 'Strata', color: colorForIndex(1)},
+    {text: 'Bod +3', color: colorForIndex(2)},
+    {text: 'Skús znova', color: colorForIndex(3)}
+  ];
+}
+refreshItemsList();
 </script>
 
-  <script>
-  // ==========================================
-  // ERIKAI OS — UNIVERZÁLNY BEZPEČNOSTNÝ STRÁŽCA
-  // ==========================================
+<script>
   const povolenyHostitel = "erikai-demoa1.github.io";
-  
-  // Overenie, či prebehol proces v session pamäti alebo či prichádza zo správnej domény
   const jeOvereny = sessionStorage.getItem('erikai_auth_token') === 'VERIFIED_OK';
   let pristupOk = jeOvereny || document.referrer.includes(povolenyHostitel);
 
-  // Ak sa niekto pokúsi otvoriť podstránku napriamo (na čierno)
   if (!pristupOk && window.location.hostname !== "127.0.0.1" && window.location.hostname !== "localhost") {
-    
-    // Vtipné upozornenie
     alert("🚨 Haha, chcel si sa sem dostať zadarmo bez overenia?! Tak takto teda nie! Šup-šup naspäť na začiatok, pekne od 1. kroku sa prihlásiť! 🏃‍♂️💨");
-    
-    // Presmerovanie na hlavnú vstupnú bránu ErikAI OS
     window.location.href = "https://erikai-demoa1.github.io/ErikAI/";
   }
 </script>
