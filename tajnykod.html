@@ -218,18 +218,24 @@
 
     <div class="advanced-box">
       <div class="input-group" style="margin-bottom: 12px;">
-        <label for="shaRounds">Počet SHA-256 opakovaní na každé heslo (1 až 10):</label>
+        <label for="shaRounds">Počet SHA-256 cyklov na každé heslo:</label>
         <select id="shaRounds">
-          <option value="1">1× SHA-256 (Rýchle)</option>
-          <option value="3" selected>3× SHA-256 (Štandardná kaskáda)</option>
-          <option value="5">5× SHA-256 (Vysoká ochrana)</option>
-          <option value="10">10× SHA-256 (Maximálna paranoja)</option>
+          <option value="1">1 cyklus</option>
+          <option value="2">2 cykly</option>
+          <option value="3" selected>3 cykly (Štandard)</option>
+          <option value="4">4 cykly</option>
+          <option value="5">5 cyklov</option>
+          <option value="6">6 cyklov</option>
+          <option value="7">7 cyklov</option>
+          <option value="8">8 cyklov</option>
+          <option value="9">9 cyklov</option>
+          <option value="10">10 cyklov (Maximum)</option>
         </select>
       </div>
 
       <label class="checkbox-row" style="margin-top: 14px;">
         <input type="checkbox" id="enableExpiry" onclick="toggleExpiry()">
-        <span>Aktivovať časovú expiráciu (samozničenie správy)</span>
+        <span>Aktivovať časovú expiráciu</span>
       </label>
       <div id="expirySettings" style="display: none;" class="timer-row">
         <input type="number" id="expiryValue" value="15" min="1" style="flex: 2;">
@@ -268,27 +274,23 @@
       box.style.display = isChecked ? 'flex' : 'none';
     }
 
-    // Funkcia, ktorá spracuje 5 hesiel, každé preženie zvoleným počtom opakovaní (1-10) a spojí do kľúča
     async function getDynamicKey(passwords, rounds) {
       const enc = new TextEncoder();
       const hashes = [];
 
       for (let p of passwords) {
         let currentBuffer = enc.encode(p);
-        // Opakovanie SHA-256 pre dané heslo presne podľa zvoleného počtu cyklov
         for (let i = 0; i < rounds; i++) {
           currentBuffer = await crypto.subtle.digest('SHA-256', currentBuffer);
         }
         hashes.push(new Uint8Array(currentBuffer));
       }
 
-      // Spojíme 5 x 32 bajtov = 160 bajtov
       const megaCombined = new Uint8Array(160);
       for (let i = 0; i < 5; i++) {
         megaCombined.set(hashes[i], i * 32);
       }
 
-      // Finálne premiešanie pre AES kľúč
       const finalHash = await crypto.subtle.digest('SHA-256', megaCombined);
 
       return await crypto.subtle.importKey(
@@ -329,7 +331,6 @@
           expireTimestamp = Date.now() + (val * multiplier);
         }
 
-        // Zbalíme správu, expiráciu a počet cyklov do JSON objektu, aby o tom príjemca vedel
         const payload = {
           m: text,
           exp: expireTimestamp,
@@ -377,14 +378,8 @@
         const iv = combinedData.slice(0, 12);
         const encrypted = combinedData.slice(12);
 
-        // Najskôr skúsime rozšifrovať správu tak, že zistíme počet cyklov z payloadu, alebo ak je to uložené v šifre.
-        // Kedže payload je zašifrovaný, musíme najprv poznať počet cyklov. Vylepšenie: uložime počet cyklov do výberu, 
-        // alebo automaticky vyskúšame cykly od 1 do 10, kým to neprejde! (Brutálne šikovné pre používateľa).
-        
         let decrypted = null;
-        let successfulRounds = 3;
 
-        // Automatické zistenie správneho počtu cyklov vyskúšaním rozsahu 1 až 10:
         for (let r = 1; r <= 10; r++) {
           try {
             const testKey = await getDynamicKey(passwords, r);
@@ -394,15 +389,14 @@
               encrypted
             );
             decrypted = testDecrypted;
-            successfulRounds = r;
-            break; // Našli sme správny počet cyklov!
+            break;
           } catch(err) {
-            // Pokračujeme v skúšaní ďalšieho počtu cyklov
+            // Skúša ďalší cyklus
           }
         }
 
         if (!decrypted) {
-          throw new Error("Nepodarilo sa odomknúť – nesprávne heslá alebo poškodený kód.");
+          throw new Error("Nepodarilo sa odomknúť.");
         }
 
         const decodedString = new TextDecoder().decode(decrypted);
@@ -415,9 +409,9 @@
           }
         }
 
-        document.getElementById('resultOutput'].textContent = payload.m;
+        document.getElementById('resultOutput').textContent = payload.m;
       } catch (e) {
-        document.getElementById('resultOutput').textContent = "❌ Chyba: Niektoré z 5 hesiel je nesprávne, alebo je kód poškodený!";
+        document.getElementById('resultOutput').textContent = "❌ Chyba: Nesprávne heslá alebo poškodený kód!";
       }
     }
 
