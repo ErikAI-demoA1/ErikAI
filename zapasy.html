@@ -49,12 +49,25 @@
   .score-inputs{display:flex;align-items:center;gap:4px}
   .score-inputs input{width:45px;text-align:center;padding:4px;font-weight:bold}
 
-  .bracket{display:flex;gap:12px;overflow:auto;padding:6px}
-  .round{min-width:180px;display:flex;flex-direction:column;gap:8px}
+  .bracket{display:flex;gap:16px;overflow-x:auto;padding:6px}
+  .round{min-width:200px;display:flex;flex-direction:column;gap:10px}
   
   .export-panel{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  /* TLAČOVÝ MÓD - PDF */
+  #printReport { display: none; }
+  @media print {
+    body { background: #fff !important; color: #000 !important; }
+    .wrap > header, .grid, .panel, script { display: none !important; }
+    #printReport { display: block !important; padding: 20px; font-family: Arial, sans-serif; }
+    #printReport h1 { font-size: 22px; color: #000; border-bottom: 2px solid #333; padding-bottom: 5px; }
+    #printReport h2 { font-size: 16px; margin-top: 20px; color: #222; }
+    #printReport table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    #printReport th, #printReport td { border: 1px solid #ccc; padding: 6px 8px; font-size: 12px; color: #000; text-align: left; }
+    #printReport th { background: #eee !important; color: #000; }
+    .print-match { border: 1px solid #ccc; padding: 6px 10px; margin-bottom: 4px; font-size: 12px; display: flex; justify-content: space-between; }
+  }
 </style>
-<!-- html2canvas pre export do obrázka -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
@@ -71,7 +84,7 @@
   </header>
 
   <div class="grid">
-    <!-- ĽAVÝ PANEL: Nastavenia a Tímy -->
+    <!-- ĽAVÝ PANEL -->
     <div class="panel">
       <h3 style="margin:0 0 6px 0; font-size:15px">Nastavenia & Tímy</h3>
       
@@ -112,7 +125,7 @@
       <div class="small" style="margin-top:10px;text-align:center;">💾 Zmeny sa ukladajú automaticky.</div>
     </div>
 
-    <!-- PRAVÝ PANEL: Hlavná plocha (Zápasy, Tabuľka, Pavúk) -->
+    <!-- PRAVÝ PANEL -->
     <div class="main-content">
       <div class="stage panel" id="captureArea">
         <div class="tabs">
@@ -140,6 +153,8 @@
   </div>
 </div>
 
+<div id="printReport"></div>
+
 <script>
 let state = {
   teams: ['FC Erik', 'Real Madrid', 'Arsenal', 'Barcelona', 'Juventus', 'Bayern', 'PSG', 'Manchester City'],
@@ -150,7 +165,7 @@ let state = {
   options: { groupCount: 2, knockSlots: 8 }
 };
 
-const lsKey = 'erikai_tournament_v2';
+const lsKey = 'erikai_tournament_v3';
 
 function saveState() {
   localStorage.setItem(lsKey, JSON.stringify(state));
@@ -163,7 +178,6 @@ function loadState() {
   }
 }
 
-// DOM
 const teamInput = document.getElementById('teamInput');
 const teamsList = document.getElementById('teamsList');
 const formatSel = document.getElementById('format');
@@ -173,6 +187,7 @@ const generateBtn = document.getElementById('generateBtn');
 const matchesArea = document.getElementById('matchesArea');
 const tableArea = document.getElementById('tableArea');
 const bracketArea = document.getElementById('bracketArea');
+const printReport = document.getElementById('printReport');
 
 function initInputs() {
   formatSel.value = state.format;
@@ -229,7 +244,6 @@ document.getElementById('clearAll').onclick = () => {
   saveState();
 };
 
-// Generovanie rozpisu
 function generateTournament() {
   const raw = teamInput.value.trim();
   if(raw) {
@@ -297,7 +311,7 @@ function buildKnockout(teams, slots) {
   const round1 = [];
   for(let i=0; i<slots/2; i++) {
     round1.push({
-      id: 'k_' + Math.random().toString(36).substr(2, 9),
+      id: 'k_0_' + i,
       aName: seeded[i],
       bName: seeded[slots - 1 - i],
       scoreA: null,
@@ -306,12 +320,13 @@ function buildKnockout(teams, slots) {
   }
   const bracket = [round1];
   let currentSlots = slots / 2;
+  let rIdx = 1;
   while(currentSlots > 1) {
     currentSlots /= 2;
     const nextRound = [];
     for(let i=0; i<currentSlots; i++) {
       nextRound.push({
-        id: 'k_' + Math.random().toString(36).substr(2, 9),
+        id: `k_${rIdx}_${i}`,
         aName: 'TBD',
         bName: 'TBD',
         scoreA: null,
@@ -319,17 +334,18 @@ function buildKnockout(teams, slots) {
       });
     }
     bracket.push(nextRound);
+    rIdx++;
   }
   return bracket;
 }
 
 generateBtn.onclick = generateTournament;
 
-// RENDER VIEWS
 function rebuildUI() {
   renderMatchesView();
   renderTableView();
   renderBracketView();
+  preparePrintReport();
 }
 
 function renderMatchesView() {
@@ -347,6 +363,7 @@ function renderMatchesView() {
     });
   } else if(state.format === 'knockout') {
     if(state.bracket.length === 0) { matchesArea.innerHTML = '<div class="small">Žiadny pavúk.</div>'; return; }
+    // V móde vyraďovačky zobrazíme zápasy prvého kola na editáciu
     state.bracket[0].forEach(m => matchesArea.appendChild(createMatchCard(m)));
   }
 }
@@ -358,9 +375,9 @@ function createMatchCard(m, groupName = null) {
     <div class="match-row">
       <div style="flex:1; font-weight:600; font-size:13px;">${m.aName}</div>
       <div class="score-inputs">
-        <input type="number" min="0" value="${m.scoreA !== null ? m.scoreA : ''}" placeholder="-" onchange="updateScore('${m.id}', this.value, '${m.scoreB !== null ? m.scoreB : 0}', '${groupName || ''}')">
+        <input type="number" min="0" value="${m.scoreA !== null ? m.scoreA : ''}" placeholder="-" onchange="updateScore('${m.id}', this.previousElementSibling.value ? this.previousElementSibling.value : 0, this.value, '${groupName || ''}')" oninput="updateScore('${m.id}', this.parentElement.children[0].value, this.parentElement.children[2].value, '${groupName || ''}')">
         <span>:</span>
-        <input type="number" min="0" value="${m.scoreB !== null ? m.scoreB : ''}" placeholder="-" onchange="updateScore('${m.id}', '${m.scoreA !== null ? m.scoreA : 0}', this.value, '${groupName || ''}')">
+        <input type="number" min="0" value="${m.scoreB !== null ? m.scoreB : ''}" placeholder="-" oninput="updateScore('${m.id}', this.parentElement.children[0].value, this.parentElement.children[2].value, '${groupName || ''}')">
       </div>
       <div style="flex:1; text-align:right; font-weight:600; font-size:13px;">${m.bName}</div>
     </div>
@@ -369,8 +386,8 @@ function createMatchCard(m, groupName = null) {
 }
 
 window.updateScore = function(id, sA, sB, groupName) {
-  const scoreA = sA === '' ? null : parseInt(sA);
-  const scoreB = sB === '' ? null : parseInt(sB);
+  const scoreA = (sA === '' || sA === null) ? null : parseInt(sA);
+  const scoreB = (sB === '' || sB === null) ? null : parseInt(sB);
 
   if(groupName) {
     const g = state.groups.find(x => x.name === groupName);
@@ -382,24 +399,15 @@ window.updateScore = function(id, sA, sB, groupName) {
     const m = state.matches.find(x => x.id === id);
     if(m) { m.scoreA = scoreA; m.scoreB = scoreB; }
   } else if(state.format === 'knockout') {
-    // Nájdi v pavúku
+    // Nájdi a aktualizuj v pavúku
     for(let r=0; r<state.bracket.length; r++) {
       const m = state.bracket[r].find(x => x.id === id);
       if(m) {
         m.scoreA = scoreA; m.scoreB = scoreB;
-        // Ak je vyplnené skóre, posuň víťaza do ďalšieho kola
+        // Ak sú obidva vstupy zadané, posuň víťaza do ďalšieho kola
         if(scoreA !== null && scoreB !== null && scoreA !== scoreB) {
           const winner = scoreA > scoreB ? m.aName : m.bName;
-          const matchIdx = state.bracket[r].indexOf(m);
-          const nextRoundIdx = r + 1;
-          if(state.bracket[nextRoundIdx]) {
-            const nextMatchIdx = Math.floor(matchIdx / 2);
-            const nextMatch = state.bracket[nextRoundIdx][nextMatchIdx];
-            if(nextMatch) {
-              if(matchIdx % 2 === 0) nextMatch.aName = winner;
-              else nextMatch.bName = winner;
-            }
-          }
+          propagateKnockoutWinner(r, id, winner);
         }
         break;
       }
@@ -409,7 +417,25 @@ window.updateScore = function(id, sA, sB, groupName) {
   saveState();
   renderTableView();
   renderBracketView();
+  preparePrintReport();
 };
+
+function propagateKnockoutWinner(roundIdx, matchId, winnerName) {
+  const round = state.bracket[roundIdx];
+  const matchIdx = round.findIndex(x => x.id === matchId);
+  const nextRoundIdx = roundIdx + 1;
+  if(state.bracket[nextRoundIdx]) {
+    const nextMatchIdx = Math.floor(matchIdx / 2);
+    const nextMatch = state.bracket[nextRoundIdx][nextMatchIdx];
+    if(nextMatch) {
+      if(matchIdx % 2 === 0) {
+        nextMatch.aName = winnerName;
+      } else {
+        nextMatch.bName = winnerName;
+      }
+    }
+  }
+}
 
 function renderTableView() {
   tableArea.innerHTML = '';
@@ -429,7 +455,7 @@ function renderTableView() {
 function calculateStandings(teams, matches) {
   const stats = {};
   teams.forEach(t => {
-    stats[t] = { name: t, P:0, W:0, D:0, L:0, GF:0, GA:0, Pts:0 };
+    stats[t] = { name: t, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 };
   });
 
   matches.forEach(m => {
@@ -452,7 +478,9 @@ function calculateStandings(teams, matches) {
     }
   });
 
-  return Object.values(stats).sort((a,b) => b.Pts - a.Pts || (b.GF - b.GA) - (a.GF - a.GA) || b.GF - a.GF);
+  Object.values(stats).forEach(s => s.GD = s.GF - s.GA);
+
+  return Object.values(stats).sort((a,b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || a.name.localeCompare(b.name));
 }
 
 function createTableElement(standings) {
@@ -460,12 +488,13 @@ function createTableElement(standings) {
   tbl.innerHTML = `
     <thead>
       <tr>
-        <th>Tím</th><th>Z</th><th>V</th><th>R</th><th>P</th><th>Skóre</th><th>Bardy</th>
+        <th>Por</th><th>Tím</th><th>Z</th><th>V</th><th>R</th><th>P</th><th>Skóre</th><th>Bardy</th>
       </tr>
     </thead>
     <tbody>
-      ${standings.map(s => `
+      ${standings.map((s, idx) => `
         <tr>
+          <td>${idx+1}.</td>
           <td><strong>${s.name}</strong></td>
           <td>${s.P}</td><td>${s.W}</td><td>${s.D}</td><td>${s.L}</td>
           <td>${s.GF}:${s.GA}</td>
@@ -490,7 +519,12 @@ function renderBracketView() {
   state.bracket.forEach((round, rIdx) => {
     const col = document.createElement('div');
     col.className = 'round';
-    col.innerHTML = `<h4 style="margin:0 0 8px 0; font-size:13px; color:var(--accent1)">Kolo ${rIdx+1}</h4>`;
+    let roundName = `Kolo ${rIdx+1}`;
+    if(rIdx === state.bracket.length - 1) roundName = 'Finále';
+    else if(rIdx === state.bracket.length - 2) roundName = 'Semifinále';
+    
+    col.innerHTML = `<h4 style="margin:0 0 8px 0; font-size:13px; color:var(--accent1)">${roundName}</h4>`;
+    
     round.forEach(m => {
       const card = document.createElement('div');
       card.className = 'match-card';
@@ -509,7 +543,75 @@ function renderBracketView() {
   bracketArea.appendChild(container);
 }
 
-// Záložky prepínanie
+function preparePrintReport() {
+  let formatName = 'Liga (každý s každým)';
+  if(state.format === 'groups') formatName = 'Skupinová fáza + Liga';
+  if(state.format === 'knockout') formatName = 'Vyraďovačka (Pavúk)';
+
+  let html = `<h1>ErikAI — Report Turnaja</h1>`;
+  html += `<p><strong>Formát:</strong> ${formatName}</p>`;
+  
+  html += `<h2>Zoznam tímov (${state.teams.length})</h2>`;
+  html += `<ul>` + state.teams.map(t => `<li>${t}</li>`).join('') + `</ul>`;
+
+  html += `<h2>Zápasy a Výsledky</h2>`;
+  if(state.format === 'league') {
+    state.matches.forEach(m => {
+      html += `<div class="print-match"><span>${m.aName}</span> <strong>${m.scoreA !== null ? m.scoreA : '-'} : ${m.scoreB !== null ? m.scoreB : '-'}</strong> <span>${m.bName}</span></div>`;
+    });
+  } else if(state.format === 'groups') {
+    state.groups.forEach(g => {
+      html += `<h3>Skupina ${g.name}</h3>`;
+      g.matches.forEach(m => {
+        html += `<div class="print-match"><span>${m.aName}</span> <strong>${m.scoreA !== null ? m.scoreA : '-'} : ${m.scoreB !== null ? m.scoreB : '-'}</strong> <span>${m.bName}</span></div>`;
+      });
+    });
+  } else if(state.format === 'knockout') {
+    state.bracket.forEach((rnd, idx) => {
+      html += `<h3>Kolo ${idx+1}</h3>`;
+      rnd.forEach(m => {
+        html += `<div class="print-match"><span>${m.aName}</span> <strong>${m.scoreA !== null ? m.scoreA : '-'} : ${m.scoreB !== null ? m.scoreB : '-'}</strong> <span>${m.bName}</span></div>`;
+      });
+    });
+  }
+
+  if(state.format === 'league') {
+    html += `<h2>Tabuľka / Poradie</h2>`;
+    const standings = calculateStandings(state.teams, state.matches);
+    html += createPrintTableHTML(standings);
+  } else if(state.format === 'groups') {
+    html += `<h2>Tabuľky skupín</h2>`;
+    state.groups.forEach(g => {
+      html += `<h3>Skupina ${g.name}</h3>`;
+      const standings = calculateStandings(g.teams, g.matches);
+      html += createPrintTableHTML(standings);
+    });
+  }
+
+  printReport.innerHTML = html;
+}
+
+function createPrintTableHTML(standings) {
+  return `
+    <table>
+      <thead>
+        <tr><th>Poradie</th><th>Tím</th><th>Z</th><th>V</th><th>R</th><th>P</th><th>Skóre</th><th>Body</th></tr>
+      </thead>
+      <tbody>
+        ${standings.map((s, idx) => `
+          <tr>
+            <td>${idx+1}.</td>
+            <td><strong>${s.name}</strong></td>
+            <td>${s.P}</td><td>${s.W}</td><td>${s.D}</td><td>${s.L}</td>
+            <td>${s.GF}:${s.GA}</td>
+            <td><strong>${s.Pts}</strong></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
 document.querySelectorAll('.tab').forEach(t => {
   t.onclick = () => {
     document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
@@ -521,7 +623,6 @@ document.querySelectorAll('.tab').forEach(t => {
   };
 });
 
-// Stiahnutie ako obrázok (PNG)
 document.getElementById('downloadImg').onclick = () => {
   const area = document.getElementById('captureArea');
   html2canvas(area, { backgroundColor: '#071228' }).then(canvas => {
@@ -532,12 +633,10 @@ document.getElementById('downloadImg').onclick = () => {
   });
 };
 
-// Tlač do PDF
 document.getElementById('downloadPdf').onclick = () => {
   window.print();
 };
 
-// Inicializácia pri štarte
 loadState();
 initInputs();
 renderTeamsList();
