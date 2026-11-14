@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ErikAI - Nuclear Dynamic Cipher (1-10x SHA + AES)</title>
+  <title>ErikAI - Nuclear Dynamic Cipher (Anti-Brute-Force)</title>
   <style>
     :root {
       --bg: #090a0f;
@@ -13,6 +13,7 @@
       --accent-hover: #2563eb;
       --green: #10b981;
       --green-hover: #059669;
+      --red: #ef4444;
       --text: #f1f5f9;
       --muted: #94a3b8;
     }
@@ -140,10 +141,28 @@
     }
 
     .btn-enc { background: var(--accent); }
-    .btn-enc:hover { background: var(--accent-hover); }
+    .btn-enc:hover:not(:disabled) { background: var(--accent-hover); }
 
     .btn-dec { background: var(--green); }
-    .btn-dec:hover { background: var(--green-hover); }
+    .btn-dec:hover:not(:disabled) { background: var(--green-hover); }
+
+    .btn:disabled {
+      background: #334155;
+      color: #64748b;
+      cursor: not-allowed;
+    }
+
+    .lockout-banner {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--red);
+      color: #fca5a5;
+      padding: 12px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 16px;
+      display: none;
+    }
 
     .output-section {
       margin-top: 25px;
@@ -190,8 +209,13 @@
 <body>
 
   <div class="container">
-    <h1>🛡️ ErikAI Dynamic P2P Cipher</h1>
-    <p class="subtitle">Dynamická kaskáda hesiel (1–10) + AES-256</p>
+    <h1>🛡️ ErikAI Anti-Brute-Force Cipher</h1>
+    <p class="subtitle">Dynamická kaskáda (1–10) + Ochrana proti refreshu (Max 4 pokusy)</p>
+
+    <!-- Výstražný panel pri prekročení pokusov -->
+    <div id="lockoutBanner" class="lockout-banner">
+      🚨 Príliš veľa nesprávnych pokusov! Zámok aktívny. Zostáva: <span id="countdownTimer">60</span>s
+    </div>
 
     <div class="advanced-box" style="margin-bottom: 16px;">
       <div class="input-group" style="margin-bottom: 0;">
@@ -232,12 +256,12 @@
 
     <div class="input-group">
       <label for="inputText">Správa (alebo zašifrovaný kód):</label>
-      <textarea id="inputText" placeholder="Sem napíš správu na zašifrovanje, alebo vlož kód na dešifrovanie..."></textarea>
+      <textarea id="inputText" placeholder="Sem napíš správu na zašifrovanie, alebo vlož kód na dešifrovanie..."></textarea>
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-enc" onclick="encryptMessage()">🔒 Zašifrovať</button>
-      <button class="btn btn-dec" onclick="decryptMessage()">🔓 Odomknúť</button>
+      <button class="btn btn-enc" id="btnEnc" onclick="encryptMessage()">🔒 Zašifrovať</button>
+      <button class="btn btn-dec" id="btnDec" onclick="decryptMessage()">🔓 Odomknúť</button>
     </div>
 
     <div class="output-section">
@@ -250,6 +274,9 @@
   </div>
 
   <script>
+    const LOCKOUT_TIME_MS = 60 * 1000; // 60 sekúnd trest
+    const MAX_ATTEMPTS = 4; // Maximálne 4 pokusy
+
     function updatePasswordInputs() {
       const selectElement = document.getElementById('shaRounds');
       const count = parseInt(selectElement ? selectElement.value : 3, 10) || 3;
@@ -278,13 +305,75 @@
       }
     }
 
-    // Okamžité spustenie pri načítare skriptu, aby sa políčka vygenerovali hneď
+    // Inicializácia pri štarte stránky a kontrola zámku proti refreshu
     updatePasswordInputs();
+    checkLockoutStatus();
 
     function toggleExpiry() {
       const box = document.getElementById('expirySettings');
       const isChecked = document.getElementById('enableExpiry').checked;
       box.style.display = isChecked ? 'flex' : 'none';
+    }
+
+    // Kontrola, či užívateľ nie je v treste (funguje aj po refreshi/F5)
+    function checkLockoutStatus() {
+      const lockoutUntil = localStorage.getItem('erikai_lockout_until');
+      if (lockoutUntil) {
+        const remaining = parseInt(lockoutUntil, 10) - Date.now();
+        if (remaining > 0) {
+          setLockedState(true, remaining);
+          return true;
+        } else {
+          localStorage.removeItem('erikai_lockout_until');
+          localStorage.setItem('erikai_failed_attempts', '0');
+        }
+      }
+      return false;
+    }
+
+    function setLockedState(isLocked, remainingMs = LOCKOUT_TIME_MS) {
+      const btnEnc = document.getElementById('btnEnc');
+      const btnDec = document.getElementById('btnDec');
+      const banner = document.getElementById('lockoutBanner');
+      const timerSpan = document.getElementById('countdownTimer');
+
+      if (btnEnc) btnEnc.disabled = isLocked;
+      if (btnDec) btnDec.disabled = isLocked;
+
+      if (isLocked) {
+        banner.style.display = 'block';
+        let secondsLeft = Math.ceil(remainingMs / 1000);
+        timerSpan.textContent = secondsLeft;
+
+        const interval = setInterval(() => {
+          secondsLeft--;
+          timerSpan.textContent = secondsLeft;
+          if (secondsLeft <= 0) {
+            clearInterval(interval);
+            banner.style.display = 'none';
+            if (btnEnc) btnEnc.disabled = false;
+            if (btnDec) btnDec.disabled = false;
+            localStorage.removeItem('erikai_lockout_until');
+            localStorage.setItem('erikai_failed_attempts', '0');
+          }
+        }, 1000);
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+
+    function registerFailedAttempt() {
+      let attempts = parseInt(localStorage.getItem('erikai_failed_attempts') || '0', 10);
+      attempts++;
+      localStorage.setItem('erikai_failed_attempts', attempts);
+
+      if (attempts >= MAX_ATTEMPTS) {
+        const lockoutTime = Date.now() + LOCKOUT_TIME_MS;
+        localStorage.setItem('erikai_lockout_until', lockoutTime);
+        setLockedState(true, LOCKOUT_TIME_MS);
+        return true;
+      }
+      return false;
     }
 
     async function getDynamicKey(passwords, rounds) {
@@ -328,6 +417,7 @@
     }
 
     async function encryptMessage() {
+      if (checkLockoutStatus()) return;
       try {
         const passwords = getEnteredPasswords();
         const text = document.getElementById('inputText').value;
@@ -373,12 +463,17 @@
 
         const base64String = btoa(String.fromCharCode(...combinedData));
         document.getElementById('resultOutput').textContent = base64String;
+        
+        // Úspech resetuje počítadlo chýb
+        localStorage.setItem('erikai_failed_attempts', '0');
       } catch (e) {
         alert("Chyba pri šifrovaní: " + e.message);
       }
     }
 
     async function decryptMessage() {
+      if (checkLockoutStatus()) return;
+
       try {
         const passwords = getEnteredPasswords();
         const base64Text = document.getElementById('inputText').value.trim();
@@ -410,8 +505,19 @@
         }
 
         if (!decrypted) {
-          throw new Error("Nepodarilo sa odomknúť.");
+          const isLockedNow = registerFailedAttempt();
+          const attemptsLeft = MAX_ATTEMPTS - parseInt(localStorage.getItem('erikai_failed_attempts') || '0', 10);
+          
+          if (isLockedNow) {
+            document.getElementById('resultOutput').textContent = "🚨 Príliš veľa zlých pokusov! Systém zablokovaný na 60 sekúnd.";
+          } else {
+            document.getElementById('resultOutput').textContent = `❌ Chyba: Nesprávne heslá alebo kód! Zostávajúce pokusy pred blokovaním: ${attemptsLeft}`;
+          }
+          return;
         }
+
+        // Úspešné odomknutie resetuje chybové pokusy
+        localStorage.setItem('erikai_failed_attempts', '0');
 
         const decodedString = new TextDecoder().decode(decrypted);
         const payload = JSON.parse(decodedString);
@@ -425,7 +531,12 @@
 
         document.getElementById('resultOutput').textContent = payload.m;
       } catch (e) {
-        document.getElementById('resultOutput').textContent = "❌ Chyba: Nesprávne heslá alebo poškodený kód!";
+        const isLockedNow = registerFailedAttempt();
+        if (isLockedNow) {
+          document.getElementById('resultOutput').textContent = "🚨 Príliš veľa zlých pokusov! Systém zablokovaný na 60 sekúnd.";
+        } else {
+          document.getElementById('resultOutput').textContent = "❌ Chyba: Neplatný formát kódu alebo nesprávne heslá!";
+        }
       }
     }
 
