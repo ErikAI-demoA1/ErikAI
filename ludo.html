@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ErikAI Ultra Arena — Battle režim (10k hráčov)</title>
+<title>ErikAI Ultra Arena — Battle režim (Mega Arena 10k)</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;600;800&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -13,81 +13,109 @@
   body{
     margin:0; font-family:Inter,system-ui,Arial;
     background:linear-gradient(160deg,var(--bg),#041426 120%);
-    color:var(--text); padding:18px; text-align:center; min-height:100vh;
+    color:var(--text); padding:14px; text-align:center; min-height:100vh;
   }
-  h1{color:var(--accent1); margin-bottom:5px;}
+  h1{color:var(--accent1); margin:0 0 4px 0; font-size:22px;}
   .panel{
-    background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));
-    border:1px solid rgba(255,255,255,0.05); padding:14px; border-radius:12px;
-    max-width:800px; margin:0 auto 14px auto; box-shadow:0 8px 26px rgba(0,0,0,0.5);
+    background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.08); padding:12px; border-radius:12px;
+    max-width:950px; margin:0 auto 12px auto; box-shadow:0 8px 26px rgba(0,0,0,0.5);
+  }
+  .controls-grid{
+    display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:8px; margin-bottom:8px;
+  }
+  .control-group{
+    display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.25); padding:6px 10px; border-radius:8px;
+    border:1px solid rgba(255,255,255,0.06); font-size:13px;
   }
   input, select, button{
-    padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);
-    background:rgba(0,0,0,0.3); color:var(--text); font-size:14px; margin:4px;
+    padding:7px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.12);
+    background:rgba(0,0,0,0.4); color:var(--text); font-size:13px;
   }
   button{
-    background:linear-gradient(90deg,var(--accent2),var(--accent1)); color:#041021; font-weight:700; cursor:pointer; border:none;
+    background:linear-gradient(90deg,var(--accent2),var(--accent1)); color:#041021; font-weight:800; cursor:pointer; border:none;
+    transition:transform 0.1s, opacity 0.2s;
   }
   button:hover{opacity:0.9}
-  
-  /* HERNÁ PLOCHA */
-  .board-container{
-    width:100%; max-width:900px; height:500px; margin:0 auto; overflow:auto;
-    border:2px solid rgba(255,255,255,0.1); border-radius:10px; background:#040e1a; position:relative;
+  button:active{transform:scale(0.97)}
+  .btn-secondary{
+    background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.15); font-weight:600;
   }
-  .board {
-    display: grid;
-    grid-template-columns: repeat(100, 32px);
-    grid-template-rows: repeat(100, 32px);
-    width: fit-content;
-    margin: 0 auto;
-  }
-  .cell {
-    width: 32px; height: 32px; border: 1px solid rgba(255,255,255,0.04);
-    display: flex; align-items: center; justify-content: center; position: relative;
-  }
-  .triangle {
-    width: 0; height: 0;
-    border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 16px solid red;
-    position: relative;
-  }
-  .triangle::after {
-    content: attr(data-number);
-    position: absolute; top: -16px; left: -6px;
-    font-size: 9px; font-weight: bold; color: #fff;
-    text-shadow: 0 0 2px #000;
-  }
-  
-  /* AKTÍVNY HRÁČ - SVETELNÝ EFEKT */
+
+  /* AKTÍVNY HRÁČ - VÝRAZNÝ MAJÁK */
   .active-player-box {
-    display: inline-block; padding: 8px 16px; border-radius: 8px; margin: 8px 0;
-    font-weight: bold; font-size: 16px; background: rgba(255,255,255,0.05);
-    border: 2px dashed var(--accent1); transition: all 0.3s ease;
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 18px; border-radius: 10px; margin: 6px 0;
+    font-weight: 800; font-size: 16px; background: rgba(0,0,0,0.45);
+    border: 2px solid var(--accent1); transition: all 0.25s ease;
   }
-  .player-info { margin-top: 8px; font-size: 14px; color: #9fb2d1; }
-  footer { font-size: 11px; color: #667c99; margin-top: 20px; }
-  body.dark-mode { background: #0b0f19; color: #fff; }
+  .beacon-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    display: inline-block; animation: pulseDot 1s infinite alternate;
+  }
+  @keyframes pulseDot {
+    from { transform: scale(0.85); opacity: 0.7; }
+    to { transform: scale(1.35); opacity: 1; }
+  }
+
+  .player-info { margin-top: 6px; font-size: 13px; color: #b8c9e6; min-height: 20px; }
+
+  /* MEGA HRACIA PLOCHA (CANVAS) */
+  .board-wrapper{
+    width:100%; max-width:950px; height:520px; margin:0 auto; overflow:auto;
+    border:2px solid rgba(6, 182, 212, 0.35); border-radius:12px; background:#030a14;
+    position:relative; box-shadow: inset 0 0 25px rgba(0,0,0,0.8);
+  }
+  canvas { display: block; cursor: crosshair; }
+
+  footer { font-size: 11px; color: #667c99; margin-top: 16px; }
 </style>
 </head>
 <body>
 
   <h1>ErikAI Ultra Arena — Battle režim</h1>
-  <p id="cas" style="font-size: 14px; color:#9fb2d1;"></p>
+  <p id="cas" style="font-size: 12px; color:#9fb2d1; margin:0 0 10px 0;"></p>
 
   <div class="panel">
-    <div>
-      <label>Počet hráčov (1 – 10 000):</label>
-      <input type="number" id="playerCountInput" min="1" max="10000" value="100" style="width:100px;">
-      <button onclick="initGame()">🔄 Spustiť / Nastaviť hru</button>
-      <button onclick="rollDice()">Hod kockou 🎲</button>
+    <div class="controls-grid">
+      <div class="control-group">
+        <label for="playerCountInput">Hráči (1–10 000):</label>
+        <input type="number" id="playerCountInput" min="1" max="10000" value="500" style="width:85px;">
+      </div>
+
+      <div class="control-group">
+        <label for="gridSizeInput">Plocha (Š×V):</label>
+        <input type="number" id="gridSizeInput" min="10" max="1000" value="150" style="width:75px;">
+        <span style="color:#9fb2d1; font-size:11px;" id="totalCellsLabel">(22 500 políčok)</span>
+      </div>
+
+      <div class="control-group">
+        <label for="cellSizeInput">Veľkosť bunky:</label>
+        <select id="cellSizeInput" onchange="changeZoom()">
+          <option value="24">Malá (24px)</option>
+          <option value="34" selected>Stredná (34px)</option>
+          <option value="46">Veľká (46px)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="controls-grid">
+      <button onclick="initGame()">🔄 Spustiť / Nová aréna</button>
+      <button onclick="rollDice()" style="background:linear-gradient(90deg,#10b981,#06b6d4); font-size:15px; padding:8px 18px;">🎲 Hod kockou</button>
+      <button class="btn-secondary" onclick="focusActivePlayer()">🎯 Nájsť aktívneho hráča</button>
     </div>
     
-    <div id="activeIndicator" class="active-player-box">Pripravený na hru</div>
-    <div class="player-info" id="info">Zadaj počet hráčov a klikni na Spustiť hru.</div>
+    <div>
+      <div id="activeIndicator" class="active-player-box">
+        <span class="beacon-dot" id="beaconDot" style="background:#06b6d4;"></span>
+        <span id="activeText">Pripravený na hru</span>
+      </div>
+    </div>
+    <div class="player-info" id="info">Nastav počet hráčov a rozmer plochy, potom klikni „Spustiť“.</div>
   </div>
 
-  <div class="board-container">
-    <div class="board" id="board"></div>
+  <div class="board-wrapper" id="boardWrapper">
+    <canvas id="arenaCanvas"></canvas>
   </div>
 
   <footer>
@@ -103,86 +131,111 @@
     setInterval(aktualizujCas, 1000);
     aktualizujCas();
 
-    const board = document.getElementById("board");
+    const canvas = document.getElementById("arenaCanvas");
+    const ctx = canvas.getContext("2d");
+    const boardWrapper = document.getElementById("boardWrapper");
     const info = document.getElementById("info");
     const activeIndicator = document.getElementById("activeIndicator");
-    
+    const activeText = document.getElementById("activeText");
+    const beaconDot = document.getElementById("beaconDot");
+    const gridSizeInput = document.getElementById("gridSizeInput");
+    const totalCellsLabel = document.getElementById("totalCellsLabel");
+
+    let GRID_SIZE = 150;
+    let CELL_SIZE = 34;
     let currentPlayer = 0;
     let diceRoll = 0;
     let players = [];
-    const GRID_SIZE = 100; // 100x100 = 10 000 políčok pre max výkon a prehľadnosť
-    const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
+    let spatialMap = new Map(); // Rýchle vyhľadávanie "x,y" -> index hráča (O(1) výkon aj pre 10k hráčov)
+    let animPhase = 0;
 
-    // Generovanie mriežky 100x100 (10 000 políčok)
-    function createBoard() {
-      board.innerHTML = "";
-      for (let y = 0; y < GRID_SIZE; y++) {
-        for (let x = 0; x < GRID_SIZE; x++) {
-          const cell = document.createElement("div");
-          cell.className = "cell";
-          cell.dataset.x = x;
-          cell.dataset.y = y;
-          cell.addEventListener("click", () => cellClicked(cell));
-          board.appendChild(cell);
-        }
-      }
+    gridSizeInput.addEventListener("input", () => {
+      const val = Math.max(10, Math.min(1000, parseInt(gridSizeInput.value) || 100));
+      totalCellsLabel.innerText = `(${(val * val).toLocaleString('sk-SK')} políčok)`;
+    });
+
+    function getRandomColor(index) {
+      const hue = (index * 137.508) % 360;
+      return `hsl(${hue}, 88%, 58%)`;
     }
 
-    // Generovanie náhodných pestrých farieb pre 10k hráčov
-    function getRandomColor(index) {
-      const hue = (index * 137.5) % 360; // Zlatý rez pre optimálne rozlíšenie farieb
-      return `hsl(${hue}, 80%, 60%)`;
+    function changeZoom() {
+      CELL_SIZE = parseInt(document.getElementById("cellSizeInput").value) || 34;
+      canvas.width = GRID_SIZE * CELL_SIZE;
+      canvas.height = GRID_SIZE * CELL_SIZE;
+      focusActivePlayer();
     }
 
     function initGame() {
       const countInput = parseInt(document.getElementById("playerCountInput").value) || 10;
       const count = Math.max(1, Math.min(10000, countInput));
       
-      createBoard();
+      let reqGrid = Math.max(10, Math.min(1000, parseInt(gridSizeInput.value) || 150));
+      // Automatická ochrana: plocha musí byť väčšia než počet hráčov, aby sa mali kam hýbať
+      if (reqGrid * reqGrid <= count) {
+        reqGrid = Math.ceil(Math.sqrt(count * 1.5));
+        gridSizeInput.value = reqGrid;
+        totalCellsLabel.innerText = `(${(reqGrid * reqGrid).toLocaleString('sk-SK')} políčok - auto zväčšené)`;
+      }
+
+      GRID_SIZE = reqGrid;
+      CELL_SIZE = parseInt(document.getElementById("cellSizeInput").value) || 34;
+      canvas.width = GRID_SIZE * CELL_SIZE;
+      canvas.height = GRID_SIZE * CELL_SIZE;
+
       players = [];
+      spatialMap.clear();
       currentPlayer = 0;
       diceRoll = 0;
 
-      const usedPositions = new Set();
       for (let i = 0; i < count; i++) {
-        const color = getRandomColor(i);
-        let pos;
+        let x, y, key;
         do {
-          pos = Math.floor(Math.random() * TOTAL_CELLS);
-        } while (usedPositions.has(pos));
-        usedPositions.add(pos);
+          x = Math.floor(Math.random() * GRID_SIZE);
+          y = Math.floor(Math.random() * GRID_SIZE);
+          key = `${x},${y}`;
+        } while (spatialMap.has(key));
 
-        players.push({ id: i + 1, color: color, pos: pos });
+        const playerObj = {
+          id: i + 1,
+          color: getRandomColor(i),
+          x: x,
+          y: y,
+          alive: true
+        };
+        players.push(playerObj);
+        spatialMap.set(key, i);
       }
 
-      renderPlayers();
       updateActiveVisual();
-      info.innerText = `Hra pripravená pre ${count} hráčov. Na rade je Hráč 1. Klikni „Hod kockou 🎲“.`;
-    }
-
-    function renderPlayers() {
-      // Vyčistenie buniek
-      board.querySelectorAll(".cell").forEach(c => c.innerHTML = "");
-      // Vykreslenie hráčov na pozíciách
-      players.forEach((p, idx) => {
-        if (p.pos !== -1 && p.pos < board.children.length) {
-          const cell = board.children[p.pos];
-          const fig = document.createElement("div");
-          fig.className = "triangle";
-          fig.style.borderBottomColor = p.color;
-          fig.dataset.player = idx;
-          fig.dataset.number = p.id;
-          cell.appendChild(fig);
-        }
-      });
+      focusActivePlayer();
+      info.innerText = `Aréna ${GRID_SIZE}×${GRID_SIZE} spustená pre ${count} hráčov! Klikni „🎲 Hod kockou“.`;
     }
 
     function updateActiveVisual() {
       if (players.length === 0) return;
       const activeP = players[currentPlayer];
-      activeIndicator.innerText = `🎮 Na rade: Hráč ${activeP.id}`;
+      const aliveCount = players.filter(p => p.alive).length;
+      activeText.innerText = `Na rade: Hráč #${activeP.id} (Živých: ${aliveCount}/${players.length})`;
       activeIndicator.style.borderColor = activeP.color;
-      activeIndicator.style.boxShadow = `0 0 15px ${activeP.color}`;
+      activeIndicator.style.boxShadow = `0 0 22px ${activeP.color}`;
+      beaconDot.style.backgroundColor = activeP.color;
+      beaconDot.style.boxShadow = `0 0 12px ${activeP.color}`;
+    }
+
+    function focusActivePlayer() {
+      if (players.length === 0) return;
+      const p = players[currentPlayer];
+      if (!p || !p.alive) return;
+
+      const targetScrollLeft = (p.x * CELL_SIZE) - (boardWrapper.clientWidth / 2) + (CELL_SIZE / 2);
+      const targetScrollTop = (p.y * CELL_SIZE) - (boardWrapper.clientHeight / 2) + (CELL_SIZE / 2);
+
+      boardWrapper.scrollTo({
+        left: Math.max(0, targetScrollLeft),
+        top: Math.max(0, targetScrollTop),
+        behavior: 'smooth'
+      });
     }
 
     function rollDice() {
@@ -190,69 +243,208 @@
         initGame();
         return;
       }
-      if (players[currentPlayer].pos === -1) {
+      const activeP = players[currentPlayer];
+      if (!activeP.alive) {
         nextTurn();
         return;
       }
 
       diceRoll = Math.floor(Math.random() * 6) + 1;
-      const activeP = players[currentPlayer];
-      info.innerText = `Hráč ${activeP.id} hodil číslo: ${diceRoll}. Vyber cieľové políčko v dosahu ${diceRoll} krokov (manhattan).`;
+      focusActivePlayer();
+      info.innerText = `🎲 Hráč #${activeP.id} hodil číslo ${diceRoll}! Klikni na jedno zo svietiacich políčok v dosahu.`;
     }
 
-    function cellClicked(cell) {
+    canvas.addEventListener("click", (e) => {
+      if (players.length === 0) return;
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      const tx = Math.floor(clickX / CELL_SIZE);
+      const ty = Math.floor(clickY / CELL_SIZE);
+
+      if (tx < 0 || tx >= GRID_SIZE || ty < 0 || ty >= GRID_SIZE) return;
+
       if (!diceRoll) {
-        info.innerText = "Najprv musíš hodiť kockou!";
+        info.innerText = "⚠️ Najprv klikni na „🎲 Hod kockou“!";
         return;
       }
 
       const activeP = players[currentPlayer];
-      if (activeP.pos === -1) return;
-
-      const currentCell = board.children[activeP.pos];
-      const targetIndex = Array.from(board.children).indexOf(cell);
-      
-      const cx = parseInt(currentCell.dataset.x);
-      const cy = parseInt(currentCell.dataset.y);
-      const tx = parseInt(cell.dataset.x);
-      const ty = parseInt(cell.dataset.y);
-      
-      const distance = Math.abs(tx - cx) + Math.abs(ty - cy);
+      const distance = Math.abs(tx - activeP.x) + Math.abs(ty - activeP.y);
 
       if (distance !== diceRoll) {
-        info.innerText = `Neplatný pohyb! Musíš prejsť presne o ${diceRoll} políčok (aktuálna vzdialenosť je ${distance}).`;
+        info.innerText = `❌ Neplatný ťah! Hodil si ${diceRoll}, ale klikol si na vzdialenosť ${distance} políčok.`;
         return;
       }
 
-      // Kontrola, či na cieľovom políčku niekto nestojí (eliminácia)
-      const targetPlayerIdx = players.findIndex(p => p.pos === targetIndex);
-      if (targetPlayerIdx !== -1) {
-        if (targetPlayerIdx === currentPlayer) {
-          info.innerText = "Nemôžeš vstúpiť na vlastnú figúrku!";
+      const targetKey = `${tx},${ty}`;
+      let elimMsg = "";
+
+      // Kontrola súperov na cieľovom políčku
+      if (spatialMap.has(targetKey)) {
+        const targetIdx = spatialMap.get(targetKey);
+        if (targetIdx === currentPlayer) {
+          info.innerText = "❌ Nemôžeš skočiť sám na seba!";
           return;
         } else {
-          // Vyradenie súpera
-          players[targetPlayerIdx].pos = -1;
-          info.innerText = `⚠️ Hráč ${activeP.id} vyradil hráča ${players[targetPlayerIdx].id}!`;
+          players[targetIdx].alive = false;
+          elimMsg = ` 💥 Hráč #${activeP.id} vyradil Hráča #${players[targetIdx].id}!`;
         }
       }
 
-      activeP.pos = targetIndex;
+      // Aktualizácia pozície v mape
+      spatialMap.delete(`${activeP.x},${activeP.y}`);
+      activeP.x = tx;
+      activeP.y = ty;
+      spatialMap.set(targetKey, currentPlayer);
+
       diceRoll = 0;
-      renderPlayers();
-      nextTurn();
-    }
+      nextTurn(elimMsg);
+    });
 
-    function nextTurn() {
-      if (players.length === 0) return;
-      currentPlayer = (currentPlayer + 1) % players.length;
+    function nextTurn(extraMessage = "") {
+      const alivePlayers = players.filter(p => p.alive);
+      if (alivePlayers.length <= 1 && players.length > 1) {
+        const winner = alivePlayers[0];
+        activeText.innerText = `🏆 VÍŤAZ TURNAJA: Hráč #${winner.id}!`;
+        info.innerText = `Gratulujeme! Hráč #${winner.id} ovládol celú arénu!`;
+        return;
+      }
+
+      // Nájdenie ďalšieho živého hráča
+      let loops = 0;
+      do {
+        currentPlayer = (currentPlayer + 1) % players.length;
+        loops++;
+      } while (!players[currentPlayer].alive && loops <= players.length);
+
       updateActiveVisual();
+      focusActivePlayer();
       const activeP = players[currentPlayer];
-      info.innerText = `Na rade je Hráč ${activeP.id}. Klikni „Hod kockou 🎲“.`;
+      info.innerText = `${extraMessage} Na rade je Hráč #${activeP.id}. Klikni „🎲 Hod kockou“.`;
     }
 
-    // Inicializácia pri štarte na 100 hráčov ako predvolená vzorka
+    // Vykresľovacia slučka (renderuje iba viditeľný výrez pre maximálne FPS aj pri 1 000 000 políčkach)
+    function drawLoop() {
+      animPhase += 0.08;
+
+      const viewLeft = boardWrapper.scrollLeft;
+      const viewTop = boardWrapper.scrollTop;
+      const viewRight = viewLeft + boardWrapper.clientWidth;
+      const viewBottom = viewTop + boardWrapper.clientHeight;
+
+      const startCol = Math.max(0, Math.floor(viewLeft / CELL_SIZE) - 1);
+      const endCol = Math.min(GRID_SIZE - 1, Math.ceil(viewRight / CELL_SIZE) + 1);
+      const startRow = Math.max(0, Math.floor(viewTop / CELL_SIZE) - 1);
+      const endRow = Math.min(GRID_SIZE - 1, Math.ceil(viewBottom / CELL_SIZE) + 1);
+
+      // Vyčistenie viditeľnej časti plátna
+      ctx.fillStyle = "#030a14";
+      ctx.fillRect(startCol * CELL_SIZE, startRow * CELL_SIZE, (endCol - startCol + 1) * CELL_SIZE, (endRow - startRow + 1) * CELL_SIZE);
+
+      // Kreslenie mriežky
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let c = startCol; c <= endCol + 1; c++) {
+        ctx.moveTo(c * CELL_SIZE, startRow * CELL_SIZE);
+        ctx.lineTo(c * CELL_SIZE, (endRow + 1) * CELL_SIZE);
+      }
+      for (let r = startRow; r <= endRow + 1; r++) {
+        ctx.moveTo(startCol * CELL_SIZE, r * CELL_SIZE);
+        ctx.lineTo((endCol + 1) * CELL_SIZE, r * CELL_SIZE);
+      }
+      ctx.stroke();
+
+      const activeP = players[currentPlayer];
+
+      // Zvýraznenie povolených ťahov po hode kockou
+      if (activeP && activeP.alive && diceRoll > 0) {
+        const pulseAlpha = 0.25 + Math.sin(animPhase * 1.5) * 0.15;
+        for (let dx = -diceRoll; dx <= diceRoll; dx++) {
+          const rem = diceRoll - Math.abs(dx);
+          const targets = rem === 0 ? [0] : [-rem, rem];
+          for (const dy of targets) {
+            const tx = activeP.x + dx;
+            const ty = activeP.y + dy;
+            if (tx >= startCol && tx <= endCol && ty >= startRow && ty <= endRow) {
+              ctx.fillStyle = `rgba(6, 182, 212, ${pulseAlpha})`;
+              ctx.fillRect(tx * CELL_SIZE + 1, ty * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+              ctx.strokeStyle = "#06b6d4";
+              ctx.lineWidth = 1.5;
+              ctx.strokeRect(tx * CELL_SIZE + 1, ty * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+            }
+          }
+        }
+      }
+
+      // Kreslenie hráčov vo viditeľnej oblasti
+      for (let r = startRow; r <= endRow; r++) {
+        for (let c = startCol; c <= endCol; c++) {
+          const pIdx = spatialMap.get(`${c},${r}`);
+          if (pIdx !== undefined) {
+            const p = players[pIdx];
+            if (!p.alive) continue;
+
+            const cx = c * CELL_SIZE + CELL_SIZE / 2;
+            const cy = r * CELL_SIZE + CELL_SIZE / 2;
+            const isTurn = (pIdx === currentPlayer);
+
+            // VÝRAZNÉ SVETIELKO (MAJÁK) PRE HRÁČA NA RADE
+            if (isTurn) {
+              const glowRadius = (CELL_SIZE * 0.65) + Math.sin(animPhase * 2) * (CELL_SIZE * 0.25);
+              
+              // Podsvietenie celej bunky
+              ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+              ctx.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+
+              // Žiariaci kruh (svetielko)
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2);
+              ctx.fillStyle = p.color;
+              ctx.globalAlpha = 0.35;
+              ctx.fill();
+
+              ctx.lineWidth = 3;
+              ctx.strokeStyle = "#ffffff";
+              ctx.globalAlpha = 0.95;
+              ctx.stroke();
+              ctx.restore();
+            }
+
+            // Vykreslenie trojuholníka (figúrky)
+            const triSize = CELL_SIZE * 0.34;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - triSize);
+            ctx.lineTo(cx - triSize, cy + triSize * 0.8);
+            ctx.lineTo(cx + triSize, cy + triSize * 0.8);
+            ctx.closePath();
+
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            if (isTurn) {
+              ctx.lineWidth = 2;
+              ctx.strokeStyle = "#ffffff";
+              ctx.stroke();
+            }
+
+            // Číslo hráča
+            ctx.fillStyle = isTurn ? "#ffff00" : "#ffffff";
+            ctx.font = `bold ${Math.max(8, Math.floor(CELL_SIZE * 0.28))}px Inter, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.fillText(p.id, cx, cy + triSize + Math.max(7, CELL_SIZE * 0.24));
+          }
+        }
+      }
+
+      requestAnimationFrame(drawLoop);
+    }
+
+    // Štart
     initGame();
+    requestAnimationFrame(drawLoop);
   </script>
 
 <script>
