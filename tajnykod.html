@@ -191,49 +191,34 @@
 
   <div class="container">
     <h1>🛡️ ErikAI Dynamic P2P Cipher</h1>
-    <p class="subtitle">5-stupňová kaskáda hesiel + voliteľné SHA-256 opakovania (1–10x) + AES-256</p>
+    <p class="subtitle">Dynamická kaskáda hesiel (1–10) + AES-256</p>
 
-    <div class="passwords-box">
-      <div class="input-group">
-        <label for="pass1">1. Tajné heslo:</label>
-        <input type="password" id="pass1" placeholder="Zadaj 1. heslo...">
-      </div>
-      <div class="input-group">
-        <label for="pass2">2. Tajné heslo:</label>
-        <input type="password" id="pass2" placeholder="Zadaj 2. heslo...">
-      </div>
-      <div class="input-group">
-        <label for="pass3">3. Tajné heslo:</label>
-        <input type="password" id="pass3" placeholder="Zadaj 3. heslo...">
-      </div>
-      <div class="input-group">
-        <label for="pass4">4. Tajné heslo:</label>
-        <input type="password" id="pass4" placeholder="Zadaj 4. heslo...">
-      </div>
-      <div class="input-group">
-        <label for="pass5">5. Tajné heslo:</label>
-        <input type="password" id="pass5" placeholder="Zadaj 5. heslo...">
+    <!-- Nastavenie počtu hesiel/cyklov hore, aby sa políčka vygenerovali -->
+    <div class="advanced-box" style="margin-bottom: 16px;">
+      <div class="input-group" style="margin-bottom: 0;">
+        <label for="shaRounds">Počet hesiel / SHA-256 cyklov (1 až 10):</label>
+        <select id="shaRounds" onchange="updatePasswordInputs()">
+          <option value="1">1 heslo (1 cyklus)</option>
+          <option value="2">2 heslá (2 cykly)</option>
+          <option value="3" selected>3 heslá (3 cykly - Štandard)</option>
+          <option value="4">4 heslá (4 cykly)</option>
+          <option value="5">5 hesiel (5 cyklov)</option>
+          <option value="6">6 hesiel (6 cyklov)</option>
+          <option value="7">7 hesiel (7 cyklov)</option>
+          <option value="8">8 hesiel (8 cyklov)</option>
+          <option value="9">9 hesiel (9 cyklov)</option>
+          <option value="10">10 hesiel (10 cyklov - Maximum)</option>
+        </select>
       </div>
     </div>
 
-    <div class="advanced-box">
-      <div class="input-group" style="margin-bottom: 12px;">
-        <label for="shaRounds">Počet SHA-256 cyklov na každé heslo:</label>
-        <select id="shaRounds">
-          <option value="1">1 cyklus</option>
-          <option value="2">2 cykly</option>
-          <option value="3" selected>3 cykly (Štandard)</option>
-          <option value="4">4 cykly</option>
-          <option value="5">5 cyklov</option>
-          <option value="6">6 cyklov</option>
-          <option value="7">7 cyklov</option>
-          <option value="8">8 cyklov</option>
-          <option value="9">9 cyklov</option>
-          <option value="10">10 cyklov (Maximum)</option>
-        </select>
-      </div>
+    <!-- Dynamické políčka na heslá -->
+    <div class="passwords-box" id="passwordsContainer">
+      <!-- Sem JavaScript automaticky nahodí presný počet políčok -->
+    </div>
 
-      <label class="checkbox-row" style="margin-top: 14px;">
+    <div class="advanced-box">
+      <label class="checkbox-row">
         <input type="checkbox" id="enableExpiry" onclick="toggleExpiry()">
         <span>Aktivovať časovú expiráciu</span>
       </label>
@@ -268,12 +253,44 @@
   </div>
 
   <script>
+    // Funkcia, ktorá automaticky vygeneruje presný počet políčok pre heslá podľa výberu v selectboxe
+    function updatePasswordInputs() {
+      const count = parseInt(document.getElementById('shaRounds').value, 10);
+      const container = document.getElementById('passwordsContainer');
+      container.innerHTML = '';
+
+      for (let i = 1; i <= count; i++) {
+        const group = document.createElement('div');
+        group.className = 'input-group';
+        if (i === count) group.style.marginBottom = '0'; // odstráni spodný okraj pri poslednom políčku
+
+        const label = document.createElement('label');
+        label.setAttribute('for', 'pass' + i);
+        label.textContent = `${i}. Tajné heslo:`;
+
+        const input = document.createElement('input');
+        input.type = 'password';
+        input.id = 'pass' + i;
+        input.placeholder = `Zadaj ${i}. heslo...`;
+
+        group.appendChild(label);
+        group.appendChild(input);
+        container.appendChild(group);
+      }
+    }
+
+    // Spustíme pri načítaní stránky, aby predvolene vygenerovalo 3 políčka
+    window.onload = function() {
+      updatePasswordInputs();
+    };
+
     function toggleExpiry() {
       const box = document.getElementById('expirySettings');
       const isChecked = document.getElementById('enableExpiry').checked;
       box.style.display = isChecked ? 'flex' : 'none';
     }
 
+    // Dynamická kaskáda: vezme aktívny počet hesiel a preženie ich zvoleným počtom cyklov
     async function getDynamicKey(passwords, rounds) {
       const enc = new TextEncoder();
       const hashes = [];
@@ -286,11 +303,14 @@
         hashes.push(new Uint8Array(currentBuffer));
       }
 
-      const megaCombined = new Uint8Array(160);
-      for (let i = 0; i < 5; i++) {
+      // Spojíme všetky hashe dohromady (počet hesiel x 32 bajtov)
+      const totalBytes = passwords.length * 32;
+      const megaCombined = new Uint8Array(totalBytes);
+      for (let i = 0; i < passwords.length; i++) {
         megaCombined.set(hashes[i], i * 32);
       }
 
+      // Finálne premiešanie pre AES kľúč
       const finalHash = await crypto.subtle.digest('SHA-256', megaCombined);
 
       return await crypto.subtle.importKey(
@@ -302,21 +322,26 @@
       );
     }
 
+    // Pomocná funkcia na zozbieranie vyplnených hesiel z dynamických políčok
+    function getEnteredPasswords() {
+      const count = parseInt(document.getElementById('shaRounds').value, 10);
+      const passwords = [];
+      for (let i = 1; i <= count; i++) {
+        const val = document.getElementById('pass' + i)?.value || '';
+        passwords.push(val);
+      }
+      return passwords;
+    }
+
     async function encryptMessage() {
       try {
-        const passwords = [
-          document.getElementById('pass1').value,
-          document.getElementById('pass2').value,
-          document.getElementById('pass3').value,
-          document.getElementById('pass4').value,
-          document.getElementById('pass5').value
-        ];
+        const passwords = getEnteredPasswords();
         const text = document.getElementById('inputText').value;
         const rounds = parseInt(document.getElementById('shaRounds').value, 10);
         const enableExpiry = document.getElementById('enableExpiry').checked;
 
         if (passwords.some(p => !p) || !text) {
-          alert("Musíš vyplniť všetkých 5 hesiel a text správy!");
+          alert("Musíš vyplniť všetky zadané heslá a text správy!");
           return;
         }
 
@@ -334,7 +359,8 @@
         const payload = {
           m: text,
           exp: expireTimestamp,
-          r: rounds
+          r: rounds,
+          c: passwords.length // uložení počtu hesiel, aby dešifrovanie vedelo presne, koľko ich bolo
         };
 
         const key = await getDynamicKey(passwords, rounds);
@@ -360,17 +386,11 @@
 
     async function decryptMessage() {
       try {
-        const passwords = [
-          document.getElementById('pass1').value,
-          document.getElementById('pass2').value,
-          document.getElementById('pass3').value,
-          document.getElementById('pass4').value,
-          document.getElementById('pass5').value
-        ];
+        const passwords = getEnteredPasswords();
         const base64Text = document.getElementById('inputText').value.trim();
 
         if (passwords.some(p => !p) || !base64Text) {
-          alert("Musíš zadať všetkých 5 hesiel a zašifrovaný kód!");
+          alert("Musíš zadať všetky heslá v políčkach a zašifrovaný kód!");
           return;
         }
 
@@ -380,6 +400,7 @@
 
         let decrypted = null;
 
+        // Automatické vyskúšanie cyklov od 1 do 10, kým kľúč a správa nesadnú
         for (let r = 1; r <= 10; r++) {
           try {
             const testKey = await getDynamicKey(passwords, r);
@@ -416,7 +437,7 @@
     }
 
     function copyResult() {
-      const text = document.getElementById('resultOutput').textContent;
+      const text = document.getElementById('resultOutput'].textContent;
       navigator.clipboard.writeText(text).then(() => {
         alert("Skopírované do schránky!");
       });
