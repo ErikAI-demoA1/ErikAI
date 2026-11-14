@@ -54,7 +54,6 @@
   
   .export-panel{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 
-  /* TLAČOVÝ MÓD - PDF */
   #printReport { display: none; }
   @media print {
     body { background: #fff !important; color: #000 !important; }
@@ -165,7 +164,7 @@ let state = {
   options: { groupCount: 2, knockSlots: 8 }
 };
 
-const lsKey = 'erikai_tournament_v3';
+const lsKey = 'erikai_tournament_v4';
 
 function saveState() {
   localStorage.setItem(lsKey, JSON.stringify(state));
@@ -363,23 +362,39 @@ function renderMatchesView() {
     });
   } else if(state.format === 'knockout') {
     if(state.bracket.length === 0) { matchesArea.innerHTML = '<div class="small">Žiadny pavúk.</div>'; return; }
-    // V móde vyraďovačky zobrazíme zápasy prvého kola na editáciu
-    state.bracket[0].forEach(m => matchesArea.appendChild(createMatchCard(m)));
+    // V móde vyraďovačky zobrazíme zápasy VŠETKÝCH kôl postupne, aby sa dalo kliknúť a pokračovať ďalej
+    state.bracket.forEach((round, rIdx) => {
+      let roundName = `Kolo ${rIdx+1}`;
+      if(rIdx === state.bracket.length - 1) roundName = 'Finále 🏆';
+      else if(rIdx === state.bracket.length - 2) roundName = 'Semifinále';
+      
+      const h = document.createElement('h4'); 
+      h.style.margin = '12px 0 6px 0'; 
+      h.style.color = 'var(--accent1)';
+      h.textContent = roundName;
+      matchesArea.appendChild(h);
+
+      round.forEach(m => {
+        matchesArea.appendChild(createMatchCard(m));
+      });
+    });
   }
 }
 
 function createMatchCard(m, groupName = null) {
   const div = document.createElement('div');
   div.className = 'match-card';
+  const isTBD = (m.aName === 'TBD' || m.bName === 'TBD');
+  
   div.innerHTML = `
     <div class="match-row">
-      <div style="flex:1; font-weight:600; font-size:13px;">${m.aName}</div>
+      <div style="flex:1; font-weight:600; font-size:13px; ${isTBD ? 'color:var(--muted);' : ''}">${m.aName}</div>
       <div class="score-inputs">
-        <input type="number" min="0" value="${m.scoreA !== null ? m.scoreA : ''}" placeholder="-" onchange="updateScore('${m.id}', this.previousElementSibling.value ? this.previousElementSibling.value : 0, this.value, '${groupName || ''}')" oninput="updateScore('${m.id}', this.parentElement.children[0].value, this.parentElement.children[2].value, '${groupName || ''}')">
+        <input type="number" min="0" ${isTBD ? 'disabled' : ''} value="${m.scoreA !== null ? m.scoreA : ''}" placeholder="-" oninput="updateScore('${m.id}', this.parentElement.children[0].value, this.parentElement.children[2].value, '${groupName || ''}')">
         <span>:</span>
-        <input type="number" min="0" value="${m.scoreB !== null ? m.scoreB : ''}" placeholder="-" oninput="updateScore('${m.id}', this.parentElement.children[0].value, this.parentElement.children[2].value, '${groupName || ''}')">
+        <input type="number" min="0" ${isTBD ? 'disabled' : ''} value="${m.scoreB !== null ? m.scoreB : ''}" placeholder="-" oninput="updateScore('${m.id}', this.parentElement.children[0].value, this.parentElement.children[2].value, '${groupName || ''}')">
       </div>
-      <div style="flex:1; text-align:right; font-weight:600; font-size:13px;">${m.bName}</div>
+      <div style="flex:1; text-align:right; font-weight:600; font-size:13px; ${isTBD ? 'color:var(--muted);' : ''}">${m.bName}</div>
     </div>
   `;
   return div;
@@ -399,12 +414,10 @@ window.updateScore = function(id, sA, sB, groupName) {
     const m = state.matches.find(x => x.id === id);
     if(m) { m.scoreA = scoreA; m.scoreB = scoreB; }
   } else if(state.format === 'knockout') {
-    // Nájdi a aktualizuj v pavúku
     for(let r=0; r<state.bracket.length; r++) {
       const m = state.bracket[r].find(x => x.id === id);
       if(m) {
         m.scoreA = scoreA; m.scoreB = scoreB;
-        // Ak sú obidva vstupy zadané, posuň víťaza do ďalšieho kola
         if(scoreA !== null && scoreB !== null && scoreA !== scoreB) {
           const winner = scoreA > scoreB ? m.aName : m.bName;
           propagateKnockoutWinner(r, id, winner);
@@ -520,7 +533,7 @@ function renderBracketView() {
     const col = document.createElement('div');
     col.className = 'round';
     let roundName = `Kolo ${rIdx+1}`;
-    if(rIdx === state.bracket.length - 1) roundName = 'Finále';
+    if(rIdx === state.bracket.length - 1) roundName = 'Finále 🏆';
     else if(rIdx === state.bracket.length - 2) roundName = 'Semifinále';
     
     col.innerHTML = `<h4 style="margin:0 0 8px 0; font-size:13px; color:var(--accent1)">${roundName}</h4>`;
@@ -568,7 +581,9 @@ function preparePrintReport() {
     });
   } else if(state.format === 'knockout') {
     state.bracket.forEach((rnd, idx) => {
-      html += `<h3>Kolo ${idx+1}</h3>`;
+      let rName = `Kolo ${idx+1}`;
+      if(idx === state.bracket.length - 1) rName = 'Finále';
+      html += `<h3>${rName}</h3>`;
       rnd.forEach(m => {
         html += `<div class="print-match"><span>${m.aName}</span> <strong>${m.scoreA !== null ? m.scoreA : '-'} : ${m.scoreB !== null ? m.scoreB : '-'}</strong> <span>${m.bName}</span></div>`;
       });
