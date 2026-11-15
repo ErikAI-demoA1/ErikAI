@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI OS — Lokálny Prehliadač & Bot Engine</title>
+<title>ErikAI OS — Inteligentný Lokálny Vyhľadávač</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -63,7 +63,6 @@
 
   p { color: var(--text-muted); font-size: 0.95rem; }
 
-  /* Sekcie */
   .panel {
     background: var(--card-glass);
     border: 1px solid var(--card-border);
@@ -73,35 +72,34 @@
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   }
 
-  h2 { font-size: 1.3rem; margin-bottom: 15px; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
-
-  .input-row {
+  .search-row {
     display: flex;
     gap: 10px;
-    flex-wrap: wrap;
   }
 
   input[type="text"] {
     flex: 1;
-    min-width: 240px;
-    padding: 14px 18px;
-    background: rgba(3, 7, 18, 0.8);
+    padding: 16px 20px;
+    background: rgba(3, 7, 18, 0.9);
     border: 1px solid var(--card-border);
-    border-radius: 12px;
+    border-radius: 14px;
     color: #fff;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     outline: none;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
   }
 
-  input[type="text"]:focus { border-color: var(--neon-red); box-shadow: 0 0 15px var(--accent-glow); }
+  input[type="text"]:focus { 
+    border-color: var(--neon-red); 
+    box-shadow: 0 0 20px var(--accent-glow); 
+  }
 
   button {
     background: linear-gradient(135deg, var(--neon-red), var(--neon-orange));
     color: #fff;
     border: none;
-    padding: 14px 24px;
-    border-radius: 12px;
+    padding: 0 28px;
+    border-radius: 14px;
     font-weight: 700;
     cursor: pointer;
     box-shadow: 0 4px 15px var(--accent-glow);
@@ -110,44 +108,56 @@
 
   button:hover { transform: translateY(-2px); opacity: 0.95; }
 
-  /* Výsledky vyhľadávania / Zoznam v databáze */
   .results-list {
-    margin-top: 15px;
+    margin-top: 20px;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-height: 400px;
-    overflow-y: auto;
   }
 
   .result-card {
     background: rgba(3, 7, 18, 0.6);
     border: 1px solid var(--card-border);
-    padding: 15px;
-    border-radius: 12px;
-    transition: border-color 0.2s;
+    padding: 18px;
+    border-radius: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
   }
 
-  .result-card:hover { border-color: var(--card-hover-border); }
+  .result-card:hover { 
+    border-color: var(--card-hover-border);
+    transform: translateY(-2px);
+  }
 
-  .result-card h3 a {
+  .result-info h3 {
     color: #fff;
-    text-decoration: none;
-    font-size: 1.05rem;
+    font-size: 1.1rem;
+    margin-bottom: 4px;
   }
-  .result-card h3 a:hover { color: var(--neon-red); text-decoration: underline; }
 
-  .result-card p {
+  .result-info p {
     font-size: 0.85rem;
-    margin-top: 5px;
     color: var(--text-muted);
   }
 
-  .status-msg {
+  .visit-btn {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
     font-size: 0.85rem;
-    color: var(--neon-orange);
-    margin-top: 8px;
-    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid var(--card-border);
+    transition: background 0.2s, border-color 0.2s;
+    white-space: nowrap;
+  }
+
+  .visit-btn:hover {
+    background: var(--neon-red);
+    border-color: var(--neon-red);
   }
 </style>
 </head>
@@ -155,209 +165,128 @@
 
   <div class="main-container">
     <header>
-      <h1>🌐 ErikAI Lokálny Prehliadač & Bot</h1>
-      <p>Nezávislý systém pre vyhľadávanie a ukladanie stránok priamo v tvojom zariadení – bez serverov a zadarmo.</p>
+      <h1>🔎 ErikAI Okamžitý Vyhľadávač</h1>
+      <p>Zadaj ľubovoľné slovo (napr. pes, auto, správy, hry) a bot ťa hneď nasmeruje na najlepšie stránky!</p>
     </header>
 
-    <!-- Panel pre Bota (Indexovanie) -->
     <div class="panel">
-      <h2>🤖 ErikAI Bot (Crawl & Index)</h2>
-      <p style="margin-bottom: 12px;">Zadaj URL adresu stránky, ktorú chceš stiahnuť a pridať do našej lokálnej databázy:</p>
-      <div class="input-row">
-        <input type="text" id="crawlUrl" placeholder="https://example.com/stranka">
-        <button onclick="runBot()">Spustiť Bota ⚡</button>
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="Čo chceš hľadať? (napr. pes)..." onkeyup="checkEnter(event)">
+        <button onclick="searchWeb()">Hľadaj ⚡</button>
       </div>
-      <div id="botStatus" class="status-msg"></div>
-    </div>
 
-    <!-- Panel pre Vlastný Vyhľadávač -->
-    <div class="panel">
-      <h2>🔎 Vlastné vyhľadávanie v ErikAI databáze</h2>
-      <div class="input-row">
-        <input type="text" id="searchQuery" placeholder="Hľadaj v uložených stránkach..." onkeyup="performSearch()">
-      </div>
       <div class="results-list" id="searchResults">
-        <!-- Sem sa budú vypisovať výsledky -->
-      </div>
-    </div>
-
-    <!-- Zoznam všetkých uložených stránok v databáze -->
-    <div class="panel">
-      <h2>📦 Uložené stránky v lokálnej databáze (IndexedDB)</h2>
-      <button onclick="loadAllPages()" style="font-size: 0.8rem; padding: 8px 14px; margin-bottom: 12px;">Obnoviť zoznam</button>
-      <div class="results-list" id="dbList">
-        <!-- Zoznam z databázy -->
+        <!-- Sem sa vyhodia výsledky -->
       </div>
     </div>
   </div>
 
   <script>
     // ==========================================
-    // 1. POKROČILÁ LOKÁLNA DATABÁZA (IndexedDB)
+    // 🧠 LOKÁLNA BOT DATABÁZA (Zadarmo & Bez Serveru)
     // ==========================================
-    let db = null;
-    const dbName = "ErikAI_OS_Database";
-    const storeName = "pages";
+    // Sem si môžeš pridávať ľubovoľné kľúčové slová a stránky, ktoré má bot poznať
+    const botDatabase = [
+      {
+        keywords: ["pes", "psov", "psi", "zvieratá", "cider", "mačka"],
+        title: "Všetko o psoch a domácich zvieratách",
+        description: "Najlepšie weby o starostlivosti, krmive a výchove psov.",
+        url: "https://www.dogtime.com"
+      },
+      {
+        keywords: ["pes", "wikipedia", "encyklopédia"],
+        title: "Pes domáci — Wikipédia",
+        description: "Všetky odborné informácie o evolúcii, druhoch a správaní psov.",
+        url: "https://sk.wikipedia.org/wiki/Pes_domáci"
+      },
+      {
+        keywords: ["hry", "steam", "zábava", "pc", "gaming"],
+        title: "Steam — Najväčšia herná platforma",
+        description: "Hraj, diskutuj a objavuj tisíce hier priamo na PC.",
+        url: "https://store.steampowered.com"
+      },
+      {
+        keywords: ["filmy", "kino", "recenzie", "imdb"],
+        title: "IMDb — Filmová databáza",
+        description: "Hodnotenia, herci, trailery a informácie o všetkých filmoch.",
+        url: "https://www.imdb.com"
+      },
+      {
+        keywords: ["erikai", "os", "aplikácie", "hry", "portál"],
+        title: "ErikAI OS Universe (Domov)",
+        description: "Hlavný portál ekosystému Erika Mohyláka.",
+        url: "https://erikaios2025.github.io/ErikAI/"
+      },
+      {
+        keywords: ["správy", "aktuality", "novinky", "svet"],
+        title: "Aktuality.sk — Domáce a svetové správy",
+        description: "Rýchle spravodajstvo, komentáre a témy, ktoré hýbu Slovenskom.",
+        url: "https://www.aktuality.sk"
+      }
+    ];
 
-    function initDB() {
-      const request = indexedDB.open(dbName, 1);
-      
-      request.onerror = (e) => console.error("Chyba IndexedDB:", e.target.error);
-      
-      request.onupgradeneeded = (e) => {
-        const database = e.target.result;
-        if (!database.objectStoreNames.contains(storeName)) {
-          database.createObjectStore(storeName, { keyPath: "url" });
-        }
-      };
-
-      request.onsuccess = (e) => {
-        db = e.target.result;
-        console.log("IndexedDB pripravená na 100% ✅");
-        loadAllPages(); // Načítame uložené stránky pri štarte
-      };
+    function checkEnter(event) {
+      if (event.key === "Enter") {
+        searchWeb();
+      }
     }
 
     // ==========================================
-    // 2. LOKÁLNY BOT (Crawl & Index)
+    // ⚡ VYHĽADÁVACÍ BOT ALGORITMUS
     // ==========================================
-    async function runBot() {
-      const urlInput = document.getElementById("crawlUrl");
-      const statusDiv = document.getElementById("botStatus");
-      const targetUrl = urlInput.value.trim();
+    function searchWeb() {
+      const query = document.getElementById("searchInput").value.toLowerCase().trim();
+      const container = document.getElementById("searchResults");
+      container.innerHTML = "";
 
-      if (!targetUrl) {
-        statusDiv.innerText = "⚠️ Zadaj platnú URL adresu!";
+      if (!query) {
+        container.innerHTML = `<p style="color:var(--text-muted)">Zadaj aspoň jedno slovo na vyhľadávanie.</p>`;
         return;
       }
 
-      statusDiv.innerText = "🤖 Bot sťahuje stránku cez bezplatnú proxy...";
+      const words = query.split(" ");
 
-      try {
-        // Použijeme bezplatnú CORS proxy, aby sme obišli obmedzenia prehliadača
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-        const response = await fetch(proxyUrl);
-        const data = await response.json();
-
-        if (!data.contents) throw new Error("Nepodarilo sa získať obsah stránky.");
-
-        // Parsovanie HTML
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(data.contents, "text/html");
-
-        const title = doc.querySelector("title") ? doc.querySelector("title").innerText : targetUrl;
-        const description = doc.querySelector("meta[name='description']") ? doc.querySelector("meta[name='description']").content : "Bez popisu";
-        const bodyText = doc.body ? doc.body.innerText.substring(0, 3000).toLowerCase() : "";
-
-        const pageRecord = {
-          url: targetUrl,
-          title: title,
-          description: description,
-          text: bodyText,
-          savedAt: new Date().toLocaleString('sk-SK')
-        };
-
-        // Uloženie do IndexedDB
-        saveToIndexedDB(pageRecord);
-
-        statusDiv.innerText = `✅ Úspešne uložené do databázy: "${title}"`;
-        urlInput.value = "";
-        loadAllPages();
-      } catch (err) {
-        console.error(err);
-        statusDiv.innerText = "❌ Bot narazil na chybu (stránka blokuje prístup alebo zlá URL).";
-      }
-    }
-
-    function saveToIndexedDB(record) {
-      if (!db) return;
-      const tx = db.transaction([storeName], "readwrite");
-      const store = tx.objectStore(storeName);
-      store.put(record);
-    }
-
-    // ==========================================
-    // 3. VYHĽADÁVACÍ MOTOR (Search & Rank)
-    // ==========================================
-    function performSearch() {
-      const query = document.getElementById("searchQuery").value.toLowerCase().trim();
-      const resultsContainer = document.getElementById("searchResults");
-      resultsContainer.innerHTML = "";
-
-      if (!db || !query) return;
-
-      const tx = db.transaction([storeName], "readonly");
-      const store = tx.objectStore(storeName);
-      const request = store.getAll();
-
-      request.onsuccess = (e) => {
-        const pages = e.target.result;
-        const terms = query.split(" ");
-
-        // Bodovací systém relevancie
-        const scored = pages.map(page => {
-          let score = 0;
-          terms.forEach(term => {
-            if (page.title.toLowerCase().includes(term)) score += 15;
-            if (page.description.toLowerCase().includes(term)) score += 8;
-            if (page.text.includes(term)) score += 2;
+      // Prejdeme našu databázu a ohodnotíme zhody
+      const scoredResults = botDatabase.map(item => {
+        let score = 0;
+        words.forEach(word => {
+          // Ak kľúčové slovo obsahuje zadaný výraz
+          item.keywords.forEach(kw => {
+            if (kw.includes(word)) score += 10;
           });
-          return { ...page, score };
+          // Ak sa slovo nachádza v názve alebo popise
+          if (item.title.toLowerCase().includes(word)) score += 5;
+          if (item.description.toLowerCase().includes(word)) score += 2;
         });
+        return { ...item, score };
+      });
 
-        const filtered = scored.filter(p => p.score > 0).sort((a, b) => b.score - a.score);
+      // Vyberieme tie, ktoré majú aspoň nejakú zhodu
+      const matches = scoredResults.filter(r => r.score > 0).sort((a, b) => b.score - a.score);
 
-        if (filtered.length === 0) {
-          resultsContainer.innerHTML = `<p style="color:var(--text-muted)">Žiadne výsledky pre "${query}".</p>`;
-          return;
-        }
+      if (matches.length === 0) {
+        container.innerHTML = `
+          <div class="result-card" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+            <p style="color: #fff;">🤖 Bot nenašiel priamu zhodu pre <b>"${query}"</b> v lokálnej databáze.</p>
+            <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank" class="visit-btn" style="background: var(--neon-red);">Hľadať cez Google ↗</a>
+          </div>
+        `;
+        return;
+      }
 
-        filtered.forEach(page => {
-          resultsContainer.innerHTML += `
-            <div class="result-card">
-              <h3><a href="${page.url}" target="_blank">${page.title}</a></h3>
-              <p><b>Odkaz:</b> ${page.url}</p>
-              <p>${page.description}</p>
+      // Vypíšeme výsledky
+      matches.forEach(res => {
+        container.innerHTML += `
+          <div class="result-card">
+            <div class="result-info">
+              <h3>${res.title}</h3>
+              <p>${res.description}</p>
             </div>
-          `;
-        });
-      };
+            <a href="${res.url}" target="_blank" class="visit-btn">Otvoriť stránku ↗</a>
+          </div>
+        `;
+      });
     }
-
-    // ==========================================
-    // 4. VYPÍSANIE VŠETKÝCH ULOŽENÝCH STRÁNOK
-    // ==========================================
-    function loadAllPages() {
-      const container = document.getElementById("dbList");
-      container.innerHTML = "";
-
-      if (!db) return;
-
-      const tx = db.transaction([storeName], "readonly");
-      const store = tx.objectStore(storeName);
-      const request = store.getAll();
-
-      request.onsuccess = (e) => {
-        const pages = e.target.result;
-        if (pages.length === 0) {
-          container.innerHTML = `<p style="color:var(--text-muted)">Databázové úložisko je zatiaľ prázdne. Spusti bota vyššie!</p>`;
-          return;
-        }
-
-        pages.forEach(page => {
-          container.innerHTML += `
-            <div class="result-card">
-              <h3><a href="${page.url}" target="_blank">${page.title}</a></h3>
-              <p>${page.description}</p>
-              <p style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Uložené: ${page.savedAt}</p>
-            </div>
-          `;
-        });
-      };
-    }
-
-    // Spustenie pri načítaní stránky
-    window.addEventListener("load", initDB);
   </script>
 </body>
 </html>
