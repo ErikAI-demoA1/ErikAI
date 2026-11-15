@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI OS — Lokálny Prehliadač & Bot Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #030712;
+    --card-glass: rgba(17, 24, 39, 0.75);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-hover-border: rgba(239, 68, 68, 0.5);
+    --neon-red: #ef4444;
+    --neon-orange: #f97316;
+    --accent-glow: rgba(239, 68, 68, 0.25);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--bg-deep);
+    background-image: 
+      radial-gradient(circle at 10% 20%, rgba(239, 68, 68, 0.08) 0%, transparent 40%),
+      linear-gradient(135deg, #030712 0%, #0b0f19 100%);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+
+  .main-container {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+  }
+
+  header {
+    background: var(--card-glass);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff 40%, var(--neon-red), var(--neon-orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  p { color: var(--text-muted); font-size: 0.95rem; }
+
+  /* Sekcie */
+  .panel {
+    background: var(--card-glass);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 25px;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+
+  h2 { font-size: 1.3rem; margin-bottom: 15px; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    min-width: 240px;
+    padding: 14px 18px;
+    background: rgba(3, 7, 18, 0.8);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus { border-color: var(--neon-red); box-shadow: 0 0 15px var(--accent-glow); }
+
+  button {
+    background: linear-gradient(135deg, var(--neon-red), var(--neon-orange));
+    color: #fff;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 15px var(--accent-glow);
+    transition: transform 0.2s, opacity 0.2s;
+  }
+
+  button:hover { transform: translateY(-2px); opacity: 0.95; }
+
+  /* Výsledky vyhľadávania / Zoznam v databáze */
+  .results-list {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .result-card {
+    background: rgba(3, 7, 18, 0.6);
+    border: 1px solid var(--card-border);
+    padding: 15px;
+    border-radius: 12px;
+    transition: border-color 0.2s;
+  }
+
+  .result-card:hover { border-color: var(--card-hover-border); }
+
+  .result-card h3 a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.05rem;
+  }
+  .result-card h3 a:hover { color: var(--neon-red); text-decoration: underline; }
+
+  .result-card p {
+    font-size: 0.85rem;
+    margin-top: 5px;
+    color: var(--text-muted);
+  }
+
+  .status-msg {
+    font-size: 0.85rem;
+    color: var(--neon-orange);
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+  <div class="main-container">
+    <header>
+      <h1>🌐 ErikAI Lokálny Prehliadač & Bot</h1>
+      <p>Nezávislý systém pre vyhľadávanie a ukladanie stránok priamo v tvojom zariadení – bez serverov a zadarmo.</p>
+    </header>
+
+    <!-- Panel pre Bota (Indexovanie) -->
+    <div class="panel">
+      <h2>🤖 ErikAI Bot (Crawl & Index)</h2>
+      <p style="margin-bottom: 12px;">Zadaj URL adresu stránky, ktorú chceš stiahnuť a pridať do našej lokálnej databázy:</p>
+      <div class="input-row">
+        <input type="text" id="crawlUrl" placeholder="https://example.com/stranka">
+        <button onclick="runBot()">Spustiť Bota ⚡</button>
+      </div>
+      <div id="botStatus" class="status-msg"></div>
+    </div>
+
+    <!-- Panel pre Vlastný Vyhľadávač -->
+    <div class="panel">
+      <h2>🔎 Vlastné vyhľadávanie v ErikAI databáze</h2>
+      <div class="input-row">
+        <input type="text" id="searchQuery" placeholder="Hľadaj v uložených stránkach..." onkeyup="performSearch()">
+      </div>
+      <div class="results-list" id="searchResults">
+        <!-- Sem sa budú vypisovať výsledky -->
+      </div>
+    </div>
+
+    <!-- Zoznam všetkých uložených stránok v databáze -->
+    <div class="panel">
+      <h2>📦 Uložené stránky v lokálnej databáze (IndexedDB)</h2>
+      <button onclick="loadAllPages()" style="font-size: 0.8rem; padding: 8px 14px; margin-bottom: 12px;">Obnoviť zoznam</button>
+      <div class="results-list" id="dbList">
+        <!-- Zoznam z databázy -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. POKROČILÁ LOKÁLNA DATABÁZA (IndexedDB)
+    // ==========================================
+    let db = null;
+    const dbName = "ErikAI_OS_Database";
+    const storeName = "pages";
+
+    function initDB() {
+      const request = indexedDB.open(dbName, 1);
+      
+      request.onerror = (e) => console.error("Chyba IndexedDB:", e.target.error);
+      
+      request.onupgradeneeded = (e) => {
+        const database = e.target.result;
+        if (!database.objectStoreNames.contains(storeName)) {
+          database.createObjectStore(storeName, { keyPath: "url" });
+        }
+      };
+
+      request.onsuccess = (e) => {
+        db = e.target.result;
+        console.log("IndexedDB pripravená na 100% ✅");
+        loadAllPages(); // Načítame uložené stránky pri štarte
+      };
+    }
+
+    // ==========================================
+    // 2. LOKÁLNY BOT (Crawl & Index)
+    // ==========================================
+    async function runBot() {
+      const urlInput = document.getElementById("crawlUrl");
+      const statusDiv = document.getElementById("botStatus");
+      const targetUrl = urlInput.value.trim();
+
+      if (!targetUrl) {
+        statusDiv.innerText = "⚠️ Zadaj platnú URL adresu!";
+        return;
+      }
+
+      statusDiv.innerText = "🤖 Bot sťahuje stránku cez bezplatnú proxy...";
+
+      try {
+        // Použijeme bezplatnú CORS proxy, aby sme obišli obmedzenia prehliadača
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+        const response = await fetch(proxyUrl);
+        const data = await response.json();
+
+        if (!data.contents) throw new Error("Nepodarilo sa získať obsah stránky.");
+
+        // Parsovanie HTML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data.contents, "text/html");
+
+        const title = doc.querySelector("title") ? doc.querySelector("title").innerText : targetUrl;
+        const description = doc.querySelector("meta[name='description']") ? doc.querySelector("meta[name='description']").content : "Bez popisu";
+        const bodyText = doc.body ? doc.body.innerText.substring(0, 3000).toLowerCase() : "";
+
+        const pageRecord = {
+          url: targetUrl,
+          title: title,
+          description: description,
+          text: bodyText,
+          savedAt: new Date().toLocaleString('sk-SK')
+        };
+
+        // Uloženie do IndexedDB
+        saveToIndexedDB(pageRecord);
+
+        statusDiv.innerText = `✅ Úspešne uložené do databázy: "${title}"`;
+        urlInput.value = "";
+        loadAllPages();
+      } catch (err) {
+        console.error(err);
+        statusDiv.innerText = "❌ Bot narazil na chybu (stránka blokuje prístup alebo zlá URL).";
+      }
+    }
+
+    function saveToIndexedDB(record) {
+      if (!db) return;
+      const tx = db.transaction([storeName], "readwrite");
+      const store = tx.objectStore(storeName);
+      store.put(record);
+    }
+
+    // ==========================================
+    // 3. VYHĽADÁVACÍ MOTOR (Search & Rank)
+    // ==========================================
+    function performSearch() {
+      const query = document.getElementById("searchQuery").value.toLowerCase().trim();
+      const resultsContainer = document.getElementById("searchResults");
+      resultsContainer.innerHTML = "";
+
+      if (!db || !query) return;
+
+      const tx = db.transaction([storeName], "readonly");
+      const store = tx.objectStore(storeName);
+      const request = store.getAll();
+
+      request.onsuccess = (e) => {
+        const pages = e.target.result;
+        const terms = query.split(" ");
+
+        // Bodovací systém relevancie
+        const scored = pages.map(page => {
+          let score = 0;
+          terms.forEach(term => {
+            if (page.title.toLowerCase().includes(term)) score += 15;
+            if (page.description.toLowerCase().includes(term)) score += 8;
+            if (page.text.includes(term)) score += 2;
+          });
+          return { ...page, score };
+        });
+
+        const filtered = scored.filter(p => p.score > 0).sort((a, b) => b.score - a.score);
+
+        if (filtered.length === 0) {
+          resultsContainer.innerHTML = `<p style="color:var(--text-muted)">Žiadne výsledky pre "${query}".</p>`;
+          return;
+        }
+
+        filtered.forEach(page => {
+          resultsContainer.innerHTML += `
+            <div class="result-card">
+              <h3><a href="${page.url}" target="_blank">${page.title}</a></h3>
+              <p><b>Odkaz:</b> ${page.url}</p>
+              <p>${page.description}</p>
+            </div>
+          `;
+        });
+      };
+    }
+
+    // ==========================================
+    // 4. VYPÍSANIE VŠETKÝCH ULOŽENÝCH STRÁNOK
+    // ==========================================
+    function loadAllPages() {
+      const container = document.getElementById("dbList");
+      container.innerHTML = "";
+
+      if (!db) return;
+
+      const tx = db.transaction([storeName], "readonly");
+      const store = tx.objectStore(storeName);
+      const request = store.getAll();
+
+      request.onsuccess = (e) => {
+        const pages = e.target.result;
+        if (pages.length === 0) {
+          container.innerHTML = `<p style="color:var(--text-muted)">Databázové úložisko je zatiaľ prázdne. Spusti bota vyššie!</p>`;
+          return;
+        }
+
+        pages.forEach(page => {
+          container.innerHTML += `
+            <div class="result-card">
+              <h3><a href="${page.url}" target="_blank">${page.title}</a></h3>
+              <p>${page.description}</p>
+              <p style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Uložené: ${page.savedAt}</p>
+            </div>
+          `;
+        });
+      };
+    }
+
+    // Spustenie pri načítaní stránky
+    window.addEventListener("load", initDB);
+  </script>
+</body>
+</html>
