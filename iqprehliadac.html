@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI IQ Prehliadač — Autonómny Vedomostný Engine</title>
+<title>ErikAI IQ Prehliadač — Multi-Source Neural Engine</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -36,7 +36,7 @@
 
   .main-container {
     width: 100%;
-    max-width: 900px;
+    max-width: 950px;
     display: flex;
     flex-direction: column;
     gap: 25px;
@@ -142,6 +142,17 @@
     color: var(--text-muted);
   }
 
+  .source-tag {
+    font-size: 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--neon-red);
+    margin-left: 8px;
+    display: inline-block;
+  }
+
   .visit-btn {
     background: rgba(255, 255, 255, 0.08);
     color: #fff;
@@ -173,18 +184,18 @@
   <div class="main-container">
     <header>
       <h1>🧠 ErikAI IQ Prehliadač</h1>
-      <p>Nezávislý systém pre inteligentné vyhľadávanie v otvorených vedomostných databázach — bezpečne, bez reklám a zadarmo.</p>
+      <p>Autonómny uzol pre hľadanie vo viacerých otvorených svetových databázach naraz — bezpečne, zadarmo a bez reklám.</p>
     </header>
 
     <div class="panel">
       <div class="search-row">
-        <input type="text" id="searchInput" placeholder="Čo chceš vyhľadať? (napr. vesmír, fyzika, pes)..." onkeyup="checkEnter(event)">
-        <button onclick="runIQSearch()">Vyhľadať ⚡</button>
+        <input type="text" id="searchInput" placeholder="Zadaj kľúčové slovo (napr. vesmír, história, pes, Curie)..." onkeyup="checkEnter(event)">
+        <button onclick="runMultiSourceSearch()">Prehľadávať ⚡</button>
       </div>
       <div id="systemStatus" class="system-status"></div>
 
       <div class="results-list" id="searchResults">
-        <!-- Sem sa vypíšu inteligentné výsledky -->
+        <!-- Sem sa vyhodia výsledky zo všetkých zdrojov -->
       </div>
     </div>
   </div>
@@ -192,14 +203,14 @@
   <script>
     function checkEnter(event) {
       if (event.key === "Enter") {
-        runIQSearch();
+        runMultiSourceSearch();
       }
     }
 
-    // ==========================================
-    // 🧠 ERIKAI IQ MULTI-SOURCE VYHĽADÁVAČ
-    // ==========================================
-    async function runIQSearch() {
+    // ==========================================================
+    // 🌐 ERIKAI IQ MULTI-SOURCE ROZŠÍRENÝ VYHĽADÁVAČ
+    // ==========================================================
+    async function runMultiSourceSearch() {
       const query = document.getElementById("searchInput").value.trim();
       const container = document.getElementById("searchResults");
       const status = document.getElementById("systemStatus");
@@ -207,72 +218,91 @@
       container.innerHTML = "";
 
       if (!query) {
-        status.innerText = "⚠️ Zadaj výraz do vyhľadávania!";
+        status.innerText = "⚠️ Prosím, zadaj hľadaný výraz!";
         return;
       }
 
-      status.innerText = "🧠 ErikAI IQ prechádza viaceré nezávislé vedomostné zdroje...";
+      status.innerText = "🧠 ErikAI IQ paralelný prieskum: oslovujem Wikipédiu a Open Library...";
 
       try {
-        // Zdroje 1: Slovenská Wikipédia API
+        // 1. Slovenská Wikipédia API
         const wikiSkUrl = `https://sk.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
         
-        // Zdroje 2: Anglická Wikipédia API (pre širší svetový záber, ak je to potrebné)
+        // 2. Svetová/Anglická Wikipédia API
         const wikiEnUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
 
-        // Paralelne potiahneme dáta z viacerých slobodných zdrojov
-        const [resSk, resEn] = await Promise.all([
+        // 3. Open Library API (Svetová bezplatná databáza kníh a dokumentov)
+        const booksUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=4`;
+
+        // Spustíme všetky požiadavky naraz (rýchlosť na 1. mieste)
+        const [resSk, resEn, resBooks] = await Promise.all([
           fetch(wikiSkUrl).then(r => r.json()).catch(() => null),
-          fetch(wikiEnUrl).then(r => r.json()).catch(() => null)
+          fetch(wikiEnUrl).then(r => r.json()).catch(() => null),
+          fetch(booksUrl).then(r => r.json()).catch(() => null)
         ]);
 
-        let allItems = [];
+        let combinedResults = [];
 
-        // Spracujeme slovenské výsledky
+        // Spracovanie SK Wikipédie
         if (resSk && resSk.query && resSk.query.search) {
           resSk.query.search.forEach(item => {
-            allItems.push({
-              title: item.title + " (SK)",
+            combinedResults.push({
+              title: item.title,
               snippet: item.snippet.replace(/(<([^>]+)>)/gi, ""),
-              url: `https://sk.wikipedia.org/wiki/${encodeURIComponent(item.title)}`
+              url: `https://sk.wikipedia.org/wiki/${encodeURIComponent(item.title)}`,
+              source: "Wikipédia SK"
             });
           });
         }
 
-        // Spracujeme svetové výsledky
+        // Spracovanie EN Wikipédie (pridáme len top výsledky)
         if (resEn && resEn.query && resEn.query.search) {
-          resEn.query.search.slice(0, 3).forEach(item => { // zoberieme top 3 z EN
-            allItems.push({
-              title: item.title + " (World / EN)",
+          resEn.query.search.slice(0, 3).forEach(item => {
+            combinedResults.push({
+              title: item.title,
               snippet: item.snippet.replace(/(<([^>]+)>)/gi, ""),
-              url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}`
+              url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}`,
+              source: "Wikipédia EN"
             });
           });
         }
 
-        if (allItems.length === 0) {
+        // Spracovanie Open Library (Knihy a publikácie)
+        if (resBooks && resBooks.docs) {
+          resBooks.docs.forEach(book => {
+            const author = book.author_name ? book.author_name.join(', ') : 'Neznámy autor';
+            combinedResults.push({
+              title: `${book.title} (${book.first_publish_year || 'Neuvedené'})`,
+              snippet: `Autor: ${author}. Knižná publikácia voľne registrovaná v svetovom archíve.`,
+              url: `https://openlibrary.org${book.key}`,
+              source: "Open Library"
+            });
+          });
+        }
+
+        if (combinedResults.length === 0) {
           status.innerText = `❌ ErikAI IQ nenašiel žiadne záznamy pre výraz "${query}".`;
           return;
         }
 
-        status.innerText = `✅ Úspešne nájdených ${allItems.length} relevantných výsledkov:`;
+        status.innerText = `✅ Úspešne nájdených ${combinedResults.length} výsledkov z viacerých databáz:`;
 
-        // Vykreslíme výsledky
-        allItems.forEach(res => {
+        // Vykreslenie všetkých zozbieraných výsledkov
+        combinedResults.forEach(res => {
           container.innerHTML += `
             <div class="result-card">
               <div class="result-info">
-                <h3>${res.title}</h3>
+                <h3>${res.title} <span class="source-tag">${res.source}</span></h3>
                 <p>${res.snippet}...</p>
               </div>
-              <a href="${res.url}" target="_blank" class="visit-btn">Otvoriť stránku ↗</a>
+              <a href="${res.url}" target="_blank" class="visit-btn">Otvoriť zdroj ↗</a>
             </div>
           `;
         });
 
       } catch (err) {
         console.error(err);
-        status.innerText = "❌ Chyba pri komunikácii so vedomostnými uzlami.";
+        status.innerText = "❌ Chyba pri sieťovom prepojení na vedomostné uzly.";
       }
     }
   </script>
