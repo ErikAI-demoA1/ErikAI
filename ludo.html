@@ -63,7 +63,7 @@
     width:100%; max-width:980px; height:480px; margin:0 auto; overflow:hidden;
     border:2px solid rgba(6, 182, 212, 0.35); border-radius:12px; background:#030a14;
     position:relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
-    touch-action: none; /* Vlastné plynulé posúvanie prstom po mape */
+    touch-action: none;
   }
   canvas { display: block; width: 100%; height: 100%; cursor: grab; }
   canvas:active { cursor: grabbing; }
@@ -168,25 +168,22 @@
     const gpuSizeEl = document.getElementById("gpuSize");
     const coordsBadge = document.getElementById("coordsBadge");
 
-    // BINÁRNE DÁTOVÉ ŠTRUKTÚRY (TypedArrays) - NULOVÁ ZÁŤAŽ NA RAM A GARBAGE COLLECTOR
     let GRID_SIZE = 700;
     let CELL_SIZE = 24;
     let PLAYER_COUNT = 0;
     let aliveCount = 0;
-    let currentPlayer = 0; // 0-based index
+    let currentPlayer = 0;
     let diceRoll = 0;
 
-    let playerX = new Uint16Array(0);      // X súradnica hráča
-    let playerY = new Uint16Array(0);      // Y súradnica hráča
-    let playerAlive = new Uint8Array(0);   // 1 = živý, 0 = vyradený
-    let gridOccupancy = new Int32Array(0); // Index hráča na políčku (-1 = voľné)
-    let colorPalette = [];                 // Predpočítaných 360 farieb (šetrí pamäť)
+    let playerX = new Uint16Array(0);
+    let playerY = new Uint16Array(0);
+    let playerAlive = new Uint8Array(0);
+    let gridOccupancy = new Int32Array(0);
+    let colorPalette = [];
 
-    // Virtuálna kamera (v pixeloch)
     let camX = 0;
     let camY = 0;
 
-    // Predpočítanie 360 farieb raz pri štarte
     for (let h = 0; h < 360; h++) {
       colorPalette.push(`hsl(${h}, 88%, 58%)`);
     }
@@ -227,7 +224,6 @@
 
     function changeZoom() {
       CELL_SIZE = parseInt(document.getElementById("cellSizeInput").value) || 24;
-      focusActivePlayer();
       drawScene();
     }
 
@@ -249,7 +245,6 @@
       currentPlayer = 0;
       diceRoll = 0;
 
-      // Alokácia čistej binárnej pamäte (okamžité, < 5 ms pre 100k hráčov)
       playerX = new Uint16Array(count);
       playerY = new Uint16Array(count);
       playerAlive = new Uint8Array(count);
@@ -297,6 +292,7 @@
       drawScene();
     }
 
+    // OPRAVENÁ FUNKCIA: Hľadanie ID je teraz IBA KAMERA NA POZOROVANIE (Nezmení aktuálneho hráča na ťahu!)
     function jumpToPlayerById() {
       const idInput = parseInt(document.getElementById("targetPlayerId").value);
       if (isNaN(idInput) || idInput < 1 || idInput > PLAYER_COUNT) {
@@ -304,14 +300,17 @@
         return;
       }
       const idx = idInput - 1;
-      if (!playerAlive[idx]) {
-        alert(`Hráč #${idInput} je už vyradený.`);
-        return;
-      }
-      currentPlayer = idx;
-      updateActiveVisual();
-      focusActivePlayer();
-      info.innerText = `🎯 Kamera presunutá na Hráča #${idInput} [${playerX[idx]}, ${playerY[idx]}].`;
+      const px = playerX[idx];
+      const py = playerY[idx];
+      const isAlive = playerAlive[idx] === 1;
+
+      // Presuneme kameru priamo na vyhľadaného hráča
+      camX = (px * CELL_SIZE) - (canvas.width / 2) + (CELL_SIZE / 2);
+      camY = (py * CELL_SIZE) - (canvas.height / 2) + (CELL_SIZE / 2);
+      clampCamera();
+      drawScene();
+
+      info.innerText = `👁️ Náhľad: Hráč #${idInput} je na pozícii [${px}, ${py}] (${isAlive ? 'Živý' : 'Vyradený'}). Na ťahu je stále Hráč #${currentPlayer + 1}!`;
     }
 
     function rollDice() {
@@ -328,7 +327,6 @@
       info.innerText = `🎲 Hráč #${currentPlayer + 1} hodil číslo ${diceRoll}! Ťukni na svietiace políčko v dosahu.`;
     }
 
-    // OVLÁDANIE KAMERY (POSÚVANIE PRSTOM / MYŠOU) A KLIK NA POLÍČKO
     let isDragging = false;
     let dragMoved = false;
     let lastPointerX = 0;
@@ -364,7 +362,6 @@
       isDragging = false;
       canvas.releasePointerCapture(e.pointerId);
 
-      // Ak používateľ iba ťukol (neposúval mapu), spracujeme herný ťah
       if (!dragMoved) {
         handleCellTap(e.clientX, e.clientY);
       }
@@ -410,7 +407,6 @@
         }
       }
 
-      // Presun hráča v binárnej mape
       gridOccupancy[py * GRID_SIZE + px] = -1;
       gridOccupancy[targetCellIdx] = currentPlayer;
       playerX[currentPlayer] = tx;
@@ -443,7 +439,6 @@
       info.innerText = `${extraMessage} Na rade je Hráč #${currentPlayer + 1}. Klikni „🎲 Hod kockou“.`;
     }
 
-    // VYKRESLENIE IBA VIDITEĽNÉHO VÝREZU KAMERY (60 FPS AJ PRI 100 000 HRÁČOCH)
     function drawScene() {
       ctx.fillStyle = "#030a14";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -453,7 +448,6 @@
       const startRow = Math.max(0, Math.floor(camY / CELL_SIZE));
       const endRow = Math.min(GRID_SIZE - 1, Math.ceil((camY + canvas.height) / CELL_SIZE));
 
-      // Mriežka
       if (CELL_SIZE >= 14) {
         ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
         ctx.lineWidth = 1;
@@ -471,7 +465,6 @@
         ctx.stroke();
       }
 
-      // Zvýraznenie povolených ťahov po hode kockou
       if (PLAYER_COUNT > 0 && playerAlive[currentPlayer] && diceRoll > 0) {
         const px = playerX[currentPlayer];
         const py = playerY[currentPlayer];
@@ -495,7 +488,6 @@
         }
       }
 
-      // Vykreslenie iba tých buniek, ktoré sú práve na obrazovke (max pár stoviek buniek namiesto 100 000!)
       const triSize = CELL_SIZE * 0.34;
       const showNumbers = CELL_SIZE >= 18;
       if (showNumbers) {
@@ -545,7 +537,6 @@
       }
     }
 
-    // INDEXEDDB ÚLOŽISKO (BEZ 5MB LIMITU LOCALSTORAGE - ZVLÁDA STÁ MB AŽ GB BINÁRNYCH DÁT)
     function openArenaDB() {
       return new Promise((resolve, reject) => {
         const req = indexedDB.open("ErikAI_UltraArena_DB", 1);
@@ -624,7 +615,6 @@
       }
     }
 
-    // Spustenie so 100 000 hráčmi na ploche 700x700 (490 000 políčok)
     initGame();
   </script>
 
