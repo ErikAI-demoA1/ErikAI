@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI OS — Inteligentný Lokálny Vyhľadávač</title>
+<title>ErikAI OS — Nezávislý Autonómny Bot</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -159,133 +159,100 @@
     background: var(--neon-red);
     border-color: var(--neon-red);
   }
+
+  .bot-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--neon-orange);
+    margin-top: 10px;
+  }
 </style>
 </head>
 <body>
 
   <div class="main-container">
     <header>
-      <h1>🔎 ErikAI Okamžitý Vyhľadávač</h1>
-      <p>Zadaj ľubovoľné slovo (napr. pes, auto, správy, hry) a bot ťa hneď nasmeruje na najlepšie stránky!</p>
+      <h1>🤖 ErikAI Autonómny Bot</h1>
+      <p>Zadaj akékoľvek slovo – náš bot ho automaticky vyhľadá v otvorených zdrojoch a hneď ťa prepojí na priamy web!</p>
     </header>
 
     <div class="panel">
       <div class="search-row">
-        <input type="text" id="searchInput" placeholder="Čo chceš hľadať? (napr. pes)..." onkeyup="checkEnter(event)">
-        <button onclick="searchWeb()">Hľadaj ⚡</button>
+        <input type="text" id="searchInput" placeholder="Napíš čo hľadáš (napr. pes, vesmír, Paríž)..." onkeyup="checkEnter(event)">
+        <button onclick="runAutonomousBot()">Bot Hľadaj ⚡</button>
       </div>
+      <div id="botStatus" class="bot-status"></div>
 
       <div class="results-list" id="searchResults">
-        <!-- Sem sa vyhodia výsledky -->
+        <!-- Sem bot vyhodí výsledky -->
       </div>
     </div>
   </div>
 
   <script>
-    // ==========================================
-    // 🧠 LOKÁLNA BOT DATABÁZA (Zadarmo & Bez Serveru)
-    // ==========================================
-    // Sem si môžeš pridávať ľubovoľné kľúčové slová a stránky, ktoré má bot poznať
-    const botDatabase = [
-      {
-        keywords: ["pes", "psov", "psi", "zvieratá", "cider", "mačka"],
-        title: "Všetko o psoch a domácich zvieratách",
-        description: "Najlepšie weby o starostlivosti, krmive a výchove psov.",
-        url: "https://www.dogtime.com"
-      },
-      {
-        keywords: ["pes", "wikipedia", "encyklopédia"],
-        title: "Pes domáci — Wikipédia",
-        description: "Všetky odborné informácie o evolúcii, druhoch a správaní psov.",
-        url: "https://sk.wikipedia.org/wiki/Pes_domáci"
-      },
-      {
-        keywords: ["hry", "steam", "zábava", "pc", "gaming"],
-        title: "Steam — Najväčšia herná platforma",
-        description: "Hraj, diskutuj a objavuj tisíce hier priamo na PC.",
-        url: "https://store.steampowered.com"
-      },
-      {
-        keywords: ["filmy", "kino", "recenzie", "imdb"],
-        title: "IMDb — Filmová databáza",
-        description: "Hodnotenia, herci, trailery a informácie o všetkých filmoch.",
-        url: "https://www.imdb.com"
-      },
-      {
-        keywords: ["erikai", "os", "aplikácie", "hry", "portál"],
-        title: "ErikAI OS Universe (Domov)",
-        description: "Hlavný portál ekosystému Erika Mohyláka.",
-        url: "https://erikaios2025.github.io/ErikAI/"
-      },
-      {
-        keywords: ["správy", "aktuality", "novinky", "svet"],
-        title: "Aktuality.sk — Domáce a svetové správy",
-        description: "Rýchle spravodajstvo, komentáre a témy, ktoré hýbu Slovenskom.",
-        url: "https://www.aktuality.sk"
-      }
-    ];
-
     function checkEnter(event) {
       if (event.key === "Enter") {
-        searchWeb();
+        runAutonomousBot();
       }
     }
 
     // ==========================================
-    // ⚡ VYHĽADÁVACÍ BOT ALGORITMUS
+    // ⚡ AUTONÓMNY BOT PRE HĽADANIE BEZ GOOGLU
     // ==========================================
-    function searchWeb() {
-      const query = document.getElementById("searchInput").value.toLowerCase().trim();
+    async function runAutonomousBot() {
+      const query = document.getElementById("searchInput").value.trim();
       const container = document.getElementById("searchResults");
+      const status = document.getElementById("botStatus");
+      
       container.innerHTML = "";
 
       if (!query) {
-        container.innerHTML = `<p style="color:var(--text-muted)">Zadaj aspoň jedno slovo na vyhľadávanie.</p>`;
+        status.innerText = "⚠️ Najprv niečo napíš!";
         return;
       }
 
-      const words = query.split(" ");
+      status.innerText = "🤖 Bot prehľadáva dostupné bezplatné zdroje a databázy...";
 
-      // Prejdeme našu databázu a ohodnotíme zhody
-      const scoredResults = botDatabase.map(item => {
-        let score = 0;
-        words.forEach(word => {
-          // Ak kľúčové slovo obsahuje zadaný výraz
-          item.keywords.forEach(kw => {
-            if (kw.includes(word)) score += 10;
-          });
-          // Ak sa slovo nachádza v názve alebo popise
-          if (item.title.toLowerCase().includes(word)) score += 5;
-          if (item.description.toLowerCase().includes(word)) score += 2;
-        });
-        return { ...item, score };
-      });
+      try {
+        // Využijeme bezplatné a otvorené Wikipedia API pre slovenský a svetový jazyk
+        const wikiUrl = `https://sk.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+        
+        const response = await fetch(wikiUrl);
+        const data = await response.json();
+        
+        const searchResults = data.query ? data.query.search : [];
 
-      // Vyberieme tie, ktoré majú aspoň nejakú zhodu
-      const matches = scoredResults.filter(r => r.score > 0).sort((a, b) => b.score - a.score);
+        if (searchResults.length === 0) {
+          status.innerText = `🤖 Bot nenašiel priame záznamy pre "${query}". Skús iné slovo.`;
+          return;
+        }
 
-      if (matches.length === 0) {
-        container.innerHTML = `
-          <div class="result-card" style="flex-direction: column; align-items: flex-start; gap: 10px;">
-            <p style="color: #fff;">🤖 Bot nenašiel priamu zhodu pre <b>"${query}"</b> v lokálnej databáze.</p>
-            <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank" class="visit-btn" style="background: var(--neon-red);">Hľadať cez Google ↗</a>
-          </div>
-        `;
-        return;
-      }
+        status.innerText = `✅ Bot našiel ${searchResults.length} priamych výsledkov:`;
 
-      // Vypíšeme výsledky
-      matches.forEach(res => {
-        container.innerHTML += `
-          <div class="result-card">
-            <div class="result-info">
-              <h3>${res.title}</h3>
-              <p>${res.description}</p>
+        // Pre každú nájdenú položku vygenerujeme priamy odkaz na Wikipédiu / web
+        searchResults.forEach(item => {
+          // Vytvoríme priamy odkaz na daný článok
+          const pageTitleEncoded = encodeURIComponent(item.title);
+          const directUrl = `https://sk.wikipedia.org/wiki/${pageTitleEncoded}`;
+          
+          // Očistíme HTML značky z úryvku textu
+          const cleanSnippet = item.snippet.replace(/(<([^>]+)>)/gi, "");
+
+          container.innerHTML += `
+            <div class="result-card">
+              <div class="result-info">
+                <h3>${item.title}</h3>
+                <p>${cleanSnippet}...</p>
+              </div>
+              <a href="${directUrl}" target="_blank" class="visit-btn">Otvoriť stránku ↗</a>
             </div>
-            <a href="${res.url}" target="_blank" class="visit-btn">Otvoriť stránku ↗</a>
-          </div>
-        `;
-      });
+          `;
+        });
+
+      } catch (err) {
+        console.error(err);
+        status.innerText = "❌ Bot narazil na sieťovú chybu pri komunikácii so zdrojom.";
+      }
     }
   </script>
 </body>
