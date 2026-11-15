@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI IQ Prehliadač — Multi-Source Neural Engine</title>
+<title>ErikAI IQ Prehliadač — Ultimate Universe Engine</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -126,6 +126,11 @@
     transition: all 0.2s;
   }
 
+  .result-card.erik-exclusive {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(3, 7, 18, 0.85));
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+
   .result-card:hover { 
     border-color: var(--card-hover-border);
     transform: translateY(-2px);
@@ -147,10 +152,16 @@
     font-family: 'JetBrains Mono', monospace;
     padding: 3px 8px;
     border-radius: 6px;
-    background: rgba(239, 68, 68, 0.15);
-    color: var(--neon-red);
+    background: rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
     margin-left: 8px;
     display: inline-block;
+  }
+
+  .source-tag.erik {
+    background: var(--neon-red);
+    color: #fff;
+    font-weight: 800;
   }
 
   .visit-btn {
@@ -184,126 +195,204 @@
   <div class="main-container">
     <header>
       <h1>🧠 ErikAI IQ Prehliadač</h1>
-      <p>Autonómny uzol pre hľadanie vo viacerých otvorených svetových databázach naraz — bezpečne, zadarmo a bez reklám.</p>
+      <p>Ultimátny uzol obsahujúci kompletne všetky tvoje súbory, nástroje, hry a svetové databázy.</p>
     </header>
 
     <div class="panel">
       <div class="search-row">
-        <input type="text" id="searchInput" placeholder="Zadaj kľúčové slovo (napr. vesmír, história, pes, Curie)..." onkeyup="checkEnter(event)">
-        <button onclick="runMultiSourceSearch()">Prehľadávať ⚡</button>
+        <input type="text" id="searchInput" placeholder="Hľadaj čokoľvek (napr. video editor, prekladač, vizitka, šachy)..." onkeyup="checkEnter(event)">
+        <button onclick="runMegaSearch()">Prehľadávať ⚡</button>
       </div>
       <div id="systemStatus" class="system-status"></div>
 
       <div class="results-list" id="searchResults">
-        <!-- Sem sa vyhodia výsledky zo všetkých zdrojov -->
+        <!-- Sem sa vyhodia výsledky -->
       </div>
     </div>
   </div>
 
   <script>
+    // ==========================================================
+    // 📂 ABSOLÚTNE KOMPLETNÁ DATABÁZA VŠETKÝCH TVOJICH PROJEKTOV
+    // ==========================================================
+    const megaEcosystemDB = [
+      // Hry a zábava
+      { keywords: ["šachy", "sachy", "hra", "dosková"], title: "♟️ ErikAI Šachy", description: "Zahraj si klasické šachy priamo v ErikAI OS.", url: "sachy.html", source: "ErikAI OS Universe" },
+      { keywords: ["dáma", "dama", "hra"], title: "🔴 ErikAI Dáma", description: "Strategická hra dáma.", url: "dama.html", source: "ErikAI OS Universe" },
+      { keywords: ["ludo", "človeče"], title: "🎲 ErikAI Ludo / Človeče", description: "Zábavná dosková hra.", url: "ludo.html", source: "ErikAI OS Universe" },
+      { keywords: ["pamäť", "memory", "match", "hra"], title: "🧠 Memory Match Game", description: "Tréning pamäti a postrehu.", url: "memorymatch.html", source: "ErikAI OS Universe" },
+      { keywords: ["fifa", "futbal", "erikfifa"], title: "⚽ ErikFIFA", description: "Futbalová zábava v ekosystéme.", url: "erikfifa.html", source: "ErikAI OS Universe" },
+
+      // Nástroje, editori a utility
+      { keywords: ["video", "editor", "strih"], title: "🎬 ErikAI Video Editor", description: "Úprava a tvorba video obsahu[span_11](start_span)[span_11](end_span).", url: "video_editor.html", source: "ErikAI OS Universe" },
+      { keywords: ["prekladač", "translate", "preklad"], title: "🌐 ErikAI Prekladač", description: "Prekladanie textov a jazykov[span_12](start_span)[span_12](end_span).", url: "translate.html", source: "ErikAI OS Universe" },
+      { keywords: ["tréning", "trening", "treningai", "cvičenie"], title: "🎯 ErikAI Tréningy", description: "Tréningové moduly a cvičenia[span_13](start_span)[span_13](end_span).", url: "treningai.html", source: "ErikAI OS Universe" },
+      { keywords: ["vizitka", "profil", "kontakt"], title: "💳 ErikAI Digitálna Vizitka", description: "Prezentácia a osobné vizitky[span_14](start_span)[span_14](end_span).", url: "vizitka.html", source: "ErikAI OS Universe" },
+      { keywords: ["vzorce", "matematika", "fyzika"], title: "📐 Vzorce a Výpočty", description: "Zoznam užitočných vzorcov[span_15](start_span)[span_15](end_span).", url: "vzorce.html", source: "ErikAI OS Universe" },
+      { keywords: ["písanie", "writesped", "klávesnica", "rychlost"], title: "⌨️ WriteSped — Rýchle Písanie", description: "Tréning rýchlosti písania na klávesnici[span_16](start_span)[span_16](end_span).", url: "writesped.html", source: "ErikAI OS Universe" },
+      { keywords: ["zápasy", "sport", "zapasy"], title: "🏆 ErikAI Športové Zápasy", description: "Prehľad zápasov a výsledkov[span_17](start_span)[span_17](end_span).", url: "zapasy.html", source: "ErikAI OS Universe" },
+      { keywords: ["záznam", "nahrávok", "audio", "zaznam_nahravok", "mikrofón"], title: "🎙️ Záznam Nahrávok", description: "Audio záznamník a správa zvuku[span_18](start_span)[span_18](end_span).", url: "zaznam_nahravok.html", source: "ErikAI OS Universe" },
+      { keywords: ["kalkulačka", "kalkulacka", "počítanie"], title: "🔢 ErikAI Kalkulačka", description: "Rýchle a presné výpočty.", url: "13kalkulacka.html", source: "ErikAI OS Universe" },
+      { keywords: ["budík", "cas", "hodiny", "alarm"], title: "⏰ ErikAI Budík & Hodiny", description: "Správa času a budíkov.", url: "budik.html", source: "ErikAI OS Universe" },
+      { keywords: ["počasie", "pocasie", "teplota"], title: "🌤️ ErikAI Počasie", description: "Aktuálne predpovede počasia.", url: "pocasie.html", source: "ErikAI OS Universe" },
+      { keywords: ["mapy", "mapa", "gps", "navigácia"], title: "🗺️ ErikAI Mapy", description: "Geografický prehľad a lokalizácia.", url: "mapy.html", source: "ErikAI OS Universe" },
+      { keywords: ["skener", "scanner", "ocr"], title: "📷 ErikAI Skener & Dokumenty", description: "Skenovanie dokladov a papiera.", url: "skener.html", source: "ErikAI OS Universe" },
+      { keywords: ["qr", "kód", "generator"], title: "📱 ErikAI QR Kód Generátor", description: "Tvorba a čítanie QR kódov.", url: "qr.html", source: "ErikAI OS Universe" },
+      { keywords: ["kompas", "smer"], title: "🧭 ErikAI Kompas", description: "Smerový orientačný nástroj.", url: "kompas.html", source: "ErikAI OS Universe" },
+      { keywords: ["rýchlosť", "speedometer"], title: "🏎️ ErikAI Merač Rýchlosti", description: "Sledovanie rýchlosti pohybu.", url: "speedometer.html", source: "ErikAI OS Universe" },
+      { keywords: ["preved", "jednotiek"], title: "🔄 Prevod Jednotiek", description: "Konverzia veličín a jednotiek.", url: "prevodjednotiek.html", source: "ErikAI OS Universe" },
+      { keywords: ["pdf", "editor", "dokumenty"], title: "📄 PDF Editor & Nástroje", description: "Práca s dokumentmi a PDF.", url: "editorpdf.html", source: "ErikAI OS Universe" },
+
+      // AI a Chat moduly
+      { keywords: ["chat", "erikai", "ai", "asistent", "chaterikai"], title: "💬 ErikAI Chat & Asistent", description: "Interaktívna umelá inteligencia a komunikácia.", url: "chaterikai.html", source: "ErikAI OS Universe" },
+      { keywords: ["ai1", "ai2", "ai3", "ai4", "model", "4ai"], title: "🤖 ErikAI Moduly AI", description: "Pokročilé neurónové modely a experimenty.", url: "ai1.html", source: "ErikAI OS Universe" },
+
+      // 3D a Grafika
+      { keywords: ["3d", "box", "objekt", "generator"], title: "📦 ErikAI 3D Box Generátor", description: "Tvorba 3D objektov v priestore.", url: "3dbox.html", source: "ErikAI OS Universe" },
+      { keywords: ["catia", "3dcatia", "cad", "model"], title: "📐 3D Catia / CAD Modul", description: "Technické modelovanie a konštrukcie.", url: "3dcatia.html", source: "ErikAI OS Universe" },
+      { keywords: ["craft", "3dcraft"], title: "⛏️ 3D Craft World", description: "Svet kockového stavania.", url: "3dcraft.html", source: "ErikAI OS Universe" },
+
+      // Zábava a multimédiá
+      { keywords: ["radio", "hudba", "audio", "sound"], title: "📻 ErikAI Rádio & Hudba", description: "Streamovanie audio kanálov a hudby.", url: "radio.html", source: "ErikAI OS Universe" },
+      { keywords: ["film", "kino", "mesto", "video"], title: "🏙️ ErikAI Kino & Filmy", description: "Filmové projekty a Nekonečné mesto.", url: "film4.html", source: "ErikAI OS Universe" },
+      { keywords: ["mutant", "menu", "postava"], title: "👾 ErikAI Mutant Menu", description: "Špeciálne herné a vizuálne rozhranie.", url: "mutantmenu.html", source: "ErikAI OS Universe" },
+
+      // Obchod a firemné šablóny
+      { keywords: ["eshop", "obchod", "tovar", "produkt"], title: "🛍️ ErikAI E-shop Šablóna", description: "Inzercia a predaj produktov.", url: "eshop.html", source: "ErikAI OS Universe" },
+      { keywords: ["firma", "biznis", "spoločnosť"], title: "🏢 ErikAI Firma Šablóna", description: "Korporátna prezentácia.", url: "firma.html", source: "ErikAI OS Universe" },
+      { keywords: ["faktúry", "faktury", "platby"], title: "📊 ErikAI Fakturačný Systém", description: "Tvorba a správa faktúr.", url: "faktury.html", source: "ErikAI OS Universe" },
+
+      // Osobné
+      { keywords: ["erik", "mohylak", "autor", "profil"], title: "🇸🇰 Erik Mohylák (Profil)", description: "Tvorca a zakladateľ ErikAI OS.", url: "erik_mohylak.html", source: "ErikAI OS Universe" }
+    ];
+
     function checkEnter(event) {
       if (event.key === "Enter") {
-        runMultiSourceSearch();
+        runMegaSearch();
       }
     }
 
     // ==========================================================
-    // 🌐 ERIKAI IQ MULTI-SOURCE ROZŠÍRENÝ VYHĽADÁVAČ
+    // ⚡ MEGA VYHĽADÁVANIE (Všetky súbory + Svet)
     // ==========================================================
-    async function runMultiSourceSearch() {
-      const query = document.getElementById("searchInput").value.trim();
+    async function runMegaSearch() {
+      const query = document.getElementById("searchInput").value.toLowerCase().trim();
       const container = document.getElementById("searchResults");
       const status = document.getElementById("systemStatus");
       
       container.innerHTML = "";
 
       if (!query) {
-        status.innerText = "⚠️ Prosím, zadaj hľadaný výraz!";
+        status.innerText = "⚠️ Najprv niečo zadaj do vyhľadávania!";
         return;
       }
 
-      status.innerText = "🧠 ErikAI IQ paralelný prieskum: oslovujem Wikipédiu a Open Library...";
+      status.innerText = "🧠 ErikAI IQ prechádza kompletne všetky súbory a svetové zdroje...";
+
+      let allResults = [];
+      const queryWords = query.split(" ");
+
+      // 1. PREHĽADÁME KOMPLETNÚ DATABÁZU
+      megaEcosystemDB.forEach(item => {
+        let matchScore = 0;
+        queryWords.forEach(word => {
+          if (item.title.toLowerCase().includes(word)) matchScore += 15;
+          if (item.description.toLowerCase().includes(word)) matchScore += 8;
+          item.keywords.forEach(kw => {
+            if (kw.includes(word)) matchScore += 25;
+          });
+        });
+
+        if (matchScore > 0) {
+          allResults.push({
+            title: item.title,
+            snippet: item.description,
+            url: item.url,
+            source: item.source,
+            isErikItem: true,
+            score: matchScore
+          });
+        }
+      });
+
+      // Zoradíme podľa zhody
+      allResults.sort((a, b) => b.score - a.score);
 
       try {
-        // 1. Slovenská Wikipédia API
+        // 2. PRIDÁME AJ SVETOVÉ ZDROJE (Wikipédia SK + EN & Open Library)
         const wikiSkUrl = `https://sk.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
-        
-        // 2. Svetová/Anglická Wikipédia API
         const wikiEnUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+        const booksUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=3`;
 
-        // 3. Open Library API (Svetová bezplatná databáza kníh a dokumentov)
-        const booksUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=4`;
-
-        // Spustíme všetky požiadavky naraz (rýchlosť na 1. mieste)
         const [resSk, resEn, resBooks] = await Promise.all([
           fetch(wikiSkUrl).then(r => r.json()).catch(() => null),
           fetch(wikiEnUrl).then(r => r.json()).catch(() => null),
           fetch(booksUrl).then(r => r.json()).catch(() => null)
         ]);
 
-        let combinedResults = [];
-
-        // Spracovanie SK Wikipédie
         if (resSk && resSk.query && resSk.query.search) {
-          resSk.query.search.forEach(item => {
-            combinedResults.push({
+          resSk.query.search.slice(0, 4).forEach(item => {
+            allResults.push({
               title: item.title,
               snippet: item.snippet.replace(/(<([^>]+)>)/gi, ""),
               url: `https://sk.wikipedia.org/wiki/${encodeURIComponent(item.title)}`,
-              source: "Wikipédia SK"
+              source: "Wikipédia SK",
+              isErikItem: false
             });
           });
         }
 
-        // Spracovanie EN Wikipédie (pridáme len top výsledky)
         if (resEn && resEn.query && resEn.query.search) {
-          resEn.query.search.slice(0, 3).forEach(item => {
-            combinedResults.push({
+          resEn.query.search.slice(0, 2).forEach(item => {
+            allResults.push({
               title: item.title,
               snippet: item.snippet.replace(/(<([^>]+)>)/gi, ""),
               url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}`,
-              source: "Wikipédia EN"
+              source: "Wikipédia EN",
+              isErikItem: false
             });
           });
         }
 
-        // Spracovanie Open Library (Knihy a publikácie)
         if (resBooks && resBooks.docs) {
           resBooks.docs.forEach(book => {
             const author = book.author_name ? book.author_name.join(', ') : 'Neznámy autor';
-            combinedResults.push({
+            allResults.push({
               title: `${book.title} (${book.first_publish_year || 'Neuvedené'})`,
-              snippet: `Autor: ${author}. Knižná publikácia voľne registrovaná v svetovom archíve.`,
+              snippet: `Autor: ${author}. Knižná publikácia zo svetového archívu.`,
               url: `https://openlibrary.org${book.key}`,
-              source: "Open Library"
+              source: "Open Library",
+              isErikItem: false
             });
           });
         }
 
-        if (combinedResults.length === 0) {
-          status.innerText = `❌ ErikAI IQ nenašiel žiadne záznamy pre výraz "${query}".`;
-          return;
-        }
-
-        status.innerText = `✅ Úspešne nájdených ${combinedResults.length} výsledkov z viacerých databáz:`;
-
-        // Vykreslenie všetkých zozbieraných výsledkov
-        combinedResults.forEach(res => {
-          container.innerHTML += `
-            <div class="result-card">
-              <div class="result-info">
-                <h3>${res.title} <span class="source-tag">${res.source}</span></h3>
-                <p>${res.snippet}...</p>
-              </div>
-              <a href="${res.url}" target="_blank" class="visit-btn">Otvoriť zdroj ↗</a>
-            </div>
-          `;
-        });
-
       } catch (err) {
-        console.error(err);
-        status.innerText = "❌ Chyba pri sieťovom prepojení na vedomostné uzly.";
+        console.log("Svetové uzly offline, používam lokálny ekosystém.");
       }
+
+      if (allResults.length === 0) {
+        status.innerText = `❌ Žiadne výsledky pre výraz "${query}".`;
+        return;
+      }
+
+      status.innerText = `✅ Úspešne nájdených ${allResults.length} výsledkov (všetky tvoje aplikácie + svetové zdroje):`;
+
+      // Vykreslenie
+      allResults.forEach(res => {
+        const cardClass = res.isErikItem ? "result-card erik-exclusive" : "result-card";
+        const tagClass = res.isErikItem ? "source-tag erik" : "source-tag";
+
+        container.innerHTML += `
+          <div class="${cardClass}">
+            <div class="result-info">
+              <h3>${res.title} <span class="${tagClass}">${res.source}</span></h3>
+              <p>${res.snippet}</p>
+            </div>
+            <a href="${res.url}" target="_blank" class="visit-btn">Otvoriť ↗</a>
+          </div>
+        `;
+      });
     }
   </script>
 </body>
