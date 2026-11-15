@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ErikAI OS — Nezávislý Autonómny Bot</title>
+<title>ErikAI IQ Prehliadač — Autonómny Vedomostný Engine</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -160,7 +160,7 @@
     border-color: var(--neon-red);
   }
 
-  .bot-status {
+  .system-status {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.85rem;
     color: var(--neon-orange);
@@ -172,19 +172,19 @@
 
   <div class="main-container">
     <header>
-      <h1>🤖 ErikAI Autonómny Bot</h1>
-      <p>Zadaj akékoľvek slovo – náš bot ho automaticky vyhľadá v otvorených zdrojoch a hneď ťa prepojí na priamy web!</p>
+      <h1>🧠 ErikAI IQ Prehliadač</h1>
+      <p>Nezávislý systém pre inteligentné vyhľadávanie v otvorených vedomostných databázach — bezpečne, bez reklám a zadarmo.</p>
     </header>
 
     <div class="panel">
       <div class="search-row">
-        <input type="text" id="searchInput" placeholder="Napíš čo hľadáš (napr. pes, vesmír, Paríž)..." onkeyup="checkEnter(event)">
-        <button onclick="runAutonomousBot()">Bot Hľadaj ⚡</button>
+        <input type="text" id="searchInput" placeholder="Čo chceš vyhľadať? (napr. vesmír, fyzika, pes)..." onkeyup="checkEnter(event)">
+        <button onclick="runIQSearch()">Vyhľadať ⚡</button>
       </div>
-      <div id="botStatus" class="bot-status"></div>
+      <div id="systemStatus" class="system-status"></div>
 
       <div class="results-list" id="searchResults">
-        <!-- Sem bot vyhodí výsledky -->
+        <!-- Sem sa vypíšu inteligentné výsledky -->
       </div>
     </div>
   </div>
@@ -192,66 +192,87 @@
   <script>
     function checkEnter(event) {
       if (event.key === "Enter") {
-        runAutonomousBot();
+        runIQSearch();
       }
     }
 
     // ==========================================
-    // ⚡ AUTONÓMNY BOT PRE HĽADANIE BEZ GOOGLU
+    // 🧠 ERIKAI IQ MULTI-SOURCE VYHĽADÁVAČ
     // ==========================================
-    async function runAutonomousBot() {
+    async function runIQSearch() {
       const query = document.getElementById("searchInput").value.trim();
       const container = document.getElementById("searchResults");
-      const status = document.getElementById("botStatus");
+      const status = document.getElementById("systemStatus");
       
       container.innerHTML = "";
 
       if (!query) {
-        status.innerText = "⚠️ Najprv niečo napíš!";
+        status.innerText = "⚠️ Zadaj výraz do vyhľadávania!";
         return;
       }
 
-      status.innerText = "🤖 Bot prehľadáva dostupné bezplatné zdroje a databázy...";
+      status.innerText = "🧠 ErikAI IQ prechádza viaceré nezávislé vedomostné zdroje...";
 
       try {
-        // Využijeme bezplatné a otvorené Wikipedia API pre slovenský a svetový jazyk
-        const wikiUrl = `https://sk.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+        // Zdroje 1: Slovenská Wikipédia API
+        const wikiSkUrl = `https://sk.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
         
-        const response = await fetch(wikiUrl);
-        const data = await response.json();
-        
-        const searchResults = data.query ? data.query.search : [];
+        // Zdroje 2: Anglická Wikipédia API (pre širší svetový záber, ak je to potrebné)
+        const wikiEnUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
 
-        if (searchResults.length === 0) {
-          status.innerText = `🤖 Bot nenašiel priame záznamy pre "${query}". Skús iné slovo.`;
+        // Paralelne potiahneme dáta z viacerých slobodných zdrojov
+        const [resSk, resEn] = await Promise.all([
+          fetch(wikiSkUrl).then(r => r.json()).catch(() => null),
+          fetch(wikiEnUrl).then(r => r.json()).catch(() => null)
+        ]);
+
+        let allItems = [];
+
+        // Spracujeme slovenské výsledky
+        if (resSk && resSk.query && resSk.query.search) {
+          resSk.query.search.forEach(item => {
+            allItems.push({
+              title: item.title + " (SK)",
+              snippet: item.snippet.replace(/(<([^>]+)>)/gi, ""),
+              url: `https://sk.wikipedia.org/wiki/${encodeURIComponent(item.title)}`
+            });
+          });
+        }
+
+        // Spracujeme svetové výsledky
+        if (resEn && resEn.query && resEn.query.search) {
+          resEn.query.search.slice(0, 3).forEach(item => { // zoberieme top 3 z EN
+            allItems.push({
+              title: item.title + " (World / EN)",
+              snippet: item.snippet.replace(/(<([^>]+)>)/gi, ""),
+              url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title)}`
+            });
+          });
+        }
+
+        if (allItems.length === 0) {
+          status.innerText = `❌ ErikAI IQ nenašiel žiadne záznamy pre výraz "${query}".`;
           return;
         }
 
-        status.innerText = `✅ Bot našiel ${searchResults.length} priamych výsledkov:`;
+        status.innerText = `✅ Úspešne nájdených ${allItems.length} relevantných výsledkov:`;
 
-        // Pre každú nájdenú položku vygenerujeme priamy odkaz na Wikipédiu / web
-        searchResults.forEach(item => {
-          // Vytvoríme priamy odkaz na daný článok
-          const pageTitleEncoded = encodeURIComponent(item.title);
-          const directUrl = `https://sk.wikipedia.org/wiki/${pageTitleEncoded}`;
-          
-          // Očistíme HTML značky z úryvku textu
-          const cleanSnippet = item.snippet.replace(/(<([^>]+)>)/gi, "");
-
+        // Vykreslíme výsledky
+        allItems.forEach(res => {
           container.innerHTML += `
             <div class="result-card">
               <div class="result-info">
-                <h3>${item.title}</h3>
-                <p>${cleanSnippet}...</p>
+                <h3>${res.title}</h3>
+                <p>${res.snippet}...</p>
               </div>
-              <a href="${directUrl}" target="_blank" class="visit-btn">Otvoriť stránku ↗</a>
+              <a href="${res.url}" target="_blank" class="visit-btn">Otvoriť stránku ↗</a>
             </div>
           `;
         });
 
       } catch (err) {
         console.error(err);
-        status.innerText = "❌ Bot narazil na sieťovú chybu pri komunikácii so zdrojom.";
+        status.innerText = "❌ Chyba pri komunikácii so vedomostnými uzlami.";
       }
     }
   </script>
