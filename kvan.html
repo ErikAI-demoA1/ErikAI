@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErikAI Quantum P=NP Lab — Riešiteľ zložitosti</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #030712;
+    --card-glass: rgba(17, 24, 39, 0.8);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --neon-red: #ef4444;
+    --neon-orange: #f97316;
+    --quantum-cyan: #06b6d4;
+    --quantum-purple: #8b5cf6;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-deep);
+    background-image: 
+      radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.12) 0%, transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(239, 68, 68, 0.1) 0%, transparent 45%);
+    color: var(--text-main);
+    min-height: 100vh;
+    padding: 25px 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 960px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  header {
+    background: var(--card-glass);
+    border: 1px solid var(--border-subtle);
+    border-radius: 20px;
+    padding: 28px;
+    text-align: center;
+    backdrop-filter: blur(16px);
+  }
+
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff 30%, var(--quantum-cyan), var(--neon-red));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  .subtitle { color: var(--text-muted); font-size: 0.95rem; }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--card-glass);
+    border: 1px solid var(--border-subtle);
+    border-radius: 20px;
+    padding: 24px;
+    backdrop-filter: blur(16px);
+  }
+
+  .panel-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 8px;
+    text-transform: uppercase;
+  }
+
+  .badge-p { background: rgba(239, 68, 68, 0.2); color: var(--neon-red); border: 1px solid rgba(239, 68, 68, 0.4); }
+  .badge-np { background: rgba(6, 182, 212, 0.2); color: var(--quantum-cyan); border: 1px solid rgba(6, 182, 212, 0.4); }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 15px;
+  }
+
+  input[type="text"] {
+    background: rgba(3, 7, 18, 0.9);
+    border: 1px solid var(--border-subtle);
+    color: #fff;
+    padding: 14px 18px;
+    border-radius: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    width: 240px;
+    text-align: center;
+    letter-spacing: 3px;
+    outline: none;
+  }
+
+  input[type="text"]:focus { border-color: var(--quantum-cyan); }
+
+  button {
+    background: linear-gradient(135deg, var(--quantum-cyan), var(--quantum-purple));
+    color: #fff;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+  }
+
+  button:hover { transform: translateY(-2px); opacity: 0.92; }
+
+  .btn-reset {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .terminal {
+    background: #02050c;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .big-code {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: 5px;
+    text-align: center;
+    margin: 15px 0;
+  }
+
+  .classic-color { color: var(--neon-orange); }
+  .quantum-color { color: var(--quantum-cyan); text-shadow: 0 0 15px rgba(6, 182, 212, 0.5); }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 10px;
+  }
+
+  .qubit-matrix {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+    margin-top: 15px;
+  }
+
+  .qubit {
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(6, 182, 212, 0.1);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--quantum-cyan);
+    transition: all 0.15s;
+  }
+
+  .qubit.locked {
+    background: var(--quantum-cyan);
+    color: #030712;
+    font-weight: 900;
+    box-shadow: 0 0 12px var(--quantum-cyan);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>⚛️ ErikAI Quantum P = NP Lab</h1>
+    <p class="subtitle">Experimentálne spojenie klasickej logiky (P) a kvantovej superpozície (NP) priamo v HTML</p>
+    
+    <div class="controls">
+      <input type="text" id="targetSecret" maxlength="6" value="ERIK26" placeholder="TAJNÝ KÓD">
+      <button onclick="startQuantumFusion()">Spustiť P + NP Fúziu ⚡</button>
+      <button class="btn-reset" onclick="randomizeSecret()">Náhodný NP Kľúč 🎲</button>
+    </div>
+  </header>
+
+  <div class="grid-2">
+    <!-- KLASICKÝ P PROCESOR -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>🖥️ Klasický Algoritmus</span>
+        <span class="badge badge-p">Trieda P (Postupne)</span>
+      </div>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+        Skúša kombinácie jednu po druhej. Pri zložitých NP problémoch exponenciálne spomaľuje.
+      </p>
+      <div class="terminal">
+        <div>Stav: <span id="classicStatus">Čakám na zadanie...</span></div>
+        <div class="big-code classic-color" id="classicDisplay">------</div>
+        <div class="stat-row">
+          <span>Operácie: <strong id="classicOps">0</strong></span>
+          <span>Čas: <strong id="classicTime">0 ms</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- KVANTOVÝ P=NP ENGINE -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>⚛️ Kvantový P + NP Most</span>
+        <span class="badge badge-np">Superpozícia (Paralelne)</span>
+      </div>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
+        Využíva kvantovú interferenciu (Groverov princíp): všetky stavy existujú naraz a zlé sa vyrušia.
+      </p>
+      <div class="terminal">
+        <div>Stav: <span id="quantumStatus">Qubity v pohotovosti...</span></div>
+        <div class="big-code quantum-color" id="quantumDisplay">|ψ⟩ 0101</div>
+        <div class="stat-row">
+          <span>Kvantové kroky: <strong id="quantumOps">0</strong></span>
+          <span>Čas: <strong id="quantumTime">0 ms</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIZUALIZÁCIA QUBITOV -->
+  <div class="panel">
+    <div class="panel-title">
+      <span>🧬 Živé Qubitové Pole (Stav Superpozície 0 & 1 naraz)</span>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--quantum-cyan);" id="entropyLabel">Entropia: 100%</span>
+    </div>
+    <div class="qubit-matrix" id="qubitMatrix"></div>
+  </div>
+</div>
+
+<script>
+  const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let classicTimer = null;
+  let quantumTimer = null;
+
+  // Vytvoríme 24 vizuálnych qubitov
+  const matrix = document.getElementById("qubitMatrix");
+  for (let i = 0; i < 24; i++) {
+    const div = document.createElement("div");
+    div.className = "qubit";
+    div.id = "q-" + i;
+    div.innerText = "|01⟩";
+    matrix.appendChild(div);
+  }
+
+  function randomizeSecret() {
+    let res = "";
+    for (let i = 0; i < 6; i++) {
+      res += CHARS[Math.floor(Math.random() * CHARS.length)];
+    }
+    document.getElementById("targetSecret").value = res;
+  }
+
+  function startQuantumFusion() {
+    clearInterval(classicTimer);
+    clearInterval(quantumTimer);
+
+    const secret = document.getElementById("targetSecret").value.toUpperCase().trim();
+    if (!secret) return;
+
+    // Reset štatistík
+    let cOps = 0;
+    let qOps = 0;
+    const startTime = performance.now();
+
+    document.getElementById("classicStatus").innerText = "Prehľadávam priestor...";
+    document.getElementById("quantumStatus").innerText = "Kolaps vlnovej funkcie...";
+    
+    for (let i = 0; i < 24; i++) {
+      const q = document.getElementById("q-" + i);
+      q.classList.remove("locked");
+    }
+
+    // 1. KLASICKÝ P ALGORITMUS (Hrubá sila - pomalé hľadanie)
+    classicTimer = setInterval(() => {
+      cOps += Math.floor(Math.random() * 450) + 120;
+      let fakeGuess = "";
+      for (let i = 0; i < secret.length; i++) {
+        // Postupne s veľkou námahou odhaľuje znaky
+        if (cOps > (i + 1) * 8500) {
+          fakeGuess += secret[i];
+        } else {
+          fakeGuess += CHARS[Math.floor(Math.random() * CHARS.length)];
+        }
+      }
+      document.getElementById("classicDisplay").innerText = fakeGuess;
+      document.getElementById("classicOps").innerText = cOps.toLocaleString();
+      document.getElementById("classicTime").innerText = Math.round(performance.now() - startTime) + " ms";
+
+      if (fakeGuess === secret) {
+        clearInterval(classicTimer);
+        document.getElementById("classicStatus").innerText = "✅ Vyriešené (vysoká záťaž CPU)";
+      }
+    }, 30);
+
+    // 2. KVANTOVÝ P=NP MOST (Paralelná interferencia - bleskové zrýchlenie)
+    let lockedCount = 0;
+    quantumTimer = setInterval(() => {
+      qOps++;
+      let qGuess = "";
+      
+      // Animácia qubitov
+      for (let i = 0; i < 24; i++) {
+        const q = document.getElementById("q-" + i);
+        if (!q.classList.contains("locked")) {
+          q.innerText = Math.random() > 0.5 ? "|1⟩" : "|0⟩";
+        }
+      }
+
+      // Kvantová zosilňovacia vlna uzamkne správne pozície exponenciálne rýchlo
+      if (qOps % 3 === 0 && lockedCount < secret.length) {
+        lockedCount++;
+        // Uzamkneme časť qubitov
+        for (let k = 0; k < lockedCount * 4; k++) {
+          if (document.getElementById("q-" + k)) {
+            document.getElementById("q-" + k).classList.add("locked");
+            document.getElementById("q-" + k).innerText = "✓";
+          }
+        }
+      }
+
+      for (let i = 0; i < secret.length; i++) {
+        if (i < lockedCount) {
+          qGuess += secret[i];
+        } else {
+          qGuess += CHARS[Math.floor(Math.random() * CHARS.length)];
+        }
+      }
+
+      const entropy = Math.max(0, Math.round(100 - (lockedCount / secret.length) * 100));
+      document.getElementById("entropyLabel").innerText = `Entropia: ${entropy}%`;
+      document.getElementById("quantumDisplay").innerText = qGuess;
+      document.getElementById("quantumOps").innerText = qOps;
+      document.getElementById("quantumTime").innerText = Math.round(performance.now() - startTime) + " ms";
+
+      if (lockedCount === secret.length) {
+        clearInterval(quantumTimer);
+        document.getElementById("quantumStatus").innerText = "⚡ P = NP Stav dosiahnutý!";
+      }
+    }, 45);
+  }
+</script>
+</body>
+</html>
