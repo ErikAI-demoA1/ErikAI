@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ErikAI OS // Quantum AR & GPS Nav v4.3 (Live OSM Traffic)</title>
+    <title>ErikAI OS // Quantum AR & GPS Nav v4.4 (Auto Traffic Scanner)</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -121,7 +121,7 @@
             <div class="w-2.5 h-2.5 rounded-full bg-erik-green animate-ping"></div>
             <div>
                 <h1 class="text-sm font-extrabold tracking-wider text-erik-cyan leading-none">
-                    ERIKAI OS <span class="text-[9px] font-mono bg-cyan-950/80 text-erik-green px-1.5 py-0.5 rounded border border-emerald-700/50 ml-1">v4.3 LIVE OSM</span>
+                    ERIKAI OS <span class="text-[9px] font-mono bg-cyan-950/80 text-erik-green px-1.5 py-0.5 rounded border border-emerald-700/50 ml-1">v4.4 AUTO-SCAN</span>
                 </h1>
                 <p id="gps-status-text" class="text-[10px] font-mono text-slate-400 mt-0.5">Satelitný signál pripravený...</p>
             </div>
@@ -187,7 +187,7 @@
             <div class="relative flex items-center">
                 <span class="absolute left-3 text-xs text-erik-cyan font-bold">A</span>
                 <input type="text" id="start-input" value="Moja aktuálna GPS poloha"
-                    placeholder="Štart..."
+                    placeholder="Odkiaľ (mesto, adresa alebo GPS)..."
                     class="w-full bg-slate-950 border border-erik-border rounded-xl pl-8 pr-9 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-erik-cyan">
                 <button onclick="useCurrentGpsAsStart()" title="Použiť moje GPS" class="absolute right-2 p-1 text-erik-cyan text-sm">🎯</button>
             </div>
@@ -195,7 +195,7 @@
             <div class="relative flex items-center gap-1.5">
                 <div class="relative flex-1 flex items-center">
                     <span class="absolute left-3 text-xs text-erik-green font-bold">B</span>
-                    <input type="text" id="end-input" placeholder="Kam ideme? (napr. Senec, Martin, Žilina...)"
+                    <input type="text" id="end-input" placeholder="Kam ideme? (napr. Senec, Žilina, Nitra...)"
                         class="w-full bg-slate-950 border border-erik-border rounded-xl pl-8 pr-8 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-erik-green">
                     <button onclick="clearEndInput()" class="absolute right-2.5 text-slate-500 text-xs">✕</button>
                 </div>
@@ -206,14 +206,7 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-            <span class="text-[10px] font-mono text-slate-500 shrink-0">Test obmedzení:</span>
-            <button onclick="testTrafficArea(48.1985, 17.2650, 'Uzol D1/D4 Ivanka pri Dunaji')" class="shrink-0 px-2 py-1 rounded-lg bg-amber-950/60 border border-amber-500/50 text-[11px] text-amber-300">🚧 D1/D4 BA</button>
-            <button onclick="testTrafficArea(49.1810, 18.7750, 'Výstavba D1 Višňové / Žilina')" class="shrink-0 px-2 py-1 rounded-lg bg-amber-950/60 border border-amber-500/50 text-[11px] text-amber-300">🚧 D1 Žilina</button>
-            <button onclick="testTrafficArea(48.3480, 18.0450, 'Priemyselný park Nitra Sever')" class="shrink-0 px-2 py-1 rounded-lg bg-amber-950/60 border border-amber-500/50 text-[11px] text-amber-300">🚧 Nitra Sever</button>
-        </div>
-
-        <div id="alternatives-container" class="hidden pt-2">
+        <div id="alternatives-container" class="hidden pt-1">
             <div class="text-[10px] font-mono uppercase text-slate-400 mb-1 flex justify-between">
                 <span>Dostupné trasy (1 - 5 možností):</span>
                 <span id="routes-found-badge" class="text-erik-green font-bold"></span>
@@ -259,11 +252,11 @@
         <div id="map-wrapper" class="relative flex-1 w-full h-full">
             <div id="map" class="w-full h-full z-0"></div>
 
-            <!-- DOPRAVNÁ LEGENDA (V ľavom hornom rohu mapy) -->
+            <!-- DOPRAVNÁ LEGENDA + ŽIVÉ POČÍTADLO -->
             <div class="absolute top-3 left-3 z-10 hud-glass rounded-xl p-2 shadow-2xl text-[10px] font-mono space-y-1.5 border border-erik-border pointer-events-auto">
                 <div class="flex items-center justify-between gap-2 mb-1">
                     <span class="font-bold text-erik-cyan uppercase tracking-wider">Legenda</span>
-                    <span id="incident-counter-badge" class="px-1.5 py-0.2 rounded bg-slate-800 text-erik-green font-bold">0</span>
+                    <span id="incident-counter-badge" class="px-1.5 py-0.5 rounded bg-slate-800 text-erik-green font-bold">Skenujem...</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="w-3 h-3 rounded-full bg-rose-500 inline-block shadow-[0_0_8px_#ff2a5f]"></span>
@@ -280,7 +273,7 @@
             </div>
 
             <!-- PLÁVAJÚCI MANÉVER BANNER -->
-            <div id="turn-banner" class="hidden absolute top-3 left-36 right-3 z-10 bg-erik-panel/95 backdrop-blur-md border-2 border-erik-cyan rounded-2xl p-3 shadow-2xl flex items-center gap-3">
+            <div id="turn-banner" class="hidden absolute top-3 left-40 right-3 z-10 bg-erik-panel/95 backdrop-blur-md border-2 border-erik-cyan rounded-2xl p-3 shadow-2xl flex items-center gap-3">
                 <div id="traffic-sign-box" class="w-12 h-12 rounded-full bg-red-600 border-2 border-white flex flex-col items-center justify-center text-white font-mono font-extrabold shadow-lg shrink-0 text-center">
                     <span id="sign-val" class="text-xs leading-none">50</span>
                     <span id="sign-lbl" class="text-[8px] uppercase leading-none mt-0.5">km/h</span>
@@ -296,6 +289,10 @@
 
             <!-- TLAČIDLÁ NA MAPE -->
             <div class="absolute right-3 bottom-28 z-10 flex flex-col gap-2">
+                <button onclick="scanTrafficNow()" title="Obnoviť dopravné obmedzenia v tejto oblasti"
+                    class="w-11 h-11 rounded-2xl bg-erik-panel/95 border border-amber-500/60 text-amber-400 shadow-xl flex items-center justify-center text-base active:scale-90 transition">
+                    🚧
+                </button>
                 <button onclick="enableFollowMe()" id="follow-btn" title="Sledovať GPS"
                     class="w-11 h-11 rounded-2xl bg-erik-panel/95 border-2 border-erik-cyan text-erik-cyan shadow-xl flex items-center justify-center text-lg active:scale-90 transition">
                     🧭
@@ -362,7 +359,8 @@
             simulating: false,
             simTimer: null,
             incidentLayers: [],
-            viewportFetchTimer: null
+            viewportFetchTimer: null,
+            isFetchingTraffic: false
         };
 
         const map = L.map('map', { zoomControl: false, attributionControl: true }).setView(state.userPos, 14);
@@ -381,12 +379,12 @@
 
         map.on('dragstart', () => { state.followUser = false; updateFollowButtonUI(); });
 
-        // DEBOUNCED VIEWPORT FETCH: Šetrí RAM a zabraňuje preťaženiu servera pri posúvaní mapy
+        // Automatické skenovanie pri posune mapy (s ochranou proti zahlteniu RAM)
         map.on('moveend', () => {
             clearTimeout(state.viewportFetchTimer);
             state.viewportFetchTimer = setTimeout(() => {
-                fetchIncidentsForCurrentViewport();
-            }, 800);
+                fetchIncidentsForBounds(map.getBounds());
+            }, 900);
         });
 
         let toastTimeout = null;
@@ -488,11 +486,8 @@
             document.getElementById('end-input').focus();
         }
 
-        function testTrafficArea(lat, lon, label) {
-            state.followUser = false;
-            updateFollowButtonUI();
-            map.setView([lat, lon], 14, { animate: true });
-            showToast(`Skenujem oblasť: ${label}`);
+        function scanTrafficNow() {
+            fetchIncidentsForBounds(map.getBounds(), true);
         }
 
         function initRealGpsTracking() {
@@ -603,96 +598,117 @@
             return fbData.code === 'Ok' ? fbData.routes : [];
         }
 
-        // OPRAVENÉ NAČÍTAVANIE REÁLNYCH OSM OBMEDZENÍ (CESTY VO VÝSTAVBE, UZÁVIERKY, ZÁTARASY)
-        async function fetchIncidentsForCurrentViewport() {
-            const zoom = map.getZoom();
+        // DYNAMICKÉ SKENOVANIE DOPRAVNÝCH OBMEDZENÍ S ZÁLOŽNÝM SERVEROM (PRE TRASU AJ PRE POHĽAD MAPY)
+        async function fetchIncidentsForBounds(bounds, forceNotify = false) {
+            if (state.isFetchingTraffic) return;
+            state.isFetchingTraffic = true;
+
             const counterBadge = document.getElementById('incident-counter-badge');
+            counterBadge.textContent = 'Skenujem...';
 
-            // Ak je mapa príliš oddialená (zoom < 11), nevyťažujeme RAM ani server
-            if (zoom < 11) {
-                state.incidentLayers.forEach(l => map.removeLayer(l));
-                state.incidentLayers = [];
-                counterBadge.textContent = 'Priblíž';
-                return;
-            }
-
-            const bounds = map.getBounds();
             const sw = bounds.getSouthWest();
             const ne = bounds.getNorthEast();
 
-            // Reálne OSM tagy pre rozostavané cesty, uzávierky a zátarasy
+            // Ochrana RAM: Ak je výrez obrovský (napr. celá Európa), ohraničíme ho na rozumný okruh ~80 km okolo stredu
+            const center = bounds.getCenter();
+            const latSpan = Math.min(Math.abs(ne.lat - sw.lat), 1.4);
+            const lngSpan = Math.min(Math.abs(ne.lng - sw.lng), 2.0);
+            const minLat = (center.lat - latSpan / 2).toFixed(4);
+            const maxLat = (center.lat + latSpan / 2).toFixed(4);
+            const minLng = (center.lng - lngSpan / 2).toFixed(4);
+            const maxLng = (center.lng + lngSpan / 2).toFixed(4);
+
             const query = `
-                [out:json][timeout:10];
+                [out:json][timeout:12];
                 (
-                  way["highway"="construction"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-                  way["highway"~"motorway|trunk|primary|secondary|tertiary|residential"]["access"="no"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-                  node["barrier"~"block|jersey_barrier|gate"]["access"="no"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+                  way["highway"="construction"](${minLat},${minLng},${maxLat},${maxLng});
+                  way["construction"](${minLat},${minLng},${maxLat},${maxLng});
+                  way["highway"~"motorway|trunk|primary|secondary|tertiary"]["access"="no"](${minLat},${minLng},${maxLat},${maxLng});
+                  node["barrier"~"block|jersey_barrier|gate"]["access"="no"](${minLat},${minLng},${maxLat},${maxLng});
                 );
-                out geom 40;
+                out geom 50;
             `;
 
-            try {
-                const res = await fetch('https://overpass-api.de/api/interpreter', {
-                    method: 'POST',
-                    body: query
-                });
-                const data = await res.json();
+            const endpoints = [
+                'https://overpass-api.de/api/interpreter',
+                'https://overpass.kumi.systems/api/interpreter'
+            ];
 
-                // Uvoľnenie starých vrstiev z RAM
-                state.incidentLayers.forEach(l => map.removeLayer(l));
-                state.incidentLayers = [];
-
-                let count = 0;
-                if (data && Array.isArray(data.elements)) {
-                    data.elements.forEach(el => {
-                        const isClosure = el.tags?.access === 'no' || el.type === 'node';
-                        const colorHex = isClosure ? '#ff2a5f' : '#f59e0b';
-                        const badgeClass = isClosure ? 'bg-rose-600 shadow-[0_0_10px_#ff2a5f]' : 'bg-amber-500 shadow-[0_0_10px_#f59e0b]';
-                        const iconChar = isClosure ? '⛔' : '🚧';
-                        const title = el.tags?.name || (isClosure ? 'Uzávierka / Zákaz vjazdu' : 'Práce na ceste / Výstavba');
-                        const desc = el.tags?.note || el.tags?.description || (isClosure ? 'Úsek je uzavretý pre dopravu' : 'Stavebné práce na komunikácii');
-
-                        // Ak ide o cestu (way), vykreslíme farebnú čiaru priamo na vozovke + značku v strede
-                        if (el.type === 'way' && Array.isArray(el.geometry) && el.geometry.length > 0) {
-                            const latlngs = el.geometry.map(p => [p.lat, p.lon]);
-                            const line = L.polyline(latlngs, {
-                                color: colorHex,
-                                weight: 6,
-                                opacity: 0.9,
-                                dashArray: '8, 6'
-                            }).addTo(map).bindPopup(`<b>${title}</b><br>${desc}`);
-                            state.incidentLayers.push(line);
-
-                            const midPt = latlngs[Math.floor(latlngs.length / 2)];
-                            const pin = L.marker(midPt, {
-                                icon: L.divIcon({
-                                    className: '',
-                                    html: `<div class="w-6 h-6 rounded-full ${badgeClass} border-2 border-white flex items-center justify-center text-xs">${iconChar}</div>`,
-                                    iconSize: [24, 24],
-                                    iconAnchor: [12, 12]
-                                })
-                            }).addTo(map).bindPopup(`<b>${title}</b><br>${desc}`);
-                            state.incidentLayers.push(pin);
-                            count++;
-                        } else if (el.type === 'node' && el.lat && el.lon) {
-                            const pin = L.marker([el.lat, el.lon], {
-                                icon: L.divIcon({
-                                    className: '',
-                                    html: `<div class="w-6 h-6 rounded-full ${badgeClass} border-2 border-white flex items-center justify-center text-xs">${iconChar}</div>`,
-                                    iconSize: [24, 24],
-                                    iconAnchor: [12, 12]
-                                })
-                            }).addTo(map).bindPopup(`<b>${title}</b><br>${desc}`);
-                            state.incidentLayers.push(pin);
-                            count++;
-                        }
+            let data = null;
+            for (const url of endpoints) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 9000);
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        body: query,
+                        signal: controller.signal
                     });
+                    clearTimeout(timeoutId);
+                    if (res.ok) {
+                        data = await res.json();
+                        break;
+                    }
+                } catch (e) {
+                    console.warn(`Server ${url} neodpovedal, skúšam ďalší...`);
                 }
-                counterBadge.textContent = `${count} nájdených`;
-            } catch (e) {
-                console.warn('Overpass API dočasne zaneprázdnené:', e);
-                counterBadge.textContent = 'Offline';
             }
+
+            // Uvoľnenie starých vrstiev z RAM
+            state.incidentLayers.forEach(l => map.removeLayer(l));
+            state.incidentLayers = [];
+
+            let count = 0;
+            if (data && Array.isArray(data.elements)) {
+                data.elements.forEach(el => {
+                    const isClosure = el.tags?.access === 'no' || el.type === 'node';
+                    const colorHex = isClosure ? '#ff2a5f' : '#f59e0b';
+                    const badgeClass = isClosure ? 'bg-rose-600 shadow-[0_0_10px_#ff2a5f]' : 'bg-amber-500 shadow-[0_0_10px_#f59e0b]';
+                    const iconChar = isClosure ? '⛔' : '🚧';
+                    const title = el.tags?.name || (isClosure ? 'Uzávierka / Zákaz vjazdu' : 'Práce na ceste / Výstavba');
+                    const desc = el.tags?.note || el.tags?.description || (isClosure ? 'Úsek je uzavretý pre dopravu' : 'Stavebné práce na komunikácii');
+
+                    if (el.type === 'way' && Array.isArray(el.geometry) && el.geometry.length > 0) {
+                        const latlngs = el.geometry.map(p => [p.lat, p.lon]);
+                        const line = L.polyline(latlngs, {
+                            color: colorHex,
+                            weight: 6,
+                            opacity: 0.92,
+                            dashArray: '8, 6'
+                        }).addTo(map).bindPopup(`<b>${title}</b><br>${desc}`);
+                        state.incidentLayers.push(line);
+
+                        const midPt = latlngs[Math.floor(latlngs.length / 2)];
+                        const pin = L.marker(midPt, {
+                            icon: L.divIcon({
+                                className: '',
+                                html: `<div class="w-6 h-6 rounded-full ${badgeClass} border-2 border-white flex items-center justify-center text-xs">${iconChar}</div>`,
+                                iconSize: [24, 24],
+                                iconAnchor: [12, 12]
+                            })
+                        }).addTo(map).bindPopup(`<b>${title}</b><br>${desc}`);
+                        state.incidentLayers.push(pin);
+                        count++;
+                    } else if (el.type === 'node' && el.lat && el.lon) {
+                        const pin = L.marker([el.lat, el.lon], {
+                            icon: L.divIcon({
+                                className: '',
+                                html: `<div class="w-6 h-6 rounded-full ${badgeClass} border-2 border-white flex items-center justify-center text-xs">${iconChar}</div>`,
+                                iconSize: [24, 24],
+                                iconAnchor: [12, 12]
+                            })
+                        }).addTo(map).bindPopup(`<b>${title}</b><br>${desc}`);
+                        state.incidentLayers.push(pin);
+                        count++;
+                    }
+                });
+            }
+
+            counterBadge.textContent = data ? `${count} nájdených` : 'Server zaneprázdnený';
+            if (forceNotify) {
+                showToast(data ? `V oblasti sa našlo ${count} obmedzení.` : 'Dopravný server momentálne neodpovedá.');
+            }
+            state.isFetchingTraffic = false;
         }
 
         async function calculateRoutes() {
@@ -763,6 +779,11 @@
                 renderMarkers(startCoords, endCoords, eg.name);
                 renderRouteAlternatives();
                 selectRoute(0);
+
+                // OKAMŽITÉ SKENOVANIE DOPRAVNÝCH OBMEDZENÍ POZDĹŽ NÁJDENEJ TRASY
+                const routeGroup = L.featureGroup(state.routePolylines);
+                fetchIncidentsForBounds(routeGroup.getBounds().pad(0.15));
+
                 speakSlovak(`Našiel som ${state.routes.length} trasy do cieľa ${eg.name}.`);
             } catch (err) {
                 console.error(err);
@@ -970,7 +991,7 @@
 
         window.addEventListener('load', () => {
             initRealGpsTracking();
-            fetchIncidentsForCurrentViewport();
+            fetchIncidentsForBounds(map.getBounds());
             if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
         });
     </script>
