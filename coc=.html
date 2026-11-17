@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="sk" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clash of Clans // TH Power Matrix & Comparison</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        coc: {
+                            dark: '#0f172a',
+                            panel: '#1e293b',
+                            border: '#334155',
+                            gold: '#fbbf24',
+                            accent: '#38bdf8',
+                            danger: '#f43f5e',
+                            success: '#10b981'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0b0f19; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .coc-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(251, 191, 36, 0.2); }
+    </style>
+</head>
+<body class="min-h-screen p-3 sm:p-6 flex flex-col items-center">
+
+    <!-- HLAVIČKA -->
+    <header class="w-full max-w-6xl text-center mb-6">
+        <h1 class="text-2xl sm:text-4xl font-black tracking-wider text-coc-gold uppercase drop-shadow-lg">
+            ⚔️ Clash of Clans: TH Power Matrix
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-400 mt-1 font-mono">Porovnávač pokroku od TH1 do TH19 (Vrátane Merge a Endgame)</p>
+    </header>
+
+    <!-- HLAVNÝ OBSAH: DVA HRÁČI -->
+    <div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+        <!-- HRÁČ 1 -->
+        <div class="coc-card rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
+                <input type="text" id="p1-name" value="Hráč 1 (napr. Kamoš)" class="bg-slate-900 border border-slate-700 text-coc-gold font-bold px-3 py-1.5 rounded-xl text-sm w-1/2 focus:outline-none focus:border-coc-gold">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono text-slate-400">TH Level:</span>
+                    <select id="p1-th" onchange="updatePlayerTH(1)" class="bg-slate-900 border border-slate-700 text-cyan-400 font-mono font-bold px-2 py-1 rounded-xl text-sm focus:outline-none">
+                        <!-- Generuje sa scriptom TH1 - TH19 -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-4">
+                <button onclick="setMaxForPlayer(1)" class="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold rounded-xl active:scale-95 transition">⚡ Max pre túto TH</button>
+                <div class="text-right">
+                    <span class="text-xs font-mono text-slate-400">Skóre: </span>
+                    <span id="p1-score" class="text-lg font-mono font-black text-coc-gold">0 pts</span>
+                </div>
+            </div>
+
+            <!-- Zoznam položiek pre Hráča 1 -->
+            <div id="p1-items-container" class="space-y-3 flex-1 overflow-y-auto max-h-[500px] pr-1"></div>
+        </div>
+
+        <!-- HRÁČ 2 -->
+        <div class="coc-card rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
+                <input type="text" id="p2-name" value="Hráč 2 (Ja / TH19)" class="bg-slate-900 border border-slate-700 text-coc-gold font-bold px-3 py-1.5 rounded-xl text-sm w-1/2 focus:outline-none focus:border-coc-gold">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono text-slate-400">TH Level:</span>
+                    <select id="p2-th" onchange="updatePlayerTH(2)" class="bg-slate-900 border border-slate-700 text-cyan-400 font-mono font-bold px-2 py-1 rounded-xl text-sm focus:outline-none">
+                        <!-- Generuje sa scriptom TH1 - TH19 -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-4">
+                <button onclick="setMaxForPlayer(2)" class="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold rounded-xl active:scale-95 transition">⚡ Max pre túto TH</button>
+                <div class="text-right">
+                    <span class="text-xs font-mono text-slate-400">Skóre: </span>
+                    <span id="p2-score" class="text-lg font-mono font-black text-coc-gold">0 pts</span>
+                </div>
+            </div>
+
+            <!-- Zoznam položiek pre Hráča 2 -->
+            <div id="p2-items-container" class="space-y-3 flex-1 overflow-y-auto max-h-[500px] pr-1"></div>
+        </div>
+
+    </div>
+
+    <!-- VÝSLEDKOVÝ PANEL (VERDIKT) -->
+    <div class="w-full max-w-6xl coc-card rounded-2xl p-6 text-center shadow-2xl border-2 border-coc-gold/40">
+        <h2 class="text-lg font-black text-coc-gold uppercase tracking-wider mb-2">🏆 Clash Verdict (Vyhodnotenie)</h2>
+        <p id="verdict-text" class="text-sm sm:text-base font-semibold text-slate-200">Vyklikaj položky alebo zvoľ Town Hall a porovnanie sa vyhodnotí automaticky.</p>
+    </div>
+
+    <!-- JAVASCRIPT LOGIKA -->
+    <script>
+        // Master zoznam budov, hrdinov a kľúčových vecí s definíciou, od ktorej TH sú dostupné a akú majú váhu
+        const masterItems = [
+            { id: 'th', name: 'Town Hall (Hlavná budova)', category: 'Hlavná', minTH: 1, maxLevel: 19, weight: 100 },
+            { id: 'clan_castle', name: 'Clan Castle (Hrad)', category: 'Hlavná', minTH: 1, maxLevel: 12, weight: 50 },
+            { id: 'guardian_shrine', name: 'Guardian Shrine', category: 'Endgame', minTH: 17, maxLevel: 3, weight: 80 },
+            
+            // Hrdinovia
+            { id: 'hero_bk', name: 'Barbarian King', category: 'Hrdinovia', minTH: 7, maxLevel: 100, weight: 40 },
+            { id: 'hero_aq', name: 'Archer Queen', category: 'Hrdinovia', minTH: 9, maxLevel: 100, weight: 40 },
+            { id: 'hero_gw', name: 'Grand Warden', category: 'Hrdinovia', minTH: 11, maxLevel: 75, weight: 45 },
+            { id: 'hero_rc', name: 'Royal Champion', category: 'Hrdinovia', minTH: 13, maxLevel: 50, weight: 45 },
+            { id: 'hero_minion', name: 'Minion Prince / 5. Hrdina', category: 'Hrdinovia', minTH: 16, maxLevel: 40, weight: 50 },
+
+            // Špeciálne / Merge obrany
+            { id: 'monolith', name: 'Monolith', category: 'Obrany', minTH: 15, maxLevel: 4, weight: 70 },
+            { id: 'spell_tower', name: 'Spell Tower', category: 'Obrany', minTH: 15, maxLevel: 4, weight: 60 },
+            { id: 'firecracker_tower', name: 'Firecracker Tower', category: 'Obrany', minTH: 17, maxLevel: 5, weight: 65 },
+            { id: 'spiky_tower', name: 'Spiky Tower', category: 'Obrany', minTH: 18, maxLevel: 5, weight: 70 },
+
+            // Klasické kľúčové obrany
+            { id: 'inferno', name: 'Inferno Tower', category: 'Obrany', minTH: 10, maxLevel: 10, weight: 50 },
+            { id: 'scattershot', name: 'Scattershot', category: 'Obrany', minTH: 13, maxLevel: 6, weight: 55 },
+            { id: 'xbow', name: 'X-Bow', category: 'Obrany', minTH: 9, maxLevel: 12, weight: 35 },
+            { id: 'builder_huts', name: 'Builder Huts (Bojové budovy)', category: 'Obrany', minTH: 14, maxLevel: 5, weight: 60 },
+
+            // Múry
+            { id: 'walls', name: 'Múry (Všetky na max pre danú TH)', category: 'Múry & Pasce', minTH: 1, maxLevel: 20, weight: 150 }
+        ];
+
+        // Inicializácia výberu TH (1 až 19)
+        function initTHSelectors() {
+            const s1 = document.getElementById('p1-th');
+            const s2 = document.getElementById('p2-th');
+            for (let i = 1; i <= 19; i++) {
+                s1.innerHTML += `<option value="${i}" ${i === 15 ? 'selected' : ''}>TH ${i}</option>`;
+                s2.innerHTML += `<option value="${i}" ${i === 19 ? 'selected' : ''}>TH ${i}</option>`;
+            }
+        }
+
+        // Vykreslenie položiek pre hráča
+        function renderPlayerUI(playerNum) {
+            const thLevel = parseInt(document.getElementById(`p${playerNum}-th`).value);
+            const container = document.getElementById(`p${playerNum}-items-container`);
+            container.innerHTML = '';
+
+            // Zoskupenie podľa kategórií
+            const categories = [...new Set(masterItems.map(i => i.category))];
+
+            categories.forEach(cat => {
+                const catItems = masterItems.filter(item => item.category === cat && item.minTH <= thLevel);
+                if (catItems.length === 0) return;
+
+                let catHtml = `<div class="text-xs font-mono font-bold text-coc-gold uppercase tracking-wider mt-2 mb-1">${cat}</div>`;
+                
+                catItems.forEach(item => {
+                    catHtml += `
+                        <div class="flex items-center justify-between bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl">
+                            <span class="text-xs text-slate-200 font-medium">${item.name}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-mono text-slate-400">Max: ${item.maxLevel}</span>
+                                <input type="number" min="0" max="${item.maxLevel}" value="${item.maxLevel}" 
+                                    data-item="${item.id}" data-player="${playerNum}"
+                                    onchange="calculateScores()"
+                                    class="p${playerNum}-input w-14 bg-slate-950 border border-slate-700 text-cyan-400 text-xs font-mono font-bold text-center rounded-lg focus:outline-none focus:border-cyan-400">
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML += catHtml;
+            });
+            calculateScores();
+        }
+
+        function updatePlayerTH(playerNum) {
+            renderPlayerUI(playerNum);
+        }
+
+        function setMaxForPlayer(playerNum) {
+            const inputs = document.querySelectorAll(`.p${playerNum}-input`);
+            inputs.forEach(input => {
+                const max = input.getAttribute('max');
+                input.value = max;
+            });
+            calculateScores();
+        }
+
+        // Výpočet skóre a vyhodnotenie
+        function calculateScores() {
+            const p1Name = document.getElementById('p1-name').value || 'Hráč 1';
+            const p2Name = document.getElementById('p2-name').value || 'Hráč 2';
+            
+            let p1Total = 0;
+            let p2Total = 0;
+
+            document.querySelectorAll('.p1-input').forEach(input => {
+                const itemId = input.getAttribute('data-item');
+                const val = parseInt(input.value) || 0;
+                const itemDef = masterItems.find(i => i.id === itemId);
+                if (itemDef) {
+                    p1Total += (val / itemDef.maxLevel) * itemDef.weight;
+                }
+            });
+
+            document.querySelectorAll('.p2-input').forEach(input => {
+                const itemId = input.getAttribute('data-item');
+                const val = parseInt(input.value) || 0;
+                const itemDef = masterItems.find(i => i.id === itemId);
+                if (itemDef) {
+                    p2Total += (val / itemDef.maxLevel) * itemDef.weight;
+                }
+            });
+
+            document.getElementById('p1-score').textContent = `${Math.round(p1Total)} pts`;
+            document.getElementById('p2-score').textContent = `${Math.round(p2Total)} pts`;
+
+            // Verdikt
+            const verdictEl = document.getElementById('verdict-text');
+            if (p2Total > p1Total) {
+                const diff = Math.round(p2Total - p1Total);
+                verdictEl.innerHTML = `🔥 <span class="text-coc-gold font-bold">${p2Name}</span> vyhráva a je silnejší o <span class="text-emerald-400">${diff} bodov</span> v celkovom progrese!`;
+            } else if (p1Total > p2Total) {
+                const diff = Math.round(p1Total - p2Total);
+                verdictEl.innerHTML = `🔥 <span class="text-coc-gold font-bold">${p1Name}</span> vyhráva a je silnejší o <span class="text-emerald-400">${diff} bodov</span> v celkovom progrese!`;
+            } else {
+                verdictEl.innerHTML = `⚖️ Obaja hráči sú na <span class="text-cyan-400">absolútne rovnakej úrovni</span> pokroku!`;
+            }
+        }
+
+        window.addEventListener('load', () => {
+            initTHSelectors();
+            renderPlayerUI(1);
+            renderPlayerUI(2);
+        });
+    </script>
+</body>
+</html>
