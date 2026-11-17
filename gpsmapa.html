@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="sk" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ErikAI OS // Quantum AR & GPS Nav</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        erik: {
+                            bg: '#070b14',
+                            panel: '#0d1322',
+                            border: '#1e293b',
+                            cyan: '#00f0ff',
+                            green: '#00ff88',
+                            purple: '#a855f7',
+                            danger: '#ff2a5f'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #070b14;
+            color: #f1f5f9;
+            overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Tmavý futuristický filter pre mapové dlaždice */
+        .leaflet-tile-pane {
+            filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(95%) saturate(120%);
+        }
+        .leaflet-container {
+            background-color: #070b14 !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+        .leaflet-control-attribution {
+            background: rgba(7, 11, 20, 0.75) !important;
+            color: #64748b !important;
+            font-size: 9px !important;
+        }
+        .leaflet-control-attribution a {
+            color: #00f0ff !important;
+        }
+
+        /* Pulzujúca GPS šípka používateľa */
+        .gps-puck-wrapper {
+            position: relative;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .gps-pulse-ring {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 240, 255, 0.28);
+            animation: gpsRadar 2s infinite ease-out;
+        }
+        .gps-arrow {
+            width: 22px;
+            height: 22px;
+            background: #00f0ff;
+            border: 2.5px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 14px #00f0ff, 0 0 25px rgba(0, 240, 255, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.25s linear;
+            z-index: 2;
+        }
+        .gps-arrow::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 9px solid #070b14;
+            transform: translateY(-1px);
+        }
+
+        @keyframes gpsRadar {
+            0% { transform: scale(0.6); opacity: 0.9; }
+            100% { transform: scale(1.9); opacity: 0; }
+        }
+
+        /* Skrytie scrollbarov pre čistý mobilný vzhľad */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* AR HUD sklenený efekt */
+        .hud-glass {
+            background: rgba(7, 11, 20, 0.72);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+        }
+
+        /* AR Horizont línia */
+        .ar-reticle {
+            background-image: radial-gradient(circle, rgba(0, 240, 255, 0.15) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col select-none">
+
+    <!-- HORNÁ LIŠTA (ErikAI OS Header) -->
+    <header class="bg-erik-panel/95 border-b border-erik-border px-3 py-2 flex items-center justify-between z-30 shrink-0">
+        <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-erik-green animate-ping"></div>
+            <div>
+                <h1 class="text-sm sm:text-base font-extrabold tracking-wider text-erik-cyan leading-none">
+                    ERIKAI OS <span class="text-[10px] font-mono bg-cyan-950/80 text-erik-green px-1.5 py-0.5 rounded border border-emerald-700/50 ml-1">AR NAV</span>
+                </h1>
+                <p id="gps-status-text" class="text-[10px] font-mono text-slate-400 mt-0.5">Inicializujem satelity...</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+            <!-- Hlasová navigácia Mute/Unmute -->
+            <button id="voice-toggle-btn" onclick="toggleVoice()" title="Hlasová navigácia"
+                class="p-2 rounded-xl bg-slate-900 border border-erik-border text-erik-cyan hover:border-erik-cyan active:scale-95 transition">
+                <span id="voice-icon" class="text-sm">🔊</span>
+            </button>
+
+            <!-- AR Kamera Toggle -->
+            <button id="ar-toggle-btn" onclick="toggleARMode()"
+                class="px-2.5 py-2 rounded-xl bg-slate-900 border border-erik-purple/60 text-purple-300 hover:bg-purple-950/50 active:scale-95 transition flex items-center gap-1.5 text-xs font-bold shadow-lg">
+                <span>📷</span>
+                <span id="ar-btn-label">AR Kamera</span>
+            </button>
+
+            <!-- Rozbaliť / Zbaliť vyhľadávanie -->
+            <button id="search-panel-toggle" onclick="toggleSearchDrawer()"
+                class="p-2 rounded-xl bg-cyan-950/70 border border-erik-cyan/50 text-erik-cyan active:scale-95 transition text-xs font-bold">
+                🔍 Trasa
+            </button>
+        </div>
+    </header>
+
+    <!-- NOTIFIKAČNÝ BANNER (namiesto alert) -->
+    <div id="toast-box" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 border border-erik-cyan text-slate-100 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-mono max-w-[92vw] text-center">
+    </div>
+
+    <!-- VYHĽADÁVACÍ PANEL (Odkiaľ -> Kam + Dopravný prostriedok + Alternatívy) -->
+    <section id="search-drawer" class="bg-erik-panel/95 border-b border-erik-border px-3 py-3 z-20 shrink-0 transition-all duration-300 shadow-2xl">
+        <!-- Výber režimu dopravy -->
+        <div class="flex items-center justify-between gap-2 mb-2.5">
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-erik-border flex-1">
+                <button onclick="setTravelMode('driving')" id="mode-driving"
+                    class="flex-1 py-1.5 rounded-lg text-xs font-bold bg-erik-cyan text-slate-950 transition">
+                    🚗 Auto
+                </button>
+                <button onclick="setTravelMode('foot')" id="mode-foot"
+                    class="flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">
+                    🚶 Pešo
+                </button>
+                <button onclick="setTravelMode('bicycle')" id="mode-bicycle"
+                    class="flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition">
+                    🚲 Bicykel
+                </button>
+            </div>
+
+            <button onclick="startRouteSimulation()" id="sim-toggle-btn"
+                class="px-3 py-2 rounded-xl bg-emerald-950/80 border border-erik-green/50 text-erik-green text-xs font-mono font-bold hover:bg-emerald-900/60 active:scale-95 transition shrink-0">
+                ▶ Test jazdy
+            </button>
+        </div>
+
+        <!-- Vstupy A -> B -->
+        <div class="space-y-2">
+            <!-- ODKIAĽ (Štart) -->
+            <div class="relative flex items-center">
+                <span class="absolute left-3 text-xs text-erik-cyan font-bold">A</span>
+                <input type="text" id="start-input" value="Moja aktuálna GPS poloha"
+                    placeholder="Odkiaľ (Štart)..."
+                    class="w-full bg-slate-950 border border-erik-border rounded-xl pl-8 pr-9 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-erik-cyan">
+                <button onclick="useCurrentGpsAsStart()" title="Použiť moje GPS"
+                    class="absolute right-2 p-1 text-erik-cyan hover:text-white text-sm">
+                    🎯
+                </button>
+            </div>
+
+            <!-- KAM (Cieľ) -->
+            <div class="relative flex items-center gap-1.5">
+                <div class="relative flex-1 flex items-center">
+                    <span class="absolute left-3 text-xs text-erik-green font-bold">B</span>
+                    <input type="text" id="end-input" placeholder="Kam ideme? (napr. Bratislava, Nitra, Žilina...)"
+                        class="w-full bg-slate-950 border border-erik-border rounded-xl pl-8 pr-8 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-erik-green">
+                    <button onclick="clearEndInput()" class="absolute right-2.5 text-slate-500 hover:text-slate-300 text-xs">✕</button>
+                </div>
+                <button onclick="calculateRoutes()" id="go-btn"
+                    class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-erik-cyan to-erik-green text-slate-950 font-extrabold text-xs sm:text-sm shadow-lg hover:opacity-95 active:scale-95 transition shrink-0">
+                    Hľadať 🚀
+                </button>
+            </div>
+        </div>
+
+        <!-- Rýchle predvoľby miest -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2">
+            <span class="text-[10px] font-mono text-slate-500 shrink-0">Rýchle ciele:</span>
+            <button onclick="quickRoute('Nitra, Svätoplukovo námestie')" class="shrink-0 px-2.5 py-1 rounded-lg bg-slate-900 border border-erik-border text-[11px] text-cyan-300 hover:border-erik-cyan">Nitra Centrum</button>
+            <button onclick="quickRoute('Bratislava, Hlavná stanica')" class="shrink-0 px-2.5 py-1 rounded-lg bg-slate-900 border border-erik-border text-[11px] text-cyan-300 hover:border-erik-cyan">Bratislava</button>
+            <button onclick="quickRoute('Trnava, Trojičné námestie')" class="shrink-0 px-2.5 py-1 rounded-lg bg-slate-900 border border-erik-border text-[11px] text-cyan-300 hover:border-erik-cyan">Trnava</button>
+            <button onclick="quickRoute('Žilina, Mariánske námestie')" class="shrink-0 px-2.5 py-1 rounded-lg bg-slate-900 border border-erik-border text-[11px] text-cyan-300 hover:border-erik-cyan">Žilina</button>
+            <button onclick="quickRoute('Košice, Dóm svätej Alžbety')" class="shrink-0 px-2.5 py-1 rounded-lg bg-slate-900 border border-erik-border text-[11px] text-cyan-300 hover:border-erik-cyan">Košice</button>
+        </div>
+
+        <!-- KARTY ALTERNATÍVNYCH TRÁS -->
+        <div id="alternatives-container" class="hidden pt-2.5">
+            <div class="text-[10px] font-mono uppercase text-slate-400 mb-1.5 flex justify-between">
+                <span>Dostupné trasy (klikni pre výber):</span>
+                <span id="routes-found-badge" class="text-erik-green"></span>
+            </div>
+            <div id="route-cards-list" class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                <!-- Dynamicky generované karty trás -->
+            </div>
+        </div>
+    </section>
+
+    <!-- HLAVNÁ PLOCHA: AR KAMERA + MAPA -->
+    <main id="workspace-container" class="flex-1 relative flex flex-col overflow-hidden">
+
+        <!-- LIVE AR KAMERA / DASHCAM SEKCE (Skrytá kým sa nezapne AR režim) -->
+        <div id="ar-camera-section" class="hidden relative w-full h-1/2 bg-black border-b-2 border-erik-cyan overflow-hidden shrink-0 transition-all duration-300">
+            <video id="ar-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+            
+            <!-- AR Mriežka a HUD prekrytie cez kameru -->
+            <div class="absolute inset-0 ar-reticle pointer-events-none flex flex-col justify-between p-3">
+                <!-- Horný AR HUD riadok -->
+                <div class="flex justify-between items-start">
+                    <div class="hud-glass px-3 py-1.5 rounded-xl flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                        <span class="text-[11px] font-mono font-bold text-erik-cyan">AR DASHCAM LIVE</span>
+                    </div>
+                    <button onclick="toggleARFullscreen()" class="pointer-events-auto hud-glass px-2.5 py-1.5 rounded-xl text-[11px] font-mono text-white hover:border-erik-cyan">
+                        <span id="ar-expand-label">⤢ Celá obrazovka</span>
+                    </button>
+                </div>
+
+                <!-- Stredová virtuálna AR navigačná šípka v priestore -->
+                <div class="flex flex-col items-center justify-center my-auto">
+                    <div id="ar-floating-arrow" class="w-20 h-20 rounded-full hud-glass border-2 border-erik-green flex flex-col items-center justify-center shadow-[0_0_30px_rgba(0,255,136,0.45)] transform transition-transform duration-300">
+                        <span id="ar-arrow-icon" class="text-3xl leading-none">⬆️</span>
+                        <span id="ar-arrow-dist" class="text-[11px] font-mono font-extrabold text-erik-green mt-1">-- m</span>
+                    </div>
+                    <div id="ar-street-banner" class="mt-2 hud-glass px-3 py-1 rounded-full text-xs font-bold text-white max-w-[85vw] truncate">
+                        Pripravený na AR navádzanie
+                    </div>
+                </div>
+
+                <!-- Spodný AR HUD riadok (Súradnice + Sklon/Smer) -->
+                <div class="flex justify-between items-end text-[10px] font-mono text-cyan-300">
+                    <div class="hud-glass px-2.5 py-1 rounded-lg">
+                        HDG: <span id="ar-heading">0°</span> | ACC: <span id="ar-accuracy">±--m</span>
+                    </div>
+                    <div class="hud-glass px-2.5 py-1 rounded-lg text-erik-green font-bold">
+                        QUANTUM VISION
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chybová hláška ak kamera nie je dostupná -->
+            <div id="ar-error-overlay" class="hidden absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center">
+                <span class="text-3xl mb-2">📷🚫</span>
+                <p id="ar-error-text" class="text-xs font-mono text-rose-400 max-w-xs">Kamera nie je dostupná alebo bol zamietnutý prístup.</p>
+                <button onclick="toggleARMode()" class="mt-3 px-4 py-1.5 rounded-lg bg-slate-800 text-xs text-white border border-slate-600">Zavrieť AR režim</button>
+            </div>
+        </div>
+
+        <!-- MAPOVÝ KONTAJNER (Leaflet) -->
+        <div id="map-wrapper" class="relative flex-1 w-full h-full">
+            <div id="map" class="w-full h-full z-0"></div>
+
+            <!-- PLÁVAJÚCI HORNÝ MANÉVER BANNER (Ako v Google Mapách / Sygicu) -->
+            <div id="turn-banner" class="hidden absolute top-3 left-3 right-3 z-10 bg-erik-panel/95 backdrop-blur-md border-2 border-erik-cyan rounded-2xl p-3 shadow-2xl flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-cyan-950 border border-erik-cyan flex items-center justify-center text-2xl shrink-0 shadow-inner" id="maneuver-icon">
+                    ⬆️
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2">
+                        <span id="maneuver-distance" class="text-lg font-mono font-extrabold text-erik-green">0 m</span>
+                        <span class="text-[10px] font-mono uppercase text-slate-400">do ďalšieho manévru</span>
+                    </div>
+                    <p id="maneuver-text" class="text-sm font-bold text-white truncate">Pokračujte po trase</p>
+                    <p id="maneuver-subtext" class="text-[11px] text-cyan-300 truncate mt-0.5">Sledujem GPS polohu...</p>
+                </div>
+            </div>
+
+            <!-- PRAVÉ PLÁVAJÚCE TLAČIDLÁ NA MAPE (Vycentrovať GPS, Prehľad trasy) -->
+            <div class="absolute right-3 bottom-28 z-10 flex flex-col gap-2">
+                <button onclick="enableFollowMe()" id="follow-btn" title="Sledovať moju polohu"
+                    class="w-11 h-11 rounded-2xl bg-erik-panel/95 border-2 border-erik-cyan text-erik-cyan shadow-xl flex items-center justify-center text-lg active:scale-90 transition">
+                    🧭
+                </button>
+                <button onclick="fitWholeRoute()" title="Zobraziť celú trasu"
+                    class="w-11 h-11 rounded-2xl bg-erik-panel/95 border border-erik-border text-slate-200 hover:border-erik-cyan shadow-xl flex items-center justify-center text-base active:scale-90 transition">
+                    🗺️
+                </button>
+            </div>
+
+            <!-- SPODNÝ TELEMETRICKÝ COCKPIT (Tachometer km/h + Vzdialenosť + Čas + Presnosť GPS) -->
+            <div class="absolute bottom-3 left-3 right-3 z-10 bg-erik-panel/95 backdrop-blur-md border border-erik-border rounded-2xl p-2.5 shadow-2xl flex items-center justify-between gap-2">
+                
+                <!-- DIGITÁLNY TACHOMETER -->
+                <div class="flex items-center gap-2.5 bg-slate-950 border border-erik-cyan/40 rounded-xl px-3 py-1.5 shrink-0">
+                    <div class="text-center">
+                        <div id="speed-value" class="text-2xl sm:text-3xl font-mono font-extrabold text-erik-cyan leading-none">0</div>
+                        <div class="text-[9px] font-mono uppercase tracking-widest text-slate-400 mt-0.5">km/h</div>
+                    </div>
+                </div>
+
+                <!-- CIEĽOVÉ ÚDAJE (Zostávajúci čas a km) -->
+                <div class="flex-1 grid grid-cols-2 gap-2 text-center">
+                    <div class="bg-slate-950/70 rounded-xl py-1.5 px-2 border border-slate-800">
+                        <div class="text-[9px] font-mono uppercase text-slate-400">Zostáva</div>
+                        <div id="remaining-dist" class="text-sm sm:text-base font-mono font-bold text-white">-- km</div>
+                    </div>
+                    <div class="bg-slate-950/70 rounded-xl py-1.5 px-2 border border-slate-800">
+                        <div class="text-[9px] font-mono uppercase text-slate-400">Príchod / Čas</div>
+                        <div id="remaining-time" class="text-sm sm:text-base font-mono font-bold text-erik-green">-- min</div>
+                    </div>
+                </div>
+
+                <!-- PRESNOSŤ GPS A KROKY -->
+                <div class="hidden sm:flex flex-col items-end justify-center text-right font-mono text-[10px] text-slate-400 pr-1 shrink-0">
+                    <div>GPS: <span id="gps-acc-badge" class="text-erik-green font-bold">±-- m</span></div>
+                    <div id="coords-mini" class="text-slate-500 mt-0.5">0.0000, 0.0000</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <script>
+        /**
+         * ERIKAI OS - QUANTUM AR & GPS NAVIGATION ENGINE
+         * Plne samostatný mobilný navigačný systém s podporou reálneho GPS, OSRM trás,
+         * hlasového navádzania v slovenčine a AR Dashcam HUD režimu.
+         */
+
+        // --- GLOBÁLNY STAV APLIKÁCIE ---
+        const state = {
+            userPos: [48.3061, 18.0826], // Predvolená poloha: Nitra (aktualizuje sa hneď po chytení GPS)
+            hasRealGps: false,
+            accuracy: null,
+            heading: 0,
+            speedKmh: 0,
+            lastGpsFix: null,
+            followUser: true,
+            travelMode: 'driving', // 'driving' | 'foot' | 'bicycle'
+            routes: [],
+            activeRouteIndex: 0,
+            routePolylines: [],
+            destMarker: null,
+            startMarker: null,
+            steps: [],
+            currentStepIndex: 0,
+            lastSpokenStep: -1,
+            voiceEnabled: true,
+            arActive: false,
+            arFullscreen: false,
+            cameraStream: null,
+            simulating: false,
+            simTimer: null
+        };
+
+        // --- INICIALIZÁCIA MAPY (LEAFLET) ---
+        const map = L.map('map', {
+            zoomControl: false,
+            attributionControl: true
+        }).setView(state.userPos, 15);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap | ErikAI OS'
+        }).addTo(map);
+
+        // Vlastná pulzujúca smerová ikona používateľa
+        const userIcon = L.divIcon({
+            className: '',
+            html: `
+                <div class="gps-puck-wrapper">
+                    <div class="gps-pulse-ring"></div>
+                    <div class="gps-arrow" id="user-arrow-el"></div>
+                </div>
+            `,
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
+        });
+
+        const userMarker = L.marker(state.userPos, { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+
+        // Ak používateľ posunie mapu prstom, dočasne vypneme automatické centrovanie
+        map.on('dragstart', () => {
+            state.followUser = false;
+            updateFollowButtonUI();
+        });
+
+        // --- POMOCNÉ NOTIFIKÁCIE ---
+        let toastTimeout = null;
+        function showToast(msg, duration = 3200) {
+            const box = document.getElementById('toast-box');
+            box.textContent = msg;
+            box.classList.remove('hidden');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                box.classList.add('hidden');
+            }, duration);
+        }
+
+        // --- HLASOVÁ NAVIGÁCIA (SLOVAK SPEECH SYNTHESIS) ---
+        function speakSlovak(text) {
+            if (!state.voiceEnabled || !('speechSynthesis' in window)) return;
+            try {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'sk-SK';
+                utterance.rate = 1.02;
+                utterance.pitch = 1.0;
+
+                // Pokus o výber slovenského alebo českého hlasu
+                const voices = window.speechSynthesis.getVoices();
+                const skVoice = voices.find(v => v.lang.toLowerCase().includes('sk')) ||
+                                voices.find(v => v.lang.toLowerCase().includes('cs'));
+                if (skVoice) utterance.voice = skVoice;
+
+                window.speechSynthesis.speak(utterance);
+            } catch (e) {
+                console.warn('Hlasový syntetizátor zlyhal:', e);
+            }
+        }
+
+        function toggleVoice() {
+            state.voiceEnabled = !state.voiceEnabled;
+            const icon = document.getElementById('voice-icon');
+            const btn = document.getElementById('voice-toggle-btn');
+            if (state.voiceEnabled) {
+                icon.textContent = '🔊';
+                btn.classList.add('border-erik-cyan', 'text-erik-cyan');
+                btn.classList.remove('border-slate-700', 'text-slate-500');
+                showToast('Hlasová navigácia zapnutá');
+                speakSlovak('Hlasová navigácia je zapnutá.');
+            } else {
+                icon.textContent = '🔇';
+                btn.classList.remove('border-erik-cyan', 'text-erik-cyan');
+                btn.classList.add('border-slate-700', 'text-slate-500');
+                window.speechSynthesis.cancel();
+                showToast('Hlasová navigácia stíšená');
+            }
+        }
+
+        // --- REÁLNE SLEDOVANIE GPS V MOBILE ---
+        function initRealGpsTracking() {
+            if (!('geolocation' in navigator)) {
+                document.getElementById('gps-status-text').textContent = 'GPS nie je podporované v prehliadači';
+                return;
+            }
+
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    if (state.simulating) return; // Počas demo simulácie jazdy ignorujeme reálny senzor
+
+                    const { latitude, longitude, accuracy, speed, heading } = pos.coords;
+                    const now = Date.now();
+                    const newPos = [latitude, longitude];
+
+                    // Výpočet rýchlosti v km/h (z GPS senzora alebo z rozdielu polohy v čase)
+                    let calcSpeedKmh = 0;
+                    if (typeof speed === 'number' && !isNaN(speed) && speed >= 0) {
+                        calcSpeedKmh = Math.round(speed * 3.6);
+                    } else if (state.lastGpsFix) {
+                        const distMeters = map.distance(state.lastGpsFix.pos, newPos);
+                        const dtSeconds = (now - state.lastGpsFix.time) / 1000;
+                        if (dtSeconds > 0.5 && distMeters > 1.5) {
+                            calcSpeedKmh = Math.round((distMeters / dtSeconds) * 3.6);
+                        }
+                    }
+
+                    // Výpočet azimutu (smeru)
+                    let calcHeading = state.heading;
+                    if (typeof heading === 'number' && !isNaN(heading)) {
+                        calcHeading = Math.round(heading);
+                    } else if (state.lastGpsFix && map.distance(state.lastGpsFix.pos, newPos) > 2) {
+                        calcHeading = computeBearing(state.lastGpsFix.pos, newPos);
+                    }
+
+                    state.userPos = newPos;
+                    state.hasRealGps = true;
+                    state.accuracy = Math.round(accuracy);
+                    state.speedKmh = calcSpeedKmh;
+                    state.heading = calcHeading;
+                    state.lastGpsFix = { pos: newPos, time: now };
+
+                    updateTelemetryUI();
+                    updateUserMarkerOnMap();
+                    checkNavigationProgress();
+                },
+                (err) => {
+                    console.warn('GPS chyba:', err.message);
+                    document.getElementById('gps-status-text').textContent = 'Čakám na povolenie GPS...';
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 1000,
+                    timeout: 15000
+                }
+            );
+        }
+
+        function updateTelemetryUI() {
+            document.getElementById('speed-value').textContent = state.speedKmh;
+            document.getElementById('gps-status-text').textContent = state.simulating
+                ? 'SIMULÁCIA JAZDY AKTÍVNA'
+                : `GPS FIX • Presnosť ±${state.accuracy || 5} m`;
+            document.getElementById('gps-acc-badge').textContent = `±${state.accuracy || 5} m`;
+            document.getElementById('coords-mini').textContent = `${state.userPos[0].toFixed(4)}, ${state.userPos[1].toFixed(4)}`;
+            document.getElementById('ar-heading').textContent = `${state.heading}°`;
+            document.getElementById('ar-accuracy').textContent = `±${state.accuracy || 5}m`;
+        }
+
+        function updateUserMarkerOnMap() {
+            userMarker.setLatLng(state.userPos);
+            const arrowEl = document.getElementById('user-arrow-el');
+            if (arrowEl) {
+                arrowEl.style.transform = `rotate(${state.heading}deg)`;
+            }
+            if (state.followUser) {
+                map.setView(state.userPos, map.getZoom(), { animate: true });
+            }
+        }
+
+        function enableFollowMe() {
+            state.followUser = true;
+            updateFollowButtonUI();
+            map.setView(state.userPos, 16, { animate: true });
+            showToast('Centrovanie na vašu GPS polohu zapnuté');
+        }
+
+        function updateFollowButtonUI() {
+            const btn = document.getElementById('follow-btn');
+            if (state.followUser) {
+                btn.classList.add('border-erik-cyan', 'text-erik-cyan');
+                btn.classList.remove('border-erik-border', 'text-slate-400');
+            } else {
+                btn.classList.remove('border-erik-cyan', 'text-erik-cyan');
+                btn.classList.add('border-erik-border', 'text-slate-400');
+            }
+        }
+
+        // --- OVLÁDANIE UI A VYHĽADÁVANIA ---
+        function toggleSearchDrawer() {
+            const drawer = document.getElementById('search-drawer');
+            drawer.classList.toggle('hidden');
+            setTimeout(() => map.invalidateSize(), 250);
+        }
+
+        function setTravelMode(mode) {
+            state.travelMode = mode;
+            ['driving', 'foot', 'bicycle'].forEach(m => {
+                const btn = document.getElementById(`mode-${m}`);
+                if (m === mode) {
+                    btn.className = 'flex-1 py-1.5 rounded-lg text-xs font-bold bg-erik-cyan text-slate-950 transition';
+                } else {
+                    btn.className = 'flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition';
+                }
+            });
+            if (document.getElementById('end-input').value.trim()) {
+                calculateRoutes();
+            }
+        }
+
+        function useCurrentGpsAsStart() {
+            document.getElementById('start-input').value = 'Moja aktuálna GPS poloha';
+            showToast('Štart nastavený na vašu aktuálnu GPS polohu');
+        }
+
+        function clearEndInput() {
+            document.getElementById('end-input').value = '';
+            document.getElementById('end-input').focus();
+        }
+
+        function quickRoute(destName) {
+            document.getElementById('end-input').value = destName;
+            calculateRoutes();
+        }
+
+        document.getElementById('end-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') calculateRoutes();
+        });
+
+        // --- GEOKÓDOVANIE (NOMINATIM) A VÝPOČET ALTERNATÍVNYCH TRÁS (OSRM) ---
+        async function geocodeAddress(query) {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+            const res = await fetch(url, {
+                headers: { 'Accept-Language': 'sk' }
+            });
+            const data = await res.json();
+            if (!data || data.length === 0) return null;
+            return {
+                lat: parseFloat(data[0].lat),
+                lon: parseFloat(data[0].lon),
+                name: data[0].display_name.split(',')[0]
+            };
+        }
+
+        async function calculateRoutes() {
+            const startText = document.getElementById('start-input').value.trim();
+            const endText = document.getElementById('end-input').value.trim();
+
+            if (!endText) {
+                showToast('Zadajte cieľovú adresu (Kam chcete ísť)');
+                return;
+            }
+
+            stopRouteSimulation();
+            const goBtn = document.getElementById('go-btn');
+            goBtn.textContent = 'Počítam...';
+            goBtn.disabled = true;
+
+            try {
+                // 1. Určenie štartovacieho bodu A
+                let startCoords = state.userPos;
+                if (startText && startText.toLowerCase() !== 'moja aktuálna gps poloha') {
+                    const startGeo = await geocodeAddress(startText);
+                    if (!startGeo) {
+                        showToast(`Nenašiel som štart: "${startText}"`);
+                        return;
+                    }
+                    startCoords = [startGeo.lat, startGeo.lon];
+                }
+
+                // 2. Určenie cieľového bodu B
+                const endGeo = await geocodeAddress(endText);
+                if (!endGeo) {
+                    showToast(`Cieľ "${endText}" sa nepodarilo nájsť`);
+                    return;
+                }
+                const endCoords = [endGeo.lat, endGeo.lon];
+
+                // 3. OSRM výpočet trasy vrátane alternatív
+                const profile = state.travelMode === 'foot' ? 'foot' : (state.travelMode === 'bicycle' ? 'bike' : 'car');
+                const osrmUrl = `https://router.project-osrm.org/route/v1/${profile}/${startCoords[1]},${startCoords[0]};${endCoords[1]},${endCoords[0]}?overview=full&geometries=geojson&steps=true&alternatives=true`;
+
+                const routeRes = await fetch(osrmUrl);
+                const routeData = await routeRes.json();
+
+                if (routeData.code !== 'Ok' || !routeData.routes || routeData.routes.length === 0) {
+                    showToast('Nepodarilo sa nájsť zjazdnú trasu medzi týmito bodmi.');
+                    return;
+                }
+
+                state.routes = routeData.routes;
+                state.activeRouteIndex = 0;
+
+                renderMarkers(startCoords, endCoords, endGeo.name);
+                renderRouteAlternatives();
+                selectRoute(0);
+
+                // Zbalíme vyhľadávací formulár na mobile, aby ostala veľká mapa + karty trás
+                speakSlovak(`Trasa do cieľa ${endGeo.name} je vypočítaná. Vzdialenosť ${(state.routes[0].distance / 1000).toFixed(1)} kilometra.`);
+
+            } catch (err) {
+                console.error(err);
+                showToast('Chyba spojenia s navigačným serverom.');
+            } finally {
+                goBtn.textContent = 'Hľadať 🚀';
+                goBtn.disabled = false;
+            }
+        }
+
+        function renderMarkers(startCoords, endCoords, destLabel) {
+            if (state.destMarker) map.removeLayer(state.destMarker);
+            if (state.startMarker) map.removeLayer(state.startMarker);
+
+            // Ak štart nie je aktuálne GPS, zobrazíme značku A
+            if (map.distance(startCoords, state.userPos) > 30) {
+                state.startMarker = L.marker(startCoords, {
+                    icon: L.divIcon({
+                        className: '',
+                        html: `<div class="w-6 h-6 rounded-full bg-erik-cyan text-slate-950 font-extrabold text-xs flex items-center justify-center border-2 border-white shadow-lg">A</div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    })
+                }).addTo(map);
+            }
+
+            // Cieľová značka B
+            state.destMarker = L.marker(endCoords, {
+                icon: L.divIcon({
+                    className: '',
+                    html: `<div class="w-7 h-7 rounded-full bg-erik-green text-slate-950 font-extrabold text-xs flex items-center justify-center border-2 border-white shadow-[0_0_15px_#00ff88]">B</div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                })
+            }).addTo(map).bindPopup(`<b>Cieľ:</b> ${destLabel}`);
+        }
+
+        function renderRouteAlternatives() {
+            const container = document.getElementById('alternatives-container');
+            const list = document.getElementById('route-cards-list');
+            const badge = document.getElementById('routes-found-badge');
+
+            container.classList.remove('hidden');
+            badge.textContent = `${state.routes.length} ${state.routes.length === 1 ? 'trasa' : 'trasy'}`;
+            list.innerHTML = '';
+
+            state.routes.forEach((route, idx) => {
+                const distKm = (route.distance / 1000).toFixed(1);
+                const mins = Math.max(1, Math.round(route.duration / 60));
+                const isSelected = idx === state.activeRouteIndex;
+
+                const card = document.createElement('button');
+                card.onclick = () => selectRoute(idx);
+                card.className = `shrink-0 text-left px-3 py-2 rounded-xl border transition-all ${
+                    isSelected
+                        ? 'bg-cyan-950/90 border-erik-cyan shadow-[0_0_15px_rgba(0,240,255,0.2)]'
+                        : 'bg-slate-900/90 border-erik-border hover:border-slate-600'
+                }`;
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="text-[11px] font-bold ${isSelected ? 'text-erik-cyan' : 'text-slate-300'}">
+                            ${idx === 0 ? '⚡ Trasa 1 (Najrýchlejšia)' : `🔀 Alternatíva ${idx + 1}`}
+                        </span>
+                        <span class="text-xs font-mono font-extrabold text-erik-green">${mins} min</span>
+                    </div>
+                    <div class="text-[11px] font-mono text-slate-400 mt-0.5">
+                        ${distKm} km • ${route.legs[0]?.summary || 'Hlavný ťah'}
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function selectRoute(index) {
+            state.activeRouteIndex = index;
+            renderRouteAlternatives();
+
+            // Vymazať staré čiary trás
+            state.routePolylines.forEach(line => map.removeLayer(line));
+            state.routePolylines = [];
+
+            // Vykresliť všetky trasy (neaktívne najprv, aktívnu navrch)
+            state.routes.forEach((route, idx) => {
+                if (idx === index) return;
+                const latLngs = route.geometry.coordinates.map(c => [c[1], c[0]]);
+                const altLine = L.polyline(latLngs, {
+                    color: '#a855f7',
+                    weight: 5,
+                    opacity: 0.45,
+                    dashArray: '8, 8'
+                }).addTo(map);
+                altLine.on('click', () => selectRoute(idx));
+                state.routePolylines.push(altLine);
+            });
+
+            // Aktívna trasa
+            const activeRoute = state.routes[index];
+            const activeLatLngs = activeRoute.geometry.coordinates.map(c => [c[1], c[0]]);
+            const mainLine = L.polyline(activeLatLngs, {
+                color: '#00f0ff',
+                weight: 6,
+                opacity: 0.92
+            }).addTo(map);
+            state.routePolylines.push(mainLine);
+
+            // Naplniť kroky navigácie
+            state.steps = activeRoute.legs[0].steps || [];
+            state.currentStepIndex = 0;
+            state.lastSpokenStep = -1;
+
+            updateTripStats(activeRoute.distance, activeRoute.duration);
+            updateCurrentManeuverUI();
+            fitWholeRoute();
+        }
+
+        function fitWholeRoute() {
+            if (state.routePolylines.length === 0) return;
+            state.followUser = false;
+            updateFollowButtonUI();
+            const group = L.featureGroup(state.routePolylines);
+            map.fitBounds(group.getBounds(), { padding: [55, 55] });
+        }
+
+        function updateTripStats(distMeters, durationSec) {
+            const km = (distMeters / 1000).toFixed(1);
+            const mins = Math.max(1, Math.round(durationSec / 60));
+            document.getElementById('remaining-dist').textContent = `${km} km`;
+            document.getElementById('remaining-time').textContent = `${mins} min`;
+        }
+
+        // --- PREKLAD MANÉVROV DO SLOVENČINY ---
+        function formatSlovakManeuver(step) {
+            const type = step.maneuver?.type || '';
+            const modifier = step.maneuver?.modifier || '';
+            const street = step.name ? ` na ${step.name}` : '';
+
+            if (type === 'arrive') return { icon: '🏁', text: 'Dorazili ste do cieľa!' };
+            if (type === 'depart') return { icon: '🚀', text: `Vyrazte po trase${street}` };
+            if (type === 'roundabout' || type === 'rotary') {
+                const exit = step.maneuver?.exit ? `${step.maneuver.exit}. výjazdom` : '';
+                return { icon: '🔄', text: `Na kruhovom objazde odbočte ${exit}${street}` };
+            }
+
+            if (modifier.includes('left')) {
+                return { icon: '⬅️', text: `Odbočte vľavo${street}` };
+            }
+            if (modifier.includes('right')) {
+                return { icon: '➡️', text: `Odbočte vpravo${street}` };
+            }
+            if (modifier.includes('uturn')) {
+                return { icon: '↩️', text: `Otočte sa do protismeru${street}` };
+            }
+
+            return { icon: '⬆️', text: `Pokračujte rovno${street}` };
+        }
+
+        function updateCurrentManeuverUI() {
+            const banner = document.getElementById('turn-banner');
+            if (!state.steps || state.steps.length === 0) {
+                banner.classList.add('hidden');
+                return;
+            }
+
+            banner.classList.remove('hidden');
+            const step = state.steps[Math.min(state.currentStepIndex, state.steps.length - 1)];
+            const info = formatSlovakManeuver(step);
+
+            const stepLoc = [step.maneuver.location[1], step.maneuver.location[0]];
+            const distToTurn = Math.round(map.distance(state.userPos, stepLoc));
+            const distLabel = distToTurn > 1000 ? `${(distToTurn / 1000).toFixed(1)} km` : `${distToTurn} m`;
+
+            document.getElementById('maneuver-icon').textContent = info.icon;
+            document.getElementById('maneuver-distance').textContent = distLabel;
+            document.getElementById('maneuver-text').textContent = info.text;
+            document.getElementById('maneuver-subtext').textContent = `Krok ${state.currentStepIndex + 1} z ${state.steps.length}`;
+
+            // Aktualizácia aj AR Dashcam HUD šípky
+            document.getElementById('ar-arrow-icon').textContent = info.icon;
+            document.getElementById('ar-arrow-dist').textContent = distLabel;
+            document.getElementById('ar-street-banner').textContent = info.text;
+
+            // Hlasové oznámenie pri novom kroku
+            if (state.lastSpokenStep !== state.currentStepIndex) {
+                state.lastSpokenStep = state.currentStepIndex;
+                speakSlovak(`Za ${distLabel}, ${info.text}`);
+            }
+        }
+
+        function checkNavigationProgress() {
+            if (!state.steps || state.steps.length === 0) return;
+            const step = state.steps[state.currentStepIndex];
+            if (!step) return;
+
+            const targetLoc = [step.maneuver.location[1], step.maneuver.location[0]];
+            const dist = map.distance(state.userPos, targetLoc);
+
+            // Ak sme sa priblížili na 25 metrov k manévru, posunieme na ďalší krok
+            if (dist < 25 && state.currentStepIndex < state.steps.length - 1) {
+                state.currentStepIndex++;
+            }
+            updateCurrentManeuverUI();
+        }
+
+        // --- LIVE AR KAMERA / DASHCAM REŽIM ---
+        async function toggleARMode() {
+            const arSection = document.getElementById('ar-camera-section');
+            const btnLabel = document.getElementById('ar-btn-label');
+            const errorOverlay = document.getElementById('ar-error-overlay');
+
+            if (!state.arActive) {
+                state.arActive = true;
+                arSection.classList.remove('hidden');
+                errorOverlay.classList.add('hidden');
+                btnLabel.textContent = 'Vypnúť AR';
+
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: 'environment' } },
+                        audio: false
+                    });
+                    state.cameraStream = stream;
+                    const videoEl = document.getElementById('ar-video');
+                    videoEl.srcObject = stream;
+                    showToast('AR Dashcam režim aktivovaný');
+                } catch (err) {
+                    console.warn('Chyba kamery:', err);
+                    errorOverlay.classList.remove('hidden');
+                    document.getElementById('ar-error-text').textContent =
+                        'Nepodarilo sa spustiť zadnú kameru (skontrolujte povolenie kamery v prehliadači alebo HTTPS pripojenie).';
+                }
+            } else {
+                state.arActive = false;
+                state.arFullscreen = false;
+                arSection.classList.add('hidden');
+                arSection.classList.remove('h-full');
+                arSection.classList.add('h-1/2');
+                document.getElementById('map-wrapper').classList.remove('hidden');
+                btnLabel.textContent = 'AR Kamera';
+
+                if (state.cameraStream) {
+                    state.cameraStream.getTracks().forEach(track => track.stop());
+                    state.cameraStream = null;
+                }
+            }
+            setTimeout(() => map.invalidateSize(), 300);
+        }
+
+        function toggleARFullscreen() {
+            const arSection = document.getElementById('ar-camera-section');
+            const mapWrapper = document.getElementById('map-wrapper');
+            const label = document.getElementById('ar-expand-label');
+
+            state.arFullscreen = !state.arFullscreen;
+            if (state.arFullscreen) {
+                arSection.classList.remove('h-1/2');
+                arSection.classList.add('h-full');
+                mapWrapper.classList.add('hidden');
+                label.textContent = '⤡ Rozdeliť s mapou';
+            } else {
+                arSection.classList.remove('h-full');
+                arSection.classList.add('h-1/2');
+                mapWrapper.classList.remove('hidden');
+                label.textContent = '⤢ Celá obrazovka';
+                setTimeout(() => map.invalidateSize(), 250);
+            }
+        }
+
+        // --- SIMULÁCIA JAZDY (PRE OKAMŽITÉ TESTOVANIE VIZUÁLU, RÝCHLOSTI A HLASU) ---
+        function startRouteSimulation() {
+            if (state.simulating) {
+                stopRouteSimulation();
+                return;
+            }
+
+            if (!state.routes || state.routes.length === 0) {
+                showToast('Najskôr vyhľadajte trasu, potom spustite test jazdy!');
+                return;
+            }
+
+            const activeRoute = state.routes[state.activeRouteIndex];
+            const coords = activeRoute.geometry.coordinates.map(c => [c[1], c[0]]);
+            if (coords.length < 2) return;
+
+            state.simulating = true;
+            state.followUser = true;
+            state.currentStepIndex = 0;
+            state.lastSpokenStep = -1;
+            updateFollowButtonUI();
+
+            const simBtn = document.getElementById('sim-toggle-btn');
+            simBtn.textContent = '⏹ Stop test';
+            simBtn.classList.replace('text-erik-green', 'text-rose-400');
+
+            // Zbalíme vyhľadávací panel pre čistý výhľad na jazdu
+            document.getElementById('search-drawer').classList.add('hidden');
+            setTimeout(() => map.invalidateSize(), 200);
+
+            let pointIdx = 0;
+            const totalDist = activeRoute.distance;
+            const totalDur = activeRoute.duration;
+
+            speakSlovak('Spúšťam simuláciu jazdy.');
+
+            state.simTimer = setInterval(() => {
+                if (pointIdx >= coords.length - 1) {
+                    stopRouteSimulation();
+                    speakSlovak('Dorazili ste do cieľa.');
+                    showToast('🏁 Dorazili ste do cieľa!');
+                    return;
+                }
+
+                const p1 = coords[pointIdx];
+                const p2 = coords[pointIdx + 1];
+
+                state.userPos = p1;
+                state.heading = computeBearing(p1, p2);
+                state.speedKmh = state.travelMode === 'foot' ? 5 : (state.travelMode === 'bicycle' ? 22 : Math.floor(52 + Math.random() * 18));
+                state.accuracy = 4;
+
+                const progressRatio = pointIdx / coords.length;
+                updateTripStats(totalDist * (1 - progressRatio), totalDur * (1 - progressRatio));
+                updateTelemetryUI();
+                updateUserMarkerOnMap();
+                checkNavigationProgress();
+
+                pointIdx++;
+            }, 650);
+        }
+
+        function stopRouteSimulation() {
+            state.simulating = false;
+            clearInterval(state.simTimer);
+            state.speedKmh = 0;
+            updateTelemetryUI();
+
+            const simBtn = document.getElementById('sim-toggle-btn');
+            simBtn.textContent = '▶ Test jazdy';
+            simBtn.classList.replace('text-rose-400', 'text-erik-green');
+        }
+
+        // Výpočet uhla (azimutu) medzi dvoma GPS bodmi
+        function computeBearing(start, end) {
+            const lat1 = start[0] * Math.PI / 180;
+            const lat2 = end[0] * Math.PI / 180;
+            const dLon = (end[1] - start[1]) * Math.PI / 180;
+            const y = Math.sin(dLon) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+            const brng = Math.atan2(y, x) * 180 / Math.PI;
+            return Math.round((brng + 360) % 360);
+        }
+
+        // --- ŠTART SYSTÉMU ---
+        window.addEventListener('load', () => {
+            initRealGpsTracking();
+            // Prednačítanie hlasov v prehliadači
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.getVoices();
+            }
+        });
+    </script>
+</body>
+</html>
