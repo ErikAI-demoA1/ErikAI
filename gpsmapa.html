@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ErikAI OS // Quantum AR & GPS Nav v2</title>
+    <title>ErikAI OS // Quantum AR & GPS Nav v3</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -117,7 +117,7 @@
         }
 
         .hud-glass {
-            background: rgba(7, 11, 20, 0.82);
+            background: rgba(7, 11, 20, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(0, 240, 255, 0.25);
@@ -137,9 +137,9 @@
             <div class="w-2.5 h-2.5 rounded-full bg-erik-green animate-ping"></div>
             <div>
                 <h1 class="text-sm font-extrabold tracking-wider text-erik-cyan leading-none">
-                    ERIKAI OS <span class="text-[9px] font-mono bg-cyan-950/80 text-erik-green px-1.5 py-0.5 rounded border border-emerald-700/50 ml-1">v2.0 PRO</span>
+                    ERIKAI OS <span class="text-[9px] font-mono bg-cyan-950/80 text-erik-green px-1.5 py-0.5 rounded border border-emerald-700/50 ml-1">v3.0 PRO</span>
                 </h1>
-                <p id="gps-status-text" class="text-[10px] font-mono text-slate-400 mt-0.5">Inicializujem satelity...</p>
+                <p id="gps-status-text" class="text-[10px] font-mono text-slate-400 mt-0.5">Satelitný signál pripravený...</p>
             </div>
         </div>
 
@@ -167,7 +167,7 @@
     </div>
 
     <!-- VYHĽADÁVACÍ PANEL -->
-    <section id="search-drawer" class="bg-erik-panel/95 border-b border-erik-border px-3.py-2.5 z-20 shrink-0 transition-all duration-300 shadow-2xl">
+    <section id="search-drawer" class="bg-erik-panel/95 border-b border-erik-border px-3 py-2.5 z-20 shrink-0 transition-all duration-300 shadow-2xl">
         <!-- Režim dopravy -->
         <div class="flex items-center justify-between gap-2 mb-2">
             <div class="flex bg-slate-950 p-1 rounded-xl border border-erik-border flex-1">
@@ -191,14 +191,14 @@
             </button>
         </div>
 
-        <!-- 🛣️ PREPÍNAČ DIAĽNIC (Zákonné pravidlo / Výber trasy) -->
+        <!-- 🛣️ PREPÍNAČ DIAĽNIC / OKRESKY -->
         <div id="highway-option-wrapper" class="flex items-center justify-between bg-slate-950/80 border border-erik-border rounded-xl px-3 py-1.5 mb-2">
             <span class="text-[11px] font-mono text-slate-300 flex items-center gap-1.5">
-                <span id="highway-icon">🛣️</span> Trasa po diaľniciach:
+                <span id="highway-icon">🛣️</span> Preferencia diaľnic:
             </span>
             <button onclick="toggleHighways()" id="highway-toggle-btn"
                 class="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-cyan-950 text-erik-cyan border border-erik-cyan/50 active:scale-95 transition">
-                Zapnuté (D1/R1 povolené)
+                Zapnuté (S diaľnicami)
             </button>
         </div>
 
@@ -235,10 +235,10 @@
             <button onclick="quickRoute('Žilina')" class="shrink-0 px-2 py-1 rounded-lg bg-slate-900 border border-erik-border text-[11px] text-cyan-300">Žilina</button>
         </div>
 
-        <!-- Alternatívne trasy karty -->
+        <!-- Alternatívne trasy karty (1 až 5 možností) -->
         <div id="alternatives-container" class="hidden pt-2">
             <div class="text-[10px] font-mono uppercase text-slate-400 mb-1 flex justify-between">
-                <span>Výber trás (zohľadňujú zákony a diaľnice):</span>
+                <span>Výber trasových možností (1 - 5):</span>
                 <span id="routes-found-badge" class="text-erik-green font-bold"></span>
             </div>
             <div id="route-cards-list" class="flex gap-2 overflow-x-auto no-scrollbar pb-1"></div>
@@ -268,7 +268,7 @@
                 </div>
                 <div class="flex justify-between items-end text-[10px] font-mono text-cyan-300">
                     <div class="hud-glass px-2 py-1 rounded-lg">HDG: <span id="ar-heading">0°</span></div>
-                    <div class="hud-glass px-2 py-1 rounded-lg text-erik-green font-bold">ZÁKONNÝ REŽIM AKTÍVNY</div>
+                    <div class="hud-glass px-2 py-1 rounded-lg text-erik-green font-bold">ZÁKONNÝ REŽIM PLATNÝ</div>
                 </div>
             </div>
             <div id="ar-error-overlay" class="hidden absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center">
@@ -282,7 +282,7 @@
         <div id="map-wrapper" class="relative flex-1 w-full h-full">
             <div id="map" class="w-full h-full z-0"></div>
 
-            <!-- PLÁVAJÚCI MANÉVER BANNER + DOPRAVNÁ ZNAČKA -->
+            <!-- PLÁVAJÚCI MANÉVER BANNER -->
             <div id="turn-banner" class="hidden absolute top-3 left-3 right-3 z-10 bg-erik-panel/95 backdrop-blur-md border-2 border-erik-cyan rounded-2xl p-3 shadow-2xl flex items-center gap-3">
                 <div id="traffic-sign-box" class="w-12 h-12 rounded-full bg-red-600 border-2 border-white flex flex-col items-center justify-center text-white font-mono font-extrabold shadow-lg shrink-0 text-center">
                     <span id="sign-val" class="text-xs leading-none">50</span>
@@ -309,7 +309,7 @@
                 </button>
             </div>
 
-            <!-- SPODNÝ TELEMETRICKÝ COCKPIT (NEVYNECHÁVA DIEL V MOBILE - FIX 100dvh) -->
+            <!-- SPODNÝ TELEMETRICKÝ COCKPIT (FIX 100dvh - bez orezania) -->
             <div class="absolute bottom-2 left-3 right-3 z-10 bg-erik-panel/95 backdrop-blur-md border border-erik-border rounded-2xl p-2.5 shadow-2xl flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2 bg-slate-950 border border-erik-cyan/40 rounded-xl px-2.5 py-1.5 shrink-0">
                     <div class="text-center">
@@ -420,16 +420,18 @@
                     : 'flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition';
             });
 
-            // Zákonné pravidlo: Pre chodca a bicykel automaticky zakážeme diaľnice
+            // ZÁKONNÉ PRAVIDLO: Chodec a cyklista nesmú ísť na diaľnicu (hard blok)
             const hwWrapper = document.getElementById('highway-option-wrapper');
             if (mode === 'foot' || mode === 'bicycle') {
                 state.allowHighways = false;
-                hwWrapper.style.opacity = '0.4';
+                hwWrapper.style.opacity = '0.35';
                 hwWrapper.style.pointerEvents = 'none';
                 updateHighwayToggleUI();
             } else {
+                state.allowHighways = true;
                 hwWrapper.style.opacity = '1';
                 hwWrapper.style.pointerEvents = 'auto';
+                updateHighwayToggleUI();
             }
 
             if (document.getElementById('end-input').value.trim()) calculateRoutes();
@@ -445,10 +447,10 @@
         function updateHighwayToggleUI() {
             const btn = document.getElementById('highway-toggle-btn');
             if (state.allowHighways) {
-                btn.textContent = 'Zapnuté (D1/R1 povolené)';
+                btn.textContent = 'Zapnuté (S diaľnicami)';
                 btn.className = 'px-3 py-1 rounded-lg text-xs font-mono font-bold bg-cyan-950 text-erik-cyan border border-erik-cyan/50';
             } else {
-                btn.textContent = 'Vypnuté (Mimo diaľnic)';
+                btn.textContent = 'Vypnuté (Bez diaľnic / Okresky)';
                 btn.className = 'px-3 py-1 rounded-lg text-xs font-mono font-bold bg-purple-950 text-purple-300 border border-purple-500/50';
             }
         }
@@ -501,7 +503,6 @@
             document.getElementById('gps-acc-badge').textContent = `±${state.accuracy || 5}m`;
             document.getElementById('ar-heading').textContent = `${state.heading}°`;
 
-            // Kontrola prekročenia rýchlosti (Zákonný audit)
             const speedEl = document.getElementById('speed-value');
             if (state.travelMode === 'driving' && state.speedKmh > 90) {
                 speedEl.className = 'text-2xl font-mono font-extrabold text-rose-500 leading-none animate-pulse';
@@ -521,7 +522,7 @@
             state.followUser = true;
             updateFollowButtonUI();
             map.setView(state.userPos, 16, { animate: true });
-            showToast('Sledovanie zapnuté');
+            showToast('Sledowanie zapnuté');
         }
 
         function updateFollowButtonUI() {
@@ -536,7 +537,6 @@
             setTimeout(() => map.invalidateSize(), 250);
         }
 
-        // Geocoding & Routing (OSRM)
         async function geocodeAddress(query) {
             const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
             const res = await fetch(url, { headers: { 'Accept-Language': 'sk' } });
@@ -545,6 +545,7 @@
             return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: data[0].display_name.split(',')[0] };
         }
 
+        // Výpočet 1 až 5 možností trás s ohľadom na zákony a diaľnice
         async function calculateRoutes() {
             const startText = document.getElementById('start-input').value.trim();
             const endText = document.getElementById('end-input').value.trim();
@@ -552,7 +553,7 @@
 
             stopRouteSimulation();
             const goBtn = document.getElementById('go-btn');
-            goBtn.textContent = 'Počítam...';
+            goBtn.textContent = 'Počítam 1-5 trás...';
             goBtn.disabled = true;
 
             try {
@@ -570,31 +571,42 @@
                 if (state.travelMode === 'foot') profile = 'foot';
                 else if (state.travelMode === 'bicycle') profile = 'bike';
 
-                // OSRM vyžiadanie trasy
+                // OSRM dopyt pre viacero alternatívnych trás
                 let osrmUrl = `https://router.project-osrm.org/route/v1/${profile}/${startCoords[1]},${startCoords[0]};${endCoords[1]},${endCoords[0]}?overview=full&geometries=geojson&steps=true&alternatives=true`;
                 
                 const res = await fetch(osrmUrl);
                 const data = await res.json();
 
-                if (data.code !== 'Ok' || !data.routes) { showToast('Trasa sa nenašla.'); return; }
-
-                // Filtrovanie diaľnic ak sú vypnuté
-                let validRoutes = data.routes;
-                if (!state.allowHighways && state.travelMode === 'driving') {
-                    validRoutes = data.routes.filter(r => {
-                        const summary = (r.legs[0]?.summary || '').toLowerCase();
-                        return !summary.includes('d1') && !summary.includes('d2') && !summary.includes('r1') && !summary.includes('motorway');
-                    });
-                    if (validRoutes.length === 0) validRoutes = data.routes; // fallback ak inak nejde
+                if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+                    showToast('Trasa sa nenašla.');
+                    return;
                 }
 
-                state.routes = validRoutes;
+                let rawRoutes = data.routes;
+
+                // ZÁKONNÉ PRAVIDLO: Ak je zvolené auto a vypnuté diaľnice, alebo ak ide o chodca/cyklistu, filtrujeme diaľnice
+                if (!state.allowHighways || state.travelMode === 'foot' || state.travelMode === 'bicycle') {
+                    rawRoutes = rawRoutes.filter(r => {
+                        const summary = (r.legs[0]?.summary || '').toLowerCase();
+                        // Kontrola kľúčových slov pre diaľnice a rýchlostné cesty
+                        const isHighway = summary.includes('d1') || summary.includes('d2') || summary.includes('r1') || summary.includes('motorway') || summary.includes('expressway');
+                        return !isHighway;
+                    });
+                    // Ak filter vyradil všetko, zoberieme aspoň bezpečné alternatívy alebo upozorníme
+                    if (rawRoutes.length === 0) {
+                        rawRoutes = data.routes;
+                        showToast('Upozornenie: Úplne bez diaľnic sa nedá prejsť, bola zvolená najvhodnejšia cesta.');
+                    }
+                }
+
+                // Obmedzenie na max 5 možností trás
+                state.routes = rawRoutes.slice(0, 5);
                 state.activeRouteIndex = 0;
 
                 renderMarkers(startCoords, endCoords, eg.name);
                 renderRouteAlternatives();
                 selectRoute(0);
-                speakSlovak(`Trasa do ${eg.name} je pripravená.`);
+                speakSlovak(`Našiel som ${state.routes.length} možné trasy do cieľa ${eg.name}.`);
             } catch (err) {
                 console.error(err);
                 showToast('Chyba servera trasy.');
@@ -624,7 +636,7 @@
             const badge = document.getElementById('routes-found-badge');
 
             container.classList.remove('hidden');
-            badge.textContent = `${state.routes.length} ${state.routes.length === 1 ? 'trasa' : 'trasy'}`;
+            badge.textContent = `${state.routes.length} ${state.routes.length === 1 ? 'možnosť' : 'možnosti'}`;
             list.innerHTML = '';
 
             state.routes.forEach((route, idx) => {
@@ -634,13 +646,13 @@
 
                 const card = document.createElement('button');
                 card.onclick = () => selectRoute(idx);
-                card.className = `shrink-0 text-left px-3 py-2 rounded-xl border transition-all ${isSelected ? 'bg-cyan-950/90 border-erik-cyan shadow' : 'bg-slate-900/90 border-erik-border'}`;
+                card.className = `shrink-0 text-left px-3.5 py-2 rounded-xl border transition-all ${isSelected ? 'bg-cyan-950/95 border-erik-cyan shadow-lg' : 'bg-slate-900/90 border-erik-border'}`;
                 card.innerHTML = `
                     <div class="flex items-center justify-between gap-3">
-                        <span class="text-[11px] font-bold ${isSelected ? 'text-erik-cyan' : 'text-slate-300'}">Trasa ${idx + 1}</span>
+                        <span class="text-[11px] font-bold ${isSelected ? 'text-erik-cyan' : 'text-slate-300'}">Možnosť ${idx + 1}</span>
                         <span class="text-xs font-mono font-extrabold text-erik-green">${mins} min</span>
                     </div>
-                    <div class="text-[10px] font-mono text-slate-400 mt-0.5">${distKm} km • ${route.legs[0]?.summary || 'Cesta'}</div>
+                    <div class="text-[10px] font-mono text-slate-400 mt-0.5">${distKm} km • ${route.legs[0]?.summary || 'Hlavný ťah'}</div>
                 `;
                 list.appendChild(card);
             });
@@ -701,7 +713,6 @@
             document.getElementById('maneuver-text').textContent = step.name ? `Odbočte na ${step.name}` : 'Pokračujte po trase';
             document.getElementById('ar-arrow-dist').textContent = `${dist} m`;
 
-            // Kontrola zákona pre cyklistu / chodca na rýchlostnej ceste
             const warningTag = document.getElementById('legal-warning-tag');
             if ((state.travelMode === 'foot' || state.travelMode === 'bicycle') && (step.name || '').toLowerCase().includes('d1')) {
                 warningTag.textContent = 'POZOR: Zákaz vjazdu!';
@@ -728,7 +739,6 @@
             updateCurrentManeuverUI();
         }
 
-        // AR Kamera
         async function toggleARMode() {
             const ar = document.getElementById('ar-camera-section');
             if (!state.arActive) {
@@ -758,10 +768,9 @@
             else { ar.classList.replace('h-full', 'h-1/2'); mapW.classList.remove('hidden'); setTimeout(() => map.invalidateSize(), 200); }
         }
 
-        // Simulácia
         function startRouteSimulation() {
             if (state.simulating) { stopRouteSimulation(); return; }
-            if (!state.routes || state.routes.length === 0) { showToast('Najskôr vyhľadajte trasu!'); return; }
+            if (!state.routes || state.routes.length === 0) { showToast('Najskôr vyhľadajte trasy!'); return; }
 
             const coords = state.routes[state.activeRouteIndex].geometry.coordinates.map(c => [c[1], c[0]]);
             state.simulating = true;
