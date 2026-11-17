@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ErikAI OS // Quantum AR & GPS Nav v3</title>
+    <title>ErikAI OS // Quantum AR & GPS Nav v4</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -45,7 +45,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Tmavý futuristický filter pre mapové dlaždice */
         .leaflet-tile-pane {
             filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(95%) saturate(120%);
         }
@@ -62,7 +61,6 @@
             color: #00f0ff !important;
         }
 
-        /* Pulzujúca GPS šípka používateľa */
         .gps-puck-wrapper {
             position: relative;
             width: 36px;
@@ -107,14 +105,8 @@
             100% { transform: scale(1.9); opacity: 0; }
         }
 
-        /* Skrytie scrollbarov */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         .hud-glass {
             background: rgba(7, 11, 20, 0.85);
@@ -131,13 +123,13 @@
 </head>
 <body class="h-[100dvh] w-screen overflow-hidden flex flex-col select-none">
 
-    <!-- HORNÁ LIŠTA (ErikAI OS Header) -->
+    <!-- HORNÁ LIŠTA -->
     <header class="bg-erik-panel/95 border-b border-erik-border px-3 py-2 flex items-center justify-between z-30 shrink-0">
         <div class="flex items-center gap-2">
             <div class="w-2.5 h-2.5 rounded-full bg-erik-green animate-ping"></div>
             <div>
                 <h1 class="text-sm font-extrabold tracking-wider text-erik-cyan leading-none">
-                    ERIKAI OS <span class="text-[9px] font-mono bg-cyan-950/80 text-erik-green px-1.5 py-0.5 rounded border border-emerald-700/50 ml-1">v3.0 PRO</span>
+                    ERIKAI OS <span class="text-[9px] font-mono bg-cyan-950/80 text-erik-green px-1.5 py-0.5 rounded border border-emerald-700/50 ml-1">v4.0 MULTI-ROUTE</span>
                 </h1>
                 <p id="gps-status-text" class="text-[10px] font-mono text-slate-400 mt-0.5">Satelitný signál pripravený...</p>
             </div>
@@ -191,10 +183,10 @@
             </button>
         </div>
 
-        <!-- 🛣️ PREPÍNAČ DIAĽNIC / OKRESKY -->
+        <!-- PREPÍNAČ DIAĽNIC / BEZ DIAĽNIC -->
         <div id="highway-option-wrapper" class="flex items-center justify-between bg-slate-950/80 border border-erik-border rounded-xl px-3 py-1.5 mb-2">
             <span class="text-[11px] font-mono text-slate-300 flex items-center gap-1.5">
-                <span id="highway-icon">🛣️</span> Preferencia diaľnic:
+                <span id="highway-icon">🛣️</span> Režim diaľnic:
             </span>
             <button onclick="toggleHighways()" id="highway-toggle-btn"
                 class="px-3 py-1 rounded-lg text-xs font-mono font-bold bg-cyan-950 text-erik-cyan border border-erik-cyan/50 active:scale-95 transition">
@@ -238,7 +230,7 @@
         <!-- Alternatívne trasy karty (1 až 5 možností) -->
         <div id="alternatives-container" class="hidden pt-2">
             <div class="text-[10px] font-mono uppercase text-slate-400 mb-1 flex justify-between">
-                <span>Výber trasových možností (1 - 5):</span>
+                <span>Dostupné trasy (1 - 5 možností):</span>
                 <span id="routes-found-badge" class="text-erik-green font-bold"></span>
             </div>
             <div id="route-cards-list" class="flex gap-2 overflow-x-auto no-scrollbar pb-1"></div>
@@ -268,7 +260,7 @@
                 </div>
                 <div class="flex justify-between items-end text-[10px] font-mono text-cyan-300">
                     <div class="hud-glass px-2 py-1 rounded-lg">HDG: <span id="ar-heading">0°</span></div>
-                    <div class="hud-glass px-2 py-1 rounded-lg text-erik-green font-bold">ZÁKONNÝ REŽIM PLATNÝ</div>
+                    <div class="hud-glass px-2 py-1 rounded-lg text-erik-green font-bold" id="ar-mode-badge">REŽIM: AUTO</div>
                 </div>
             </div>
             <div id="ar-error-overlay" class="hidden absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center">
@@ -282,7 +274,7 @@
         <div id="map-wrapper" class="relative flex-1 w-full h-full">
             <div id="map" class="w-full h-full z-0"></div>
 
-            <!-- PLÁVAJÚCI MANÉVER BANNER -->
+            <!-- PLÁVAJÚCI MANÉVER BANNER + DOPRAVNÁ ZNAČKA -->
             <div id="turn-banner" class="hidden absolute top-3 left-3 right-3 z-10 bg-erik-panel/95 backdrop-blur-md border-2 border-erik-cyan rounded-2xl p-3 shadow-2xl flex items-center gap-3">
                 <div id="traffic-sign-box" class="w-12 h-12 rounded-full bg-red-600 border-2 border-white flex flex-col items-center justify-center text-white font-mono font-extrabold shadow-lg shrink-0 text-center">
                     <span id="sign-val" class="text-xs leading-none">50</span>
@@ -309,7 +301,7 @@
                 </button>
             </div>
 
-            <!-- SPODNÝ TELEMETRICKÝ COCKPIT (FIX 100dvh - bez orezania) -->
+            <!-- SPODNÝ TELEMETRICKÝ COCKPIT -->
             <div class="absolute bottom-2 left-3 right-3 z-10 bg-erik-panel/95 backdrop-blur-md border border-erik-border rounded-2xl p-2.5 shadow-2xl flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2 bg-slate-950 border border-erik-cyan/40 rounded-xl px-2.5 py-1.5 shrink-0">
                     <div class="text-center">
@@ -383,7 +375,7 @@
         map.on('dragstart', () => { state.followUser = false; updateFollowButtonUI(); });
 
         let toastTimeout = null;
-        function showToast(msg, duration = 3000) {
+        function showToast(msg, duration = 3200) {
             const box = document.getElementById('toast-box');
             box.textContent = msg;
             box.classList.remove('hidden');
@@ -420,19 +412,34 @@
                     : 'flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition';
             });
 
-            // ZÁKONNÉ PRAVIDLO: Chodec a cyklista nesmú ísť na diaľnicu (hard blok)
+            // Aktualizácia dopravnej značky a AR štítku
+            const signVal = document.getElementById('sign-val');
+            const signLbl = document.getElementById('sign-lbl');
+            const arBadge = document.getElementById('ar-mode-badge');
             const hwWrapper = document.getElementById('highway-option-wrapper');
-            if (mode === 'foot' || mode === 'bicycle') {
+
+            if (mode === 'foot') {
                 state.allowHighways = false;
                 hwWrapper.style.opacity = '0.35';
                 hwWrapper.style.pointerEvents = 'none';
-                updateHighwayToggleUI();
+                signVal.textContent = '🚶';
+                signLbl.textContent = 'CHODNÍK';
+                arBadge.textContent = 'REŽIM: PEŠO (BEZ DIAĽNIC)';
+            } else if (mode === 'bicycle') {
+                state.allowHighways = false;
+                hwWrapper.style.opacity = '0.35';
+                hwWrapper.style.pointerEvents = 'none';
+                signVal.textContent = '🚲';
+                signLbl.textContent = 'CYKLO';
+                arBadge.textContent = 'REŽIM: BICYKEL (BEZ DIAĽNIC)';
             } else {
-                state.allowHighways = true;
                 hwWrapper.style.opacity = '1';
                 hwWrapper.style.pointerEvents = 'auto';
-                updateHighwayToggleUI();
+                signVal.textContent = state.allowHighways ? '130' : '90';
+                signLbl.textContent = 'km/h';
+                arBadge.textContent = state.allowHighways ? 'REŽIM: AUTO (DIAĽNICE)' : 'REŽIM: AUTO (OKRESKY)';
             }
+            updateHighwayToggleUI();
 
             if (document.getElementById('end-input').value.trim()) calculateRoutes();
         }
@@ -441,12 +448,14 @@
             if (state.travelMode === 'foot' || state.travelMode === 'bicycle') return;
             state.allowHighways = !state.allowHighways;
             updateHighwayToggleUI();
+            document.getElementById('sign-val').textContent = state.allowHighways ? '130' : '90';
+            document.getElementById('ar-mode-badge').textContent = state.allowHighways ? 'REŽIM: AUTO (DIAĽNICE)' : 'REŽIM: AUTO (OKRESKY)';
             if (document.getElementById('end-input').value.trim()) calculateRoutes();
         }
 
         function updateHighwayToggleUI() {
             const btn = document.getElementById('highway-toggle-btn');
-            if (state.allowHighways) {
+            if (state.allowHighways && state.travelMode === 'driving') {
                 btn.textContent = 'Zapnuté (S diaľnicami)';
                 btn.className = 'px-3 py-1 rounded-lg text-xs font-mono font-bold bg-cyan-950 text-erik-cyan border border-erik-cyan/50';
             } else {
@@ -504,7 +513,8 @@
             document.getElementById('ar-heading').textContent = `${state.heading}°`;
 
             const speedEl = document.getElementById('speed-value');
-            if (state.travelMode === 'driving' && state.speedKmh > 90) {
+            const limit = state.travelMode === 'driving' ? (state.allowHighways ? 130 : 90) : (state.travelMode === 'bicycle' ? 25 : 8);
+            if (state.speedKmh > limit) {
                 speedEl.className = 'text-2xl font-mono font-extrabold text-rose-500 leading-none animate-pulse';
             } else {
                 speedEl.className = 'text-2xl font-mono font-extrabold text-erik-cyan leading-none';
@@ -522,7 +532,7 @@
             state.followUser = true;
             updateFollowButtonUI();
             map.setView(state.userPos, 16, { animate: true });
-            showToast('Sledowanie zapnuté');
+            showToast('Sledovanie zapnuté');
         }
 
         function updateFollowButtonUI() {
@@ -545,7 +555,47 @@
             return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: data[0].display_name.split(',')[0] };
         }
 
-        // Výpočet 1 až 5 možností trás s ohľadom na zákony a diaľnice
+        // Pomocná funkcia na zistenie, či trasa obsahuje diaľnicu (D1, D2, R1...)
+        function routeUsesHighway(route) {
+            const summary = (route.legs?.[0]?.summary || '').toLowerCase();
+            if (/\b(d[1-4]|r[1-9]|motorway|diaľnica)\b/.test(summary)) return true;
+            const steps = route.legs?.[0]?.steps || [];
+            return steps.some(s => {
+                const ref = (s.ref || '').toLowerCase();
+                const name = (s.name || '').toLowerCase();
+                return /\b(d[1-4]|r[1-9])\b/.test(ref) || /\b(d[1-4]|r[1-9]|diaľnica)\b/.test(name);
+            });
+        }
+
+        // Stiahnutie trás z príslušného OSRM servera (auto / pešo / bicykel)
+        async function fetchOsrmRoutes(coordsList, mode) {
+            const coordStr = coordsList.map(c => `${c[1]},${c[0]}`).join(';');
+            let baseUrl = `https://router.project-osrm.org/route/v1/driving/${coordStr}`;
+            if (mode === 'foot') {
+                baseUrl = `https://routing.openstreetmap.de/routed-foot/route/v1/foot/${coordStr}`;
+            } else if (mode === 'bicycle') {
+                baseUrl = `https://routing.openstreetmap.de/routed-bike/route/v1/bike/${coordStr}`;
+            }
+
+            const url = `${baseUrl}?overview=full&geometries=geojson&steps=true&alternatives=3`;
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.code === 'Ok' && Array.isArray(data.routes)) {
+                    return data.routes;
+                }
+            } catch (e) {
+                console.warn('Primárny server zlyhal, skúšam záložný:', e);
+            }
+
+            // Záložný fallback ak by routed-foot/bike bol dočasne nedostupný
+            const fallbackUrl = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true&alternatives=3`;
+            const fbRes = await fetch(fallbackUrl);
+            const fbData = await fbRes.json();
+            return fbData.code === 'Ok' ? fbData.routes : [];
+        }
+
+        // Výpočet 1 až 5 reálne odlišných možností trás podľa dopravného prostriedku a zákonov
         async function calculateRoutes() {
             const startText = document.getElementById('start-input').value.trim();
             const endText = document.getElementById('end-input').value.trim();
@@ -553,7 +603,7 @@
 
             stopRouteSimulation();
             const goBtn = document.getElementById('go-btn');
-            goBtn.textContent = 'Počítam 1-5 trás...';
+            goBtn.textContent = 'Počítam...';
             goBtn.disabled = true;
 
             try {
@@ -567,49 +617,76 @@
                 if (!eg) { showToast('Cieľ sa nenašiel.'); return; }
                 const endCoords = [eg.lat, eg.lon];
 
-                let profile = 'car';
-                if (state.travelMode === 'foot') profile = 'foot';
-                else if (state.travelMode === 'bicycle') profile = 'bike';
+                // 1. Priame trasy z dedikovaného enginu (auto / pešo / bicykel)
+                let collectedRoutes = await fetchOsrmRoutes([startCoords, endCoords], state.travelMode);
 
-                // OSRM dopyt pre viacero alternatívnych trás
-                let osrmUrl = `https://router.project-osrm.org/route/v1/${profile}/${startCoords[1]},${startCoords[0]};${endCoords[1]},${endCoords[0]}?overview=full&geometries=geojson&steps=true&alternatives=true`;
-                
-                const res = await fetch(osrmUrl);
-                const data = await res.json();
+                // 2. Generovanie alternatívnych koridorov (severná/južná odchýlka) pre viac možností (1-5) a obchádzanie diaľnic
+                const midLat = (startCoords[0] + endCoords[0]) / 2;
+                const midLon = (startCoords[1] + endCoords[1]) / 2;
+                const dLat = endCoords[0] - startCoords[0];
+                const dLon = endCoords[1] - startCoords[1];
+                const distDeg = Math.hypot(dLat, dLon);
 
-                if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
-                    showToast('Trasa sa nenašla.');
-                    return;
+                if (distDeg > 0.03) {
+                    const perpLat = -dLon * 0.22;
+                    const perpLon = dLat * 0.22;
+
+                    const viaNorth = [midLat + perpLat, midLon + perpLon];
+                    const viaSouth = [midLat - perpLat, midLon - perpLon];
+
+                    const [northRoutes, southRoutes] = await Promise.all([
+                        fetchOsrmRoutes([startCoords, viaNorth, endCoords], state.travelMode),
+                        fetchOsrmRoutes([startCoords, viaSouth, endCoords], state.travelMode)
+                    ]);
+
+                    collectedRoutes = [...collectedRoutes, ...northRoutes, ...southRoutes];
                 }
 
-                let rawRoutes = data.routes;
-
-                // ZÁKONNÉ PRAVIDLO: Ak je zvolené auto a vypnuté diaľnice, alebo ak ide o chodca/cyklistu, filtrujeme diaľnice
-                if (!state.allowHighways || state.travelMode === 'foot' || state.travelMode === 'bicycle') {
-                    rawRoutes = rawRoutes.filter(r => {
-                        const summary = (r.legs[0]?.summary || '').toLowerCase();
-                        // Kontrola kľúčových slov pre diaľnice a rýchlostné cesty
-                        const isHighway = summary.includes('d1') || summary.includes('d2') || summary.includes('r1') || summary.includes('motorway') || summary.includes('expressway');
-                        return !isHighway;
-                    });
-                    // Ak filter vyradil všetko, zoberieme aspoň bezpečné alternatívy alebo upozorníme
-                    if (rawRoutes.length === 0) {
-                        rawRoutes = data.routes;
-                        showToast('Upozornenie: Úplne bez diaľnic sa nedá prejsť, bola zvolená najvhodnejšia cesta.');
+                // 3. ZÁKONNÝ FILTER: Pre chodca, bicykel alebo auto "Bez diaľnic" vyradíme trasy po D1/R1
+                const mustAvoidHighways = !state.allowHighways || state.travelMode === 'foot' || state.travelMode === 'bicycle';
+                if (mustAvoidHighways) {
+                    const nonHighwayRoutes = collectedRoutes.filter(r => !routeUsesHighway(r));
+                    if (nonHighwayRoutes.length > 0) {
+                        collectedRoutes = nonHighwayRoutes;
                     }
                 }
 
-                // Obmedzenie na max 5 možností trás
-                state.routes = rawRoutes.slice(0, 5);
+                // 4. Deduplikácia trás podľa vzdialenosti a prepočítanie reálneho času podľa rýchlosti profilu
+                const uniqueRoutes = [];
+                collectedRoutes.forEach(r => {
+                    const isDuplicate = uniqueRoutes.some(u => Math.abs(u.distance - r.distance) < 400);
+                    if (!isDuplicate) {
+                        // Korekcia trvania podľa profilu (chodec ~5 km/h, bicykel ~18 km/h)
+                        if (state.travelMode === 'foot') {
+                            r.adjustedDuration = Math.round(r.distance / (5 / 3.6));
+                        } else if (state.travelMode === 'bicycle') {
+                            r.adjustedDuration = Math.round(r.distance / (18 / 3.6));
+                        } else {
+                            r.adjustedDuration = r.duration;
+                        }
+                        uniqueRoutes.push(r);
+                    }
+                });
+
+                // Zoradenie od najkratšej/najrýchlejšej a výber max 5 možností
+                uniqueRoutes.sort((a, b) => a.adjustedDuration - b.adjustedDuration);
+                state.routes = uniqueRoutes.slice(0, 5);
                 state.activeRouteIndex = 0;
+
+                if (state.routes.length === 0) {
+                    showToast('Nepodarilo sa nájsť vyhovujúcu trasu.');
+                    return;
+                }
 
                 renderMarkers(startCoords, endCoords, eg.name);
                 renderRouteAlternatives();
                 selectRoute(0);
-                speakSlovak(`Našiel som ${state.routes.length} možné trasy do cieľa ${eg.name}.`);
+
+                const modeLabel = state.travelMode === 'foot' ? 'pre chodca' : (state.travelMode === 'bicycle' ? 'pre bicykel' : 'pre auto');
+                speakSlovak(`Našiel som ${state.routes.length} trasy ${modeLabel} do cieľa ${eg.name}.`);
             } catch (err) {
                 console.error(err);
-                showToast('Chyba servera trasy.');
+                showToast('Chyba navigačného servera.');
             } finally {
                 goBtn.textContent = 'Hľadať 🚀';
                 goBtn.disabled = false;
@@ -636,23 +713,29 @@
             const badge = document.getElementById('routes-found-badge');
 
             container.classList.remove('hidden');
-            badge.textContent = `${state.routes.length} ${state.routes.length === 1 ? 'možnosť' : 'možnosti'}`;
+            badge.textContent = `${state.routes.length} z 5 možností`;
             list.innerHTML = '';
 
             state.routes.forEach((route, idx) => {
                 const distKm = (route.distance / 1000).toFixed(1);
-                const mins = Math.max(1, Math.round(route.duration / 60));
+                const mins = Math.max(1, Math.round((route.adjustedDuration || route.duration) / 60));
+                const hours = Math.floor(mins / 60);
+                const remMins = mins % 60;
+                const timeStr = hours > 0 ? `${hours} h ${remMins} min` : `${mins} min`;
+
                 const isSelected = idx === state.activeRouteIndex;
+                const hasHw = routeUsesHighway(route);
+                const tagBadge = hasHw ? '🛣️ Diaľnica' : '🌿 Bez diaľnic';
 
                 const card = document.createElement('button');
                 card.onclick = () => selectRoute(idx);
                 card.className = `shrink-0 text-left px-3.5 py-2 rounded-xl border transition-all ${isSelected ? 'bg-cyan-950/95 border-erik-cyan shadow-lg' : 'bg-slate-900/90 border-erik-border'}`;
                 card.innerHTML = `
                     <div class="flex items-center justify-between gap-3">
-                        <span class="text-[11px] font-bold ${isSelected ? 'text-erik-cyan' : 'text-slate-300'}">Možnosť ${idx + 1}</span>
-                        <span class="text-xs font-mono font-extrabold text-erik-green">${mins} min</span>
+                        <span class="text-[11px] font-bold ${isSelected ? 'text-erik-cyan' : 'text-slate-300'}">Trasa ${idx + 1}</span>
+                        <span class="text-xs font-mono font-extrabold text-erik-green">${timeStr}</span>
                     </div>
-                    <div class="text-[10px] font-mono text-slate-400 mt-0.5">${distKm} km • ${route.legs[0]?.summary || 'Hlavný ťah'}</div>
+                    <div class="text-[10px] font-mono text-slate-400 mt-0.5">${distKm} km • ${tagBadge}</div>
                 `;
                 list.appendChild(card);
             });
@@ -678,11 +761,12 @@
             const main = L.polyline(coords, { color: '#00f0ff', weight: 6, opacity: 0.95 }).addTo(map);
             state.routePolylines.push(main);
 
-            state.steps = activeRoute.legs[0].steps || [];
+            // Spojenie krokov zo všetkých úsekov (legs)
+            state.steps = activeRoute.legs.flatMap(leg => leg.steps || []);
             state.currentStepIndex = 0;
             state.lastSpokenStep = -1;
 
-            updateTripStats(activeRoute.distance, activeRoute.duration);
+            updateTripStats(activeRoute.distance, activeRoute.adjustedDuration || activeRoute.duration);
             updateCurrentManeuverUI();
             fitWholeRoute();
         }
@@ -697,7 +781,10 @@
 
         function updateTripStats(dist, dur) {
             document.getElementById('remaining-dist').textContent = `${(dist / 1000).toFixed(1)} km`;
-            document.getElementById('remaining-time').textContent = `${Math.max(1, Math.round(dur / 60))} min`;
+            const mins = Math.max(1, Math.round(dur / 60));
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            document.getElementById('remaining-time').textContent = h > 0 ? `${h}h ${m}m` : `${mins} min`;
         }
 
         function updateCurrentManeuverUI() {
@@ -710,15 +797,17 @@
             const dist = Math.round(map.distance(state.userPos, stepLoc));
 
             document.getElementById('maneuver-distance').textContent = dist > 1000 ? `${(dist / 1000).toFixed(1)} km` : `${dist} m`;
-            document.getElementById('maneuver-text').textContent = step.name ? `Odbočte na ${step.name}` : 'Pokračujte po trase';
+            document.getElementById('maneuver-text').textContent = step.name ? `Pokračujte na ${step.name}` : 'Pokračujte po trase';
             document.getElementById('ar-arrow-dist').textContent = `${dist} m`;
+            document.getElementById('ar-street-banner').textContent = step.name || 'Sledujte trasu';
 
             const warningTag = document.getElementById('legal-warning-tag');
-            if ((state.travelMode === 'foot' || state.travelMode === 'bicycle') && (step.name || '').toLowerCase().includes('d1')) {
+            const isHwStep = /\b(d[1-4]|r[1-9]|diaľnica)\b/i.test((step.name || '') + ' ' + (step.ref || ''));
+            if ((state.travelMode === 'foot' || state.travelMode === 'bicycle') && isHwStep) {
                 warningTag.textContent = 'POZOR: Zákaz vjazdu!';
                 warningTag.className = 'text-[10px] font-mono bg-rose-950 text-rose-400 px-1.5 py-0.5 rounded border border-rose-800';
             } else {
-                warningTag.textContent = 'Legal: OK';
+                warningTag.textContent = state.travelMode === 'foot' ? 'Chodník OK' : (state.travelMode === 'bicycle' ? 'Cyklotrasa OK' : 'Legal: OK');
                 warningTag.className = 'text-[10px] font-mono bg-emerald-950 text-erik-green px-1.5 py-0.5 rounded border border-emerald-800';
             }
 
@@ -785,7 +874,7 @@
             state.simTimer = setInterval(() => {
                 if (idx >= coords.length - 1) { stopRouteSimulation(); showToast('Cieľ dosiahnutý!'); return; }
                 state.userPos = coords[idx];
-                state.speedKmh = state.travelMode === 'foot' ? 5 : (state.travelMode === 'bicycle' ? 20 : 65);
+                state.speedKmh = state.travelMode === 'foot' ? 5 : (state.travelMode === 'bicycle' ? 18 : 65);
                 updateTelemetryUI();
                 updateUserMarkerOnMap();
                 checkNavigationProgress();
