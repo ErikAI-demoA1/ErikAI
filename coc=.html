@@ -6,6 +6,8 @@
     <title>Clash of Clans // Ultimate Master Matrix (TH19 + Export)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html2canvas na sťahovanie ako obrázok -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -30,10 +32,14 @@
     <style>
         body { background-color: #0b0f19; color: #f8fafc; font-family: 'Inter', sans-serif; }
         .coc-card { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(251, 191, 36, 0.3); }
+        
+        /* ŠPECIÁLNE ÚPRAVY PRE TLAČ A PDF, ABY SA TO NEODREZÁVALO */
         @media print {
-            body { background: white !important; color: black !important; }
+            body { background: white !important; color: black !important; zoom: 0.8; }
             .no-print { display: none !important; }
-            .coc-card { background: white !important; border: 1px solid #ccc !important; }
+            .coc-card { background: white !important; border: 1px solid #ccc !important; box-shadow: none !important; margin-bottom: 20px; }
+            input { border: none !important; background: transparent !important; color: black !important; font-weight: bold; }
+            div[id$="-items-container"] { max-height: none !important; overflow: visible !important; }
         }
     </style>
 </head>
@@ -44,67 +50,73 @@
         <h1 class="text-2xl sm:text-4xl font-black tracking-wider text-coc-gold uppercase drop-shadow-lg">
             ⚔️ Clash of Clans: Ultimate Master Matrix (TH19)
         </h1>
-        <p class="text-xs sm:text-sm text-slate-400 mt-1 font-mono">Kompletný porovnávač s automatickým ukladaním a možnosťou exportu</p>
+        <p class="text-xs sm:text-sm text-slate-400 mt-1 font-mono">Kompletný porovnávač s automatickým ukladaním, PDF a exportom ako obrázok</p>
         
         <!-- EXPORT TLAČIDLÁ -->
         <div class="flex flex-wrap justify-center gap-2 mt-4 no-print">
+            <button onclick="exportAsImage()" class="px-3 py-1.5 bg-purple-500/20 border border-purple-500/50 text-purple-300 text-xs font-bold rounded-xl hover:bg-purple-500/30 transition">📷 Stiahnuť ako obrázok (PNG)</button>
             <button onclick="exportAsJSON()" class="px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 text-xs font-bold rounded-xl hover:bg-cyan-500/30 transition">📥 Stiahnuť JSON dáta</button>
             <button onclick="exportAsHTML()" class="px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold rounded-xl hover:bg-amber-500/30 transition">🌐 Stiahnuť ako HTML</button>
             <button onclick="window.print()" class="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 text-xs font-bold rounded-xl hover:bg-emerald-500/30 transition">🖨️ Tlačiť / Uložiť ako PDF</button>
         </div>
     </header>
 
-    <!-- DVA HRÁČI -->
-    <div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- HLAVNÝ OBSAH NA EXPORT (ZABALENÝ V KONTAJNERI) -->
+    <div id="export-container" class="w-full max-w-6xl flex flex-col items-center gap-6">
 
-        <!-- HRÁČ 1 -->
-        <div class="coc-card rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col">
-            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
-                <input type="text" id="p1-name" value="Hráč 1 (Kamoš)" oninput="saveData()" class="bg-slate-900 border border-slate-700 text-coc-gold font-bold px-3 py-1.5 rounded-xl text-sm w-3/5 focus:outline-none focus:border-coc-gold">
-                <div class="text-right">
-                    <span class="text-xs font-mono text-slate-400">Skóre: </span>
-                    <span id="p1-score" class="text-lg font-mono font-black text-coc-gold">0 pts</span>
+        <!-- DVA HRÁČI -->
+        <div class="w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- HRÁČ 1 -->
+            <div class="coc-card rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
+                    <input type="text" id="p1-name" value="Hráč 1 (Kamoš)" oninput="saveData()" class="bg-slate-900 border border-slate-700 text-coc-gold font-bold px-3 py-1.5 rounded-xl text-sm w-3/5 focus:outline-none focus:border-coc-gold">
+                    <div class="text-right">
+                        <span class="text-xs font-mono text-slate-400">Skóre: </span>
+                        <span id="p1-score" class="text-lg font-mono font-black text-coc-gold">0 pts</span>
+                    </div>
                 </div>
+
+                <div class="flex justify-between items-center mb-4 no-print">
+                    <button onclick="setMaxForPlayer(1)" class="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold rounded-xl active:scale-95 transition">⚡ Všetko Max</button>
+                    <button onclick="setZeroForPlayer(1)" class="px-3 py-1 bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-bold rounded-xl active:scale-95 transition">❌ Všetko 0</button>
+                </div>
+
+                <div id="p1-items-container" class="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1"></div>
             </div>
 
-            <div class="flex justify-between items-center mb-4 no-print">
-                <button onclick="setMaxForPlayer(1)" class="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold rounded-xl active:scale-95 transition">⚡ Všetko Max</button>
-                <button onclick="setZeroForPlayer(1)" class="px-3 py-1 bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-bold rounded-xl active:scale-95 transition">❌ Všetko 0</button>
+            <!-- HRÁČ 2 -->
+            <div class="coc-card rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
+                    <input type="text" id="p2-name" value="Erik PRO (TH19)" oninput="saveData()" class="bg-slate-900 border border-slate-700 text-coc-gold font-bold px-3 py-1.5 rounded-xl text-sm w-3/5 focus:outline-none focus:border-coc-gold">
+                    <div class="text-right">
+                        <span class="text-xs font-mono text-slate-400">Skóre: </span>
+                        <span id="p2-score" class="text-lg font-mono font-black text-coc-gold">0 pts</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center mb-4 no-print">
+                    <button onclick="setMaxForPlayer(2)" class="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold rounded-xl active:scale-95 transition">⚡ Všetko Max</button>
+                    <button onclick="setZeroForPlayer(2)" class="px-3 py-1 bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-bold rounded-xl active:scale-95 transition">❌ Všetko 0</button>
+                </div>
+
+                <div id="p2-items-container" class="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1"></div>
             </div>
 
-            <div id="p1-items-container" class="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1"></div>
         </div>
 
-        <!-- HRÁČ 2 -->
-        <div class="coc-card rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col">
-            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
-                <input type="text" id="p2-name" value="Erik PRO (TH19)" oninput="saveData()" class="bg-slate-900 border border-slate-700 text-coc-gold font-bold px-3 py-1.5 rounded-xl text-sm w-3/5 focus:outline-none focus:border-coc-gold">
-                <div class="text-right">
-                    <span class="text-xs font-mono text-slate-400">Skóre: </span>
-                    <span id="p2-score" class="text-lg font-mono font-black text-coc-gold">0 pts</span>
-                </div>
-            </div>
-
-            <div class="flex justify-between items-center mb-4 no-print">
-                <button onclick="setMaxForPlayer(2)" class="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold rounded-xl active:scale-95 transition">⚡ Všetko Max</button>
-                <button onclick="setZeroForPlayer(2)" class="px-3 py-1 bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-bold rounded-xl active:scale-95 transition">❌ Všetko 0</button>
-            </div>
-
-            <div id="p2-items-container" class="space-y-3 flex-1 overflow-y-auto max-h-[600px] pr-1"></div>
+        <!-- VÝSLEDKOVÝ PANEL -->
+        <div class="w-full coc-card rounded-2xl p-6 text-center shadow-2xl border-2 border-coc-gold/40">
+            <h2 class="text-lg font-black text-coc-gold uppercase tracking-wider mb-2">🏆 Clash Verdict (Celkové vyhodnotenie)</h2>
+            <p id="verdict-text" class="text-sm sm:text-base font-semibold text-slate-200">Zadaj levely položiek a porovnanie sa vyhodnotí automaticky.</p>
         </div>
 
-    </div>
-
-    <!-- VÝSLEDKOVÝ PANEL -->
-    <div class="w-full max-w-6xl coc-card rounded-2xl p-6 text-center shadow-2xl border-2 border-coc-gold/40">
-        <h2 class="text-lg font-black text-coc-gold uppercase tracking-wider mb-2">🏆 Clash Verdict (Celkové vyhodnotenie)</h2>
-        <p id="verdict-text" class="text-sm sm:text-base font-semibold text-slate-200">Zadaj levely položiek a porovnanie sa vyhodnotí automaticky.</p>
     </div>
 
     <!-- JAVASCRIPT MASTER ZOZNAM -->
     <script>
         const masterItems = [
-            // 🏛️ TOWN HALL (Špeciálne na začiatku)
+            // 🏛️ TOWN HALL
             { id: 'town_hall', name: 'Town Hall', category: '🏛️ Hlavná budova', maxLevel: 19, weight: 150 },
 
             // 👑 HRDINOVIA
@@ -380,7 +392,28 @@
             }
         }
 
-        // Export funkcií
+        // Export ako obrázok (PNG) pomocou html2canvas
+        function exportAsImage() {
+            const container = document.getElementById('export-container');
+            // Dočasne odstránime obmedzenie výšky pre skrollovanie, aby sa odfotil celý obsah
+            const scrollContainers = container.querySelectorAll('.overflow-y-auto');
+            scrollContainers.forEach(el => el.style.maxHeight = 'none');
+
+            html2canvas(container, {
+                backgroundColor: '#0b0f19',
+                scale: 2, // Vyššia kvalita obrázka
+                useCORS: true
+            }).then(canvas => {
+                // Vrátenie pôvodného max-height späť
+                scrollContainers.forEach(el => el.style.maxHeight = '600px');
+
+                const link = document.createElement('a');
+                link.download = 'coc_matrix_comparison.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
         function exportAsJSON() {
             const data = {
                 player1: JSON.parse(localStorage.getItem('coc_player_1') || '{}'),
