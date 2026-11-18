@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clash of Clans // Ultimate Master Matrix (TH19 Real Max)</title>
+    <title>Clash of Clans // Ultimate Master Matrix (TH19 + Export)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -30,6 +30,11 @@
     <style>
         body { background-color: #0b0f19; color: #f8fafc; font-family: 'Inter', sans-serif; }
         .coc-card { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(251, 191, 36, 0.3); }
+        @media print {
+            body { background: white !important; color: black !important; }
+            .no-print { display: none !important; }
+            .coc-card { background: white !important; border: 1px solid #ccc !important; }
+        }
     </style>
 </head>
 <body class="min-h-screen p-3 sm:p-6 flex flex-col items-center">
@@ -39,7 +44,14 @@
         <h1 class="text-2xl sm:text-4xl font-black tracking-wider text-coc-gold uppercase drop-shadow-lg">
             ⚔️ Clash of Clans: Ultimate Master Matrix (TH19)
         </h1>
-        <p class="text-xs sm:text-sm text-slate-400 mt-1 font-mono">Oficiálna databáza s reálnymi maximálnymi levelmi pre hrdinov, petov, budovy a jednotky</p>
+        <p class="text-xs sm:text-sm text-slate-400 mt-1 font-mono">Kompletný porovnávač s automatickým ukladaním a možnosťou exportu</p>
+        
+        <!-- EXPORT TLAČIDLÁ -->
+        <div class="flex flex-wrap justify-center gap-2 mt-4 no-print">
+            <button onclick="exportAsJSON()" class="px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 text-xs font-bold rounded-xl hover:bg-cyan-500/30 transition">📥 Stiahnuť JSON dáta</button>
+            <button onclick="exportAsHTML()" class="px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold rounded-xl hover:bg-amber-500/30 transition">🌐 Stiahnuť ako HTML</button>
+            <button onclick="window.print()" class="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 text-xs font-bold rounded-xl hover:bg-emerald-500/30 transition">🖨️ Tlačiť / Uložiť ako PDF</button>
+        </div>
     </header>
 
     <!-- DVA HRÁČI -->
@@ -48,14 +60,14 @@
         <!-- HRÁČ 1 -->
         <div class="coc-card rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col">
             <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
-                <input type="text" id="p1-name" value="Hráč 1 (Kamoš)" class="bg-slate-900 border border-slate-700 text-coc-gold font-bold px-3 py-1.5 rounded-xl text-sm w-3/5 focus:outline-none focus:border-coc-gold">
+                <input type="text" id="p1-name" value="Hráč 1 (Kamoš)" oninput="saveData()" class="bg-slate-900 border border-slate-700 text-coc-gold font-bold px-3 py-1.5 rounded-xl text-sm w-3/5 focus:outline-none focus:border-coc-gold">
                 <div class="text-right">
                     <span class="text-xs font-mono text-slate-400">Skóre: </span>
                     <span id="p1-score" class="text-lg font-mono font-black text-coc-gold">0 pts</span>
                 </div>
             </div>
 
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex justify-between items-center mb-4 no-print">
                 <button onclick="setMaxForPlayer(1)" class="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold rounded-xl active:scale-95 transition">⚡ Všetko Max</button>
                 <button onclick="setZeroForPlayer(1)" class="px-3 py-1 bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-bold rounded-xl active:scale-95 transition">❌ Všetko 0</button>
             </div>
@@ -66,14 +78,14 @@
         <!-- HRÁČ 2 -->
         <div class="coc-card rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col">
             <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
-                <input type="text" id="p2-name" value="Erik PRO (TH19)" class="bg-slate-900 border border-slate-700 text-coc-gold font-bold px-3 py-1.5 rounded-xl text-sm w-3/5 focus:outline-none focus:border-coc-gold">
+                <input type="text" id="p2-name" value="Erik PRO (TH19)" oninput="saveData()" class="bg-slate-900 border border-slate-700 text-coc-gold font-bold px-3 py-1.5 rounded-xl text-sm w-3/5 focus:outline-none focus:border-coc-gold">
                 <div class="text-right">
                     <span class="text-xs font-mono text-slate-400">Skóre: </span>
                     <span id="p2-score" class="text-lg font-mono font-black text-coc-gold">0 pts</span>
                 </div>
             </div>
 
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex justify-between items-center mb-4 no-print">
                 <button onclick="setMaxForPlayer(2)" class="px-3 py-1 bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold rounded-xl active:scale-95 transition">⚡ Všetko Max</button>
                 <button onclick="setZeroForPlayer(2)" class="px-3 py-1 bg-rose-500/20 border border-rose-500/50 text-rose-300 text-xs font-bold rounded-xl active:scale-95 transition">❌ Všetko 0</button>
             </div>
@@ -89,9 +101,12 @@
         <p id="verdict-text" class="text-sm sm:text-base font-semibold text-slate-200">Zadaj levely položiek a porovnanie sa vyhodnotí automaticky.</p>
     </div>
 
-    <!-- JAVASCRIPT MASTER ZOZNAM S TVÝMI MAX LEVELMI -->
+    <!-- JAVASCRIPT MASTER ZOZNAM -->
     <script>
         const masterItems = [
+            // 🏛️ TOWN HALL (Špeciálne na začiatku)
+            { id: 'town_hall', name: 'Town Hall', category: '🏛️ Hlavná budova', maxLevel: 19, weight: 150 },
+
             // 👑 HRDINOVIA
             { id: 'hero_bk', name: 'Barbarian King', category: '👑 Hrdinovia', maxLevel: 115, weight: 60 },
             { id: 'hero_aq', name: 'Archer Queen', category: '👑 Hrdinovia', maxLevel: 115, weight: 60 },
@@ -167,7 +182,6 @@
             { id: 'sp_revive', name: 'Revive Spell', category: '🔮 Kúzla', maxLevel: 5, weight: 30 },
             { id: 'sp_totem', name: 'Totem Spell', category: '🔮 Kúzla', maxLevel: 5, weight: 30 },
             { id: 'sp_heroic', name: 'Heroic Spell', category: '🔮 Kúzla', maxLevel: 2, weight: 35 },
-            // Dark Spells
             { id: 'dsp_poison', name: 'Poison Spell', category: '🔮 Kúzla', maxLevel: 13, weight: 20 },
             { id: 'dsp_eq', name: 'Earthquake Spell', category: '🔮 Kúzla', maxLevel: 8, weight: 20 },
             { id: 'dsp_haste', name: 'Haste Spell', category: '🔮 Kúzla', maxLevel: 8, weight: 20 },
@@ -264,6 +278,11 @@
             container.innerHTML = '';
 
             const categories = [...new Set(masterItems.map(i => i.category))];
+            const savedData = JSON.parse(localStorage.getItem(`coc_player_${playerNum}`) || '{}');
+
+            if (savedData.name) {
+                document.getElementById(`p${playerNum}-name`).value = savedData.name;
+            }
 
             categories.forEach(cat => {
                 const catItems = masterItems.filter(item => item.category === cat);
@@ -272,6 +291,7 @@
                 let catHtml = `<div class="text-xs font-mono font-bold text-coc-gold uppercase tracking-wider mt-3 mb-1">${cat}</div>`;
                 
                 catItems.forEach(item => {
+                    const val = (savedData.items && savedData.items[item.id] !== undefined) ? savedData.items[item.id] : item.maxLevel;
                     catHtml += `
                         <div class="flex items-center justify-between bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl gap-2">
                             <div class="flex flex-col flex-1 min-w-0">
@@ -279,9 +299,9 @@
                                 <span class="text-[10px] font-mono text-slate-400">Max: ${item.maxLevel}</span>
                             </div>
                             <div class="flex items-center gap-2 shrink-0">
-                                <input type="number" min="0" max="${item.maxLevel}" value="${item.maxLevel}" 
+                                <input type="number" min="0" max="${item.maxLevel}" value="${val}" 
                                     data-item="${item.id}" data-max="${item.maxLevel}" data-player="${playerNum}"
-                                    oninput="calculateScores()"
+                                    oninput="saveData(); calculateScores();"
                                     class="p${playerNum}-input w-16 bg-slate-950 border border-slate-700 text-coc-gold text-xs font-mono font-bold text-center rounded-lg focus:outline-none focus:border-coc-gold py-1">
                             </div>
                         </div>
@@ -292,10 +312,23 @@
             calculateScores();
         }
 
+        // Ukladanie do LocalStorage
+        function saveData() {
+            for (let p = 1; p <= 2; p++) {
+                const name = document.getElementById(`p${p}-name`).value;
+                const items = {};
+                document.querySelectorAll(`.p${p}-input`).forEach(input => {
+                    items[input.getAttribute('data-item')] = parseInt(input.value) || 0;
+                });
+                localStorage.setItem(`coc_player_${p}`, JSON.stringify({ name, items }));
+            }
+        }
+
         function setMaxForPlayer(playerNum) {
             document.querySelectorAll(`.p${playerNum}-input`).forEach(input => {
                 input.value = input.getAttribute('data-max');
             });
+            saveData();
             calculateScores();
         }
 
@@ -303,13 +336,11 @@
             document.querySelectorAll(`.p${playerNum}-input`).forEach(input => {
                 input.value = 0;
             });
+            saveData();
             calculateScores();
         }
 
         function calculateScores() {
-            const p1Name = document.getElementById('p1-name').value || 'Hráč 1';
-            const p2Name = document.getElementById('p2-name').value || 'Hráč 2';
-            
             let p1Total = 0;
             let p2Total = 0;
 
@@ -334,7 +365,10 @@
             document.getElementById('p1-score').textContent = `${Math.round(p1Total)} pts`;
             document.getElementById('p2-score').textContent = `${Math.round(p2Total)} pts`;
 
+            const p1Name = document.getElementById('p1-name').value || 'Hráč 1';
+            const p2Name = document.getElementById('p2-name').value || 'Hráč 2';
             const verdictEl = document.getElementById('verdict-text');
+
             if (p2Total > p1Total) {
                 const diff = Math.round(p2Total - p1Total);
                 verdictEl.innerHTML = `🔥 <span class="text-coc-gold font-bold">${p2Name}</span> víťazí a je napred o <span class="text-emerald-400">${diff} bodov</span> v celkovom progrese!`;
@@ -344,6 +378,30 @@
             } else {
                 verdictEl.innerHTML = `⚖️ Obaja hráči majú presne <span class="text-cyan-400">rovnaké skóre</span>!`;
             }
+        }
+
+        // Export funkcií
+        function exportAsJSON() {
+            const data = {
+                player1: JSON.parse(localStorage.getItem('coc_player_1') || '{}'),
+                player2: JSON.parse(localStorage.getItem('coc_player_2') || '{}')
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'coc_matrix_data.json';
+            a.click();
+        }
+
+        function exportAsHTML() {
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'coc_th19_matrix.html';
+            a.click();
         }
 
         window.addEventListener('load', () => {
