@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="sk" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ErikAI OS – Clash of Clans Matica</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body {
+      background-color: #070a10;
+      color: #f1f5f9;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(circle at 12% 8%, rgba(245, 158, 11, 0.09), transparent 36%),
+        radial-gradient(circle at 88% 12%, rgba(34, 211, 238, 0.08), transparent 36%),
+        linear-gradient(to bottom, rgba(7, 10, 16, 0.96), rgba(7, 10, 16, 1));
+    }
+
+    .os-grid {
+      background-size: 28px 28px;
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.035) 1px, transparent 1px);
+    }
+
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0c121e;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #25334f;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b507d;
+    }
+  </style>
+</head>
+<body class="os-grid min-h-screen text-slate-100 antialiased selection:bg-amber-500/30 selection:text-amber-200">
+  <!-- Notifikačné hlásenia (bez alert/confirm) -->
+  <div id="toastStack" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full px-3 sm:px-0 pointer-events-none"></div>
+
+  <!-- Horný panel -->
+  <header class="sticky top-0 z-30 border-b border-slate-800/90 bg-slate-950/85 backdrop-blur-xl">
+    <div class="mx-auto max-w-[1440px] px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20 border border-amber-300/30">
+          <svg class="w-5 h-5 text-slate-950" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 4v6c0 5.25-3.4 9.74-8 11-4.6-1.26-8-5.75-8-11V7l8-4z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-base sm:text-xl font-extrabold tracking-tight text-white">
+              ErikAI <span class="text-amber-400">OS</span>
+            </h1>
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Auto-Save aktívny
+            </span>
+            <span id="expandedCountPill" class="hidden md:inline-flex items-center rounded-full bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-0.5 text-[11px] font-mono text-cyan-300"></span>
+          </div>
+          <p class="text-xs text-slate-400 truncate">
+            Neobmedzení hráči • Neobmedzené porovnávanie • Rozbalené kusy &amp; Hradby (350 ks)
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <div class="rounded-xl bg-slate-900/90 border border-slate-800 px-3 py-1.5 text-right">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">100% Max strop</div>
+          <div id="headerMaxPoints" class="text-xs sm:text-sm font-bold font-mono text-amber-400">0 b</div>
+        </div>
+        <div class="rounded-xl bg-slate-900/90 border border-slate-800 px-3 py-1.5 text-right">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">Počet hráčov</div>
+          <div id="headerPlayerTotal" class="text-xs sm:text-sm font-bold font-mono text-cyan-400">0</div>
+        </div>
+        <button id="btnResetDemo" type="button" class="rounded-xl bg-slate-900 hover:bg-rose-950/60 active:scale-[0.99] border border-slate-700/80 hover:border-rose-500/50 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-rose-200 transition cursor-pointer">
+          Obnoviť ukážku
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-[1440px] px-3 sm:px-6 py-5 space-y-6">
+    <!-- Horný ovládací pás: Save Kód (Kopírovať / Vložiť) + PDF Export s vlastným názvom -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- Save Kód: Kopírovať a Vložiť/Načítať (s automatickým uložením) -->
+      <div class="lg:col-span-7 rounded-2xl bg-slate-900/85 border border-slate-800/90 p-4 sm:p-5 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+              </svg>
+              Uloženie a načítanie cez Save Kód
+            </h2>
+            <p class="text-xs text-slate-400">
+              Všetko sa ukladá automaticky. Skopíruj si kód alebo vlož existujúci kód a klikni na Načítať – hneď sa automaticky uloží.
+            </p>
+          </div>
+          <span id="autoSaveStatus" class="text-[11px] font-mono text-slate-400 bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1">
+            Uložené
+          </span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <input
+            id="saveCodeInput"
+            type="text"
+            placeholder="Sem vlož uložený save kód na načítanie alebo klikni na Kopírovať kód..."
+            class="flex-1 min-w-0 rounded-xl bg-slate-950/90 border border-slate-700/80 focus:border-cyan-400 focus:outline-none px-3.5 py-2.5 text-xs font-mono text-cyan-200 placeholder-slate-500"
+          />
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="btnCopyCode" type="button" class="flex-1 sm:flex-initial rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 active:scale-[0.99] border border-cyan-400/40 px-3.5 py-2.5 text-xs font-bold text-cyan-300 transition cursor-pointer">
+              Kopírovať kód
+            </button>
+            <button id="btnPasteLoadCode" type="button" class="flex-1 sm:flex-initial rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-[0.99] px-4 py-2.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/20 transition cursor-pointer">
+              Vložiť a načítať
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export do PDF s vlastným názvom súboru -->
+      <div class="lg:col-span-5 rounded-2xl bg-slate-900/85 border border-slate-800/90 p-4 sm:p-5 shadow-xl flex flex-col justify-between">
+        <div class="mb-3">
+          <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+            <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export do PDF (vlastný názov)
+          </h2>
+          <p class="text-xs text-slate-400">
+            Zadaj vlastný názov súboru a ulož report do PDF.
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2">
+          <div class="flex-1 min-w-0 flex items-center rounded-xl bg-slate-950/90 border border-slate-700/80 focus-within:border-amber-400 pr-2.5">
+            <input
+              id="customPdfNameInput"
+              type="text"
+              value="ErikAI-OS-Report"
+              placeholder="Zadaj názov PDF súboru"
+              class="w-full min-w-0 bg-transparent px-3.5 py-2.5 text-xs font-semibold text-white placeholder-slate-500 focus:outline-none"
+            />
+            <span class="pointer-events-none select-none text-[11px] font-mono text-slate-400">.pdf</span>
+          </div>
+          <button id="btnSavePdf" type="button" class="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 active:scale-[0.99] px-4 py-2.5 text-xs font-extrabold text-slate-950 shadow-lg shadow-amber-500/20 transition cursor-pointer">
+            Uložiť PDF
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Hlavný pracovný priestor -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+      <!-- ĽAVÁ ČASŤ: Pridanie hráča + Nekonečné porovnávanie + Poradie (7 stĺpcov) -->
+      <div class="xl:col-span-7 space-y-6">
+        <!-- Pridanie hráča s vlastným menom -->
+        <section class="rounded-2xl bg-slate-900/85 border border-slate-800/90 p-4 sm:p-5 shadow-xl">
+          <h2 class="text-sm sm:text-base font-bold text-white mb-3">Pridať hráča (neobmedzený počet, vlastné meno)</h2>
+          <form id="addCustomPlayerForm" class="flex flex-col sm:flex-row gap-2.5">
+            <input
+              id="customPlayerNameInput"
+              type="text"
+              required
+              placeholder="Zadaj vlastné meno hráča..."
+              class="flex-1 min-w-0 rounded-xl bg-slate-950/90 border border-slate-700/80 focus:border-amber-400 focus:outline-none px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500"
+            />
+            <select
+              id="customPlayerPresetSelect"
+              class="rounded-xl bg-slate-950/90 border border-slate-700/80 focus:border-cyan-400 focus:outline-none px-3 py-2.5 text-xs sm:text-sm text-slate-200"
+            >
+              <option value="zero">Začať od 0 levelov</option>
+              <option value="half">Začať na 50% max levelov</option>
+              <option value="max">Začať na 100% max levelov</option>
+            </select>
+            <button
+              type="submit"
+              class="shrink-0 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] px-4 py-2.5 text-xs sm:text-sm font-extrabold text-slate-950 shadow-md shadow-emerald-500/20 transition cursor-pointer"
+            >
+              + Pridať hráča
+            </button>
+          </form>
+        </section>
+
+        <!-- Nekonečné porovnávanie ľubovoľného počtu hráčov -->
+        <section class="rounded-2xl bg-slate-900/85 border border-slate-800/90 p-4 sm:p-5 shadow-xl space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                <span class="h-2.5 w-2.5 rounded-full bg-cyan-400"></span>
+                Nekonečné porovnávanie hráčov
+              </h2>
+              <p class="text-xs text-slate-400">
+                Vyber ľubovoľný počet hráčov naraz (2, 3, 5, 10 alebo všetkých) a porovnaj ich po kategóriách.
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button type="button" data-quick-pick="2" class="quick-pick-btn rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 text-[11px] font-bold text-slate-200 transition cursor-pointer">Top 2</button>
+              <button type="button" data-quick-pick="3" class="quick-pick-btn rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 text-[11px] font-bold text-slate-200 transition cursor-pointer">Top 3</button>
+              <button type="button" data-quick-pick="5" class="quick-pick-btn rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 text-[11px] font-bold text-slate-200 transition cursor-pointer">Top 5</button>
+              <button type="button" data-quick-pick="10" class="quick-pick-btn rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 text-[11px] font-bold text-slate-200 transition cursor-pointer">Top 10</button>
+              <button type="button" data-pick-mode="all" class="rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 px-2.5 py-1.5 text-[11px] font-bold text-cyan-300 transition cursor-pointer">Všetci</button>
+              <button type="button" data-pick-mode="none" class="rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 text-[11px] font-bold text-slate-400 transition cursor-pointer">Zrušiť</button>
+            </div>
+          </div>
+
+          <div id="multiCompareTableWrap" class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/75"></div>
+        </section>
+
+        <!-- Zoznam hráčov a poradie podľa bodov -->
+        <section class="rounded-2xl bg-slate-900/85 border border-slate-800/90 p-4 sm:p-5 shadow-xl space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-sm sm:text-base font-bold text-white">Poradie hráčov</h2>
+              <p class="text-xs text-slate-400">
+                Kliknutím otvoríš úpravu levelov hráča. Zaškrtnutím ho pridáš do nekonečného porovnávania.
+              </p>
+            </div>
+            <input
+              id="filterPlayersInput"
+              type="text"
+              placeholder="Hľadať podľa mena..."
+              class="w-full sm:w-52 rounded-xl bg-slate-950/90 border border-slate-700/80 focus:border-amber-400 focus:outline-none px-3 py-2 text-xs text-white placeholder-slate-500"
+            />
+          </div>
+
+          <div id="playerRankingContainer" class="space-y-2 max-h-[620px] overflow-y-auto pr-1"></div>
+        </section>
+      </div>
+
+      <!-- PRAVÁ ČASŤ: Editor levelov aktívneho hráča (5 stĺpcov) -->
+      <div class="xl:col-span-5 rounded-2xl bg-slate-900/85 border border-slate-800/90 p-4 sm:p-5 shadow-xl space-y-4">
+        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 pb-4">
+          <div class="min-w-0 flex-1">
+            <div class="text-[11px] uppercase tracking-wider font-semibold text-amber-400">Upraviť hráča a jeho levely</div>
+            <input
+              id="editorPlayerNameInput"
+              type="text"
+              aria-label="Meno vybraného hráča"
+              class="mt-1 w-full max-w-xs rounded-lg bg-slate-950/80 border border-slate-700/80 focus:border-amber-400 focus:outline-none px-3 py-1.5 text-base sm:text-lg font-extrabold text-white"
+            />
+            <div id="editorPlayerStats" class="text-xs text-slate-400 mt-1.5 font-mono"></div>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="btnSetMaxForPlayer" type="button" class="rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 px-3 py-2 text-xs font-bold text-amber-300 transition cursor-pointer">
+              Max všetko
+            </button>
+            <button id="btnRemoveCurrentPlayer" type="button" class="rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 px-3 py-2 text-xs font-bold text-rose-300 transition cursor-pointer">
+              Zmazať
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2.5">
+          <input
+            id="filterItemsInput"
+            type="text"
+            placeholder="Filtrovať položku (napr. Cannon #1, Archer Queen, Wall Lv 20)..."
+            class="w-full rounded-xl bg-slate-950/90 border border-slate-700/80 focus:border-cyan-400 focus:outline-none px-3.5 py-2 text-xs text-white placeholder-slate-500"
+          />
+          <div id="categoryFilterBar" class="flex items-center gap-1.5 overflow-x-auto pb-1"></div>
+        </div>
+
+        <div id="editorItemsList" class="space-y-2 max-h-[560px] overflow-y-auto pr-1"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    /**
+     * Bodový systém podľa odomykacieho TH za každý jeden kus (interne, nikdy sa nezobrazuje v UI/PDF).
+     */
+    const TH_POINT_TABLE = {
+      1: 40,
+      2: 40,
+      3: 40,
+      4: 40,
+      5: 40,
+      6: 40,
+      7: 50,
+      8: 55,
+      9: 65,
+      10: 70,
+      11: 80,
+      12: 85,
+      13: 90,
+      14: 94,
+      15: 105,
+      16: 110,
+      17: 115,
+      18: 125,
+      19: 150,
+    };
+
+    /**
+     * Hradby (350 ks, skupiny Lv 1 až Lv 20):
+     * - Lv 1 až Lv 10: +0.5 b za každý level
+     * - Lv 11 až Lv 14: +1.0 b za každý level
+     * - Lv 15 až Lv 18: +1.5 b za každý level
+     * - Lv 19 až Lv 20: +2.0 b za každý level
+     */
+    const WALL_MAX_TOTAL = 350;
+    const WALL_MAX_LEVEL = 20;
+
+    function getWallPointsPerPiece(level) {
+      let pts = 0;
+      for (let lv = 1; lv <= level; lv++) {
+        if (lv <= 10) pts += 0.5;
+        else if (lv <= 14) pts += 1;
+        else if (lv <= 18) pts += 1.5;
+        else pts += 2;
+      }
+      return Math.round(pts * 10) / 10;
+    }
+
+    const WALL_GROUPS = Array.from({ length: WALL_MAX_LEVEL }, (_, idx) => {
+      const lv = idx + 1;
+      const stepPts = lv <= 10 ? 0.5 : lv <= 14 ? 1 : lv <= 18 ? 1.5 : 2;
+      return {
+        id: `walls:wall_lv_${lv}`,
+        level: lv,
+        name: `Wall Lv ${lv}`,
+        categoryId: 'walls',
+        categoryLabel: 'Hradby',
+        stepPts,
+        pointsPerPiece: getWallPointsPerPiece(lv),
+      };
+    });
+
+    const MAX_WALL_POINTS = WALL_MAX_TOTAL * getWallPointsPerPiece(WALL_MAX_LEVEL);
+
+    /**
+     * Definícia všetkých kategórií a položiek:
+     * - unlockTh: len na vnútorný výpočet bodov, nikdy sa nezobrazuje používateľovi
+     * - maxLv: maximálny level položky
+     * - count (ks): ak > 1, rozbalí sa na samostatné položky #1 .. #N
+     * - isHero: ak true, každý level = 0.5 bodu (orezané na 0..maxLv)
+     */
+    const CATALOG_CATEGORIES = [
+      {
+        id: 'heroes',
+        label: 'Hrdinovia',
+        isHero: true,
+        items: [
+          { name: 'Barbarian King', maxLv: 115, unlockTh: 4 },
+          { name: 'Archer Queen', maxLv: 115, unlockTh: 8 },
+          { name: 'Royal Champion', maxLv: 60, unlockTh: 13 },
+          { name: 'Grand Warden', maxLv: 90, unlockTh: 11 },
+          { name: 'Minion Prince', maxLv: 100, unlockTh: 9 },
+          { name: 'Dragon Duke', maxLv: 30, unlockTh: 15 },
+        ],
+      },
+      {
+        id: 'elixir_troops',
+        label: 'Elixir jednotky',
+        items: [
+          { name: 'Barbarian', maxLv: 14, unlockTh: 1 },
+          { name: 'Archer', maxLv: 15, unlockTh: 2 },
+          { name: 'Giant', maxLv: 15, unlockTh: 3 },
+          { name: 'Goblin', maxLv: 11, unlockTh: 4 },
+          { name: 'Wall Breaker', maxLv: 15, unlockTh: 4 },
+          { name: 'Balloon', maxLv: 14, unlockTh: 4 },
+          { name: 'Wizard', maxLv: 15, unlockTh: 5 },
+          { name: 'Healer', maxLv: 12, unlockTh: 6 },
+          { name: 'Dragon', maxLv: 14, unlockTh: 7 },
+          { name: 'P.E.K.K.A', maxLv: 14, unlockTh: 8 },
+          { name: 'Baby Dragon', maxLv: 13, unlockTh: 9 },
+          { name: 'Miner', maxLv: 13, unlockTh: 10 },
+          { name: 'Electro Dragon', maxLv: 10, unlockTh: 11 },
+          { name: 'Yeti (Yetimite)', maxLv: 9, unlockTh: 12 },
+          { name: 'Dragon Rider', maxLv: 7, unlockTh: 13 },
+          { name: 'Electro Titan', maxLv: 6, unlockTh: 14 },
+          { name: 'Root Rider', maxLv: 5, unlockTh: 15 },
+          { name: 'Thrower', maxLv: 5, unlockTh: 16 },
+          { name: 'Meteor Golem (Meteormite)', maxLv: 4, unlockTh: 17 },
+        ],
+      },
+      {
+        id: 'dark_elixir_troops',
+        label: 'Dark Elixir jednotky',
+        items: [
+          { name: 'Minion', maxLv: 15, unlockTh: 7 },
+          { name: 'Hog Rider', maxLv: 16, unlockTh: 8 },
+          { name: 'Valkyrie', maxLv: 13, unlockTh: 9 },
+          { name: 'Golem (Golemite)', maxLv: 16, unlockTh: 9 },
+          { name: 'Witch (Skeleton)', maxLv: 9, unlockTh: 10 },
+          { name: 'Lava Hound (Lava Pup)', maxLv: 9, unlockTh: 11 },
+          { name: 'Bowler', maxLv: 11, unlockTh: 12 },
+          { name: 'Ice Golem', maxLv: 9, unlockTh: 13 },
+          { name: 'Headhunter', maxLv: 5, unlockTh: 14 },
+          { name: 'Apprentice Warden', maxLv: 4, unlockTh: 15 },
+          { name: 'Druid (Bear)', maxLv: 7, unlockTh: 16 },
+          { name: 'Furnace (Firemite)', maxLv: 4, unlockTh: 17 },
+          { name: 'Ruin Witch (Ruin Knight)', maxLv: 5, unlockTh: 17 },
+        ],
+      },
+      {
+        id: 'defenses',
+        label: 'Obranné budovy',
+        items: [
+          { name: 'Cannon', maxLv: 21, count: 7, unlockTh: 1 },
+          { name: 'Archer Tower', maxLv: 21, count: 9, unlockTh: 2 },
+          { name: 'Mortar', maxLv: 18, count: 4, unlockTh: 3 },
+          { name: 'Air Defense', maxLv: 17, count: 5, unlockTh: 5 },
+          { name: 'Wizard Tower', maxLv: 17, count: 6, unlockTh: 6 },
+          { name: 'Air Sweeper', maxLv: 7, count: 2, unlockTh: 6 },
+          { name: 'Hidden Tesla', maxLv: 18, count: 5, unlockTh: 7 },
+          { name: 'Bomb Tower', maxLv: 13, count: 2, unlockTh: 8 },
+          { name: 'X-Bow', maxLv: 14, count: 4, unlockTh: 9 },
+          { name: 'Inferno Tower', maxLv: 12, count: 3, unlockTh: 10 },
+          { name: 'Eagle Artillery', maxLv: 7, count: 1, unlockTh: 11 },
+          { name: 'Scattershot', maxLv: 7, count: 2, unlockTh: 13 },
+          { name: "Builder's Hut", maxLv: 9, count: 5, unlockTh: 1 },
+          { name: 'Spell Tower', maxLv: 4, count: 2, unlockTh: 15 },
+          { name: 'Monolith', maxLv: 5, count: 1, unlockTh: 15 },
+          { name: 'Multi-Archer Tower', maxLv: 5, count: 3, unlockTh: 16 },
+          { name: 'Ricochet Cannon', maxLv: 5, count: 3, unlockTh: 16 },
+          { name: 'Multi-Gear Tower', maxLv: 4, count: 1, unlockTh: 17 },
+          { name: 'Firespitter', maxLv: 3, count: 2, unlockTh: 17 },
+          { name: 'Revenge Tower', maxLv: 2, count: 1, unlockTh: 18 },
+          { name: 'Super Wizard Tower', maxLv: 2, count: 2, unlockTh: 18 },
+          { name: 'Spiky Tower', maxLv: 2, count: 2, unlockTh: 19 },
+          { name: 'Firecracker Tower', maxLv: 2, count: 2, unlockTh: 19 },
+        ],
+      },
+      {
+        id: 'walls',
+        label: 'Hradby',
+        isWallCategory: true,
+        items: [],
+      },
+      {
+        id: 'traps',
+        label: 'Pasce',
+        items: [
+          { name: 'Bomb', maxLv: 14, unlockTh: 3 },
+          { name: 'Spring Trap', maxLv: 14, unlockTh: 4 },
+          { name: 'Air Bomb', maxLv: 14, unlockTh: 5 },
+          { name: 'Giant Bomb', maxLv: 12, unlockTh: 6 },
+          { name: 'Seeking Air Mine', maxLv: 8, unlockTh: 7 },
+          { name: 'Skeleton Trap', maxLv: 5, unlockTh: 8 },
+          { name: 'Tornado Trap', maxLv: 3, unlockTh: 11 },
+          { name: 'Giga Bomb', maxLv: 4, unlockTh: 17 },
+        ],
+      },
+      {
+        id: 'guardians',
+        label: 'Guardians',
+        items: [
+          { name: 'Guardian Shine', maxLv: 1, unlockTh: 19 },
+          { name: 'Longshot', maxLv: 5, unlockTh: 18 },
+          { name: 'Smasher', maxLv: 10, unlockTh: 18 },
+          { name: 'Logger', maxLv: 5, unlockTh: 18 },
+        ],
+      },
+      {
+        id: 'resources',
+        label: 'Zdroje',
+        items: [
+          { name: 'Gold Mine', maxLv: 18, count: 7, unlockTh: 1 },
+          { name: 'Elixir Collector', maxLv: 18, count: 7, unlockTh: 1 },
+          { name: 'Dark Elixir Drill', maxLv: 12, count: 3, unlockTh: 7 },
+          { name: 'Gold Storage', maxLv: 20, count: 4, unlockTh: 1 },
+          { name: 'Elixir Storage', maxLv: 20, count: 4, unlockTh: 1 },
+          { name: 'Dark Elixir Storage', maxLv: 14, count: 1, unlockTh: 7 },
+          { name: 'Clan Castle (Treasury)', maxLv: 15, count: 1, unlockTh: 3 },
+        ],
+      },
+      {
+        id: 'army_buildings',
+        label: 'Armádne budovy',
+        items: [
+          { name: 'Army Camp', maxLv: 14, count: 4, unlockTh: 1 },
+          { name: 'Barracks', maxLv: 19, count: 1, unlockTh: 1 },
+          { name: 'Dark Barracks', maxLv: 13, count: 1, unlockTh: 7 },
+          { name: 'Laboratory', maxLv: 17, count: 1, unlockTh: 3 },
+          { name: 'Spell Factory', maxLv: 10, count: 1, unlockTh: 4 },
+          { name: 'Hero Hall', maxLv: 13, count: 1, unlockTh: 4 },
+          { name: 'Dark Spell Factory', maxLv: 8, count: 1, unlockTh: 7 },
+          { name: 'Blacksmith', maxLv: 11, count: 1, unlockTh: 8 },
+          { name: 'Squad Barracks', maxLv: 12, count: 1, unlockTh: 8 },
+          { name: 'Workshop', maxLv: 9, count: 1, unlockTh: 12 },
+          { name: 'Pet House', maxLv: 12, count: 1, unlockTh: 14 },
+        ],
+      },
+      {
+        id: 'pets',
+        label: 'Peti',
+        items: [
+          { name: 'L.A.S.S.I', maxLv: 15, unlockTh: 14 },
+          { name: 'Electro Owl', maxLv: 15, unlockTh: 14 },
+          { name: 'Mighty Yak', maxLv: 15, unlockTh: 14 },
+          { name: 'Unicorn', maxLv: 15, unlockTh: 14 },
+          { name: 'Frosty', maxLv: 15, unlockTh: 15 },
+          { name: 'Diggy', maxLv: 15, unlockTh: 15 },
+          { name: 'Poison Lizard', maxLv: 15, unlockTh: 15 },
+          { name: 'Phoenix', maxLv: 10, unlockTh: 15 },
+          { name: 'Spirit Fox', maxLv: 10, unlockTh: 16 },
+          { name: 'Angry Jelly', maxLv: 15, unlockTh: 16 },
+          { name: 'Sneezy', maxLv: 10, unlockTh: 17 },
+          { name: 'Greedy Raven', maxLv: 10, unlockTh: 17 },
+        ],
+      },
+      {
+        id: 'squad',
+        label: 'Squad',
+        items: [
+          { name: 'Barch Squad', maxLv: 3, unlockTh: 8 },
+          { name: 'Giant Wizard Squad', maxLv: 3, unlockTh: 9 },
+          { name: 'Wall Breaker Squad', maxLv: 3, unlockTh: 10 },
+          { name: 'Minion Squad', maxLv: 3, unlockTh: 11 },
+          { name: 'Balloon Squad', maxLv: 3, unlockTh: 12 },
+          { name: 'Golem Witch Squad', maxLv: 3, unlockTh: 13 },
+          { name: 'Hog Rider Squad', maxLv: 3, unlockTh: 14 },
+          { name: 'Miner Squad', maxLv: 3, unlockTh: 15 },
+          { name: 'Healer Squad', maxLv: 3, unlockTh: 16 },
+          { name: 'P.E.K.K.A Titan Squad', maxLv: 3, unlockTh: 17 },
+          { name: 'Dragons Squad', maxLv: 3, unlockTh: 18 },
+          { name: 'Baby Dragon Squad', maxLv: 3, unlockTh: 19 },
+        ],
+      },
+      {
+        id: 'siege_machines',
+        label: 'Obliehacie stroje',
+        items: [
+          { name: 'Wall Wrecker', maxLv: 6, unlockTh: 12 },
+          { name: 'Battle Blimp', maxLv: 6, unlockTh: 12 },
+          { name: 'Stone Slammer', maxLv: 6, unlockTh: 12 },
+          { name: 'Siege Barracks', maxLv: 6, unlockTh: 13 },
+          { name: 'Log Launcher', maxLv: 6, unlockTh: 14 },
+          { name: 'Flame Flinger', maxLv: 6, unlockTh: 15 },
+          { name: 'Battle Drill', maxLv: 6, unlockTh: 16 },
+          { name: 'Troop Launcher', maxLv: 4, unlockTh: 17 },
+          { name: 'Sky Wagon', maxLv: 4, unlockTh: 17 },
+        ],
+      },
+      {
+        id: 'dark_spells',
+        label: 'Dark kúzla',
+        items: [
+          { name: 'Poison Spell', maxLv: 13, unlockTh: 7 },
+          { name: 'Earthquake Spell', maxLv: 8, unlockTh: 8 },
+          { name: 'Haste Spell', maxLv: 8, unlockTh: 9 },
+          { name: 'Skeleton Spell (Skeleton)', maxLv: 8, unlockTh: 10 },
+          { name: 'Bat Spell (Bat)', maxLv: 9, unlockTh: 11 },
+          { name: 'Overgrowth Spell', maxLv: 5, unlockTh: 15 },
+          { name: 'Ice Block Spell', maxLv: 6, unlockTh: 16 },
+          { name: 'Angry Spell', maxLv: 4, unlockTh: 17 },
+        ],
+      },
+      {
+        id: 'elixir_spells',
+        label: 'Elixir kúzla',
+        items: [
+          { name: 'Lightning Spell', maxLv: 14, unlockTh: 4 },
+          { name: 'Healing Spell', maxLv: 13, unlockTh: 5 },
+          { name: 'Rage Spell', maxLv: 7, unlockTh: 6 },
+          { name: 'Jump Spell', maxLv: 5, unlockTh: 9 },
+          { name: 'Freeze Spell', maxLv: 8, unlockTh: 9 },
+          { name: 'Clone Spell', maxLv: 9, unlockTh: 10 },
+          { name: 'Invisibility Spell', maxLv: 4, unlockTh: 13 },
+          { name: 'Recall Spell', maxLv: 7, unlockTh: 15 },
+          { name: 'Revive Spell', maxLv: 5, unlockTh: 16 },
+          { name: 'Totem Spell', maxLv: 5, unlockTh: 17 },
+          { name: 'Heroic Spell', maxLv: 4, unlockTh: 17 },
+        ],
+      },
+    ];
+
+    /**
+     * Rozbalí všetky položky s viacerými kusmi (ks) na samostatné položky (#1 .. #N).
+     * Vypočíta body za 1 level:
+     * - hrdinovia: 0.5 bodu za 1 level
+     * - ostatné položky: TH_POINT_TABLE[unlockTh] / maxLv
+     */
+    function buildExpandedItems() {
+      const result = [];
+      for (const cat of CATALOG_CATEGORIES) {
+        if (cat.isWallCategory) continue;
+        const isHero = Boolean(cat.isHero);
+        for (const raw of cat.items) {
+          const ksCount = raw.count || 1;
+          const thBase = TH_POINT_TABLE[raw.unlockTh] ?? 40;
+          const pointsPerLevel = isHero ? 0.5 : thBase / raw.maxLv;
+          const maxItemPoints = pointsPerLevel * raw.maxLv;
+
+          for (let i = 1; i <= ksCount; i++) {
+            const displayName = ksCount > 1 ? `${raw.name} #${i}` : raw.name;
+            const id = `${cat.id}:${raw.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}#${i}`;
+            result.push({
+              id,
+              name: displayName,
+              categoryId: cat.id,
+              categoryLabel: cat.label,
+              maxLv: raw.maxLv,
+              isHero,
+              pointsPerLevel,
+              maxItemPoints,
+            });
+          }
+        }
+      }
+      return result;
+    }
+
+    const EXPANDED_ITEMS = buildExpandedItems();
+    const MAX_POSSIBLE_POINTS =
+      EXPANDED_ITEMS.reduce((acc, item) => acc + item.maxItemPoints, 0) + MAX_WALL_POINTS;
+
+    function clampLevel(lv, maxLv) {
+      const parsed = Math.floor(Number(lv));
+      if (Number.isNaN(parsed)) return 0;
+      return Math.max(0, Math.min(maxLv, parsed));
+    }
+
+    function getPlayerWallsUsed(player, excludeLevel = null) {
+      if (!player || !player.levels) return 0;
+      let total = 0;
+      for (const wg of WALL_GROUPS) {
+        if (excludeLevel !== null && wg.level === excludeLevel) continue;
+        total += Math.max(0, Math.floor(Number(player.levels[wg.id] ?? 0)) || 0);
+      }
+      return total;
+    }
+
+    function computeWallCategoryPoints(player) {
+      if (!player || !player.levels) return 0;
+      let sum = 0;
+      for (const wg of WALL_GROUPS) {
+        const count = Math.max(0, Math.floor(Number(player.levels[wg.id] ?? 0)) || 0);
+        sum += count * wg.pointsPerPiece;
+      }
+      return Math.round(sum * 10) / 10;
+    }
+
+    function computeItemPoints(item, currentLv) {
+      const clamped = clampLevel(currentLv, item.maxLv);
+      return clamped * item.pointsPerLevel;
+    }
+
+    function computePlayerTotalPoints(player) {
+      if (!player || !player.levels) return 0;
+      let sum = 0;
+      for (const item of EXPANDED_ITEMS) {
+        sum += computeItemPoints(item, player.levels[item.id] ?? 0);
+      }
+      sum += computeWallCategoryPoints(player);
+      return Math.round(sum * 10) / 10;
+    }
+
+    function computePlayerCategoryPoints(player, categoryId) {
+      if (!player || !player.levels) return 0;
+      if (categoryId === 'walls') {
+        return computeWallCategoryPoints(player);
+      }
+      let sum = 0;
+      for (const item of EXPANDED_ITEMS) {
+        if (item.categoryId !== categoryId) continue;
+        sum += computeItemPoints(item, player.levels[item.id] ?? 0);
+      }
+      return Math.round(sum * 10) / 10;
+    }
+
+    function formatPts(num) {
+      const rounded = Math.round(num * 10) / 10;
+      return Number.isInteger(rounded) ? `${rounded} b` : `${rounded.toFixed(1)} b`;
+    }
+
+    function buildLevelsByRatio(ratio) {
+      const safeRatio = Math.max(0, Math.min(1, ratio));
+      const levels = {};
+      for (const item of EXPANDED_ITEMS) {
+        levels[item.id] = Math.round(item.maxLv * safeRatio);
+      }
+      for (const wg of WALL_GROUPS) {
+        levels[wg.id] = 0;
+      }
+      if (safeRatio >= 1) {
+        levels['walls:wall_lv_20'] = WALL_MAX_TOTAL;
+      } else if (safeRatio > 0) {
+        const targetLv = Math.max(1, Math.min(WALL_MAX_LEVEL, Math.round(WALL_MAX_LEVEL * safeRatio)));
+        levels[`walls:wall_lv_${targetLv}`] = WALL_MAX_TOTAL;
+      }
+      return levels;
+    }
+
+    function makePlayer(name, preset = 'zero') {
+      const ratio = preset === 'max' ? 1 : preset === 'half' ? 0.5 : 0;
+      return {
+        id: 'p_' + Math.random().toString(36).slice(2, 9) + '_' + Date.now().toString(36),
+        name: (name || 'Hráč').trim(),
+        levels: buildLevelsByRatio(ratio),
+      };
+    }
+
+    function createInitialState() {
+      const p1 = makePlayer('Erik', 'half');
+      const p2 = makePlayer('František', 'half');
+      const p3 = makePlayer('Leo', 'half');
+      return {
+        players: [p1, p2, p3],
+        activePlayerId: p1.id,
+        selectedCompareIds: [p1.id, p2.id, p3.id],
+        activeCategory: 'all',
+        playerFilter: '',
+        itemFilter: '',
+        pdfFileName: 'ErikAI-OS-Report',
+      };
+    }
+
+    const STORAGE_KEY = 'erikai_os_unlimited_v2';
+    let state = null;
+
+    function notify(msg, tone = 'info') {
+      const stack = document.getElementById('toastStack');
+      if (!stack) return;
+      const styles = {
+        success: 'border-emerald-500/50 bg-emerald-950/90 text-emerald-200',
+        error: 'border-rose-500/50 bg-rose-950/90 text-rose-200',
+        info: 'border-cyan-500/50 bg-slate-900/95 text-cyan-200',
+      };
+      const div = document.createElement('div');
+      div.className = `pointer-events-auto rounded-xl border px-4 py-3 text-xs font-semibold shadow-2xl transition-all duration-300 ${styles[tone] || styles.info}`;
+      div.textContent = msg;
+      stack.appendChild(div);
+      setTimeout(() => {
+        div.style.opacity = '0';
+        div.style.transform = 'translateY(8px)';
+        setTimeout(() => div.remove(), 300);
+      }, 2600);
+    }
+
+    function persistState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        const el = document.getElementById('autoSaveStatus');
+        if (el) {
+          const now = new Date().toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          el.textContent = `Uložené ${now}`;
+        }
+      } catch (err) {
+        console.error('Chyba automatického uloženia:', err);
+        notify('Nepodarilo sa automaticky uložiť zmeny.', 'error');
+      }
+    }
+
+    function loadPersistedState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.players) || parsed.players.length === 0) return null;
+        return parsed;
+      } catch (err) {
+        console.error('Chyba načítania uloženého stavu:', err);
+        return null;
+      }
+    }
+
+    function encodeSavePayload(obj) {
+      const jsonStr = JSON.stringify({
+        players: obj.players,
+        selectedCompareIds: obj.selectedCompareIds,
+        pdfFileName: obj.pdfFileName,
+      });
+      const bytes = new TextEncoder().encode(jsonStr);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i++) {
+        bin += String.fromCharCode(bytes[i]);
+      }
+      return 'ERIKAI_OS_SAVE:' + btoa(bin);
+    }
+
+    function decodeSavePayload(text) {
+      const trimmed = (text || '').trim();
+      if (!trimmed) throw new Error('Prázdny kód');
+      const base64Part = trimmed.startsWith('ERIKAI_OS_SAVE:')
+        ? trimmed.slice('ERIKAI_OS_SAVE:'.length)
+        : trimmed;
+      const bin = atob(base64Part);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) {
+        bytes[i] = bin.charCodeAt(i);
+      }
+      const jsonStr = new TextDecoder().decode(bytes);
+      const parsed = JSON.parse(jsonStr);
+      if (!parsed || !Array.isArray(parsed.players) || parsed.players.length === 0) {
+        throw new Error('Neplatná štruktúra kódu');
+      }
+      return parsed;
+    }
+
+    function escapeText(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function stripDiacritics(value) {
+      return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function renderApp() {
+      const ranked = [...state.players].sort(
+        (a, b) => computePlayerTotalPoints(b) - computePlayerTotalPoints(a)
+      );
+
+      if (!ranked.some((p) => p.id === state.activePlayerId)) {
+        state.activePlayerId = ranked[0]?.id || null;
+      }
+
+      document.getElementById('headerMaxPoints').textContent = formatPts(MAX_POSSIBLE_POINTS);
+      document.getElementById('headerPlayerTotal').textContent = String(ranked.length);
+      const pill = document.getElementById('expandedCountPill');
+      if (pill) {
+        pill.textContent = `${EXPANDED_ITEMS.length} položiek + ${WALL_MAX_TOTAL} hradieb`;
+      }
+
+      renderRanking(ranked);
+      renderMultiCompare(ranked);
+      renderEditor(ranked);
+    }
+
+    function renderRanking(ranked) {
+      const container = document.getElementById('playerRankingContainer');
+      const query = (state.playerFilter || '').trim().toLowerCase();
+      const visible = ranked.filter((p) => !query || p.name.toLowerCase().includes(query));
+
+      if (visible.length === 0) {
+        container.innerHTML = `<div class="rounded-xl border border-slate-800 bg-slate-950/60 p-6 text-center text-xs text-slate-400">Žiadny hráč nezodpovedá hľadaniu.</div>`;
+        return;
+      }
+
+      container.innerHTML = visible
+        .map((player) => {
+          const rank = ranked.findIndex((p) => p.id === player.id) + 1;
+          const pts = computePlayerTotalPoints(player);
+          const pct = MAX_POSSIBLE_POINTS > 0 ? Math.min(100, Math.round((pts / MAX_POSSIBLE_POINTS) * 1000) / 10) : 0;
+          const isActive = player.id === state.activePlayerId;
+          const isPicked = state.selectedCompareIds.includes(player.id);
+
+          const badgeCls =
+            rank === 1
+              ? 'bg-amber-400 text-slate-950 border-amber-200'
+              : rank === 2
+                ? 'bg-slate-300 text-slate-950 border-white'
+                : rank === 3
+                  ? 'bg-orange-400 text-slate-950 border-orange-200'
+                  : 'bg-slate-800 text-slate-300 border-slate-700';
+
+          return `
+            <div data-pid="${player.id}" class="rank-item flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 transition cursor-pointer ${
+              isActive
+                ? 'bg-amber-500/10 border-amber-400/60 shadow-md shadow-amber-500/5'
+                : 'bg-slate-950/75 border-slate-800/90 hover:border-slate-700'
+            }">
+              <div class="flex items-center gap-3 min-w-0">
+                <input
+                  type="checkbox"
+                  data-cid="${player.id}"
+                  ${isPicked ? 'checked' : ''}
+                  title="Pridať do nekonečného porovnávania"
+                  class="compare-pick h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-400 focus:ring-cyan-400 cursor-pointer shrink-0"
+                />
+                <span class="h-7 w-7 shrink-0 rounded-lg border text-xs font-extrabold font-mono flex items-center justify-center ${badgeCls}">
+                  ${rank}
+                </span>
+                <div class="min-w-0">
+                  <div class="font-bold text-sm text-white truncate">${escapeText(player.name)}</div>
+                  <div class="mt-1.5 w-32 sm:w-44 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                    <div class="h-full rounded-full bg-gradient-to-r from-cyan-400 via-amber-400 to-orange-500" style="width: ${pct}%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-right shrink-0">
+                <div class="text-sm sm:text-base font-extrabold font-mono text-amber-400">${formatPts(pts)}</div>
+                <div class="text-[11px] font-mono text-slate-400">${pct}% max</div>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+
+      container.querySelectorAll('.rank-item').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          if (e.target.classList.contains('compare-pick')) return;
+          state.activePlayerId = row.getAttribute('data-pid');
+          persistState();
+          renderApp();
+        });
+      });
+
+      container.querySelectorAll('.compare-pick').forEach((chk) => {
+        chk.addEventListener('change', (e) => {
+          e.stopPropagation();
+          const pid = chk.getAttribute('data-cid');
+          if (chk.checked) {
+            if (!state.selectedCompareIds.includes(pid)) {
+              state.selectedCompareIds.push(pid);
+            }
+          } else {
+            state.selectedCompareIds = state.selectedCompareIds.filter((id) => id !== pid);
+          }
+          persistState();
+          renderMultiCompare(ranked);
+        });
+      });
+    }
+
+    function renderMultiCompare(ranked) {
+      const wrap = document.getElementById('multiCompareTableWrap');
+      const selected = ranked.filter((p) => state.selectedCompareIds.includes(p.id));
+
+      if (selected.length === 0) {
+        wrap.innerHTML = `
+          <div class="p-6 text-center text-xs text-slate-400">
+            Nie je vybraný žiadny hráč. Zaškrtni ľubovoľný počet hráčov v zozname alebo klikni na <span class="text-cyan-300 font-semibold">Všetci</span>.
+          </div>
+        `;
+        return;
+      }
+
+      const topPoints = computePlayerTotalPoints(selected[0]);
+
+      const headers = selected
+        .map((p) => {
+          const pts = computePlayerTotalPoints(p);
+          const diff = Math.round((pts - topPoints) * 10) / 10;
+          return `
+            <th class="px-3 py-2.5 text-left border-b border-slate-800 min-w-[130px]">
+              <div class="font-bold text-xs text-white truncate">${escapeText(p.name)}</div>
+              <div class="mt-1 font-mono text-xs font-extrabold text-amber-400">${formatPts(pts)}</div>
+              <div class="text-[10px] font-mono ${diff === 0 ? 'text-emerald-400' : 'text-slate-400'}">
+                ${diff === 0 ? 'Najvyšší vo výbere' : `${diff > 0 ? '+' : ''}${formatPts(diff)}`}
+              </div>
+            </th>
+          `;
+        })
+        .join('');
+
+      const rows = CATALOG_CATEGORIES.map((cat) => {
+        const tds = selected
+          .map((p) => {
+            const cPts = computePlayerCategoryPoints(p, cat.id);
+            return `<td class="px-3 py-2 font-mono text-xs text-slate-200 border-b border-slate-800/60">${formatPts(cPts)}</td>`;
+          })
+          .join('');
+        return `
+          <tr class="hover:bg-slate-900/60">
+            <td class="px-3 py-2 text-xs font-semibold text-slate-300 border-b border-slate-800/60 sticky left-0 bg-slate-950/95 z-10 whitespace-nowrap">
+              ${escapeText(cat.label)}
+            </td>
+            ${tds}
+          </tr>
+        `;
+      }).join('');
+
+      wrap.innerHTML = `
+        <table class="w-full border-collapse text-left">
+          <thead>
+            <tr class="bg-slate-900/95">
+              <th class="px-3 py-2.5 text-xs font-bold text-cyan-300 border-b border-slate-800 sticky left-0 bg-slate-900 z-10 min-w-[155px]">
+                Kategória (${selected.length} hráčov)
+              </th>
+              ${headers}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderEditor(ranked) {
+      const player = ranked.find((p) => p.id === state.activePlayerId) || ranked[0];
+      if (!player) return;
+
+      const nameInput = document.getElementById('editorPlayerNameInput');
+      if (document.activeElement !== nameInput) {
+        nameInput.value = player.name;
+      }
+
+      const pts = computePlayerTotalPoints(player);
+      const pct = MAX_POSSIBLE_POINTS > 0 ? ((pts / MAX_POSSIBLE_POINTS) * 100).toFixed(1) : '0.0';
+      document.getElementById('editorPlayerStats').textContent =
+        `Skóre: ${formatPts(pts)} / ${formatPts(MAX_POSSIBLE_POINTS)} (${pct}%)`;
+
+      const tabsBar = document.getElementById('categoryFilterBar');
+      const tabs = [{ id: 'all', label: 'Všetko' }, ...CATALOG_CATEGORIES.map((c) => ({ id: c.id, label: c.label }))];
+      tabsBar.innerHTML = tabs
+        .map((t) => {
+          const active = state.activeCategory === t.id;
+          return `
+            <button
+              type="button"
+              data-tab="${t.id}"
+              class="cat-btn shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition cursor-pointer ${
+                active
+                  ? 'bg-amber-500 text-slate-950 shadow'
+                  : 'bg-slate-950/80 text-slate-300 border border-slate-800 hover:border-slate-700'
+              }"
+            >
+              ${escapeText(t.label)}
+            </button>
+          `;
+        })
+        .join('');
+
+      tabsBar.querySelectorAll('.cat-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.activeCategory = btn.getAttribute('data-tab');
+          persistState();
+          renderEditor(ranked);
+        });
+      });
+
+      const q = (state.itemFilter || '').trim().toLowerCase();
+      const showWalls = state.activeCategory === 'all' || state.activeCategory === 'walls';
+
+      const items = EXPANDED_ITEMS.filter((item) => {
+        const matchCat = state.activeCategory === 'all' || item.categoryId === state.activeCategory;
+        const matchQ =
+          !q ||
+          item.name.toLowerCase().includes(q) ||
+          item.categoryLabel.toLowerCase().includes(q);
+        return matchCat && matchQ;
+      });
+
+      const filteredWalls = showWalls
+        ? WALL_GROUPS.filter(
+            (wg) =>
+              !q ||
+              wg.name.toLowerCase().includes(q) ||
+              wg.categoryLabel.toLowerCase().includes(q) ||
+              `lv ${wg.level}`.includes(q) ||
+              `lv${wg.level}`.includes(q)
+          )
+        : [];
+
+      const listEl = document.getElementById('editorItemsList');
+
+      let wallSectionHtml = '';
+      if (showWalls && filteredWalls.length > 0) {
+        const wallsUsed = getPlayerWallsUsed(player);
+        const wallsRemaining = Math.max(0, WALL_MAX_TOTAL - wallsUsed);
+        const wallTotalPts = computeWallCategoryPoints(player);
+
+        const wallRowsHtml = filteredWalls
+          .map((wg) => {
+            const count = Math.max(0, Math.floor(Number(player.levels[wg.id] ?? 0)) || 0);
+            const rowPts = Math.round(count * wg.pointsPerPiece * 10) / 10;
+            const maxForThisRow = count + wallsRemaining;
+
+            return `
+              <div class="flex items-center justify-between gap-2.5 rounded-xl bg-slate-950/75 border border-slate-800/80 px-3 py-2">
+                <div class="min-w-0 flex-1">
+                  <div class="text-xs font-bold text-slate-100 truncate">
+                    ${escapeText(wg.name)}
+                    <span class="ml-1.5 text-[10px] font-mono font-normal text-slate-400">(${formatPts(wg.pointsPerPiece)} / ks)</span>
+                  </div>
+                  <div class="text-[10px] text-slate-400 flex items-center gap-2">
+                    <span>Hradby • +${wg.stepPts} b/lv</span>
+                    <span class="font-mono text-amber-400/90">${formatPts(rowPts)}</span>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <input
+                    type="number"
+                    min="0"
+                    max="${maxForThisRow}"
+                    step="1"
+                    value="${count}"
+                    data-wid="${wg.id}"
+                    data-wlv="${wg.level}"
+                    class="wall-input w-16 rounded-lg bg-slate-900 border border-slate-700 focus:border-amber-400 focus:outline-none px-2 py-1 text-right font-mono text-xs font-bold text-amber-300"
+                  />
+                  <span class="text-[11px] font-mono text-slate-400 w-12">ks</span>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
+        wallSectionHtml = `
+          <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <div class="text-xs font-extrabold text-amber-300">Hradby – skupiny Lv 1 až Lv 20 (limit ${WALL_MAX_TOTAL} ks)</div>
+                <div class="text-[10px] text-slate-400">Lv 1–10: 0.5 b • Lv 11–14: 1 b • Lv 15–18: 1.5 b • Lv 19–20: 2 b</div>
+              </div>
+              <div class="text-right font-mono">
+                <div class="text-xs font-bold ${wallsUsed === WALL_MAX_TOTAL ? 'text-emerald-400' : 'text-cyan-300'}">
+                  ${wallsUsed} / ${WALL_MAX_TOTAL} ks
+                </div>
+                <div class="text-[10px] text-amber-400">${formatPts(wallTotalPts)}</div>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              ${wallRowsHtml}
+            </div>
+          </div>
+        `;
+      }
+
+      const regularItemsHtml = items
+        .map((item) => {
+          const curLv = clampLevel(player.levels[item.id] ?? 0, item.maxLv);
+          const earned = computeItemPoints(item, curLv);
+
+          return `
+            <div class="flex items-center justify-between gap-2.5 rounded-xl bg-slate-950/75 border border-slate-800/80 px-3 py-2">
+              <div class="min-w-0 flex-1">
+                <div class="text-xs font-bold text-slate-100 truncate">${escapeText(item.name)}</div>
+                <div class="text-[10px] text-slate-400 flex items-center gap-2">
+                  <span>${escapeText(item.categoryLabel)}</span>
+                  <span class="font-mono text-amber-400/90">${formatPts(earned)}</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5 shrink-0">
+                <input
+                  type="number"
+                  min="0"
+                  max="${item.maxLv}"
+                  step="1"
+                  value="${curLv}"
+                  data-iid="${item.id}"
+                  data-max="${item.maxLv}"
+                  class="lv-input w-16 rounded-lg bg-slate-900 border border-slate-700 focus:border-cyan-400 focus:outline-none px-2 py-1 text-right font-mono text-xs font-bold text-cyan-300"
+                />
+                <span class="text-[11px] font-mono text-slate-400 w-12">/ ${item.maxLv}</span>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+
+      listEl.innerHTML =
+        state.activeCategory === 'walls'
+          ? wallSectionHtml
+          : regularItemsHtml + wallSectionHtml;
+
+      listEl.querySelectorAll('.lv-input').forEach((input) => {
+        input.addEventListener('change', () => {
+          const iid = input.getAttribute('data-iid');
+          const maxLv = Number(input.getAttribute('data-max'));
+          const clamped = clampLevel(input.value, maxLv);
+          input.value = String(clamped);
+          player.levels[iid] = clamped;
+          persistState();
+          renderApp();
+        });
+      });
+
+      listEl.querySelectorAll('.wall-input').forEach((input) => {
+        input.addEventListener('change', () => {
+          const wid = input.getAttribute('data-wid');
+          const wlv = Number(input.getAttribute('data-wlv'));
+          const usedElsewhere = getPlayerWallsUsed(player, wlv);
+          const maxAllowed = Math.max(0, WALL_MAX_TOTAL - usedElsewhere);
+          const rawVal = Math.floor(Number(input.value));
+          const safeVal = Number.isNaN(rawVal) ? 0 : Math.max(0, Math.min(maxAllowed, rawVal));
+
+          if (!Number.isNaN(rawVal) && rawVal > maxAllowed) {
+            notify(`Limit hradieb je max ${WALL_MAX_TOTAL} ks (zostávalo ${maxAllowed} ks).`, 'info');
+          }
+
+          input.value = String(safeVal);
+          player.levels[wid] = safeVal;
+          persistState();
+          renderApp();
+        });
+      });
+    }
+
+    function exportReportPdf() {
+      try {
+        const nameInput = document.getElementById('customPdfNameInput');
+        const cleaned = (nameInput.value || state.pdfFileName || 'ErikAI-OS-Report')
+          .trim()
+          .replace(/[\\/:*?"<>|]+/g, '-')
+          .replace(/\.pdf$/i, '') || 'ErikAI-OS-Report';
+        state.pdfFileName = cleaned;
+        persistState();
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const ranked = [...state.players].sort(
+          (a, b) => computePlayerTotalPoints(b) - computePlayerTotalPoints(a)
+        );
+        const selected = ranked.filter((p) => state.selectedCompareIds.includes(p.id));
+
+        doc.setFillColor(15, 21, 34);
+        doc.rect(0, 0, 210, 26, 'F');
+
+        doc.setTextColor(245, 158, 11);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(15);
+        doc.text('ErikAI OS - Prehlad hracov', 14, 12);
+
+        doc.setTextColor(203, 213, 225);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(
+          `Datum: ${new Date().toLocaleString('sk-SK')} | Hracov: ${ranked.length} | Max: ${Math.round(MAX_POSSIBLE_POINTS * 10) / 10} b`,
+          14,
+          20
+        );
+
+        let y = 35;
+        doc.setTextColor(15, 23, 42);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('Poradie hracov', 14, y);
+        y += 6;
+
+        doc.setFontSize(9);
+        doc.setFillColor(241, 245, 249);
+        doc.rect(14, y - 4, 182, 6, 'F');
+        doc.text('#', 16, y);
+        doc.text('Meno', 28, y);
+        doc.text('Body', 135, y);
+        doc.text('Porovnanie', 162, y);
+        y += 6;
+
+        doc.setFont('helvetica', 'normal');
+        ranked.forEach((p, i) => {
+          if (y > 276) {
+            doc.addPage();
+            y = 18;
+          }
+          const pts = computePlayerTotalPoints(p);
+          const inCompare = state.selectedCompareIds.includes(p.id);
+          doc.text(String(i + 1), 16, y);
+          doc.text(stripDiacritics(p.name), 28, y);
+          doc.text(`${Math.round(pts * 10) / 10} b`, 135, y);
+          doc.text(inCompare ? 'Ano' : '-', 162, y);
+          y += 5.5;
+        });
+
+        if (selected.length > 0) {
+          y += 5;
+          if (y > 255) {
+            doc.addPage();
+            y = 18;
+          }
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text(
+            `Porovnavani hraci (${selected.length}): ${selected.map((x) => stripDiacritics(x.name)).join(', ')}`,
+            14,
+            y
+          );
+        }
+
+        doc.save(`${cleaned}.pdf`);
+        notify(`Uložené ako "${cleaned}.pdf".`, 'success');
+      } catch (err) {
+        console.error('Chyba pri ukladaní PDF:', err);
+        notify('Nepodarilo sa vytvoriť PDF súbor.', 'error');
+      }
+    }
+
+    function wireEvents() {
+      document.getElementById('addCustomPlayerForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nameEl = document.getElementById('customPlayerNameInput');
+        const presetEl = document.getElementById('customPlayerPresetSelect');
+        const name = nameEl.value.trim();
+        if (!name) return;
+
+        const created = makePlayer(name, presetEl.value);
+        state.players.push(created);
+        state.activePlayerId = created.id;
+        if (!state.selectedCompareIds.includes(created.id)) {
+          state.selectedCompareIds.push(created.id);
+        }
+
+        nameEl.value = '';
+        persistState();
+        renderApp();
+        notify(`Pridaný hráč "${created.name}".`, 'success');
+      });
+
+      document.querySelectorAll('.quick-pick-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const count = Number(btn.getAttribute('data-quick-pick'));
+          const ranked = [...state.players].sort(
+            (a, b) => computePlayerTotalPoints(b) - computePlayerTotalPoints(a)
+          );
+          state.selectedCompareIds = ranked.slice(0, count).map((p) => p.id);
+          persistState();
+          renderApp();
+          notify(`Vybraných ${Math.min(count, ranked.length)} hráčov na porovnanie.`, 'info');
+        });
+      });
+
+      document.querySelectorAll('[data-pick-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const mode = btn.getAttribute('data-pick-mode');
+          state.selectedCompareIds = mode === 'all' ? state.players.map((p) => p.id) : [];
+          persistState();
+          renderApp();
+          notify(mode === 'all' ? 'Vybraní všetci hráči.' : 'Výber porovnávania zrušený.', 'info');
+        });
+      });
+
+      document.getElementById('filterPlayersInput').addEventListener('input', (e) => {
+        state.playerFilter = e.target.value;
+        persistState();
+        renderRanking([...state.players].sort((a, b) => computePlayerTotalPoints(b) - computePlayerTotalPoints(a)));
+      });
+
+      document.getElementById('filterItemsInput').addEventListener('input', (e) => {
+        state.itemFilter = e.target.value;
+        persistState();
+        renderEditor([...state.players].sort((a, b) => computePlayerTotalPoints(b) - computePlayerTotalPoints(a)));
+      });
+
+      document.getElementById('editorPlayerNameInput').addEventListener('change', (e) => {
+        const player = state.players.find((p) => p.id === state.activePlayerId);
+        if (!player) return;
+        const val = e.target.value.trim();
+        if (val) {
+          player.name = val;
+          persistState();
+          renderApp();
+        }
+      });
+
+      document.getElementById('btnSetMaxForPlayer').addEventListener('click', () => {
+        const player = state.players.find((p) => p.id === state.activePlayerId);
+        if (!player) return;
+        for (const item of EXPANDED_ITEMS) {
+          player.levels[item.id] = item.maxLv;
+        }
+        for (const wg of WALL_GROUPS) {
+          player.levels[wg.id] = 0;
+        }
+        player.levels['walls:wall_lv_20'] = WALL_MAX_TOTAL;
+        persistState();
+        renderApp();
+        notify(`Všetky položky a hradby (${WALL_MAX_TOTAL} ks na Lv 20) pre "${player.name}" nastavené na maximum.`, 'success');
+      });
+
+      document.getElementById('btnRemoveCurrentPlayer').addEventListener('click', () => {
+        if (state.players.length <= 1) {
+          notify('Musí zostať aspoň jeden hráč.', 'error');
+          return;
+        }
+        const idx = state.players.findIndex((p) => p.id === state.activePlayerId);
+        if (idx === -1) return;
+        const removed = state.players[idx];
+        state.players.splice(idx, 1);
+        state.selectedCompareIds = state.selectedCompareIds.filter((id) => id !== removed.id);
+        state.activePlayerId = state.players[0].id;
+        persistState();
+        renderApp();
+        notify(`Odstránený hráč "${removed.name}".`, 'info');
+      });
+
+      document.getElementById('btnCopyCode').addEventListener('click', () => {
+        try {
+          const code = encodeSavePayload(state);
+          const input = document.getElementById('saveCodeInput');
+          input.value = code;
+          input.select();
+          document.execCommand('copy');
+          persistState();
+          notify('Save kód skopírovaný.', 'success');
+        } catch (err) {
+          console.error('Chyba kopírovania kódu:', err);
+          notify('Nepodarilo sa skopírovať kód.', 'error');
+        }
+      });
+
+      document.getElementById('btnPasteLoadCode').addEventListener('click', () => {
+        try {
+          const input = document.getElementById('saveCodeInput');
+          const parsed = decodeSavePayload(input.value);
+          state.players = parsed.players;
+          state.selectedCompareIds = Array.isArray(parsed.selectedCompareIds)
+            ? parsed.selectedCompareIds
+            : parsed.players.map((p) => p.id);
+          if (parsed.pdfFileName) {
+            state.pdfFileName = parsed.pdfFileName;
+            document.getElementById('customPdfNameInput').value = parsed.pdfFileName;
+          }
+          state.activePlayerId = state.players[0]?.id || null;
+          persistState();
+          renderApp();
+          notify('Kód načítaný a automaticky uložený.', 'success');
+        } catch (err) {
+          console.error('Chyba načítania kódu:', err);
+          notify('Neplatný save kód.', 'error');
+        }
+      });
+
+      document.getElementById('customPdfNameInput').addEventListener('input', (e) => {
+        state.pdfFileName = e.target.value;
+        persistState();
+      });
+
+      document.getElementById('btnSavePdf').addEventListener('click', exportReportPdf);
+
+      document.getElementById('btnResetDemo').addEventListener('click', () => {
+        state = createInitialState();
+        document.getElementById('customPdfNameInput').value = state.pdfFileName;
+        persistState();
+        renderApp();
+        notify('Obnovený počiatočný stav.', 'info');
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      state = loadPersistedState() || createInitialState();
+      if (state.pdfFileName) {
+        document.getElementById('customPdfNameInput').value = state.pdfFileName;
+      }
+      wireEvents();
+      persistState();
+      renderApp();
+    });
+  </script>
+</body>
+</html>
